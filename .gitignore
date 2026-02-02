@@ -1,0 +1,138 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Secrets (SOPS encrypted files are OK to commit)
+*.key
+!*.key.age
+credentials.json
+service-account.json
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Docker
+docker-compose.override.yml
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+database/backups/
+*.dump
+*.sql.gz
+
+# n8n
+.n8n/
+
+# Redis
+dump.rdb
+
+# Tailscale
+config/tailscale/*.state
+
+# Syncthing
+config/syncthing/*.db
+config/syncthing/*.db-*
+config/syncthing/index-*
+
+# Media transit (temporary files)
+bot/media/transit/*
+!bot/media/transit/.gitkeep
+
+# Test artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+*.cover
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.swp
+*~
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# MyPy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Ruff
+.ruff_cache/
+
+# Node (n8n)
+node_modules/
+package-lock.json
+yarn.lock
+
+# Large files (use Git LFS if needed)
+*.pt
+*.onnx
+*.bin
+*.safetensors
+
+# Qdrant data
+services/qdrant/storage/
+
+# Zep data
+services/zep/data/

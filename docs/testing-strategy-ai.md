@@ -151,9 +151,9 @@ async def test_classify_email_low_confidence_fallback(mock_mistral, mock_email):
 #### Module Archiviste - Renommage intelligent
 
 ```python
-# tests/unit/agents/test_archiver_agent.py
+# tests/unit/agents/test_archiviste_agent.py
 @pytest.mark.asyncio
-@patch("agents.src.agents.archiver.agent.mistral_client")
+@patch("agents.src.agents.archiviste.agent.mistral_client")
 async def test_rename_document_invoice(mock_mistral):
     """Test renommage facture"""
     # Mock OCR extract
@@ -349,7 +349,7 @@ async def test_email_with_invoice_attachment_full_flow():
 
     # 4. Vérifier document archivé
     doc_db = await db.fetchrow(
-        "SELECT * FROM knowledge.documents "
+        "SELECT * FROM ingestion.documents "
         "WHERE source_email_id = $1", email_db['id']
     )
     assert doc_db is not None

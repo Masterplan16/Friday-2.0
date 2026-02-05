@@ -1577,7 +1577,7 @@ friday-2.0/
 ├── scripts/
 │   ├── setup.sh                       # Installation initiale VPS
 │   ├── backup.sh                      # Backup quotidien BDD + volumes
-│   ├── migrate-emails.sh              # Migration one-shot 55k mails
+│   ├── migrate_emails.py              # Migration one-shot 55k mails (Python, checkpoint + retry)
 │   ├── apply_migrations.py            # Execution migrations SQL numerotees + backup pre-migration
 │   ├── deploy.sh                      # Deploiement via git pull
 │   ├── dev-setup.sh                   # [AJOUT] Setup automatise dev (deps, services, migrations, seed)
@@ -2201,7 +2201,7 @@ echo "✅ Setup complete! Run 'docker compose up' to start all services."
 ```bash
 #!/bin/bash
 # Monitoring RAM VPS-4 48 Go - Alerte Telegram si >85%
-# Cron: 0 * * * * /opt/friday-2.0/scripts/monitor-ram.sh
+# Cron: 0 * * * * sops exec-env /opt/friday-2.0/.env.enc '/opt/friday-2.0/scripts/monitor-ram.sh'
 
 USAGE=$(free -m | awk 'NR==2{printf "%.0f", $3*100/$2}')
 THRESHOLD=${RAM_ALERT_THRESHOLD_PCT:-85}
@@ -2211,8 +2211,9 @@ if [ $USAGE -gt $THRESHOLD ]; then
     echo "$(date) - RAM >$THRESHOLD%: ${USAGE}%" >> /opt/friday-2.0/logs/ram-alerts.log
 
     # Alerte Telegram
-    BOT_TOKEN=$(grep TELEGRAM_BOT_TOKEN /opt/friday-2.0/.env | cut -d= -f2)
-    CHAT_ID=$(grep TELEGRAM_CHAT_ID /opt/friday-2.0/.env | cut -d= -f2)
+    # Secrets chargés via sops exec-env (compatible age/SOPS)
+    BOT_TOKEN="${TELEGRAM_BOT_TOKEN}"
+    CHAT_ID="${TELEGRAM_CHAT_ID}"
 
     curl -s -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
          -d "chat_id=${CHAT_ID}" \
@@ -2435,7 +2436,7 @@ git init
 # docker-compose.yml + docker-compose.dev.yml + docker-compose.services.yml
 docker compose up -d postgres redis qdrant
 
-# 3. Migrations SQL (001-009 : schemas core/ingestion/knowledge + tables)
+# 3. Migrations SQL (001-010 : schemas core/ingestion/knowledge + tables)
 python scripts/apply_migrations.py
 
 # 4. FastAPI Gateway + auth simple (mot de passe) + OpenAPI auto-generee

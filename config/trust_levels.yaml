@@ -12,8 +12,6 @@
 # - Risque moyen (erreur = perte de temps) → propose pendant 2-4 semaines
 # - Risque élevé (erreur = conséquence réelle) → blocked toujours
 
----
-
 # MODULE 1: Moteur Vie (Pipeline mail + Desktop search)
 email:
   classify: propose  # Risque moyen - erreur classification = perte de temps
@@ -169,6 +167,6 @@ system:
 
 # Notes:
 # - Trust levels peuvent être ajustés manuellement via Telegram: /trust set <module> <action> <level>
-# - Promotion auto: propose → auto si accuracy >95% sur 3 semaines
+# - Promotion: propose → auto si accuracy >95% sur 3 semaines + validation Antonio
 # - Rétrogradation auto: auto → propose si accuracy <90% sur 1 semaine
 # - blocked → propose: JAMAIS automatique, décision Antonio uniquement

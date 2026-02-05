@@ -65,7 +65,7 @@ VALUES
     ('test_003', 'test@example.com', 'Test Email 3', 'Body test 3', 'test', 'high', NOW());
 
 -- Insérer documents de test
-INSERT INTO knowledge.documents (filename, path, doc_type, category, created_at)
+INSERT INTO ingestion.documents (filename, path, doc_type, category, created_at)
 VALUES
     ('test_doc_001.pdf', '/test/doc1.pdf', 'facture', 'finance', NOW()),
     ('test_doc_002.pdf', '/test/doc2.pdf', 'contrat', 'legal', NOW());
@@ -81,7 +81,7 @@ echo -e "${GREEN}✅ 3 emails + 2 documents + 2 receipts créés${NC}"
 
 # Compter données insérées
 EMAIL_COUNT=$(docker exec "$POSTGRES_CONTAINER" psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -t -c "SELECT COUNT(*) FROM ingestion.emails WHERE message_id LIKE 'test_%';" | tr -d ' ')
-DOC_COUNT=$(docker exec "$POSTGRES_CONTAINER" psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -t -c "SELECT COUNT(*) FROM knowledge.documents WHERE filename LIKE 'test_%';" | tr -d ' ')
+DOC_COUNT=$(docker exec "$POSTGRES_CONTAINER" psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -t -c "SELECT COUNT(*) FROM ingestion.documents WHERE filename LIKE 'test_%';" | tr -d ' ')
 RECEIPT_COUNT=$(docker exec "$POSTGRES_CONTAINER" psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -t -c "SELECT COUNT(*) FROM core.action_receipts WHERE input_summary LIKE 'Test%';" | tr -d ' ')
 
 echo "   Emails de test: $EMAIL_COUNT"
@@ -140,13 +140,13 @@ echo -e "${YELLOW}[4/6] Suppression données (simulation disaster)...${NC}"
 
 docker exec "$POSTGRES_CONTAINER" psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" <<EOF || error_exit "Échec suppression données"
 DELETE FROM ingestion.emails WHERE message_id LIKE 'test_%';
-DELETE FROM knowledge.documents WHERE filename LIKE 'test_%';
+DELETE FROM ingestion.documents WHERE filename LIKE 'test_%';
 DELETE FROM core.action_receipts WHERE input_summary LIKE 'Test%';
 EOF
 
 # Vérifier suppression
 EMAIL_COUNT_AFTER=$(docker exec "$POSTGRES_CONTAINER" psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -t -c "SELECT COUNT(*) FROM ingestion.emails WHERE message_id LIKE 'test_%';" | tr -d ' ')
-DOC_COUNT_AFTER=$(docker exec "$POSTGRES_CONTAINER" psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -t -c "SELECT COUNT(*) FROM knowledge.documents WHERE filename LIKE 'test_%';" | tr -d ' ')
+DOC_COUNT_AFTER=$(docker exec "$POSTGRES_CONTAINER" psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -t -c "SELECT COUNT(*) FROM ingestion.documents WHERE filename LIKE 'test_%';" | tr -d ' ')
 
 if [ "$EMAIL_COUNT_AFTER" -ne 0 ] || [ "$DOC_COUNT_AFTER" -ne 0 ]; then
     error_exit "Suppression données incomplète (emails: $EMAIL_COUNT_AFTER, docs: $DOC_COUNT_AFTER)"
@@ -178,7 +178,7 @@ echo -e "${YELLOW}[6/6] Vérification intégrité données restaurées...${NC}"
 
 # Compter données restaurées
 EMAIL_COUNT_RESTORED=$(docker exec "$POSTGRES_CONTAINER" psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -t -c "SELECT COUNT(*) FROM ingestion.emails WHERE message_id LIKE 'test_%';" | tr -d ' ')
-DOC_COUNT_RESTORED=$(docker exec "$POSTGRES_CONTAINER" psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -t -c "SELECT COUNT(*) FROM knowledge.documents WHERE filename LIKE 'test_%';" | tr -d ' ')
+DOC_COUNT_RESTORED=$(docker exec "$POSTGRES_CONTAINER" psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -t -c "SELECT COUNT(*) FROM ingestion.documents WHERE filename LIKE 'test_%';" | tr -d ' ')
 RECEIPT_COUNT_RESTORED=$(docker exec "$POSTGRES_CONTAINER" psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -t -c "SELECT COUNT(*) FROM core.action_receipts WHERE input_summary LIKE 'Test%';" | tr -d ' ')
 
 echo "   Emails restaurés: $EMAIL_COUNT_RESTORED / $EMAIL_COUNT"
@@ -237,7 +237,7 @@ echo -e "${YELLOW}Nettoyage données de test...${NC}"
 
 docker exec "$POSTGRES_CONTAINER" psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" <<EOF
 DELETE FROM ingestion.emails WHERE message_id LIKE 'test_%';
-DELETE FROM knowledge.documents WHERE filename LIKE 'test_%';
+DELETE FROM ingestion.documents WHERE filename LIKE 'test_%';
 DELETE FROM core.action_receipts WHERE input_summary LIKE 'Test%';
 EOF
 

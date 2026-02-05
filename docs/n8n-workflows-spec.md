@@ -45,7 +45,7 @@ Ce document spécifie les **3 workflows n8n critiques** pour le Day 1 de Friday 
 | 3 | **Extract Attachments** | Code | Extraire liste PJ : `attachments.map(a => ({filename: a.filename, contentId: a.contentId}))`<br>Stocker paths temporaires |
 | 4 | **Call Classification API** | HTTP Request | POST `http://gateway:8000/api/v1/emails/classify`<br>Body : `{subject, text_preview: text.slice(0, 500), sender: from.address}`<br>Headers : `Authorization: Bearer ${FRIDAY_API_KEY}`<br>Response : `{category, priority, confidence, keywords}` |
 | 5 | **Insert Email PostgreSQL** | Postgres | Schema : `ingestion.emails`<br>Columns : `message_id, account, sender, recipients, subject, body_text, body_html, category, priority, confidence, received_at, processed_at`<br>Return `id` (UUID) |
-| 6 | **Publish Redis Event** | Redis Pub/Sub | Channel : `email.received`<br>Payload : `{email_id, category, priority, has_attachments}` |
+| 6 | **Publish Redis Event** | Redis Streams | Stream : `email.received`<br>Payload : `{email_id, category, priority, has_attachments}`<br>**Note : Redis Streams (pas Pub/Sub) pour garantir delivery même si consumer temporairement down** |
 | 7 | **Trigger Attachment Processing** | Condition | If `attachments.length > 0` :<br>  → POST `http://gateway:8000/api/v1/documents/process-attachments`<br>  Body : `{email_id, attachments}` |
 | 8 | **Error Handler** | On Error | Log error → `core.pipeline_errors`<br>Send Telegram alert via `http://bot:3000/alert` |
 
@@ -95,8 +95,8 @@ curl -X POST http://emailengine:3000/v1/settings/webhooks \
 | # | Node | Type | Configuration |
 |---|------|------|---------------|
 | 1 | **Daily Trigger** | Cron | Schedule : `0 7 * * *` (7h00 tous les jours)<br>Timezone : `Europe/Paris` |
-| 2 | **Get Pending Tasks** | Postgres | Query : `SELECT title, priority, due_date FROM knowledge.tasks WHERE status='pending' AND assigned_to='Antonio' ORDER BY priority DESC, due_date ASC LIMIT 10` |
-| 3 | **Get Today Events** | Postgres | Query : `SELECT title, date_start, location FROM knowledge.events WHERE DATE(date_start) = CURRENT_DATE ORDER BY date_start ASC` |
+| 2 | **Get Pending Tasks** | Postgres | Query : `SELECT title, priority, due_date FROM core.tasks WHERE status='pending' AND assigned_to='Antonio' ORDER BY priority DESC, due_date ASC LIMIT 10`<br>**⚠️ Table `core.tasks` à créer dans migration Story 2+ (non incluse dans 001-011)** |
+| 3 | **Get Today Events** | Postgres | Query : `SELECT title, date_start, location FROM core.events WHERE DATE(date_start) = CURRENT_DATE ORDER BY date_start ASC`<br>**⚠️ Table `core.events` à créer dans migration Story 2+ (non incluse dans 001-011)** |
 | 4 | **Get Urgent Emails** | Postgres | Query : `SELECT subject, sender, category FROM ingestion.emails WHERE priority='high' AND processed_at > NOW() - INTERVAL '24 hours' ORDER BY received_at DESC LIMIT 5` |
 | 5 | **Get Trust Alerts** | Postgres | Query : `SELECT module, action, status, confidence FROM core.action_receipts WHERE status='pending' AND created_at > NOW() - INTERVAL '24 hours'` |
 | 6 | **Get Module Summaries** | HTTP Request | POST `http://gateway:8000/api/v1/modules/daily-summaries`<br>Response : `{finance: {...}, thesis: {...}, legal: {...}}` |
@@ -136,7 +136,7 @@ Le briefing inclut automatiquement :
 ### Diagramme
 
 ```
-[Cron 2h00] → [Backup PostgreSQL] → [Backup Qdrant] → [Backup Zep]
+[Cron 3h00] → [Backup PostgreSQL] → [Backup Qdrant] → [Backup Zep]
                     ↓                    ↓                    ↓
               [Compress .gz]      [Snapshot API]      [Export JSON]
                     ↓                    ↓                    ↓
@@ -149,7 +149,7 @@ Le briefing inclut automatiquement :
 
 | # | Node | Type | Configuration |
 |---|------|------|---------------|
-| 1 | **Nightly Trigger** | Cron | Schedule : `0 2 * * *` (2h00 tous les jours)<br>Timezone : `Europe/Paris` |
+| 1 | **Nightly Trigger** | Cron | Schedule : `0 3 * * *` (3h00 tous les jours)<br>Timezone : `Europe/Paris` |
 | 2 | **Backup PostgreSQL** | Execute Command | Command : `pg_dump -h postgres -U friday -d friday -F c -f /backups/postgres_$(date +%Y%m%d_%H%M%S).dump`<br>Working dir : `/opt/friday/backups`<br>Timeout : 10 min |
 | 3 | **Compress PostgreSQL Backup** | Execute Command | Command : `gzip -9 /backups/postgres_*.dump` (compress le dernier dump) |
 | 4 | **Backup Qdrant Snapshot** | HTTP Request | POST `http://qdrant:6333/collections/{collection}/snapshots`<br>Response : `{snapshot_name}`<br>Then GET `http://qdrant:6333/collections/{collection}/snapshots/{snapshot_name}` → Save to `/backups/qdrant_$(date).snapshot` |
@@ -278,7 +278,7 @@ Les erreurs workflow déclenchent automatiquement :
 |----------|-----------|---------------|-------------|
 | Email Ingestion | Event-driven (~20/jour) | ~2-5s | 30s |
 | Briefing Daily | 1x/jour (7h00) | ~10-15s | 60s |
-| Backup Daily | 1x/jour (2h00) | ~5-10 min | 30 min |
+| Backup Daily | 1x/jour (3h00) | ~5-10 min | 30 min |
 
 ---
 

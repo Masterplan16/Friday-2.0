@@ -494,8 +494,8 @@ docker compose logs -f gateway          # Gateway uniquement
 
 **Story 1 : Infrastructure de base** (conçue, pas encore implémentée)
 
-1. 📋 Docker Compose (PostgreSQL 16, Redis 7, Qdrant, n8n 2.4.8, Caddy)
-2. 📋 Migrations SQL 001-009 (schemas core/ingestion/knowledge + tables)
+1. 📋 Docker Compose (PostgreSQL 16, Redis 7, Qdrant, n8n 1.69.2+, Caddy)
+2. 📋 Migrations SQL 001-010 (schemas core/ingestion/knowledge + tables)
 3. 📋 FastAPI Gateway + auth simple + OpenAPI
 4. 📋 Healthcheck endpoint (`GET /api/v1/health`)
 5. 📋 Tailscale configuré (VPS hostname `friday-vps`)

@@ -103,8 +103,9 @@ friday-2.0/
 ├── README.md                    # Ce fichier
 ├── CLAUDE.md                    # Instructions pour AI agents
 ├── _docs/
-│   ├── architecture-friday-2.0.md     # Architecture complète (~1900 lignes)
-│   └── friday-2.0-analyse-besoins.md  # Analyse besoins initiale
+│   ├── architecture-friday-2.0.md           # Architecture complète (~2500 lignes)
+│   ├── architecture-addendum-20260205.md    # Addendum technique (Presidio, RAM, OpenClaw)
+│   └── friday-2.0-analyse-besoins.md        # Analyse besoins initiale
 │
 ├── docker-compose.yml           # Services principaux
 ├── docker-compose.dev.yml       # Override dev
@@ -141,7 +142,7 @@ friday-2.0/
 │
 ├── n8n-workflows/               # Workflows n8n (JSON)
 ├── database/migrations/         # Migrations SQL numérotées (001-011+)
-├── config/                      # Config externe (Tailscale, Syncthing, Caddy, profiles RAM)
+├── config/                      # Config externe (Tailscale, Syncthing, Caddy, profiles RAM, trust_levels.yaml)
 ├── tests/                       # Tests (unit, integration, e2e)
 ├── scripts/                     # Scripts automation (setup, backup, deploy, monitor-ram)
 ├── docs/                        # Documentation technique

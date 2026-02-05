@@ -6,6 +6,14 @@ Stratégie: Checkpointing + Retry + Resume + Progress tracking
 Usage:
     python scripts/migrate_emails.py [--resume] [--dry-run] [--batch-size 100]
 
+Prérequis:
+- Table `ingestion.emails_legacy` doit exister (migration dédiée à créer avant exécution).
+  Cette table contient les 55k emails importés depuis les 4 comptes via EmailEngine bulk export.
+  Migration suggérée: `012_ingestion_emails_legacy.sql` (à créer dans Story 2).
+- Répertoire `data/` doit exister (créé automatiquement si absent):
+  - data/checkpoints/ : fichiers checkpoint JSON
+  - data/logs/ : logs migration
+
 Features:
 - Checkpoint tous les 100 emails (configurable)
 - Retry exponentiel sur erreur API (3 tentatives)

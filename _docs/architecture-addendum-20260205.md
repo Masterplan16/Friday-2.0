@@ -621,6 +621,85 @@ Les mappings Presidio (ex: `[PERSON_1] -> "Jean Dupont"`) suivent ce cycle :
 
 **Regle** : Les mappings NE SONT JAMAIS stockes en clair. En base, seul le texte anonymise est stocke. Le mapping temporaire existe uniquement en memoire pendant la duree de la requete LLM.
 
+#### **Solution debugging Trust Layer** (ajout 2026-02-05, code review adversarial CRITIQUE #4)
+
+**Problematique** : Comment Antonio corrige-t-il une action via Trust Layer si le texte est anonymise dans les receipts ?
+
+**Solution retenue** : Stockage chiffre pgcrypto + acces commande Telegram `/receipt <id> --decrypt`
+
+1. **Stockage mappings dans `core.action_receipts`** :
+   ```sql
+   ALTER TABLE core.action_receipts
+   ADD COLUMN encrypted_mapping BYTEA;  -- Chiffre via pgcrypto
+   ```
+
+2. **Chiffrement insertion** :
+   ```python
+   # agents/src/middleware/trust.py
+   async def store_receipt(..., presidio_mapping: dict):
+       mapping_json = json.dumps(presidio_mapping)
+       # Chiffrer avec cle symetrique pgcrypto (AES-256)
+       encrypted = await db.fetchval(
+           "SELECT pgp_sym_encrypt($1, $2)",
+           mapping_json,
+           os.getenv("PRESIDIO_MAPPING_KEY")  # Cle dans .env chiffre via age/SOPS
+       )
+       # Stocker dans receipt
+       await db.execute(
+           "UPDATE core.action_receipts SET encrypted_mapping = $1 WHERE id = $2",
+           encrypted, receipt_id
+       )
+   ```
+
+3. **Dechiffrement via Telegram** :
+   ```python
+   # bot/commands/receipt.py
+   @friday_action(module="trust", action="decrypt_receipt", trust_default="blocked")
+   async def handle_receipt_decrypt(receipt_id: str, user_id: int):
+       # Verifier que user = Antonio uniquement
+       if user_id != ANTONIO_TELEGRAM_ID:
+           return "❌ Acces refuse (admin uniquement)"
+
+       # Dechiffrer mapping
+       encrypted = await db.fetchval(
+           "SELECT encrypted_mapping FROM core.action_receipts WHERE id = $1",
+           receipt_id
+       )
+       if not encrypted:
+           return "⚠️  Pas de mapping disponible"
+
+       mapping_json = await db.fetchval(
+           "SELECT pgp_sym_decrypt($1, $2)",
+           encrypted,
+           os.getenv("PRESIDIO_MAPPING_KEY")
+       )
+       mapping = json.loads(mapping_json)
+
+       # Log audit trail (RGPD : tracer acces donnees)
+       await db.execute(
+           "INSERT INTO core.audit_logs (event, user_id, receipt_id, timestamp) "
+           "VALUES ('decrypt_mapping', $1, $2, NOW())",
+           user_id, receipt_id
+       )
+
+       # Retourner texte dechiffre (ephemere, pas stocke)
+       return f"🔓 Mapping dechiffre:\n{format_mapping(mapping)}"
+   ```
+
+4. **Usage Antonio** :
+   ```
+   /receipt abc-123            # Voir receipt avec texte anonymise
+   /receipt abc-123 --decrypt  # Dechiffrer temporairement pour debug (audit trail)
+   ```
+
+**Garanties RGPD** :
+- ✅ Mappings chiffres au repos (pgcrypto AES-256)
+- ✅ Cle de chiffrement dans .env chiffre (age/SOPS)
+- ✅ Acces restreint Antonio uniquement
+- ✅ Audit trail de chaque dechiffrement
+- ✅ Purge automatique apres 30 jours (retention limitee)
+- ✅ Pas d'affichage en clair dans logs (mapping ephemere en memoire Telegram)
+
 ### 9.2 Redis ACL
 
 Chaque service a ses propres permissions Redis :

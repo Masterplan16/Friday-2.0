@@ -1,0 +1,131 @@
+{
+  "dataset_name": "Email Classification Validation Dataset",
+  "version": "1.0.0",
+  "created": "2026-02-05",
+  "description": "Dataset pour valider accuracy classification emails (Story 2). Target accuracy >= 85%",
+  "emails": [
+    {
+      "id": "email_medical_001",
+      "subject": "Résultats ECG patient Dupont",
+      "text": "Bonjour Dr. Lopez, voici les résultats ECG du patient Jean Dupont effectué ce matin. Rythme sinusal à 75 bpm, pas d'anomalie détectée. Cordialement, Dr. Martin",
+      "sender": "dr.martin@hospital.fr",
+      "expected_category": "medical",
+      "expected_priority": "medium",
+      "min_confidence": 0.80,
+      "reasoning": "Email médical avec vocabulaire technique (ECG, bpm, rythme sinusal)"
+    },
+    {
+      "id": "email_medical_002",
+      "subject": "URGENT - Patient en détresse respiratoire",
+      "text": "Antonio, patient en salle 3 détresse respiratoire sévère. SpO2 à 85%. Besoin assistance immédiate.",
+      "sender": "urgences@hospital.fr",
+      "expected_category": "medical",
+      "expected_priority": "high",
+      "min_confidence": 0.95,
+      "reasoning": "Urgence médicale critique (URGENT, détresse, SpO2)"
+    },
+    {
+      "id": "email_finance_001",
+      "subject": "Facture URSSAF janvier 2026",
+      "text": "Veuillez trouver ci-joint la facture URSSAF pour janvier 2026. Montant : 2450€. Échéance : 15/02/2026.",
+      "sender": "contact@urssaf.fr",
+      "expected_category": "finance",
+      "expected_priority": "high",
+      "min_confidence": 0.85,
+      "reasoning": "Email financier officiel avec montant et échéance"
+    },
+    {
+      "id": "email_finance_002",
+      "subject": "Relevé bancaire décembre",
+      "text": "Votre relevé de compte BNP décembre est disponible. Solde : 15 230€.",
+      "sender": "no-reply@bnpparibas.fr",
+      "expected_category": "finance",
+      "expected_priority": "low",
+      "min_confidence": 0.80,
+      "reasoning": "Relevé bancaire informatif (priority low car pas d'action requise)"
+    },
+    {
+      "id": "email_thesis_001",
+      "subject": "Version 3 introduction thèse - Julie",
+      "text": "Bonjour Antonio, voici la version 3 de mon introduction de thèse avec vos corrections intégrées. Merci pour votre relecture. Julie",
+      "sender": "julie.martin@univ-paris.fr",
+      "expected_category": "thesis",
+      "expected_priority": "medium",
+      "min_confidence": 0.75,
+      "reasoning": "Email étudiant thèse avec document à relire"
+    },
+    {
+      "id": "email_thesis_002",
+      "subject": "Soutenance prévue le 15 mars - validation directeur",
+      "text": "Antonio, j'ai programmé ma soutenance le 15 mars 2026. Pourriez-vous valider la date avec le directeur de thèse ? Merci, Marc",
+      "sender": "marc.durand@univ-lyon.fr",
+      "expected_category": "thesis",
+      "expected_priority": "high",
+      "min_confidence": 0.85,
+      "reasoning": "Soutenance = deadline importante, validation requise"
+    },
+    {
+      "id": "email_professional_001",
+      "subject": "Réunion équipe mardi 10h",
+      "text": "Bonjour, réunion d'équipe mardi prochain à 10h en salle B. Ordre du jour : planning Q1 2026. À mardi !",
+      "sender": "chef@hospital.fr",
+      "expected_category": "professional",
+      "expected_priority": "medium",
+      "min_confidence": 0.70,
+      "reasoning": "Réunion professionnelle avec date/heure"
+    },
+    {
+      "id": "email_personal_001",
+      "subject": "Anniversaire samedi - tu viens ?",
+      "text": "Salut Antonio ! On organise l'anniversaire de Sophie samedi chez nous. Tu viens ? Bisous, Marie",
+      "sender": "marie.dupont@gmail.com",
+      "expected_category": "personal",
+      "expected_priority": "low",
+      "min_confidence": 0.75,
+      "reasoning": "Invitation sociale informelle"
+    },
+    {
+      "id": "email_spam_001",
+      "subject": "Gagnez 10000€ maintenant !!!",
+      "text": "Félicitations ! Vous avez été sélectionné pour gagner 10000€. Cliquez ici immédiatement : http://scam.com",
+      "sender": "promo@suspicious-domain.xyz",
+      "expected_category": "spam",
+      "expected_priority": "low",
+      "min_confidence": 0.95,
+      "reasoning": "Spam évident (montant irréaliste, urgence, domaine suspect)"
+    },
+    {
+      "id": "email_legal_001",
+      "subject": "Contrat de location - signature requise",
+      "text": "Bonjour, veuillez trouver ci-joint le contrat de location de votre appartement rue de la Paix. Merci de signer et retourner avant le 20/02.",
+      "sender": "agence@immobilier-paris.fr",
+      "expected_category": "legal",
+      "expected_priority": "high",
+      "min_confidence": 0.80,
+      "reasoning": "Contrat légal avec deadline signature"
+    },
+    {
+      "id": "email_ambiguous_001",
+      "subject": "Rendez-vous demain",
+      "text": "Salut, on se voit demain comme prévu ? À+",
+      "sender": "pierre@gmail.com",
+      "expected_category": "personal",
+      "expected_priority": "low",
+      "min_confidence": 0.50,
+      "allow_multiple_categories": ["personal", "professional"],
+      "reasoning": "Contexte insuffisant - pourrait être perso ou pro selon expéditeur"
+    },
+    {
+      "id": "email_newsletter_001",
+      "subject": "Newsletter Le Monde - édition du jour",
+      "text": "Découvrez l'actualité du jour : [titres articles...]. Se désabonner.",
+      "sender": "newsletter@lemonde.fr",
+      "expected_category": "newsletter",
+      "expected_priority": "low",
+      "min_confidence": 0.90,
+      "reasoning": "Newsletter classique avec option désabonnement"
+    }
+  ],
+  "usage": "pytest tests/integration/test_email_classification_quality.py",
+  "acceptance_criteria": "Accuracy >= 85% sur ce dataset (min 11/13 correct)"
+}

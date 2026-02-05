@@ -1,0 +1,99 @@
+{
+  "dataset_name": "PII Anonymization Validation Dataset",
+  "version": "1.0.0",
+  "created": "2026-02-05",
+  "description": "Dataset pour valider anonymisation Presidio (Story 1.5). CRITIQUE : 100% PII doivent être anonymisées.",
+  "samples": [
+    {
+      "id": "pii_sample_001",
+      "input": "Le patient Jean Dupont, né le 15/03/1980, habite au 123 rue de la Paix 75001 Paris. Tél: 0612345678. Email: jean.dupont@example.com",
+      "entities": ["PERSON", "DATE_TIME", "LOCATION", "PHONE_NUMBER", "EMAIL_ADDRESS"],
+      "sensitive_values": [
+        "Jean Dupont",
+        "15/03/1980",
+        "123 rue de la Paix",
+        "75001 Paris",
+        "0612345678",
+        "jean.dupont@example.com"
+      ],
+      "expected_anonymized_contains": ["[PERSON_", "[DATE_TIME_", "[LOCATION_", "[PHONE_NUMBER_", "[EMAIL_ADDRESS_"],
+      "reasoning": "Toutes PII standards doivent être détectées et anonymisées"
+    },
+    {
+      "id": "pii_sample_002",
+      "input": "Mme Marie Martin a effectué un virement de 5000€ depuis son compte IBAN FR76 1234 5678 9012 3456 7890 123 vers le compte de M. Pierre Durand.",
+      "entities": ["PERSON", "IBAN_CODE"],
+      "sensitive_values": [
+        "Marie Martin",
+        "Pierre Durand",
+        "FR76 1234 5678 9012 3456 7890 123"
+      ],
+      "expected_anonymized_contains": ["[PERSON_", "[IBAN_CODE_"],
+      "reasoning": "Noms de personnes + IBAN doivent être anonymisés"
+    },
+    {
+      "id": "pii_sample_003",
+      "input": "Résultats analyses patient n° 123456 (Mr Antoine Lopez, SS 1 80 03 75 123 456 78). Glycémie: 1.2 g/L, Cholestérol: 2.5 g/L.",
+      "entities": ["PERSON", "FR_NIR"],
+      "sensitive_values": [
+        "Antoine Lopez",
+        "1 80 03 75 123 456 78"
+      ],
+      "expected_anonymized_contains": ["[PERSON_", "[FR_NIR_"],
+      "reasoning": "Numéro sécurité sociale (NIR) français DOIT être anonymisé (RGPD critique)"
+    },
+    {
+      "id": "pii_sample_004",
+      "input": "Carte bancaire: 4532 1234 5678 9012 exp 12/25 CVV 123. Titulaire: Sophie Durand.",
+      "entities": ["PERSON", "CREDIT_CARD"],
+      "sensitive_values": [
+        "Sophie Durand",
+        "4532 1234 5678 9012"
+      ],
+      "expected_anonymized_contains": ["[PERSON_", "[CREDIT_CARD_"],
+      "reasoning": "Numéro carte bancaire = PII critique"
+    },
+    {
+      "id": "pii_sample_005",
+      "input": "Licence logiciel activée pour l'organisation ABC-Corp (SIRET 123 456 789 00012). Contact: directeur@abc-corp.fr",
+      "entities": ["ORGANIZATION", "EMAIL_ADDRESS"],
+      "sensitive_values": [
+        "ABC-Corp",
+        "directeur@abc-corp.fr"
+      ],
+      "expected_anonymized_contains": ["[ORGANIZATION_", "[EMAIL_ADDRESS_"],
+      "reasoning": "Organisations + emails pros doivent être anonymisés si contexte sensible"
+    },
+    {
+      "id": "pii_sample_006",
+      "input": "Patient admis le 05/02/2026 à 14h30. Diagnostic: hypertension. Médecin traitant: Dr. Martin (Paris 15e).",
+      "entities": ["DATE_TIME", "PERSON", "LOCATION"],
+      "sensitive_values": [
+        "05/02/2026",
+        "14h30",
+        "Dr. Martin",
+        "Paris 15e"
+      ],
+      "expected_anonymized_contains": ["[DATE_TIME_", "[PERSON_", "[LOCATION_"],
+      "reasoning": "Dates + lieux médicaux doivent être anonymisés (contexte médical)"
+    },
+    {
+      "id": "pii_sample_007_edge_case",
+      "input": "Email sans PII: Bonjour, merci pour votre message. La réunion est confirmée pour mardi.",
+      "entities": [],
+      "sensitive_values": [],
+      "expected_anonymized_contains": [],
+      "reasoning": "Aucune PII détectée → texte doit rester identique (pas d'anonymisation inutile)"
+    },
+    {
+      "id": "pii_sample_008_partial",
+      "input": "Appeler Jean au 06 pour discuter du projet.",
+      "entities": ["PERSON"],
+      "sensitive_values": ["Jean"],
+      "expected_anonymized_contains": ["[PERSON_"],
+      "reasoning": "Prénom seul doit être anonymisé. Numéro partiel '06' trop court pour être détecté (OK, pas une vraie PII)."
+    }
+  ],
+  "usage": "pytest tests/integration/test_anonymization_pipeline.py",
+  "acceptance_criteria": "100% des PII listées dans sensitive_values DOIVENT être anonymisées. AUCUNE fuite PII tolérée."
+}

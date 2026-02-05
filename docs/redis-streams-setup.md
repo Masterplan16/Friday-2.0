@@ -403,11 +403,68 @@ redis-cli XGROUP DESTROY email.received old-processor
 
 ---
 
+## 📦 Consumers implémentés
+
+Friday 2.0 inclut les consumers Redis Streams suivants (créés suite au code review adversarial 2026-02-05) :
+
+### **Email Processor Consumer**
+
+**Fichier** : `services/email-processor/consumer.py`
+**Consumer Group** : `email-processor`
+**Stream** : `email.received`
+
+**Rôle** :
+- Consomme événements `email.received` publiés par n8n workflow Email Ingestion
+- Déclenche actions downstream : extraction tâches, événements agenda, notifications Telegram
+- Traite pièces jointes si présentes
+
+**Démarrage** :
+```bash
+# Via Docker Compose (Story 2)
+docker compose up -d email-processor
+
+# Ou direct Python
+python services/email-processor/consumer.py
+```
+
+### **Document Indexer Consumer**
+
+**Fichier** : `services/document-indexer/consumer.py`
+**Consumer Group** : `document-indexer`
+**Stream** : `document.processed`
+
+**Rôle** :
+- Consomme événements `document.processed` publiés par n8n workflow File Processing
+- Indexe documents dans Qdrant (embeddings) + PostgreSQL knowledge.* (graphe)
+- Extrait entités et relations via NER
+
+**Démarrage** :
+```bash
+# Via Docker Compose (Story 3)
+docker compose up -d document-indexer
+
+# Ou direct Python
+python services/document-indexer/consumer.py
+```
+
+### **Consumers additionnels (TODO)**
+
+Les consumer groups suivants sont créés par `setup-redis-streams.sh` mais **n'ont pas encore de consumer implémenté** :
+
+| Consumer Group | Stream | Implémentation | Story |
+|----------------|--------|----------------|-------|
+| `error-handler` | `pipeline.error` | `services/alerting/listener.py` (déjà existe) | Story 1.5 |
+| `monitoring` | `service.down` | `services/monitoring/service_monitor.py` (à créer) | Story 1.5 |
+| `trust-manager` | `trust.level.changed`, `action.validated` | `services/metrics/trust_consumer.py` (à créer) | Story 1.5 |
+| `feedback-loop` | `action.corrected` | `services/metrics/pattern_detector.py` (à créer) | Story 1.5 |
+
+---
+
 ## 📋 Checklist production
 
 - [ ] Consumer groups créés (`./scripts/setup-redis-streams.sh`)
-- [ ] Consumers démarrés (1+ par groupe)
-- [ ] Recovery cron actif (claim pending events)
+- [ ] Consumers démarrés (1+ par groupe) — **email-processor** et **document-indexer** créés ✅
+- [ ] Recovery cron actif (claim pending events) — intégré dans chaque consumer ✅
 - [ ] Monitoring alertes configurées (backlog, pending, lag)
 - [ ] MAXLEN configuré sur tous les streams (limite taille)
 - [ ] Tests end-to-end passent (publish → consume → ACK)
@@ -415,5 +472,5 @@ redis-cli XGROUP DESTROY email.received old-processor
 ---
 
 **Créé le** : 2026-02-05
-**Version** : 1.0.0
-**Contributeur** : Claude (Code Review Adversarial - Issue #4)
+**Version** : 1.1.0
+**Contributeur** : Claude (Code Review Adversarial - Issue #1 fix)

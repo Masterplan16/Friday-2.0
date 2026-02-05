@@ -164,13 +164,14 @@ Le briefing inclut automatiquement :
 >     - friday_backups:/backups
 > ```
 | 3 | **Compress PostgreSQL Backup** | Execute Command | Command : `gzip -9 /backups/postgres_*.dump` (compress le dernier dump) |
-| 4 | **Backup Qdrant Snapshot** | HTTP Request | POST `http://qdrant:6333/collections/{collection}/snapshots`<br>Response : `{snapshot_name}`<br>Then GET `http://qdrant:6333/collections/{collection}/snapshots/{snapshot_name}` → Save to `/backups/qdrant_$(date).snapshot` |
-| 5 | **Backup Zep Memory** | HTTP Request | GET `http://zep:8000/api/v1/sessions?limit=1000` → Export all sessions to JSON<br>Save to `/backups/zep_$(date).json` |
-| 6 | **Sync to PC via Tailscale** | Execute Command | Command : `rsync -avz --progress /backups/ antonio@${TAILSCALE_PC_HOSTNAME}:/mnt/backups/friday-vps/`<br>(Tailscale permet rsync direct VPS vers PC via hostname Tailscale)<br>Timeout : 30 min |
-| 7 | **Cleanup Old Backups (VPS)** | Execute Command | Command : `find /backups -name "*.dump.gz" -mtime +7 -delete && find /backups -name "*.snapshot" -mtime +7 -delete && find /backups -name "*.json" -mtime +7 -delete`<br>(Supprime fichiers >7 jours) |
-| 8 | **Verify Backup Size** | Code | Check file sizes :<br>`ls -lh /backups/postgres_latest.dump.gz`<br>If < 10 MB → Warning (backup potentiellement incomplet) |
-| 9 | **Log Success** | Postgres | Insert `core.system_logs` : `{event: 'backup.completed', status: 'success', backup_size_mb, timestamp}` |
-| 10 | **Send Telegram Confirmation** | HTTP Request | POST Telegram : "✅ Backup quotidien terminé — PostgreSQL: X MB, Qdrant: Y MB, Zep: Z MB" |
+| 4 | **Backup Qdrant Snapshots** | HTTP Request | POST `http://qdrant:6333/collections/{collection}/snapshots` pour chaque collection (embeddings, documents)<br>Response : `{snapshot_name}`<br>Then GET snapshot → Save to `/backups/qdrant_{collection}_$(date).snapshot` |
+| 5 | **Backup Knowledge Schema** | Execute Command | Command : `pg_dump -h postgres -U friday -d friday -n knowledge -F c -f /backups/knowledge_$(date +%Y%m%d_%H%M%S).dump`<br>(Backup spécifique du schema knowledge.* pour graphe de connaissances PostgreSQL+Qdrant, remplace Zep) |
+| 6 | **Compress Knowledge Backup** | Execute Command | Command : `gzip -9 /backups/knowledge_*.dump` (compress le dernier dump knowledge) |
+| 7 | **Sync to PC via Tailscale** | Execute Command | Command : `rsync -avz --progress /backups/ antonio@${TAILSCALE_PC_HOSTNAME}:/mnt/backups/friday-vps/`<br>(Tailscale permet rsync direct VPS vers PC via hostname Tailscale)<br>Timeout : 30 min |
+| 8 | **Cleanup Old Backups (VPS)** | Execute Command | Command : `find /backups -name "*.dump.gz" -mtime +7 -delete && find /backups -name "*.snapshot" -mtime +7 -delete`<br>(Supprime fichiers >7 jours) |
+| 9 | **Verify Backup Size** | Code | Check file sizes :<br>`ls -lh /backups/postgres_latest.dump.gz`<br>`ls -lh /backups/knowledge_latest.dump.gz`<br>If < 10 MB → Warning (backup potentiellement incomplet) |
+| 10 | **Log Success** | Postgres | Insert `core.system_logs` : `{event: 'backup.completed', status: 'success', backup_size_mb, timestamp}` |
+| 11 | **Send Telegram Confirmation** | HTTP Request | POST Telegram : "✅ Backup quotidien terminé — PostgreSQL: X MB (core+ingestion), Knowledge: Y MB, Qdrant: Z MB" |
 | 11 | **Error Handler** | On Error | Log error → Telegram alert "🚨 Backup échoué — Vérifier logs VPS" |
 
 ### Variables d'environnement requises
@@ -178,11 +179,12 @@ Le briefing inclut automatiquement :
 ```env
 POSTGRES_CONN=postgresql://friday:password@postgres:5432/friday
 QDRANT_URL=http://qdrant:6333
-ZEP_URL=http://zep:8000
 TAILSCALE_PC_HOSTNAME=antonio-pc
 TELEGRAM_BOT_TOKEN=<bot_token>
 TELEGRAM_CHAT_ID=<antonio_chat_id>
 ```
+
+> **Note (2026-02-05)** : La variable `ZEP_URL` a été supprimée suite au code review adversarial. Zep a cessé ses opérations en 2024. Le graphe de connaissances utilise désormais PostgreSQL (schema knowledge.*) + Qdrant (embeddings) via `adapters/memorystore.py`.
 
 > **Recommandation** : Utiliser le hostname Tailscale (`antonio-pc`) au lieu de l'IP pour eviter les problemes de rotation d'adresse. Ex: `TAILSCALE_PC_HOSTNAME=antonio-pc`
 
@@ -206,18 +208,24 @@ cat vps_id_rsa.pub >> ~/.ssh/authorized_keys
 
 En cas de disaster recovery :
 ```bash
-# Restaurer PostgreSQL
+# 1. Restaurer PostgreSQL (core + ingestion)
 gunzip postgres_20260205_020000.dump.gz
 pg_restore -h localhost -U friday -d friday -c postgres_20260205_020000.dump
 
-# Restaurer Qdrant
-curl -X POST http://qdrant:6333/collections/{collection}/snapshots/upload \
-  -F "snapshot=@qdrant_20260205.snapshot"
+# 2. Restaurer schema knowledge (graphe de connaissances)
+gunzip knowledge_20260205_020000.dump.gz
+pg_restore -h localhost -U friday -d friday -n knowledge -c knowledge_20260205_020000.dump
 
-# Restaurer Zep
-curl -X POST http://zep:8000/api/v1/sessions/import \
-  -d @zep_20260205.json
+# 3. Restaurer Qdrant (embeddings)
+# Pour chaque collection
+curl -X POST http://qdrant:6333/collections/embeddings/snapshots/upload \
+  -F "snapshot=@qdrant_embeddings_20260205.snapshot"
+
+curl -X POST http://qdrant:6333/collections/documents/snapshots/upload \
+  -F "snapshot=@qdrant_documents_20260205.snapshot"
 ```
+
+> **Note (2026-02-05)** : Les étapes de restauration Zep ont été supprimées. Le graphe de connaissances est désormais stocké dans PostgreSQL (knowledge.*) + Qdrant.
 
 ---
 

@@ -295,7 +295,18 @@ Pipeline document complet : upload → OCR → renommage intelligent → classem
 - Retry exponentiel sur erreur
 - Resume depuis dernier checkpoint
 - Anonymisation Presidio avant classification (RGPD)
-- Durée estimée : ~9h + coût ~8$ (Mistral API)
+- **Durée estimée** : ~10-12h (incluant Presidio overhead + retry/backoff)
+- **Coût estimé** : ~$10-12 USD (Mistral API)
+
+**Calcul détaillé** (corrigé suite code review adversarial 2026-02-05) :
+- 55k emails × ~600 tokens avg (500 input + 100 output) = 33M tokens
+- Mistral Nemo pricing : $0.15/1M tokens input + $0.15/1M tokens output
+- Coût classification : 33M tokens × $0.30/1M = **$9.90 USD**
+- Rate limit Mistral : 200 RPM → 55k / 200 = **275 minutes = 4.6h (classification seule)**
+- Presidio overhead : ~150-200ms par email → 55k × 0.15s = **2.3h supplémentaires**
+- Retry + backoff (estimation 5% échecs temporaires) : ~30-45 min
+- **Durée totale réaliste** : 4.6h + 2.3h + 0.5h + marge sécurité = **~10-12h**
+- **Coût total avec marge** : $9.90 + 20% buffer = **~$10-12 USD**
 
 **Validation** :
 - Test dry-run d'abord (`--dry-run`)

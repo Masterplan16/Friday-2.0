@@ -4,6 +4,152 @@
 
 ---
 
+## 2026-02-05 : Stratégie de Notification - Telegram Topics Architecture
+
+**Décision** : Supergroup Telegram avec 5 topics spécialisés (vs canal unique initial)
+
+**Problématique identifiée** :
+- Architecture initiale : "canal unique Telegram + progressive disclosure"
+- Risque critique : Chaos informationnel si tout mélangé (alertes système + validations trust + heartbeat + métriques + conversations)
+- Question Antonio : *"Si tout arrive sur le même canal que le bot... tout ça risque d'être illisible"*
+
+**Architecture retenue** :
+
+Supergroup "Friday 2.0 Control" avec **5 topics** :
+
+1. **💬 Chat & Proactive** (DEFAULT, bidirectionnel)
+   - Conversations Antonio ↔ Friday
+   - Commandes (`/status`, `/journal`, etc.)
+   - Heartbeat proactif (Friday initie)
+   - Reminders et suggestions
+
+2. **📬 Email & Communications**
+   - Classifications email (auto)
+   - Pièces jointes détectées
+   - Emails urgents
+
+3. **🤖 Actions & Validations**
+   - Actions trust=propose (inline buttons)
+   - Corrections appliquées
+   - Trust level changes
+
+4. **🚨 System & Alerts**
+   - RAM >85%, services down
+   - Pipeline errors critiques
+   - Security events
+
+5. **📊 Metrics & Logs**
+   - Actions auto (trust=auto)
+   - Métriques nightly
+   - Logs non-critiques
+
+**Rationale** :
+- **Séparation Signal vs Noise** : Antonio peut muter topics non-urgents selon contexte (Mode Focus, Deep Work, Vacances)
+- **Conversation continue** : Topic 1 bidirectionnel préserve contexte (heartbeat → question → réponse dans même fil)
+- **Pas de quiet hours codées** : Utiliser fonctionnalités natives téléphone (DND, Focus modes)
+- **Filtrage granulaire** : Par module (email, finance, thesis) + priorité (critical, warning, info)
+
+**Alternatives considérées** :
+1. **Canal unique avec filtrage intelligent** : Rejetée car impossibilité de mute sélectif (tout ou rien)
+2. **2-3 canaux séparés** : Rejetée car perte de contexte entre canaux, Antonio préfère topics
+3. **6 topics (Chat + Proactive séparés)** : Rejetée car fragmente conversation naturelle
+4. **5 topics avec fusion Chat + Proactive** : Retenue (suggestion Antonio validée par équipe)
+
+**Routing Logic** :
+```python
+if event.source in ["heartbeat", "proactive"] → Chat & Proactive
+elif event.module in ["email", "desktop_search"] → Email & Communications
+elif event.type.startswith("action.") → Actions & Validations
+elif event.priority in ["critical", "warning"] → System & Alerts
+else → Metrics & Logs
+```
+
+**Impact Stories** :
+- **Story 1.5** : Alerting service doit router multi-topics (+4h dev, +2h tests)
+- **Story 2.5** : Heartbeat s'affiche dans Chat & Proactive (compatible)
+- **Nouvelle Story 1.6** : Telegram Topics Implementation (17-18h total)
+  - 1.6.1 : Documentation (6h)
+  - 1.6.2 : Setup supergroup manuel Antonio (15min)
+  - 1.6.3 : Bot routing implementation (4h dev + 1h tests)
+  - 1.6.4 : Inline buttons + commands (3h dev + 1h tests)
+  - 1.6.5 : E2E testing + deployment (2h tests + 1h deploy)
+
+**Bénéfices** :
+- ✅ Filtrage granulaire (mute selon contexte utilisateur)
+- ✅ Conversation continue préservée (Topic 1 bidirectionnel)
+- ✅ Séparation critique vs informatif (Topic 4 vs Topic 5)
+- ✅ Contrôle natif Telegram (mute/unmute, notifications par topic)
+- ✅ Scalabilité : Ajout topic si besoin (ex: "Finance" si volume élevé)
+
+**Documents impactés** :
+- `_docs/architecture-addendum-20260205.md` (section 11 créée)
+- `CLAUDE.md` (section Observability & Trust Layer mise à jour)
+- `docs/DECISION_LOG.md` (ce fichier)
+- `docs/telegram-topics-setup.md` (à créer - Story 1.6.1)
+- `docs/telegram-user-guide.md` (à créer - Story 1.6.1)
+
+**Rollback plan** : Si complexité topics trop élevée → Revenir à 2 canaux séparés (Control + Logs)
+
+**Ressources** :
+- Discussion complète : Session Party Mode 2026-02-05 (Antonio + Winston + Mary + Amelia)
+- Diagramme architecture : Section 11.2 addendum (Mermaid)
+- Configuration technique : Section 11.6 addendum (`config/telegram.yaml`)
+
+---
+
+## 2026-02-05 : Décision OpenClaw - Friday Natif + Heartbeat custom
+
+**Décision** : Rejeter intégration OpenClaw Day 1, implémenter Heartbeat natif dans Friday
+
+**Raison** :
+- Score décisionnel Antonio : 20/100 points
+  - Multi-chat (WhatsApp, Discord) : NON → +0
+  - Skills identifiées (≥10) : NON → +0
+  - Heartbeat critique Day 1 : OUI → +20
+  - Risque acceptable : INCERTAIN → +0
+- ROI négatif : Coût intégration (70h) vs bénéfice unique heartbeat (10h économisées)
+- Risque supply chain : 341/2857 skills malicieux (12% registry ClawHub)
+- Redondances : OpenClaw n'apporte rien que Friday n'ait déjà (Trust Layer, Presidio, mémoire persistante)
+
+**Alternatives considérées** :
+1. **OpenClaw complet Day 1** : Rejetée car coût 70h + risques moyens + ROI -86% pour seul bénéfice heartbeat
+2. **OpenClaw POC avril (Phase 1)** : Rejetée car Antonio n'a pas besoin multi-chat ni skills
+3. **Heartbeat natif Friday (retenue)** : Coût 10h, zéro risque, contrôle total, intégration native Trust Layer
+
+**Implémentation retenue** :
+- **Story 2.5 : Heartbeat Engine natif** (~10h dev)
+  - Class `FridayHeartbeat` avec interval configurable
+  - LLM décide dynamiquement quoi vérifier (vs cron fixe)
+  - Registration checks avec priorités (high/medium/low)
+  - Context-aware (heure, dernière activité, calendrier)
+  - Intégration native Trust Layer + Telegram
+
+**Bénéfices vs OpenClaw** :
+- ✅ Contrôle total code (pas de dépendance externe)
+- ✅ Intégration native `@friday_action` decorator
+- ✅ Pas de risque supply chain
+- ✅ Maintenance 2h/an vs 20h/an OpenClaw
+- ✅ Debugging 1 système vs 2 systèmes
+- ✅ Coût 10h vs 70h (-86%)
+
+**Porte de sortie** : Réévaluation OpenClaw août 2026 si besoins évoluent (multi-chat, skills auditées identifiées)
+
+**Documents impactés** :
+- `docs/DECISION_LOG.md` (ce fichier)
+- `agents/docs/heartbeat-engine-spec.md` (à créer - Story 2.5)
+- `_docs/architecture-addendum-20260205.md` (section 4 OpenClaw mise à jour)
+- `CLAUDE.md` (ajout Story 2.5 timeline)
+- `_docs/analyse-fonctionnelle-complete.md` (section Heartbeat transversal)
+
+**Rollback plan** : Si Heartbeat natif insuffisant en Q3 2026 → POC OpenClaw avec defense-in-depth (Docker hardenée + Presidio)
+
+**Ressources** :
+- Analyse comparative complète : Session Party Mode 2026-02-05
+- Documentation OpenClaw récente : v2026.2.3 (février 2026)
+- Score décisionnel : <30 points → Option 1 (Friday natif)
+
+---
+
 ## 2026-02-05 : Code Review Adversarial v2 - Corrections multiples
 
 **Décisions** :

@@ -216,41 +216,127 @@ python scripts/compare_ram_estimates.py \
 
 ---
 
-## 4. OpenClaw - Critères précis de réévaluation
+## 4. OpenClaw - Décision finale & Alternative Heartbeat natif
 
-### 4.1 Problématique
+### 4.1 Décision (2026-02-05)
 
-Architecture dit "réévaluation post-socle backend" mais critères vagues ("maturité suffisante").
+**❌ Intégration OpenClaw Day 1 REJETÉE**
 
-### 4.2 Critères obligatoires (Go/No-Go)
+**Raison** : Score décisionnel Antonio = 20/100 points → Friday Natif + Heartbeat custom
 
-| # | Critère | Seuil | Vérification |
-|---|---------|-------|--------------|
-| 1 | **Temps en production** | ≥6 mois version stable | GitHub releases + changelog |
-| 2 | **CVE critiques** | 0 CVE CVSS >7.0 non patchées | CVE database + GitHub Security Advisories |
-| 3 | **Audit sécurité externe** | Rapport public d'audit tiers | Blog officiel OpenClaw |
-| 4 | **Sandboxing durci** | Validation filePath + jail filesystem | Code review manuel `src/sandbox/` |
-| 5 | **Streaming Mistral stable** | Issue #5769 fermée + fix confirmé 2+ semaines | GitHub issues + tests utilisateurs |
-| 6 | **Documentation complète** | API docs + exemples Mistral + Skills best practices | Docs officielles |
+| Critère décisionnel | Réponse Antonio | Points | Justification |
+|---------------------|-----------------|--------|---------------|
+| **Multi-chat nécessaire ?** | ❌ NON | +0 | Telegram suffit, pas besoin WhatsApp/Discord |
+| **Skills identifiées (≥10) ?** | ❌ NON | +0 | Aucune skill ClawHub utile identifiée |
+| **Heartbeat critique Day 1 ?** | ✅ OUI | +20 | Proactivité essentielle pour Antonio |
+| **Risque acceptable ?** | ⚠️ INCERTAIN | +0 | Pas à l'aise avec 5-10% risque PII |
 
-### 4.3 Critères souhaitables (Nice-to-have)
+**Score total : 20 points < 30 → Option 1 : Friday Natif**
 
-- Instances actives <10 000 (vs 42 665 actuellement) = adoption plus raisonnée
-- Rate de fermeture issues <30 jours (vs 45+ actuellement)
-- Skills vérifié ClawHub (certification qualité/sécurité)
+### 4.2 Analyse ROI finale (données février 2026)
 
-### 4.4 Processus de réévaluation
+**Coûts intégration OpenClaw complet** :
 
-**Trigger** : 6 mois après Story 1 (estimation août 2026)
+| Poste | Effort |
+|-------|--------|
+| Dev initial (Docker hardenée, pipeline Presidio) | 15-20h |
+| Audit skills (whitelist 10-15 skills) | 10-15h |
+| Tests sécurité (pentest, validation isolation) | 8-12h |
+| Documentation | 5-8h |
+| Maintenance annuelle (re-audit, mises à jour) | 20-30h |
+| **TOTAL année 1** | **58-85h** |
 
-**Étapes** :
-1. Checklist critères Go/No-Go (Antonio + Claude)
-2. Test POC OpenClaw sur VPS-test (pas prod)
-3. Si OK → Proposal détaillée (coûts, bénéfices, migration)
-4. Décision Antonio (Go/No-Go)
+**Bénéfices OpenClaw pour Friday** :
 
-**Si Go** : Migration progressive (1 module test → 5 modules → all-in)
-**Si No-Go** : Réévaluation dans 6 mois
+| Bénéfice | Gain estimé | Condition |
+|----------|-------------|-----------|
+| Heartbeat proactif | 5-10h économisées | vs cron n8n manuel |
+| Multi-chat intégrations | 15-25h économisées | ❌ Antonio n'en a pas besoin |
+| Skills auditées | 0-50h économisées | ❌ Aucune skill identifiée |
+| **TOTAL réaliste Antonio** | **5-10h** | Heartbeat UNIQUEMENT |
+
+**ROI calculé** :
+```
+Coût = 70h (scénario réaliste)
+Bénéfice = 10h (heartbeat uniquement)
+ROI = (10 - 70) / 70 = -86%  ❌ ROI CATASTROPHIQUE
+```
+
+### 4.3 État OpenClaw février 2026 (sources récentes)
+
+**✅ Progrès confirmés** :
+- v2026.2.3 (04/02/2026) : Hardening sécurité actif
+- Sandbox validation (`filePath`, `capDrop: ALL`)
+- Docker non-root par défaut (uid 1000)
+- Équipe réactive (RCE patché rapidement)
+
+**🚨 Risques critiques persistants** :
+- **341 skills malicieux sur 2,857 audités = 12%** ([TheHackerNews 02/02/2026](https://thehackernews.com/2026/02/researchers-find-341-malicious-clawhub.html))
+- Maintainer ClawHub admet : *"cannot be secured"*
+- Bloomberg (04/02/2026) : *"security a work in progress"*
+- Supply chain attack actif (27 jan - 2 fév 2026)
+
+### 4.4 Alternative retenue : Heartbeat Engine natif Friday
+
+**✅ Story 2.5 : Heartbeat Engine natif** (~10h dev)
+
+**Composants** :
+```python
+# agents/src/core/heartbeat.py
+class FridayHeartbeat:
+    """
+    Heartbeat proactif Friday 2.0
+    Inspiré OpenClaw, mais intégration native
+    """
+    - Interval configurable (default 30min)
+    - LLM décide dynamiquement quoi vérifier (contexte-aware)
+    - Checks enregistrés avec priorités (high/medium/low)
+    - Quiet hours (22h-8h)
+    - Integration native Trust Layer (@friday_action)
+```
+
+**Exemples checks Day 1** :
+- `check_urgent_emails` (high) → Emails urgents non lus
+- `check_financial_alerts` (medium) → Alertes financières, échéances
+- `check_thesis_reminders` (low) → Deadlines thèses étudiants
+
+**Avantages vs OpenClaw** :
+
+| Dimension | OpenClaw | Heartbeat natif Friday | Delta |
+|-----------|----------|------------------------|-------|
+| **Coût dev** | 70h | **10h** | ✅ -86% |
+| **Maintenance** | 20h/an | **2h/an** | ✅ -90% |
+| **Risque supply chain** | 12% skills malicieux | **0%** | ✅ Éliminé |
+| **Intégration Trust Layer** | Custom nécessaire | **Native** | ✅ Seamless |
+| **Debugging** | 2 systèmes | **1 système** | ✅ Simplifié |
+| **Contrôle code** | Dépendance externe | **Total** | ✅ Maîtrisé |
+| **Proactivité** | ✅ Heartbeat | ✅ **Heartbeat** | ⚖️ Équivalent |
+
+**Verdict** : Heartbeat natif apporte 100% du bénéfice recherché (proactivité) pour 14% du coût OpenClaw.
+
+### 4.5 Porte de sortie : Réévaluation août 2026
+
+**Conditions réévaluation OpenClaw** :
+
+**SI** dans 6 mois (août 2026) :
+1. Antonio identifie ≥10 skills ClawHub auditées utiles
+2. Besoin multi-chat émerge (WhatsApp, Discord)
+3. Écosystème OpenClaw s'est stabilisé (supply chain cleaner)
+4. Heartbeat natif Friday s'avère insuffisant
+
+**ALORS** : POC OpenClaw Phase 1 avec defense-in-depth :
+- Docker hardenée (non-root, capDrop ALL, network isolé)
+- Pipeline Presidio obligatoire (anonymisation avant skills)
+- Whitelist skills auditée manuellement
+- VPS-test séparé (pas prod)
+- Monitoring détaillé (Falco ou équivalent)
+
+**SINON** : Friday natif reste l'architecture définitive.
+
+**Documents techniques** :
+- Spec Heartbeat Engine : [agents/docs/heartbeat-engine-spec.md](../agents/docs/heartbeat-engine-spec.md)
+- Decision Log : [docs/DECISION_LOG.md](../docs/DECISION_LOG.md#2026-02-05--décision-openclaw---friday-natif--heartbeat-custom)
+- Analyse comparative : Session Party Mode 2026-02-05 (sources OpenClaw v2026.2.3)
 
 ---
 
@@ -751,6 +837,382 @@ Les references a Zep dans les sections precedentes (6.2 notamment) doivent etre 
 
 ---
 
+## 11. Stratégie de Notification : Telegram Topics Architecture
+
+### 11.1 Contexte & Problématique
+
+**Date de décision** : 2026-02-05
+**Participants** : Antonio (Product Owner), Winston (Architect), Mary (Analyst), Amelia (Dev), via BMAD Party Mode
+
+**Problème identifié** :
+
+L'architecture initiale spécifiait "canal unique Telegram + progressive disclosure" (CLAUDE.md section Observability & Trust Layer) mais cette approche présente un risque critique de **chaos informationnel** :
+
+- Alertes système critiques (RAM >85%, services down)
+- Validations trust=propose (inline buttons requérant action immédiate)
+- Actions automatiques (trust=auto) informatives
+- Messages proactifs heartbeat (toutes les 30min)
+- Métriques et logs non-critiques
+- Conversations bidirectionnelles avec Friday (commandes, questions)
+
+**Tout mélangé dans un seul fil = illisible et contre-productif.**
+
+Antonio a soulevé la question : *"Si tout arrive sur le même canal que le bot... tout ça risque d'être illisible"* → Discussion Party Mode a validé cette préoccupation et conduit à l'architecture ci-dessous.
+
+### 11.2 Décision : Supergroup avec 5 Topics Spécialisés
+
+**Architecture retenue** :
+
+Supergroup Telegram "Friday 2.0 Control" avec 5 topics :
+
+```mermaid
+graph TB
+    subgraph "Friday 2.0 Supergroup"
+        T1[💬 Chat & Proactive<br/>DEFAULT, BIDIRECTIONNEL]
+        T2[📬 Email & Communications]
+        T3[🤖 Actions & Validations]
+        T4[🚨 System & Alerts]
+        T5[📊 Metrics & Logs]
+    end
+
+    Antonio((Antonio)) <-->|Conversations| T1
+    Heartbeat[Heartbeat Engine] -->|Messages proactifs| T1
+    EmailAgent[Email Agent] -->|Classifications| T2
+    TrustLayer[Trust Layer] -->|Validations| T3
+    Monitor[System Monitor] -->|Alertes| T4
+    Metrics[Metrics Service] -->|Stats| T5
+
+    style T1 fill:#90EE90
+    style Antonio fill:#FFD700
+```
+
+#### Topic 1: 💬 Chat & Proactive (DEFAULT, BIDIRECTIONNEL)
+
+**Rôle** : Conversation principale continue avec Friday
+
+**Contenu** :
+- Conversations Antonio ↔ Friday (questions, commandes, réponses)
+- Commandes : `/status`, `/journal`, `/receipt`, `/confiance`, `/stats`
+- Heartbeat checks proactifs (Friday initie toutes les 30min)
+- Suggestions contextuelles et reminders (deadlines thèse, échéances)
+- Message d'onboarding au premier join
+
+**Caractéristiques** :
+- Topic par défaut du supergroup (ouverture automatique)
+- Bidirectionnel : Antonio et Friday échangent naturellement
+- Préserve le contexte conversationnel (heartbeat → question → réponse dans même fil)
+
+**Rationale fusion Chat + Heartbeat** : Antonio a suggéré de fusionner les topics "General/Chat" et "Proactive/Heartbeat" initialement séparés. Rationale validée par Mary (Analyst) : *"Le heartbeat N'EST PAS une notification passive - c'est une invitation à interagir"*. Séparer conversation et proactivité fragmenterait le dialogue naturel.
+
+#### Topic 2: 📬 Email & Communications
+
+**Rôle** : Notifications liées aux emails et communications
+
+**Contenu** :
+- Classifications email automatiques (trust=auto)
+- Pièces jointes détectées et extraites
+- Validations réponses email (si trust=propose pour email.draft_reply)
+- Emails urgents identifiés (priorité high)
+- Résultats Desktop Search
+
+**Modules routés** : `email`, `desktop_search`
+
+#### Topic 3: 🤖 Actions & Validations
+
+**Rôle** : Actions nécessitant validation humaine ou feedback
+
+**Contenu** :
+- Toutes actions trust=propose avec inline buttons (Approve/Reject)
+- Corrections appliquées par Antonio (feedback loop)
+- Trust level changes (auto→propose, propose→auto)
+- Feedbacks traités et règles créées
+
+**Events routés** : `action.pending`, `action.corrected`, `trust.changed`
+
+#### Topic 4: 🚨 System & Alerts
+
+**Rôle** : Santé système et alertes critiques
+
+**Contenu** :
+- Alertes RAM >85% (moniteur VPS-4 48 Go)
+- Services down/up (PostgreSQL, Redis, Qdrant, n8n, etc.)
+- Pipeline errors critiques
+- Backup status (success/failure)
+- Security events (tentatives accès Tailscale, anomalies)
+
+**Priorités routées** : `critical`, `warning`
+
+#### Topic 5: 📊 Metrics & Logs
+
+**Rôle** : Métriques, statistiques, logs non-critiques
+
+**Contenu** :
+- Actions auto (trust=auto) exécutées avec succès
+- Métriques nightly aggregation (trust accuracy par module)
+- Stats trust accuracy hebdomadaires
+- Logs non-critiques (debug, info)
+
+**Priorités routées** : `info`, `debug`
+
+### 11.3 Rationale Architectural
+
+**Pourquoi 5 topics et pas 3 ou 7 ?**
+
+- **Topic 1 (Chat & Proactive)** = Conversation bidirectionnelle continue
+  - C'est LA conversation principale avec Friday
+  - Fusion heartbeat + chat validée pour préserver contexte conversationnel
+
+- **Topics 2-5** = Flux de notifications spécialisés par domaine
+  - Permettent filtrage granulaire via mute/unmute natif Telegram
+  - Séparation par fonction (Email, Actions, System, Logs)
+
+**Principe de séparation** :
+- **Bidirectionnel** (Topic 1) vs **Unidirectionnel** (Topics 2-5)
+- **Conversationnel** (Topic 1) vs **Notificationnel** (Topics 2-5)
+
+**Granularité validée** : 5 topics = équilibre entre simplicité (pas 10+ topics) et spécialisation (pas 2-3 trop génériques).
+
+### 11.4 Routing Logic
+
+**Algorithme de routage des événements** :
+
+```python
+# services/alerting/telegram_notifier.py
+def route_event_to_topic(event: Event) -> int:
+    """
+    Route un événement vers le topic Telegram approprié
+    Retourne le thread_id du topic cible
+    """
+    # Heartbeat et messages proactifs → Chat & Proactive
+    if event.source in ["heartbeat", "proactive"]:
+        return TOPIC_CHAT_PROACTIVE
+
+    # Module email/desktop_search → Email & Communications
+    if event.module in ["email", "desktop_search"]:
+        return TOPIC_EMAIL_COMMS
+
+    # Events action.* → Actions & Validations
+    if event.type.startswith("action."):
+        return TOPIC_ACTIONS_VALIDATIONS
+
+    # Priorité critique/warning → System & Alerts
+    if event.priority in ["critical", "warning"]:
+        return TOPIC_SYSTEM_ALERTS
+
+    # Default : Metrics & Logs
+    return TOPIC_METRICS_LOGS
+```
+
+**Ordre de priorité** : Les conditions sont évaluées séquentiellement. Un événement `action.pending` avec `priority=critical` ira dans **Actions & Validations** (première condition matchée), pas System.
+
+### 11.5 Décisions Complémentaires
+
+#### Quiet Hours : NON implémentés en code
+
+**Rationale** : Les téléphones ont nativement des fonctionnalités de gestion des notifications :
+- Do Not Disturb (DND)
+- Focus modes (iOS, Android)
+- Scheduled silence (22h-8h configurable)
+
+**Pourquoi recoder ça ?** On donne la granularité (topics), Antonio configure son téléphone selon ses besoins.
+
+**Flexibilité utilisateur** : Antonio peut muter/unmuter topics selon le contexte :
+- **Mode Normal** : Tous topics actifs → voit tout en temps réel
+- **Mode Focus** : Mute Email + Metrics, garde Actions + System → validations + alertes uniquement
+- **Mode Deep Work** : Mute tout sauf System → alertes critiques uniquement
+- **Mode Vacances** : Mute tout → check manuel quand il veut
+
+#### Filtrage par module : OUI
+
+Chaque module Friday route ses événements vers le topic approprié selon sa configuration.
+
+**Configuration centralisée** : `config/telegram.yaml` (voir section 11.6)
+
+#### Contrôle utilisateur natif Telegram
+
+- **Mute topic** : Clic droit → Mute (1h, 8h, jusqu'à réactivation)
+- **Notifications push** : Configurables par topic (silencieux, vibration, son)
+- **Historique consultable** : Topics mutés restent consultables manuellement
+
+### 11.6 Configuration Technique
+
+**Fichier** : `config/telegram.yaml`
+
+```yaml
+supergroup:
+  chat_id: ${TELEGRAM_SUPERGROUP_ID}
+  default_topic_id: ${TOPIC_CHAT_PROACTIVE_ID}
+
+topics:
+  chat_proactive:
+    thread_id: ${TOPIC_CHAT_PROACTIVE_ID}
+    name: "Chat & Proactive"
+    default: true
+    bidirectional: true
+    handlers:
+      - commands           # /status, /journal, etc.
+      - questions          # "résume mes emails urgents"
+      - conversations      # chat libre
+      - heartbeat_checks   # Friday initie (toutes les 30min)
+      - reminders          # deadlines thèse, échéances
+      - suggestions        # recommandations contextuelles
+
+  email_comms:
+    thread_id: ${TOPIC_EMAIL_ID}
+    name: "Email & Communications"
+    modules:
+      - email
+      - desktop_search
+
+  actions_validations:
+    thread_id: ${TOPIC_ACTIONS_ID}
+    name: "Actions & Validations"
+    events:
+      - action.pending
+      - action.corrected
+      - trust.changed
+
+  system_alerts:
+    thread_id: ${TOPIC_SYSTEM_ID}
+    name: "System & Alerts"
+    priority:
+      - critical
+      - warning
+
+  metrics_logs:
+    thread_id: ${TOPIC_METRICS_ID}
+    name: "Metrics & Logs"
+    priority:
+      - info
+      - debug
+```
+
+**Variables d'environnement requises** (`.env`) :
+
+```bash
+TELEGRAM_SUPERGROUP_ID=<chat_id du supergroup>
+TOPIC_CHAT_PROACTIVE_ID=<thread_id topic 1>
+TOPIC_EMAIL_ID=<thread_id topic 2>
+TOPIC_ACTIONS_ID=<thread_id topic 3>
+TOPIC_SYSTEM_ID=<thread_id topic 4>
+TOPIC_METRICS_ID=<thread_id topic 5>
+```
+
+**Obtention des thread IDs** : Voir guide technique `docs/telegram-topics-setup.md` (à créer Story 1.6).
+
+### 11.7 Onboarding UX
+
+Quand Antonio rejoint le supergroup la première fois, Friday envoie un **message onboarding dans Chat & Proactive** :
+
+```
+🎉 Bienvenue dans Friday 2.0 Control, Antonio !
+
+📚 Guide rapide des topics :
+
+💬 Chat & Proactive (ici) - Conversations avec Friday, heartbeat, reminders
+📬 Email & Communications - Classifications email et pièces jointes
+🤖 Actions & Validations - Approbations requises (buttons interactifs)
+🚨 System & Alerts - Santé système et alertes critiques
+📊 Metrics & Logs - Stats et logs détaillés
+
+💡 Astuce : Mute les topics dont tu n'as pas besoin en ce moment.
+   Tu peux toujours les consulter manuellement plus tard !
+
+Commandes utiles : /status, /journal, /confiance
+
+Prêt à commencer ? 🚀
+```
+
+**Suggestion Mary (Analyst)** : Ce message aide Antonio à comprendre **où regarder pour quoi** sans lire 50 pages de doc.
+
+### 11.8 Impact sur Stories Existantes
+
+#### Story 1.5 (Observability & Trust Layer)
+
+**Modifications requises** :
+
+1. `services/alerting/telegram_notifier.py` doit implémenter routing multi-topics
+   - Remplacer envoi sur canal unique par routage selon `route_event_to_topic()`
+   - Tester tous les cas de routage (unit tests)
+
+2. Bot Telegram doit gérer messages entrants (bidirectionnel)
+   - Listener sur topic Chat & Proactive pour commandes Antonio
+   - Réponses dans le même thread_id
+
+3. Inline buttons pour validations dans Actions & Validations topic
+   - Boutons Approve/Reject doivent fonctionner en context topic
+
+**Estimation impact** : +4h dev + 2h tests
+
+#### Story 2.5 (Heartbeat Engine)
+
+**Modifications requises** :
+
+- Heartbeat checks s'affichent dans **Chat & Proactive topic**
+- Conversations initiées par heartbeat continuent dans même fil (préservation contexte)
+
+**Estimation impact** : Aucun (architecture déjà compatible)
+
+#### Nouvelle Story 1.6 : Telegram Topics Implementation
+
+**À créer** (voir section 11.9 ci-dessous)
+
+### 11.9 Story 1.6 - Telegram Topics Implementation (Outline)
+
+**Epic** : Telegram Topics Architecture
+
+**Stories** :
+
+1. **Story 1.6.1 : Documentation** (cette section + guides)
+   - Section 11 architecture-addendum ✅ (ce document)
+   - Guide technique setup (`docs/telegram-topics-setup.md`)
+   - User guide (`docs/telegram-user-guide.md`)
+   - Mise à jour CLAUDE.md
+   - Mise à jour DECISION_LOG.md
+
+2. **Story 1.6.2 : Supergroup Setup** (manuel Antonio)
+   - Créer supergroup Telegram
+   - Activer topics feature
+   - Créer 5 topics nommés
+   - Ajouter bot Friday (admin rights)
+   - Extraire thread IDs via script
+
+3. **Story 1.6.3 : Bot Routing Implementation**
+   - Config `telegram.yaml` avec topics
+   - Router logic par module/priorité/type
+   - Bidirectional message handling (Chat & Proactive)
+   - Unit tests routing
+
+4. **Story 1.6.4 : Inline Buttons & Commands**
+   - Inline buttons pour trust=propose validations
+   - Command handlers (`/status`, `/journal`, etc.)
+   - Onboarding message au first join
+   - Integration tests
+
+5. **Story 1.6.5 : E2E Testing & Deployment**
+   - Test E2E tous topics
+   - Validation routing correct (100 events simulés)
+   - Performance test (100 events/min)
+   - Déploiement production
+
+**Durée totale estimée** : 17-18h (2-3 jours dev)
+
+**Dépendances** : Story 1.6.1 DONE avant 1.6.3 start.
+
+### 11.10 Décisions Différées (v2.0 post-MVP)
+
+Les fonctionnalités suivantes sont **hors scope v1.0** :
+
+- **Notifications push sélectives par topic** : Config granulaire par topic (son custom, vibration pattern)
+- **Message formatting avancé** : Embeds, rich media, graphs inline
+- **Analytics par topic** : Taux de lecture, temps de réponse, engagement
+- **Telegram Mini Apps intégration** : Dashboard interactif in-app
+- **Multi-langue topics** : Noms topics localisés (FR/EN selon config)
+
+**Réévaluation** : 3 mois après Story 1.6 déployée (feedback Antonio).
+
+---
+
 **Cree le** : 2026-02-05
-**Mis a jour** : 2026-02-05 (review adversariale - ajout sections 7-10)
-**Version** : 1.1
+**Mis a jour** : 2026-02-05 (review adversariale - ajout sections 7-11)
+**Version** : 1.2

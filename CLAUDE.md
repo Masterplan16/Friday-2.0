@@ -204,6 +204,28 @@ class ActionResult(BaseModel):
 | `/confiance` | Tableau accuracy par module |
 | `/stats` | Métriques globales agrégées |
 
+#### Stratégie de Notification - Telegram Topics (Story 1.6)
+
+**Architecture** : Supergroup Telegram avec **5 topics spécialisés** (décision 2026-02-05)
+
+| Topic | Rôle | Contenu |
+|-------|------|---------|
+| 💬 **Chat & Proactive** (DEFAULT) | Conversation bidirectionnelle | Commandes, questions, heartbeat, reminders |
+| 📬 **Email & Communications** | Notifications email | Classifications, PJ, emails urgents |
+| 🤖 **Actions & Validations** | Validations trust=propose | Inline buttons Approve/Reject |
+| 🚨 **System & Alerts** | Santé système | RAM >85%, services down, errors |
+| 📊 **Metrics & Logs** | Métriques non-critiques | Actions auto, stats, logs |
+
+**Rationale** : Éviter le chaos informationnel (tout mélangé dans un seul canal = illisible). Topics permettent filtrage granulaire via mute/unmute natif Telegram selon contexte utilisateur.
+
+**Contrôle utilisateur** :
+- Mode Normal : Tous topics actifs
+- Mode Focus : Mute Email + Metrics, garde Actions + System
+- Mode Deep Work : Mute tout sauf System
+- Pas de quiet hours codées (utiliser fonctionnalités natives téléphone)
+
+**Voir** : [Architecture addendum §11](_docs/architecture-addendum-20260205.md#11-stratégie-de-notification--telegram-topics-architecture) pour spécification complète (routing logic, configuration, impact stories).
+
 ---
 
 ## 🗂️ Standards techniques
@@ -523,6 +545,47 @@ docker compose logs -f gateway          # Gateway uniquement
 7. Nightly metrics aggregation (`services/metrics/nightly.py`)
 8. Tests unitaires + intégration trust middleware
 
+**Story 2 : Module Email (premier module métier)**
+
+1. Agent Email (`agents/src/agents/email/agent.py`)
+2. Classification emails (4 comptes IMAP)
+3. Extraction PJ → transit VPS → Archiviste
+4. Trust Level PROPOSE (validation humaine Day 1)
+5. Tests unitaires + intégration
+
+**Story 2.5 : Heartbeat Engine (proactivité native)** (~10h)
+
+**Décision (2026-02-05)** : Implémenter Heartbeat natif Friday (vs OpenClaw complet ROI -86%)
+
+1. ✅ Spec technique complète — **CRÉÉE** ([agents/docs/heartbeat-engine-spec.md](agents/docs/heartbeat-engine-spec.md))
+2. Class `FridayHeartbeat` (`agents/src/core/heartbeat.py`)
+   - Interval configurable (default 30min)
+   - LLM décide dynamiquement quoi vérifier (contexte-aware)
+   - Checks registration avec priorités (high/medium/low)
+   - Quiet hours (22h-8h)
+3. `ContextProvider` (`agents/src/core/context.py`)
+   - Heure, jour, weekend
+   - Dernière activité Antonio
+   - Prochain événement calendrier
+4. Checks Day 1 :
+   - `check_urgent_emails` (high)
+   - `check_financial_alerts` (medium)
+   - `check_thesis_reminders` (low)
+5. Configuration (`config/heartbeat.yaml`)
+6. Intégration main (`agents/src/main.py`)
+7. Monitoring endpoint (`/api/v1/heartbeat/status`)
+8. Tests unitaires + intégration
+
+**Rationale** : Antonio a besoin heartbeat proactif (critique Day 1) MAIS pas multi-chat ni skills OpenClaw → Heartbeat natif = 100% bénéfice recherché pour 14% coût OpenClaw.
+
+**Porte de sortie** : Réévaluation OpenClaw août 2026 si besoins évoluent (multi-chat, skills auditées identifiées).
+
+**Story 3 : Module Finance + Archiviste**
+
+1. Module Finance (classification transactions)
+2. Module Archiviste (OCR, renommage, classement)
+3. Intégration checks heartbeat (`check_financial_alerts`)
+
 **Dépendances critiques avant Story 2 :**
 - PostgreSQL 16 opérationnel avec 3 schemas + migrations 001-012 appliquées (inclut `core.tasks`, `core.events`, `ingestion.emails_legacy`)
 - Redis 7 opérationnel (cache + Streams pour événements critiques + Pub/Sub pour informatifs)
@@ -533,7 +596,7 @@ docker compose logs -f gateway          # Gateway uniquement
 - **Presidio + spaCy-fr installés** (RGPD avant tout appel LLM cloud, mapping éphémère Redis TTL court)
 - **Note** : ~~Apple Watch Ultra~~ hors scope Day 1 (pas d'API serveur, réévaluation >12 mois)
 
-**Fichiers Story 1 + 1.5 :**
+**Fichiers Story 1 + 1.5 + 2.5 :**
 - ✅ `docker-compose.yml` + `docker-compose.services.yml` — **CRÉÉS**
 - ✅ `database/migrations/001-012_*.sql` (Story 1 + 1.5) — **CRÉÉES** (12 migrations inclut emails_legacy)
 - 📋 `scripts/apply_migrations.py` — À créer (Story 1)
@@ -541,13 +604,18 @@ docker compose logs -f gateway          # Gateway uniquement
 - ✅ `config/trust_levels.yaml` — **CRÉÉ**
 - ✅ `tests/fixtures/README.md` (plan datasets) — **CRÉÉ**
 - ✅ `.sops.yaml` — **CRÉÉ** (template secrets management)
-- ✅ `docs/DECISION_LOG.md` — **CRÉÉ** (historique décisions)
+- ✅ `docs/DECISION_LOG.md` — **CRÉÉ** (historique décisions + décision OpenClaw 2026-02-05)
 - ✅ `docs/playwright-automation-spec.md` — **CRÉÉ** (spec Browser automation)
 - ✅ `agents/src/tools/anonymize.py` (Presidio integration) — **CRÉÉ** (Story 1.5.1)
 - ✅ `agents/src/middleware/models.py` (ActionResult) — **CRÉÉ** (Story 1.5.2)
 - ✅ `agents/src/middleware/trust.py` (@friday_action) — **CRÉÉ** (Story 1.5.2)
 - ✅ `services/alerting/` — **CRÉÉ** (listener Redis Streams + Telegram)
 - ✅ `services/metrics/` — **CRÉÉ** (nightly aggregation trust metrics)
+- ✅ `agents/docs/heartbeat-engine-spec.md` — **CRÉÉ** (spec Heartbeat Engine Story 2.5)
+- ✅ `_docs/architecture-addendum-20260205.md` — **MIS À JOUR** (section 4 : décision OpenClaw + alternative Heartbeat)
+- 📋 `agents/src/core/heartbeat.py` — À créer (Story 2.5)
+- 📋 `agents/src/core/context.py` — À créer (Story 2.5)
+- 📋 `config/heartbeat.yaml` — À créer (Story 2.5)
 
 **Décision memorystore (2026-02-05)** : Zep a cessé ses opérations en 2024. **Day 1** : Démarrer avec `adapters/memorystore.py` pointant vers **PostgreSQL (knowledge.*) + Qdrant (embeddings)**. **Ré-évaluation Graphiti** : 6 mois après Story 1 (~août 2026) si v1.0 stable atteinte (critères : >500 stars GitHub, doc API complète, tests charge 100k+ entités). Sinon → Neo4j Community Edition. Voir [addendum section 10](_docs/architecture-addendum-20260205.md).
 

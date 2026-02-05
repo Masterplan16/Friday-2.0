@@ -66,7 +66,7 @@ Le ton, le tutoiement/vouvoiement, l'humour, le style de communication sont conf
 
 | Source | Mode d'ingestion |
 |--------|-----------------|
-| 4 comptes mails | Via Thunderbird |
+| 4 comptes mails | Via EmailEngine (auto-hébergé Docker) — Thunderbird reste interface lecture optionnelle |
 | Documents scannés | Scanner physique |
 | Photos | Téléphone → BeeStation |
 | Transcriptions audio | Plaud Note |

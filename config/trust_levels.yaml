@@ -1,0 +1,174 @@
+# Trust Levels - Configuration initiale Friday 2.0
+# Date: 2026-02-05
+# Version: 1.0.0
+#
+# Niveaux de confiance:
+# - auto: Exécute + notifie après coup
+# - propose: Prépare + attend validation Telegram (inline buttons)
+# - blocked: Analyse uniquement, jamais d'action
+
+# Initialisation basée sur le risque:
+# - Risque bas (erreur = gênante) → auto
+# - Risque moyen (erreur = perte de temps) → propose pendant 2-4 semaines
+# - Risque élevé (erreur = conséquence réelle) → blocked toujours
+
+---
+
+# MODULE 1: Moteur Vie (Pipeline mail + Desktop search)
+email:
+  classify: propose  # Risque moyen - erreur classification = perte de temps
+  extract_tasks: propose  # Risque moyen - fausse tâche = clutter
+  extract_attachments: auto  # Risque bas - extraction mécanique
+  draft_reply: blocked  # Risque élevé - envoi mail au mauvais ton = conséquence réelle
+  prioritize: propose  # Risque moyen - mauvaise priorisation = temps perdu
+
+desktop_search:
+  index: auto  # Risque bas - indexation
+  search: auto  # Risque bas - recherche ne modifie rien
+
+# MODULE 2: Archiviste (OCR, renommage, classement)
+# Note: clé = nom du dossier agents/src/agents/archiviste/
+archiviste:
+  ocr: auto  # Risque bas - OCR = lecture seule
+  rename: propose  # Risque moyen - mauvais nom = désorganisation
+  classify: propose  # Risque moyen - mauvaise catégorie = recherche difficile
+  extract_metadata: auto  # Risque bas - extraction données
+  track_warranty: auto  # Risque bas - tracking garantie
+
+# MODULE 3: Agenda (multi-casquettes)
+agenda:
+  extract_event: propose  # Risque moyen - faux événement = agenda pollué
+  schedule: blocked  # Risque élevé - mauvais créneau = conflit réel
+  remind: auto  # Risque bas - rappel = simple notification
+
+# MODULE 4: Briefing matinal
+briefing:
+  generate: auto  # Risque bas - briefing = informatif uniquement
+  aggregate_data: auto  # Risque bas - agrégation données
+  prioritize_items: propose  # Risque moyen - mauvaise priorisation
+
+# MODULE 5: Plaud Note (transcription → cascade actions)
+plaud:
+  transcribe: auto  # Risque bas - transcription = lecture
+  extract_actions: propose  # Risque moyen - fausses actions détectées
+  extract_events: propose  # Risque moyen - faux événements
+  extract_thesis_notes: propose  # Risque moyen - mauvaise détection sujet thèse
+
+# MODULE 6: Photos (BeeStation)
+photos:
+  index: auto  # Risque bas - indexation
+  classify: auto  # Risque bas - classification photos
+  search: auto  # Risque bas - recherche
+
+# MODULE 7: Aide en consultation (médical, posologies, recos HAS)
+medical:
+  interpret_ecg: blocked  # Risque critique - conseil médical = responsabilité légale
+  check_interactions: blocked  # Risque critique - erreur = danger patient
+  suggest_posology: blocked  # Risque critique - erreur dosage = danger
+  fetch_recommendations: auto  # Risque bas - fetch HAS = lecture seule
+
+# MODULE 8: Veilleur Droit (contrats, clauses, audit)
+legal:
+  analyze_contract: blocked  # Risque élevé - mauvaise analyse = décision juridique erronée
+  detect_abusive_clauses: blocked  # Risque élevé - manquer clause = conséquence légale
+  compare_versions: propose  # Risque moyen - comparaison = aide décision
+  summarize: propose  # Risque moyen - résumé = informatif
+
+# MODULE 9: Tuteur Thèse (pré-correction méthodologique)
+thesis_tutor:
+  check_structure: propose  # Risque moyen - faux positif = étudiant confus
+  check_methodology: propose  # Risque moyen - suggestion = à valider
+  check_statistics: blocked  # Risque élevé - erreur stats = thèse invalidée
+  generate_comments: propose  # Risque moyen - commentaire = suggestion
+
+# MODULE 10: Check Thèse (anti-hallucination, sources)
+thesis_checker:
+  verify_references: propose  # Risque moyen - faux négatif = source manquée
+  check_predatory_journals: propose  # Risque moyen - alerte = à vérifier
+  suggest_missing_articles: propose  # Risque moyen - suggestion
+
+# MODULE 11: Générateur TCS
+tcs_generator:
+  generate_vignette: propose  # Risque moyen - vignette incorrecte = QCM invalide
+  simulate_expert_panel: propose  # Risque moyen - simulation = aide décision
+
+# MODULE 12: Générateur ECOS
+ecos_generator:
+  generate_station: propose  # Risque moyen - station incorrecte = examen invalide
+  generate_grading_grid: propose  # Risque moyen - grille = à valider
+
+# MODULE 13: Actualisateur de cours
+course_updater:
+  extract_sections: auto  # Risque bas - extraction = lecture
+  fetch_recent_data: auto  # Risque bas - fetch PubMed = lecture
+  generate_updates: propose  # Risque moyen - mise à jour = à valider
+
+# MODULE 14: Suivi financier (5 périmètres)
+finance:
+  classify_transaction: propose  # Risque moyen - mauvaise catégorie = comptabilité faussée
+  detect_duplicate: propose  # Risque moyen - faux positif = alerte inutile
+  track_treasury: auto  # Risque bas - tracking = lecture
+  export_accounting: blocked  # Risque élevé - export comptable = données officielles
+
+# MODULE 15: Détection d'anomalies financières
+finance_anomalies:
+  detect_anomaly: propose  # Risque moyen - faux positif = alerte inutile
+  audit_subscriptions: propose  # Risque moyen - suggestion annulation
+
+# MODULE 16: Optimisation fiscale inter-structures (nice to have)
+fiscal_optimization:
+  suggest_optimization: blocked  # Risque critique - conseil fiscal = responsabilité légale
+
+# MODULE 17: Aide à l'investissement
+investment:
+  analyze_financial_situation: propose  # Risque moyen - analyse = aide décision
+  compare_options: propose  # Risque moyen - comparaison = informatif
+  suggest_decision: blocked  # Risque élevé - conseil investissement = conséquence financière
+
+# MODULE 18: Menus & Courses
+menus:
+  generate_menu: propose  # Risque moyen - menu inadapté = repas non mangé
+  generate_shopping_list: propose  # Risque moyen - liste = à valider avant courses
+  # order_carrefour retiré du scope (Browser-Use non fiable, 60% réel)
+
+# MODULE 19: Coach remise en forme
+coach:
+  generate_workout: propose  # Risque moyen - programme inadapté = blessure potentielle
+  adjust_intensity: propose  # Risque moyen - ajustement = à valider
+  track_progress: auto  # Risque bas - tracking = lecture
+
+# MODULE 20: Entretien cyclique
+maintenance:
+  track_cycles: auto  # Risque bas - tracking = lecture
+  remind: auto  # Risque bas - rappel = notification
+  schedule_appointment: blocked  # Risque élevé - prise RDV = engagement réel
+
+# MODULE 21: Collection jeux vidéo
+collection:
+  add_item: propose  # Risque moyen - ajout = base de données
+  track_value: auto  # Risque bas - tracking valeur
+  alert_price_change: auto  # Risque bas - alerte = notification
+
+# MODULE 22: CV académique (nice to have)
+cv:
+  extract_data: auto  # Risque bas - extraction = lecture
+  generate_cv: propose  # Risque moyen - CV = à relire avant envoi
+
+# MODULE 23: Mode HS / Vacances
+vacation:
+  enable_mode: propose  # Risque moyen - activation = impact workflows
+  auto_reply: propose  # Risque moyen - réponse auto = communication externe
+  pause_workflows: propose  # Risque moyen - pause = impact système
+  generate_return_briefing: auto  # Risque bas - briefing = lecture
+
+# SYSTÈME (transversal)
+system:
+  backup: auto  # Risque bas - backup = lecture/copie
+  monitor_ram: auto  # Risque bas - monitoring = lecture
+  alert: auto  # Risque bas - alerte = notification
+
+# Notes:
+# - Trust levels peuvent être ajustés manuellement via Telegram: /trust set <module> <action> <level>
+# - Promotion auto: propose → auto si accuracy >95% sur 3 semaines
+# - Rétrogradation auto: auto → propose si accuracy <90% sur 1 semaine
+# - blocked → propose: JAMAIS automatique, décision Antonio uniquement

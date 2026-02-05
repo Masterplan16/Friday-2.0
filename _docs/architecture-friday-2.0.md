@@ -329,8 +329,8 @@ tailscale up --hostname=friday-vps
 | Decision | Choix | Source |
 |----------|-------|--------|
 | Langage principal (agents) | Python 3.12+ | LangGraph requirement |
-| Framework agents IA | LangGraph 1.2.0 | Decision architecturale |
-| Orchestration workflows data | n8n 2.4.8 | Decision architecturale |
+| Framework agents IA | LangGraph 0.2.45+ | Decision architecturale |
+| Orchestration workflows data | n8n 1.69.2+ | Decision architecturale |
 | Provider LLM | Mistral (ecosysteme complet) | Decision utilisateur |
 | Base de donnees | PostgreSQL 16 | Exigence I3 |
 | Stockage vectoriel | Qdrant | Exigence I4 |
@@ -757,6 +757,9 @@ L'analyse besoins previent : "A trop anonymiser, on perd la capacite de recherch
 | Evenements async (nouveau mail, fichier traite) | Redis Pub/Sub |
 | Requetes sync (demande STT, appel LLM) | HTTP interne via Docker network |
 | Workflows orchestres | n8n (webhooks + nodes custom) |
+| Jobs infra avec garantie de livraison | Redis Streams (complement n8n) |
+
+> **Note** : Redis Pub/Sub est **fire-and-forget** — si aucun subscriber n'ecoute au moment de la publication, le message est perdu. C'est acceptable pour les notifications temps reel (alertes, trust events). Pour les evenements critiques necessitant une garantie de livraison (ex: `email.received` declenchant un pipeline), utiliser Redis Streams ou n8n webhooks qui persistent les messages.
 
 #### 3d. Rate limiting
 
@@ -881,16 +884,22 @@ Quand Antonio corrige une action :
 5. Les regles sont injectees dans les prompts LLM (SELECT + injection, pas de RAG)
 
 ```sql
+-- Définition simplifiée (voir version complète dans la clarification "Feedback loop" ci-dessous)
+-- La table complète inclut : UUID PK, module, action, scope, conditions JSONB,
+-- output JSONB, priority, active, created_at, created_by + indexes
 CREATE TABLE core.correction_rules (
-    id SERIAL PRIMARY KEY,
+    id UUID PRIMARY KEY,
     module TEXT NOT NULL,
+    action TEXT NOT NULL,
+    scope TEXT DEFAULT 'module',
     conditions JSONB NOT NULL,
-    output TEXT NOT NULL,
+    output JSONB NOT NULL,
+    priority INT DEFAULT 1,
     source_receipts UUID[] NOT NULL,
     hit_count INT DEFAULT 0,
-    active BOOLEAN DEFAULT true,
-    approved_by TEXT,
-    created_at TIMESTAMPTZ DEFAULT NOW()
+    active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    created_by TEXT DEFAULT 'Antonio'
 );
 ```
 
@@ -1562,7 +1571,7 @@ friday-2.0/
 ├── .env.example
 ├── docker-compose.yml                 # Services principaux (PostgreSQL, Redis, Qdrant, n8n, Caddy)
 ├── docker-compose.dev.yml             # Override developpement local
-├── docker-compose.services.yml        # Services lourds a la demande (Ollama, STT, TTS, OCR)
+├── docker-compose.services.yml        # Services lourds residents (Ollama, STT, TTS, OCR) — VPS-4 48 Go
 ├── Makefile                           # make up, make logs, make backup, make migrate
 │
 ├── scripts/
@@ -1572,7 +1581,7 @@ friday-2.0/
 │   ├── apply_migrations.py            # Execution migrations SQL numerotees + backup pre-migration
 │   ├── deploy.sh                      # Deploiement via git pull
 │   ├── dev-setup.sh                   # [AJOUT] Setup automatise dev (deps, services, migrations, seed)
-│   ├── monitor-ram.sh                 # [AJOUT] Monitoring RAM cron (alerte Telegram si >90%)
+│   ├── monitor-ram.sh                 # [AJOUT] Monitoring RAM cron (alerte Telegram si >85%)
 │   ├── start-service.sh               # Demarrer service lourd (Ollama/STT/TTS/OCR)
 │   └── stop-service.sh                # Arreter service lourd
 │
@@ -1650,7 +1659,7 @@ friday-2.0/
 │       │   │   ├── agent.py           # EmailAgent (tout dans 1 fichier Day 1)
 │       │   │   └── schemas.py         # Pydantic models
 │       │   │
-│       │   ├── archiver/              # Module 2: Archiviste
+│       │   ├── archiviste/              # Module 2: Archiviste
 │       │   │   ├── __init__.py
 │       │   │   ├── agent.py           # ArchiverAgent (tout dans 1 fichier Day 1)
 │       │   │   └── schemas.py
@@ -2228,7 +2237,7 @@ fi
 ```
 # Avant (Day 1 - flat)
 agents/src/agents/email/agent.py          # 450 lignes
-agents/src/agents/archiver/agent.py       # 380 lignes
+agents/src/agents/archiviste/agent.py       # 380 lignes
 
 # Après (si douleur réelle)
 agents/src/agents/email/
@@ -2246,7 +2255,7 @@ agents/src/agents/email/
 ### Coherence Validation ✅
 
 **Decision Compatibility:**
-Toutes les technologies choisies sont compatibles sans conflit. Python 3.12 + LangGraph 1.2.0 + n8n 2.4.8 + Mistral (cloud + Ollama local) + PostgreSQL 16 + Redis 7 + Qdrant + Zep/Graphiti + Caddy + Tailscale forment un stack cohérent. Les versions sont spécifiées pour éviter les incompatibilités futures. Les corrections Party Mode (retrait Celery/SQLAlchemy/Prometheus) ont éliminé les redondances et contradictions.
+Toutes les technologies choisies sont compatibles sans conflit. Python 3.12 + LangGraph 0.2.45+ + n8n 1.69.2+ + Mistral (cloud + Ollama local) + PostgreSQL 16 + Redis 7 + Qdrant + Zep/Graphiti + Caddy + Tailscale forment un stack cohérent. Les versions sont spécifiées pour éviter les incompatibilités futures. Les corrections Party Mode (retrait Celery/SQLAlchemy/Prometheus) ont éliminé les redondances et contradictions.
 
 **Pattern Consistency:**
 Les patterns d'implémentation supportent toutes les décisions architecturales. Event-driven (Redis Pub/Sub) + REST API (FastAPI) + adaptateurs (5 types) + migrations SQL numérotées forment un ensemble cohérent. Naming conventions uniformes (events dot notation `email.received`, schemas `core/ingestion/knowledge`, migrations `001_*.sql`). Structure flat agents/ (KISS Day 1) + adapters/ séparés (évolutibilité).
@@ -2277,7 +2286,7 @@ Les 37 exigences techniques sont couvertes à 100% :
 ### Implementation Readiness Validation ✅
 
 **Decision Completeness:**
-Toutes les décisions critiques sont documentées avec versions exactes (Python 3.12+, LangGraph 1.2.0, n8n 2.4.8, PostgreSQL 16, Redis 7). Les patterns d'implémentation sont complets : adaptateurs (5 fichiers avec interfaces abstraites), event-driven (Redis Pub/Sub), migrations SQL numérotées (script `apply_migrations.py`), error handling standardisé (`FridayError` hierarchy + `RETRYABLE_EXCEPTIONS`), **Observability & Trust Layer** (middleware `@friday_action`, receipts, trust levels, feedback loop). Consistency rules explicites : KISS (flat structure Day 1), évolutibilité (pattern adaptateur), RAM VPS-4 48 Go (services lourds tous residents). Exemples fournis pour tous les patterns majeurs : LLM adapter (45 lignes), RAM profiles (dict config), health checks (dict config), tests critiques (Presidio + orchestrator), trust middleware (`@friday_action` + `ActionResult`).
+Toutes les décisions critiques sont documentées avec versions exactes (Python 3.12+, LangGraph 0.2.45+, n8n 1.69.2+, PostgreSQL 16, Redis 7). Les patterns d'implémentation sont complets : adaptateurs (5 fichiers avec interfaces abstraites), event-driven (Redis Pub/Sub), migrations SQL numérotées (script `apply_migrations.py`), error handling standardisé (`FridayError` hierarchy + `RETRYABLE_EXCEPTIONS`), **Observability & Trust Layer** (middleware `@friday_action`, receipts, trust levels, feedback loop). Consistency rules explicites : KISS (flat structure Day 1), évolutibilité (pattern adaptateur), RAM VPS-4 48 Go (services lourds tous residents). Exemples fournis pour tous les patterns majeurs : LLM adapter (45 lignes), RAM profiles (dict config), health checks (dict config), tests critiques (Presidio + orchestrator), trust middleware (`@friday_action` + `ActionResult`).
 
 **Structure Completeness:**
 La structure projet est complète avec ~150 fichiers spécifiés dans l'arborescence Step 6. Tous les répertoires sont définis : `agents/` (23 modules), `services/` (gateway, stt, tts, ocr), `bot/` (Telegram), `n8n-workflows/` (7 workflows JSON), `database/` (migrations SQL), `tests/` (unit, integration, e2e), `docs/`, `scripts/` (setup, backup, deploy, monitor-ram). Integration points clairement spécifiés : FastAPI Gateway expose `/api/v1/*`, Redis Pub/Sub pour événements (`email.received`, `document.processed`), n8n pour workflows data (cron briefing, watch GDrive Plaud). Component boundaries : 3 schemas PostgreSQL (`core`, `ingestion`, `knowledge`), adapters/ séparés du code métier, Docker Compose multi-fichiers (principal + dev + services lourds).
@@ -2327,7 +2336,7 @@ Total effort : 3h50. RAM impact : 0 Mo supplémentaire (VPS-4 48 Go, marge ~25 G
 
 **✅ Architectural Decisions**
 
-- [x] Décisions critiques documentées avec versions (Python 3.12, LangGraph 1.2.0, n8n 2.4.8, PostgreSQL 16, Redis 7, Mistral cloud+local)
+- [x] Décisions critiques documentées avec versions (Python 3.12, LangGraph 0.2.45+, n8n 1.69.2+, PostgreSQL 16, Redis 7, Mistral cloud+local)
 - [x] Tech stack complet (infrastructure I1-I4, traitement IA T1-T12, communication C1-C4, connecteurs S1-S12)
 - [x] Integration patterns définis (REST FastAPI, Redis Pub/Sub, HTTP interne Docker, n8n workflows)
 - [x] Performance considerations (services lourds residents VPS-4 48 Go, zero cold start, latence ≤30s)
@@ -2422,7 +2431,7 @@ Story 1 : Infrastructure de base
 mkdir friday-2.0 && cd friday-2.0
 git init
 
-# 2. Docker Compose (PostgreSQL 16, Redis 7, Qdrant, n8n 2.4.8, Caddy)
+# 2. Docker Compose (PostgreSQL 16, Redis 7, Qdrant, n8n 1.69.2+, Caddy)
 # docker-compose.yml + docker-compose.dev.yml + docker-compose.services.yml
 docker compose up -d postgres redis qdrant
 
@@ -2462,7 +2471,7 @@ Dépendances critiques avant story suivante :
 
 **📋 Complete Architecture Document**
 
-- Toutes décisions architecturales documentées avec versions spécifiques (Python 3.12, LangGraph 1.2.0, n8n 2.4.8, PostgreSQL 16, Redis 7, Mistral cloud+local)
+- Toutes décisions architecturales documentées avec versions spécifiques (Python 3.12, LangGraph 0.2.45+, n8n 1.69.2+, PostgreSQL 16, Redis 7, Mistral cloud+local)
 - Patterns d'implémentation garantissant la cohérence AI agents (adaptateurs, event-driven, REST, migrations SQL numérotées)
 - Structure projet complète avec tous fichiers et répertoires (~150 fichiers définis)
 - Mapping requirements → architecture (37 exigences techniques + 23 modules → fichiers spécifiques)

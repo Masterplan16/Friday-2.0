@@ -575,7 +575,27 @@ New-BurntToastNotification -Text "Claude", "Toujours en cours..."
 - **Stratégie tests IA** : [docs/testing-strategy-ai.md](docs/testing-strategy-ai.md)
   *Pyramide de tests (80% unit mocks, 15% integ datasets, 5% E2E). Métriques qualité, datasets validation, tests critiques RGPD/RAM/Trust*
 
+- **Roadmap implémentation** : [docs/implementation-roadmap.md](docs/implementation-roadmap.md)
+  *Stories détaillées (1-9+), séquence implémentation, Acceptance Criteria, dépendances, durées estimées*
+
+- **Addendum architecture (2026-02-05)** : [_docs/architecture-addendum-20260205.md](_docs/architecture-addendum-20260205.md)
+  *Clarifications techniques complémentaires : Presidio benchmark, pattern detection algo, profils RAM sources, critères OpenClaw, population graphe initiale*
+
+### Configuration & Scripts implémentation
+
+- **Trust levels config** : [config/trust_levels.yaml](config/trust_levels.yaml)
+  *Configuration initiale trust levels pour les 23 modules (auto/propose/blocked par action)*
+
+- **Script migration emails** : [scripts/migrate_emails.py](scripts/migrate_emails.py)
+  *Migration 55k emails avec checkpointing, retry, resume, progress tracking*
+
+- **Test backup/restore** : [tests/e2e/test_backup_restore.sh](tests/e2e/test_backup_restore.sh)
+  *Test E2E complet : backup PostgreSQL → disaster simulation → restore → validation intégrité*
+
+- **Plan création datasets** : [tests/fixtures/README.md](tests/fixtures/README.md)
+  *Guide complet création datasets tests IA (PII, Email Classification, Archiviste, Finance, Thèse). Durées, responsable, formats*
+
 ---
 
-**Version** : 1.2.0 (2026-02-05)
-**Status** : Architecture complétée ✅ + Observability & Trust Layer ✅ + Analyse adversariale complète ✅ + 21 clarifications techniques ✅ - **Prêt pour implémentation Story 1**
+**Version** : 1.3.0 (2026-02-05)
+**Status** : Architecture complétée ✅ + Observability & Trust Layer ✅ + Analyse adversariale complète ✅ + **12 corrections analyse méta** ✅ - **Prêt pour implémentation Story 1**

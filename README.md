@@ -62,23 +62,23 @@ Friday 2.0 est un système d'IA personnel qui agit comme un **second cerveau** p
 | Composant | Technologie | Version |
 |-----------|-------------|---------|
 | **Langage principal** | Python | 3.12+ |
-| **Framework agents IA** | LangGraph | 1.2.0 |
-| **Orchestration workflows** | n8n | 2.4.8 |
+| **Framework agents IA** | LangGraph | 0.2.45+ |
+| **Orchestration workflows** | n8n | 1.69.2+ |
 | **LLM cloud** | Mistral API | Nemo / Medium 3.1 / Large 3 / Embed |
 | **LLM local (VPS)** | Ollama | Mistral Nemo 12B / Ministral 3B |
-| **Base de données** | PostgreSQL | 16 |
-| **Cache + Pub/Sub** | Redis | 7 |
-| **Vectoriel** | Qdrant | Latest |
+| **Base de données** | PostgreSQL | 16.6 |
+| **Cache + Pub/Sub** | Redis | 7.4 |
+| **Vectoriel** | Qdrant | 1.12.5 |
 | **Mémoire graphe** | Zep + Graphiti | Latest (fallback Neo4j) |
-| **API Gateway** | FastAPI | Latest |
-| **Bot conversationnel** | python-telegram-bot | Latest |
-| **Reverse proxy** | Caddy | Latest |
+| **API Gateway** | FastAPI | 0.115+ |
+| **Bot conversationnel** | python-telegram-bot | 21.7+ |
+| **Reverse proxy** | Caddy | 2.8 |
 | **Réseau sécurisé** | Tailscale | Latest |
 | **OCR** | Surya + Marker | Latest |
 | **STT** | Faster-Whisper | Latest (fallback Deepgram) |
 | **TTS** | Kokoro | Latest (fallback Piper) |
-| **NER** | spaCy fr + GLiNER | Latest |
-| **Anonymisation** | Presidio | Latest |
+| **NER** | spaCy fr + GLiNER | spaCy 3.8+ |
+| **Anonymisation** | Presidio | 2.2.355+ |
 
 ---
 
@@ -229,6 +229,9 @@ Marge ~8-14€ sur budget max 50€/mois. Plan B : VPS-3 (24 Go, ~15€ TTC) si 
   - Source de vérité unique
   - Inclut graphe de connaissances, anonymisation réversible, Trust Layer, clarifications complètes
 
+- **Addendum technique** : [_docs/architecture-addendum-20260205.md](_docs/architecture-addendum-20260205.md)
+  - Benchmarks Presidio, algorithme pattern detection, profils RAM sources, critères OpenClaw, migration graphe
+
 - **Analyse besoins** : [_docs/friday-2.0-analyse-besoins.md](_docs/friday-2.0-analyse-besoins.md)
   - Vision produit, 23 modules, contraintes techniques (mise à jour 2026-02-05)
 
@@ -251,5 +254,5 @@ Projet personnel d'Antonio. Tous droits réservés.
 
 ---
 
-**Version** : 1.2.0 (2026-02-05)
-**Dernière mise à jour** : Analyse adversariale complète + 21 clarifications techniques
+**Version** : 1.3.0 (2026-02-05)
+**Dernière mise à jour** : Analyse adversariale complète + 21 clarifications techniques + review cohérence documentaire

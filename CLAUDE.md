@@ -53,7 +53,7 @@ agents/src/agents/email/
 |------------|---------|-----------------|
 | LLM | `adapters/llm.py` | Mistral → Gemini/Claude (1 fichier) |
 | Vectorstore | `adapters/vectorstore.py` | Qdrant → Milvus/pgvector |
-| Memorystore | `adapters/memorystore.py` | Zep+Graphiti → Neo4j/MemGPT |
+| Memorystore | `adapters/memorystore.py` | PostgreSQL+Qdrant (Day 1) → Graphiti/Neo4j (si maturité atteinte) |
 | Filesync | `adapters/filesync.py` | Syncthing → rsync/rclone |
 | Email | `adapters/email.py` | EmailEngine → IMAP direct |
 
@@ -80,8 +80,8 @@ def get_llm_adapter() -> LLMAdapter:
 | Kokoro TTS | ~2 Go | Résident |
 | Surya OCR | ~2 Go | Résident |
 | **Total services lourds** | **~16 Go** | |
-| **Socle permanent (corrigé)** | **~6-7 Go** | Inclut PG, Redis, Qdrant, n8n, Presidio, EmailEngine, Caddy, OS (Zep retiré, mort 2024) |
-| **Marge disponible** | **~25-26 Go** | |
+| **Socle permanent (corrigé)** | **~7-9 Go** | Inclut PG, Redis, Qdrant, n8n, Presidio, Zep, EmailEngine, Caddy, OS |
+| **Marge disponible** | **~23-25 Go** | |
 
 **Orchestrator simplifié (moniteur RAM, pas gestionnaire d'exclusions) :**
 ```python
@@ -503,10 +503,10 @@ docker compose logs -f gateway          # Gateway uniquement
 
 ## 🎯 First Implementation Priority
 
-**Story 1 : Infrastructure de base** (conçue, pas encore implémentée)
+**Story 1 : Infrastructure de base** (partiellement implémentée)
 
-1. 📋 Docker Compose (PostgreSQL 16, Redis 7, Qdrant, n8n 1.69.2+, Caddy)
-2. 📋 Migrations SQL 001-010 (schemas core/ingestion/knowledge + tables, inclut `core.tasks` et `core.events`)
+1. ✅ Docker Compose (PostgreSQL 16, Redis 7, Qdrant, n8n 1.69.2+, Caddy) — **CRÉÉ**
+2. ✅ Migrations SQL 001-010 (schemas core/ingestion/knowledge + tables, inclut `core.tasks` et `core.events`) — **CRÉÉES**
 3. 📋 FastAPI Gateway + auth simple + OpenAPI
 4. 📋 Healthcheck endpoint (`GET /api/v1/health`)
 5. 📋 Tailscale configuré (VPS hostname `friday-vps`)
@@ -514,7 +514,7 @@ docker compose logs -f gateway          # Gateway uniquement
 
 **Story 1.5 : Observability & Trust Layer (AVANT tout module)**
 
-1. Migration SQL `011_trust_system.sql` (tables receipts, rules, metrics)
+1. ✅ Migration SQL `011_trust_system.sql` (tables receipts, rules, metrics) — **CRÉÉE**
 2. Middleware `@friday_action` + modèle `ActionResult`
 3. Config trust levels par module (`agents/src/middleware/trust_levels.py`)
 4. Bot Telegram : commandes `/status`, `/journal`, `/receipt`, `/confiance`, `/stats`
@@ -532,15 +532,19 @@ docker compose logs -f gateway          # Gateway uniquement
 - **Bot Telegram opérationnel** (canal unique de contrôle)
 - **Presidio + spaCy-fr installés** (RGPD avant tout appel LLM cloud)
 
-**Fichiers à créer (Story 1 + 1.5) :**
-- `docker-compose.yml` + `docker-compose.services.yml`
-- `database/migrations/001-011_*.sql`
-- `scripts/apply_migrations.py`
-- `agents/src/tools/anonymize.py` (Presidio integration)
-- `agents/src/middleware/models.py` (ActionResult)
-- `agents/src/middleware/trust.py` (@friday_action)
+**Fichiers Story 1 + 1.5 :**
+- ✅ `docker-compose.yml` + `docker-compose.services.yml` — **CRÉÉS**
+- ✅ `database/migrations/001-010_*.sql` (Story 1) — **CRÉÉES**
+- ✅ `database/migrations/011_trust_system.sql` (Story 1.5) — **CRÉÉE**
+- ✅ `scripts/apply_migrations.py` — **CRÉÉ**
+- ✅ `scripts/migrate_emails.py` — **CRÉÉ**
+- ✅ `config/trust_levels.yaml` — **CRÉÉ**
+- ✅ `tests/fixtures/README.md` (plan datasets) — **CRÉÉ**
+- 📋 `agents/src/tools/anonymize.py` (Presidio integration) — À créer
+- 📋 `agents/src/middleware/models.py` (ActionResult) — À créer
+- 📋 `agents/src/middleware/trust.py` (@friday_action) — À créer
 
-**Avertissement Zep/Graphiti** : Zep a cessé ses opérations en 2024. Démarrer avec l'abstraction `adapters/memorystore.py` pointant vers PostgreSQL + Qdrant. Voir [addendum section 10](_docs/architecture-addendum-20260205.md) pour les critères de migration.
+**Décision memorystore (2026-02-05)** : Zep a cessé ses opérations en 2024. **Day 1** : Démarrer avec `adapters/memorystore.py` pointant vers **PostgreSQL (knowledge.*) + Qdrant (embeddings)**. **Ré-évaluation Graphiti** : 6 mois après Story 1 (~août 2026) si v1.0 stable atteinte (critères : >500 stars GitHub, doc API complète, tests charge 100k+ entités). Sinon → Neo4j Community Edition. Voir [addendum section 10](_docs/architecture-addendum-20260205.md).
 
 ---
 
@@ -608,8 +612,20 @@ New-BurntToastNotification -Text "Claude", "Toujours en cours..."
 - **Trust levels config** : [config/trust_levels.yaml](config/trust_levels.yaml)
   *Configuration initiale trust levels pour les 23 modules (auto/propose/blocked par action)*
 
+- **Script migration SQL** : [scripts/apply_migrations.py](scripts/apply_migrations.py)
+  *Application migrations SQL avec tracking, backup automatique, rollback en cas d'erreur*
+
 - **Script migration emails** : [scripts/migrate_emails.py](scripts/migrate_emails.py)
   *Migration 55k emails avec checkpointing, retry, resume, progress tracking*
+
+- **Script monitoring RAM** : [scripts/monitor-ram.sh](scripts/monitor-ram.sh)
+  *Vérification usage RAM + alertes Telegram si >85% (cron-able)*
+
+- **Script vérification env** : [scripts/verify_env.sh](scripts/verify_env.sh)
+  *Validation variables d'environnement requises avant démarrage*
+
+- **Script Redis Streams setup** : [scripts/setup-redis-streams.sh](scripts/setup-redis-streams.sh)
+  *Création consumer groups pour événements critiques*
 
 - **Test backup/restore** : [tests/e2e/test_backup_restore.sh](tests/e2e/test_backup_restore.sh)
   *Test E2E complet : backup PostgreSQL → disaster simulation → restore → validation intégrité*
@@ -617,7 +633,15 @@ New-BurntToastNotification -Text "Claude", "Toujours en cours..."
 - **Plan création datasets** : [tests/fixtures/README.md](tests/fixtures/README.md)
   *Guide complet création datasets tests IA (PII, Email Classification, Archiviste, Finance, Thèse). Durées, responsable, formats*
 
+### Guides techniques additionnels
+
+- **Secrets Management** : [docs/secrets-management.md](docs/secrets-management.md)
+  *Guide complet age/SOPS : installation, chiffrement/déchiffrement .env, partage clés, rotation*
+
+- **Redis Streams Setup** : [docs/redis-streams-setup.md](docs/redis-streams-setup.md)
+  *Configuration complète Redis Streams : consumer groups, retry, recovery, monitoring*
+
 ---
 
 **Version** : 1.4.0 (2026-02-05)
-**Status** : Architecture completee + Observability & Trust Layer + Analyse adversariale v2 (45+ findings fixes) - **Pret pour implementation Story 1**
+**Status** : Architecture complète + Observability & Trust Layer + Code Review Adversarial (22 issues fixes) + Fichiers critiques créés - **Prêt pour implémentation Story 1**

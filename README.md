@@ -118,7 +118,7 @@ friday-2.0/
 │   │   ├── supervisor/          # Superviseur (routage + monitoring RAM)
 │   │   ├── agents/              # 23 modules agents (flat structure Day 1)
 │   │   ├── middleware/          # @friday_action, ActionResult, trust levels
-│   │   ├── memory/              # Zep + Graphiti
+│   │   ├── memory/              # Helpers mémoire (legacy placeholder, utiliser adapters/memorystore.py)
 │   │   ├── tools/               # Outils partagés (OCR, STT, TTS, NER, anonymize)
 │   │   ├── adapters/            # Adaptateurs (LLM, vectorstore, memorystore, filesync, email)
 │   │   ├── models/              # Pydantic schemas globaux
@@ -214,8 +214,8 @@ friday-2.0/
 | Workflows n8n critiques | ✅ Spécifiés (Email Ingestion, Briefing Daily, Backup Daily) |
 | Stratégie tests IA | ✅ Documentée (pyramide, datasets, métriques) |
 | 21 clarifications techniques | ✅ Toutes ajoutées dans l'architecture |
-| Story 1 : Infrastructure de base | 📋 Conçue, prête pour implémentation |
-| Story 1.5 : Trust Layer | 📋 Conçue, prête pour implémentation |
+| Story 1 : Infrastructure de base | 🔄 Partiellement implémentée (Docker, migrations 001-010, scripts créés) |
+| Story 1.5 : Trust Layer | 🔄 Partiellement implémentée (migration 011, config trust, docs créées) |
 | Story 2+ : Modules métier | ⏳ En attente |
 
 **Next step** : Implémenter Story 1 (Docker Compose, PostgreSQL, Redis, FastAPI Gateway, Tailscale)
@@ -255,5 +255,5 @@ Projet personnel d'Antonio. Tous droits réservés.
 
 ---
 
-**Version** : 1.3.0 (2026-02-05)
-**Dernière mise à jour** : Analyse adversariale complète + 21 clarifications techniques + review cohérence documentaire
+**Version** : 1.4.0 (2026-02-05)
+**Dernière mise à jour** : Code review adversarial complet (22 issues fixes) + Fichiers critiques créés (migrations, docs, scripts)

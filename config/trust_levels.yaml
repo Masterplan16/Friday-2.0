@@ -25,7 +25,7 @@ desktop_search:
   search: auto  # Risque bas - recherche ne modifie rien
 
 # MODULE 2: Archiviste (OCR, renommage, classement)
-# Note: clé = nom du dossier agents/src/agents/archiviste/
+# Note: clé = nom du module (structure flat Day 1: agents/src/agents/archiviste/agent.py)
 archiviste:
   ocr: auto  # Risque bas - OCR = lecture seule
   rename: propose  # Risque moyen - mauvais nom = désorganisation
@@ -131,7 +131,7 @@ menus:
 
 # MODULE 19: Coach remise en forme
 coach:
-  generate_workout: propose  # Risque moyen - programme inadapté = blessure potentielle
+  generate_workout: blocked  # Risque élevé - programme inadapté = blessure potentielle → BLOQUÉ jusqu'à validation médicale
   adjust_intensity: propose  # Risque moyen - ajustement = à valider
   track_progress: auto  # Risque bas - tracking = lecture
 

@@ -218,6 +218,18 @@ Le ton, le tutoiement/vouvoiement, l'humour, le style de communication sont conf
 - Ajustement intelligent : mauvaise nuit → séance allégée, semaine chargée → menus simples
 - Coaching intelligent, pas condescendant (Antonio est médecin)
 
+**Limitations Day 1 (sans Apple Watch)** :
+- Suggestions basées UNIQUEMENT sur :
+  - Agenda (temps libre détecté)
+  - Menus (calories estimées)
+- PAS de données physiologiques réelles :
+  - Sommeil, fréquence cardiaque, VO2max, calories brûlées réelles
+- Recommandations génériques (ex: "Tu as 1h libre ce soir → suggestion: course 30min")
+
+**Workaround temporaire** :
+- Export manuel CSV Apple Health hebdomadaire → Import Friday (script à créer Story 5+)
+- Réévaluation app tierce avec API (ex: HealthFit) si disponible >6 mois
+
 #### Entretien cyclique
 - Vidange voiture, contrôle technique, révision chaudière, détartrage, etc.
 - Suivi automatique des cycles

@@ -340,7 +340,7 @@ echo "✅ Toutes les variables requises sont définies"
 
 ### 6.1 Problématique
 
-L'architecture spécifie comment peupler le graphe **au fil de l'eau** (nouveaux emails → création nœuds/relations) mais PAS la **migration initiale** de 55 000 emails existants + documents déjà archivés.
+L'architecture spécifie comment peupler le graphe **au fil de l'eau** (nouveaux emails → création nœuds/relations) mais PAS la **migration initiale** de 110 000 emails existants + documents déjà archivés.
 
 ### 6.2 Stratégie migration graphe
 
@@ -440,14 +440,14 @@ async def populate_graph_from_email(self, email: dict, classification: dict):
 ```python
 # Extension checkpoint pour graphe
 checkpoint_data = {
-    'postgres_processed': 55000,
-    'graph_processed': 42000,  # NOUVEAU
-    'qdrant_processed': 30000,  # NOUVEAU
+    'postgres_processed': 110000,
+    'graph_processed': 84000,  # NOUVEAU
+    'qdrant_processed': 60000,  # NOUVEAU
     'last_email_id': 'abc123'
 }
 ```
 
-**Resume partiel** : Si graphe crash à 42k/55k, reprendre à 42k (pas besoin de refaire PostgreSQL).
+**Resume partiel** : Si graphe crash à 84k/110k, reprendre à 84k (pas besoin de refaire PostgreSQL).
 
 ### 6.6 Validation post-migration
 

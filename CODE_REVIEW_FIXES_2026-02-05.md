@@ -50,13 +50,13 @@
 
 **Corrections appliquées** :
 1. ✅ **MIS À JOUR** : `docs/implementation-roadmap.md`
-   - Durée corrigée : ~10-12h (inclut Presidio overhead 2.3h + retry 30-45min)
-   - Coût corrigé : ~$10-12 USD (33M tokens × $0.30/1M)
+   - Durée corrigée : ~20-24h (inclut Presidio overhead 4.6h + retry 30-45min)
+   - Coût corrigé : ~$20-24 USD (66M tokens × $0.30/1M)
    - **Calcul détaillé ajouté** :
-     - Classification seule : 4.6h (rate limit 200 RPM)
-     - Presidio overhead : 2.3h (150ms/email × 55k)
+     - Classification seule : 9.2h (rate limit 200 RPM, 110k emails)
+     - Presidio overhead : 4.6h (150ms/email × 110k)
      - Retry + backoff : 30-45 min
-     - Marge sécurité : 10-12h total
+     - Marge sécurité : 20-24h total
 
 ---
 

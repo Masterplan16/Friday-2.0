@@ -1,0 +1,11 @@
+# Friday 2.0 - Locked dependencies (generated via `pip freeze`)
+# Used for reproducible builds in production
+#
+# Generated: 2026-02-05
+# Format: To populate this file, run:
+#   python -m venv venv
+#   source venv/bin/activate  # or venv\Scripts\activate on Windows
+#   pip install -r agents/pyproject.toml -e .
+#   pip freeze > agents/requirements-lock.txt
+#
+# TODO: Generate on first CI/CD setup

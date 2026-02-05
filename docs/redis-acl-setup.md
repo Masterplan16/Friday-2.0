@@ -38,11 +38,14 @@ ACL SETUSER friday_gateway on >PASSWORD_GATEWAY ~cache:* +get +set +setex +del +
 - Publier événements critiques (XADD sur Streams)
 - Lire leur consumer group (XREADGROUP)
 - Acknowledge messages (XACK)
+- **Mapping Presidio** : READ/WRITE `presidio:mapping:*` (TTL 1h)
 
 **ACL** :
 ```redis
-ACL SETUSER friday_agents on >PASSWORD_AGENTS ~stream:* +xadd +xreadgroup +xack +xpending allchannels
+ACL SETUSER friday_agents on >PASSWORD_AGENTS ~stream:* ~presidio:mapping:* +xadd +xreadgroup +xack +xpending +get +setex +del allchannels
 ```
+
+**Note** : `+setex` pour mapping Presidio avec TTL automatique, `+get` pour désanonymisation, `+del` pour nettoyage manuel si besoin.
 
 ---
 
@@ -98,8 +101,8 @@ user admin on >ADMIN_PASSWORD ~* &* +@all
 # Gateway
 user friday_gateway on >GATEWAY_PASSWORD ~cache:* +get +set +setex +del +expire +ttl +publish allchannels
 
-# Agents IA
-user friday_agents on >AGENTS_PASSWORD ~stream:* +xadd +xreadgroup +xack +xpending allchannels
+# Agents IA (+ mapping Presidio)
+user friday_agents on >AGENTS_PASSWORD ~stream:* ~presidio:mapping:* +xadd +xreadgroup +xack +xpending +get +setex +del allchannels
 
 # Alerting
 user friday_alerting on >ALERTING_PASSWORD ~stream:* +xreadgroup +xack +xadd +xpending allchannels
@@ -203,17 +206,21 @@ OK
 
 ---
 
-### **Test 2 : Agents peuvent publier streams**
+### **Test 2 : Agents peuvent publier streams + mapping Presidio**
 
 ```bash
 redis-cli -u redis://friday_agents:PASSWORD@localhost:6379
 > XADD stream:email.received * message_id "123"
 "1707139200000-0"
+> SETEX presidio:mapping:[EMAIL_abc123] 3600 "antonio@example.com"
+OK
+> GET presidio:mapping:[EMAIL_abc123]
+"antonio@example.com"
 > SET cache:test "fail"
 (error) NOPERM this user has no permissions to access one of the keys used as arguments
 ```
 
-✅ Correct : Agents peuvent streams, PAS cache.
+✅ Correct : Agents peuvent streams + mapping Presidio (TTL 1h), PAS cache.
 
 ---
 
@@ -273,7 +280,7 @@ redis-cli CONFIG REWRITE
 | Service | User | Clés autorisées | Commandes | Channels |
 |---------|------|-----------------|-----------|----------|
 | Gateway | `friday_gateway` | `cache:*` | GET, SET, SETEX, DEL, EXPIRE, TTL, PUBLISH | all |
-| Agents | `friday_agents` | `stream:*` | XADD, XREADGROUP, XACK, XPENDING | all |
+| Agents | `friday_agents` | `stream:*`, `presidio:mapping:*` | XADD, XREADGROUP, XACK, XPENDING, GET, SETEX, DEL | all |
 | Alerting | `friday_alerting` | `stream:*` | XREADGROUP, XACK, XADD, XPENDING | all |
 | Metrics | `friday_metrics` | `metrics:*` | GET, SET, INCRBY, EXPIRE | all |
 | n8n | `friday_n8n` | `cache:*` | GET, PUBLISH | all |

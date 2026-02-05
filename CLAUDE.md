@@ -80,8 +80,8 @@ def get_llm_adapter() -> LLMAdapter:
 | Kokoro TTS | ~2 Go | Résident |
 | Surya OCR | ~2 Go | Résident |
 | **Total services lourds** | **~16 Go** | |
-| **Socle permanent (corrigé)** | **~7-9 Go** | Inclut PG, Redis, Qdrant, n8n, Presidio, Zep, EmailEngine, Caddy, OS |
-| **Marge disponible** | **~23-25 Go** | |
+| **Socle permanent (corrigé)** | **~6.5-8.5 Go** | Inclut PG, Redis, Qdrant, n8n, Presidio, EmailEngine, Caddy, OS (SANS Zep - fermé 2024) |
+| **Marge disponible** | **~24-25.5 Go** | |
 
 **Orchestrator simplifié (moniteur RAM, pas gestionnaire d'exclusions) :**
 ```python
@@ -505,7 +505,7 @@ docker compose logs -f gateway          # Gateway uniquement
 
 **Story 1 : Infrastructure de base** (partiellement implémentée)
 
-1. ✅ Docker Compose (PostgreSQL 16, Redis 7, Qdrant, n8n 1.69.2+, Caddy) — **CRÉÉ**
+1. ✅ Docker Compose (PostgreSQL 16, Redis 7, Qdrant, n8n 1.69.2, Caddy) — **CRÉÉ**
 2. ✅ Migrations SQL 001-010 (schemas core/ingestion/knowledge + tables, inclut `core.tasks` et `core.events`) — **CRÉÉES**
 3. 📋 FastAPI Gateway + auth simple + OpenAPI
 4. 📋 Healthcheck endpoint (`GET /api/v1/health`)
@@ -543,9 +543,11 @@ docker compose logs -f gateway          # Gateway uniquement
 - ✅ `.sops.yaml` — **CRÉÉ** (template secrets management)
 - ✅ `docs/DECISION_LOG.md` — **CRÉÉ** (historique décisions)
 - ✅ `docs/playwright-automation-spec.md` — **CRÉÉ** (spec Browser automation)
-- 📋 `agents/src/tools/anonymize.py` (Presidio integration) — À créer (Story 1.5.1)
-- 📋 `agents/src/middleware/models.py` (ActionResult) — À créer (Story 1.5.2)
-- 📋 `agents/src/middleware/trust.py` (@friday_action) — À créer (Story 1.5.2)
+- ✅ `agents/src/tools/anonymize.py` (Presidio integration) — **CRÉÉ** (Story 1.5.1)
+- ✅ `agents/src/middleware/models.py` (ActionResult) — **CRÉÉ** (Story 1.5.2)
+- ✅ `agents/src/middleware/trust.py` (@friday_action) — **CRÉÉ** (Story 1.5.2)
+- ✅ `services/alerting/` — **CRÉÉ** (listener Redis Streams + Telegram)
+- ✅ `services/metrics/` — **CRÉÉ** (nightly aggregation trust metrics)
 
 **Décision memorystore (2026-02-05)** : Zep a cessé ses opérations en 2024. **Day 1** : Démarrer avec `adapters/memorystore.py` pointant vers **PostgreSQL (knowledge.*) + Qdrant (embeddings)**. **Ré-évaluation Graphiti** : 6 mois après Story 1 (~août 2026) si v1.0 stable atteinte (critères : >500 stars GitHub, doc API complète, tests charge 100k+ entités). Sinon → Neo4j Community Edition. Voir [addendum section 10](_docs/architecture-addendum-20260205.md).
 
@@ -619,7 +621,7 @@ New-BurntToastNotification -Text "Claude", "Toujours en cours..."
   *Application migrations SQL avec tracking, backup automatique, rollback en cas d'erreur*
 
 - **Script migration emails** : [scripts/migrate_emails.py](scripts/migrate_emails.py)
-  *Migration 55k emails avec checkpointing, retry, resume, progress tracking*
+  *Migration 110k emails avec checkpointing, retry, resume, progress tracking*
 
 - **Script monitoring RAM** : [scripts/monitor-ram.sh](scripts/monitor-ram.sh)
   *Vérification usage RAM + alertes Telegram si >85% (cron-able)*

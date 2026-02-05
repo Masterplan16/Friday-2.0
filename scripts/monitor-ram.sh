@@ -8,6 +8,8 @@ set -euo pipefail
 
 # Configuration
 RAM_ALERT_THRESHOLD_PCT=85
+CPU_ALERT_THRESHOLD_PCT=80
+DISK_ALERT_THRESHOLD_PCT=80
 TELEGRAM_BOT_TOKEN="${TELEGRAM_BOT_TOKEN:-}"
 TELEGRAM_CHAT_ID="${TELEGRAM_CHAT_ID:-}"
 
@@ -35,6 +37,32 @@ get_ram_usage() {
     echo "$used_gb $total_gb"
 }
 
+# Fonction : Obtenir utilisation CPU
+get_cpu_usage() {
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        # macOS : Utiliser top
+        cpu_usage=$(top -l 1 | awk '/CPU usage/ {print $3}' | sed 's/%//')
+    else
+        # Linux : Utiliser top
+        cpu_usage=$(top -bn1 | grep "Cpu(s)" | awk '{print $2}' | cut -d'%' -f1)
+    fi
+
+    echo "$cpu_usage"
+}
+
+# Fonction : Obtenir utilisation disque
+get_disk_usage() {
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        # macOS : Racine du système
+        disk_usage=$(df -h / | tail -1 | awk '{print $5}' | tr -d '%')
+    else
+        # Linux : Racine du système
+        disk_usage=$(df -h / | tail -1 | awk '{print $5}' | tr -d '%')
+    fi
+
+    echo "$disk_usage"
+}
+
 # Fonction : Envoyer alerte Telegram
 send_telegram_alert() {
     local message="$1"
@@ -54,40 +82,75 @@ send_telegram_alert() {
 
 # Main
 main() {
-    echo "🔍 Friday 2.0 - Monitoring RAM"
-    echo "=============================="
+    echo "🔍 Friday 2.0 - Monitoring Système"
+    echo "==================================="
 
-    # Obtenir usage RAM
+    # Obtenir métriques
     read -r used_gb total_gb <<< "$(get_ram_usage)"
+    ram_usage_pct=$((used_gb * 100 / total_gb))
 
-    # Calculer pourcentage
-    usage_pct=$((used_gb * 100 / total_gb))
+    cpu_usage=$(get_cpu_usage)
+    cpu_usage_int=${cpu_usage%.*}  # Arrondir à l'entier
+
+    disk_usage=$(get_disk_usage)
+
+    # Afficher métriques
+    echo ""
+    echo "📊 RAM"
+    echo "  Totale      : ${total_gb} Go"
+    echo "  Utilisée    : ${used_gb} Go"
+    echo "  Utilisation : ${ram_usage_pct}%"
+    echo "  Seuil       : ${RAM_ALERT_THRESHOLD_PCT}%"
 
     echo ""
-    echo "RAM totale    : ${total_gb} Go"
-    echo "RAM utilisée  : ${used_gb} Go"
-    echo "Utilisation   : ${usage_pct}%"
-    echo "Seuil alerte  : ${RAM_ALERT_THRESHOLD_PCT}%"
+    echo "💻 CPU"
+    echo "  Utilisation : ${cpu_usage}%"
+    echo "  Seuil       : ${CPU_ALERT_THRESHOLD_PCT}%"
+
+    echo ""
+    echo "💾 Disque (racine /)"
+    echo "  Utilisation : ${disk_usage}%"
+    echo "  Seuil       : ${DISK_ALERT_THRESHOLD_PCT}%"
     echo ""
 
-    # Vérifier seuil
-    if [[ $usage_pct -ge $RAM_ALERT_THRESHOLD_PCT ]]; then
-        echo -e "${RED}🚨 ALERTE RAM : Utilisation ${usage_pct}% >= ${RAM_ALERT_THRESHOLD_PCT}%${NC}"
+    # Vérifier seuils
+    alerts=""
+    exit_code=0
 
-        # Envoyer alerte Telegram si demandé
-        if [[ "${1:-}" == "--telegram" ]]; then
-            send_telegram_alert "🚨 *Friday 2.0 - Alerte RAM*
+    if [[ $ram_usage_pct -ge $RAM_ALERT_THRESHOLD_PCT ]]; then
+        echo -e "${RED}🚨 ALERTE RAM : ${ram_usage_pct}% >= ${RAM_ALERT_THRESHOLD_PCT}%${NC}"
+        alerts="${alerts}🚨 *RAM* : ${ram_usage_pct}% (${used_gb}/${total_gb} Go)
+"
+        exit_code=1
+    else
+        echo -e "${GREEN}✅ RAM OK (${ram_usage_pct}% < ${RAM_ALERT_THRESHOLD_PCT}%)${NC}"
+    fi
 
-Utilisation : *${usage_pct}%* (${used_gb}/${total_gb} Go)
-Seuil : ${RAM_ALERT_THRESHOLD_PCT}%
+    if [[ $cpu_usage_int -ge $CPU_ALERT_THRESHOLD_PCT ]]; then
+        echo -e "${RED}🚨 ALERTE CPU : ${cpu_usage}% >= ${CPU_ALERT_THRESHOLD_PCT}%${NC}"
+        alerts="${alerts}🚨 *CPU* : ${cpu_usage}%
+"
+        exit_code=1
+    else
+        echo -e "${GREEN}✅ CPU OK (${cpu_usage}% < ${CPU_ALERT_THRESHOLD_PCT}%)${NC}"
+    fi
 
+    if [[ $disk_usage -ge $DISK_ALERT_THRESHOLD_PCT ]]; then
+        echo -e "${RED}🚨 ALERTE DISQUE : ${disk_usage}% >= ${DISK_ALERT_THRESHOLD_PCT}%${NC}"
+        alerts="${alerts}🚨 *Disque* : ${disk_usage}%
+"
+        exit_code=1
+    else
+        echo -e "${GREEN}✅ Disque OK (${disk_usage}% < ${DISK_ALERT_THRESHOLD_PCT}%)${NC}"
+    fi
+
+    # Envoyer alerte Telegram si anomalie détectée
+    if [[ -n "$alerts" ]] && [[ "${1:-}" == "--telegram" ]]; then
+        send_telegram_alert "🚨 *Friday 2.0 - Alerte Système*
+
+${alerts}
 Vérifier les services lourds :
 \`docker stats --no-stream\`"
-        fi
-
-        exit 1
-    else
-        echo -e "${GREEN}✅ RAM OK (${usage_pct}% < ${RAM_ALERT_THRESHOLD_PCT}%)${NC}"
     fi
 
     # Optionnel : Afficher détails Docker
@@ -97,6 +160,8 @@ Vérifier les services lourds :
         echo "-----------------------------------"
         docker stats --no-stream --format "table {{.Name}}\t{{.MemUsage}}\t{{.MemPerc}}" | head -n 6
     fi
+
+    exit $exit_code
 }
 
 main "$@"

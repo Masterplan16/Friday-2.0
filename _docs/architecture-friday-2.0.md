@@ -227,7 +227,7 @@ Recherche
 
 | Donnee | Volume | Cout one-shot | Duree |
 |--------|--------|---------------|-------|
-| 55 000 mails (4 comptes) | ~275 Mo texte | ~8$ (embedding Mistral Embed + classification Nemo) | ~9h batch de nuit |
+| 110 000 mails (4 comptes) | ~550 Mo texte | ~16$ (embedding Mistral Embed + classification Nemo) | ~18h batch de nuit |
 
 ### Lacunes identifiees et contournements
 
@@ -1670,7 +1670,7 @@ friday-2.0/
 ├── scripts/
 │   ├── setup.sh                       # Installation initiale VPS
 │   ├── backup.sh                      # Backup quotidien BDD + volumes
-│   ├── migrate_emails.py              # Migration one-shot 55k mails (Python, checkpoint + retry)
+│   ├── migrate_emails.py              # Migration one-shot 110k mails (Python, checkpoint + retry)
 │   ├── apply_migrations.py            # Execution migrations SQL numerotees + backup pre-migration
 │   ├── deploy.sh                      # Deploiement via git pull
 │   ├── dev-setup.sh                   # [AJOUT] Setup automatise dev (deps, services, migrations, seed)
@@ -2485,7 +2485,7 @@ Justification :
 
 - **OpenClaw comme facade** : Si maturité suffisante (CVE-2026-25253 corrigée, sandboxing durci, streaming Mistral stable), peut remplacer le bot Telegram comme interface multi-canal (Telegram + WhatsApp + Discord). Backend reste identique grâce au pattern adaptateur.
 
-- **Partitioning table emails** : Si >500k mails (actuel : 55k migration one-shot). PostgreSQL 16 supporte partitioning natif (par mois/année).
+- **Partitioning table emails** : Si >500k mails (actuel : 110k migration one-shot). PostgreSQL 16 supporte partitioning natif (par mois/année).
 
 ### Implementation Handoff
 

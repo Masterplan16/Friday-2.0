@@ -62,8 +62,8 @@ Friday 2.0 est un système d'IA personnel qui agit comme un **second cerveau** p
 | Composant | Technologie | Version |
 |-----------|-------------|---------|
 | **Langage principal** | Python | 3.12+ |
-| **Framework agents IA** | LangGraph | 0.2.45+ |
-| **Orchestration workflows** | n8n | 1.69.2+ |
+| **Framework agents IA** | LangGraph | ==0.2.45 |
+| **Orchestration workflows** | n8n | 1.69.2 |
 | **LLM cloud** | Mistral API | mistral-nemo-latest / mistral-medium-latest / mistral-large-latest / mistral-embed |
 | **LLM local (VPS)** | Ollama | Mistral Nemo 12B / Ministral 3B |
 | **Base de données** | PostgreSQL | 16.6 |
@@ -190,6 +190,58 @@ friday-2.0/
 
 ---
 
+## 🚀 Setup & Prérequis
+
+### Prérequis système
+
+- **Linux/macOS/Windows** : Git Bash ou WSL requis pour exécuter scripts `.sh`
+- **Python** : 3.12+
+- **Docker** : 24+
+- **Docker Compose** : 2.20+
+- **age** (secrets encryption) : https://github.com/FiloSottile/age
+
+### Rendre scripts exécutables
+
+```bash
+# Linux/macOS/Git Bash Windows
+chmod +x scripts/*.py scripts/*.sh
+```
+
+### Configuration secrets (one-time setup)
+
+**Générer clé age pour chiffrement secrets :**
+
+```bash
+# Générer clé age (sauvegardée localement)
+age-keygen -o ~/.config/sops/age/keys.txt
+
+# Extraire la clé publique (utiliser dans .sops.yaml)
+age-keygen -y ~/.config/sops/age/keys.txt
+# Output: age1xxx... (copier cette valeur dans .sops.yaml)
+```
+
+**Chiffrer `.env` (voir [docs/secrets-management.md](docs/secrets-management.md) pour détails) :**
+
+```bash
+# Créer .env.enc depuis .env template
+sops -e .env.example > .env.enc
+
+# Déchiffrer avant lancement (automatique via docker-compose avec init script)
+sops -d .env.enc > .env
+```
+
+### Dépendances verrouillées
+
+```bash
+# Générer requirements-lock.txt (reproduceabilité production)
+python -m venv venv
+source venv/bin/activate  # ou: venv\Scripts\activate (Windows)
+pip install -e agents/
+pip freeze > agents/requirements-lock.txt
+```
+
+---
+
 ## 💰 Budget
 
 | Poste | Coût mensuel |
@@ -200,7 +252,7 @@ friday-2.0/
 | Divers (domaine, ntfy) | ~2-3€ |
 | **Total estimé** | **~36-42€/mois** |
 
-**Note budget:** Estimation optimiste. Prévoir ~45-48€ premiers mois (tests intensifs, migration 55k emails, dépassements API possibles). Marge ~2-5€ sur budget max 50€/mois. Plan B : VPS-3 (24 Go, ~15€ TTC) si besoin de réduire.
+**Note budget:** Estimation optimiste. Prévoir ~45-48€ premiers mois (tests intensifs, migration 110k emails, dépassements API possibles). Marge ~2-5€ sur budget max 50€/mois. Plan B : VPS-3 (24 Go, ~15€ TTC) si besoin de réduire.
 
 ---
 

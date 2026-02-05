@@ -244,14 +244,16 @@ Le ton, le tutoiement/vouvoiement, l'humour, le style de communication sont conf
 
 ## 5. Canaux de communication
 
+> **📝 Décision architecturale** : Telegram remplace Discord comme canal principal (mobile-first, vocal natif bidirectionnel, meilleure confidentialité, API bot supérieure, notifications push natives)
+
 | Canal | Usage | Priorité |
 |-------|-------|----------|
-| **Discord** | Texte + vocal, accessible PC et téléphone, déjà en place | Principal |
-| **Vocal entrant (téléphone/PC)** | Commander Friday par la voix (voiture, entre patients) | Élevée |
-| **Vocal sortant (TTS)** | Briefing lu, réponses parlées | Élevée |
-| **Enceinte connectée maison** | Wake word, interaction ambiante type Alexa | Nice to have |
-| **Notifications proactives** | Alertes intelligentes poussées au bon moment | Élevée |
-| **Mode consultation express** | Photo/question rapide → réponse en 30 secondes via téléphone | Élevée |
+| **Telegram** | Interface principale : texte, vocal (STT/TTS), envoi/réception fichiers, boutons inline, notifications push | Principal (100% Day 1) |
+| **Vocal entrant (téléphone/PC)** | Commander Friday par la voix (voiture, entre patients) via Telegram ou interface dédiée | Élevée |
+| **Vocal sortant (TTS)** | Briefing lu, réponses parlées (Kokoro TTS sur VPS + Piper fallback) | Élevée |
+| **Enceinte connectée maison** | Wake word, interaction ambiante type Alexa | Nice to have (non prioritaire) |
+| **Notifications proactives** | Alertes intelligentes poussées au bon moment via Telegram + ntfy | Élevée |
+| **Mode consultation express** | Photo/question rapide → réponse en 30 secondes via Telegram | Élevée |
 
 ---
 
@@ -298,17 +300,17 @@ Briefing ←─────(agrège tout)────→ Tous les modules
 
 | Contrainte | Valeur |
 |------------|--------|
-| **Budget** | 20-30€/mois (APIs cloud) |
-| **Matériel existant** | PC Dell laptop (Intel Core Ultra 7 255H, 32 Go RAM, pas de GPU) |
-| **Stockage** | Synology BeeStation (déjà possédé, photos stockées dessus) |
-| **Serveur** | VPS dédié prévu (séparé du VPS MiraIdesk/Jarvis) |
-| **Confidentialité** | Anonymisation réversible avant tout traitement LLM |
-| **Architecture IA** | Hybride : local (classification, OCR, données sensibles) + cloud (raisonnement) |
-| **LLM local** | CPU-only, réaliste pour 3B-7B (tri, classification), insuffisant pour raisonnement complexe |
-| **Interface** | Multi-device : PC + téléphone + enceinte connectée (nice to have) |
-| **Mails** | 4 comptes centralisés dans Thunderbird |
-| **Thèses** | Google Docs partagés avec étudiants |
-| **Données santé** | Apple Watch Ultra (sommeil, FC, activité) |
+| **Budget** | 50€/mois maximum (VPS + APIs cloud). Estimation réelle : ~36-42€/mois (VPS-4 25€ + Mistral 6-9€ + Deepgram 3-5€ + divers 2-3€) |
+| **Serveur** | OVH VPS-4 : 48 Go RAM / 12 vCores / 300 Go NVMe (~25€ TTC/mois) - Tous services lourds résidents simultanément |
+| **Laptop utilisateur** | Dell Pro Max 16 (Core Ultra 7 255H, 32 Go RAM, pas de GPU). **AUCUN modèle IA ne tourne sur le laptop** - rôle = stockage documents uniquement |
+| **Stockage** | Synology BeeStation (photos) + PC (documents locaux) + VPS (index + métadonnées uniquement) |
+| **Confidentialité** | Anonymisation réversible via Presidio + spaCy-fr AVANT tout traitement LLM cloud (obligatoire RGPD) |
+| **Architecture IA** | Hybride VPS/cloud : Ollama VPS (données sensibles) + Mistral cloud (raisonnement complexe) |
+| **LLM local VPS** | Mistral Nemo 12B + Ministral 3B via Ollama sur VPS (CPU suffisant, données ne sortent pas) |
+| **Interface principale** | Telegram bot (mobile-first, vocal natif bidirectionnel, meilleure confidentialité que Discord) - 100% Day 1 |
+| **Mails** | 4 comptes via EmailEngine (auto-hébergé Docker). Thunderbird reste interface utilisateur optionnelle |
+| **Thèses** | Google Docs partagés avec étudiants (API v1 - limitation : Suggestions au lieu de commentaires ancrés) |
+| **Données santé** | Apple Watch Ultra (sommeil, FC, activité) - **Intégration à définir** (export manuel CSV ou app tierce) |
 | **Usage** | Strictement individuel, jamais commercialisé |
 | **Extension** | Foyer de 3 (épouse + fille 10 ans), extension famille envisageable plus tard |
 

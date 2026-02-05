@@ -69,33 +69,33 @@ def get_llm_adapter() -> LLMAdapter:
 
 ---
 
-### 3. Contraintes matérielles - VPS 16 Go RAM
+### 3. Contraintes matérielles - VPS-4 OVH 48 Go RAM
 
-**Services lourds mutuellement exclusifs - Gestion obligatoire.**
+**Tous services lourds résidents en simultané. Plus d'exclusion mutuelle.**
 
-| Service lourd | RAM | Compatible avec | Incompatible avec |
-|---------------|-----|-----------------|-------------------|
-| Ollama Nemo 12B | ~8 Go | Surya, Playwright | Faster-Whisper |
-| Ollama Ministral 3B | ~3 Go | Whisper, Kokoro, Surya | - |
-| Faster-Whisper | ~4 Go | Ministral 3B, Kokoro | Ollama Nemo 12B |
-| Kokoro TTS | ~2 Go | Tout sauf Nemo+Whisper | - |
-| Surya OCR | ~2 Go | Tout sauf Nemo+Whisper | - |
+| Service lourd | RAM | Mode |
+|---------------|-----|------|
+| Ollama Nemo 12B | ~8 Go | Résident |
+| Faster-Whisper | ~4 Go | Résident |
+| Kokoro TTS | ~2 Go | Résident |
+| Surya OCR | ~2 Go | Résident |
+| **Total services lourds** | **~16 Go** | |
+| **Socle permanent** | **~5-7 Go** | |
+| **Marge disponible** | **~25 Go** | |
 
-**Configuration externe obligatoire :**
+**Orchestrator simplifié (moniteur RAM, pas gestionnaire d'exclusions) :**
 ```python
 # config/profiles.py
 SERVICE_RAM_PROFILES: dict[str, ServiceProfile] = {
-    "ollama-nemo": ServiceProfile(ram_gb=8, incompatible_with=["faster-whisper"]),
-    "ollama-ministral": ServiceProfile(ram_gb=3, incompatible_with=[]),
-    "faster-whisper": ServiceProfile(ram_gb=4, incompatible_with=["ollama-nemo"]),
-    # ...
+    "ollama-nemo": ServiceProfile(ram_gb=8),
+    "faster-whisper": ServiceProfile(ram_gb=4),
+    "kokoro-tts": ServiceProfile(ram_gb=2),
+    "surya-ocr": ServiceProfile(ram_gb=2),
 }
+RAM_ALERT_THRESHOLD_PCT = 85  # Alerte si dépasse
 ```
 
-**Orchestrator LangGraph gère l'ordonnancement :**
-```python
-# agents/src/supervisor/orchestrator.py charge config/profiles.py
-```
+**Plan B (VPS-3, 24 Go, 15€ TTC) :** Si besoin de réduire le budget → réactive les exclusions mutuelles via `VPS_TIER` env var.
 
 ---
 
@@ -118,6 +118,82 @@ result = await presidio_deanonymize(response)
 - age/SOPS pour secrets (JAMAIS de `.env` en clair dans git)
 - pgcrypto pour colonnes sensibles BDD (données médicales, financières)
 - Ollama local VPS pour données ultra-sensibles (pas de sortie cloud)
+
+---
+
+### 5. Observability & Trust Layer - OBLIGATOIRE
+
+**RÈGLE CRITIQUE : Chaque action de module DOIT passer par le décorateur `@friday_action`.**
+
+#### Trust Levels (3 niveaux)
+
+| Niveau | Comportement | Exemples |
+|--------|-------------|----------|
+| `auto` | Exécute + notifie après coup | Classification email, OCR, briefing |
+| `propose` | Prépare + attend validation Telegram (inline buttons) | Brouillon réponse mail, classement financier |
+| `blocked` | Analyse uniquement, jamais d'action | Données médicales, investissement, modification contrat |
+
+**Initialisation par risque :** Low risk → `auto`, Medium → `propose`, High → `blocked`. Promotion/rétrogradation automatique basée sur accuracy hebdomadaire (seuil 90%).
+
+#### Middleware `@friday_action`
+
+```python
+# agents/src/middleware/trust.py
+@friday_action(module="email", action="classify", trust_default="propose")
+async def classify_email(email: Email) -> ActionResult:
+    # 1. Charge les correction_rules du module
+    rules = await db.fetch(
+        "SELECT conditions, output FROM core.correction_rules "
+        "WHERE module='email' AND active=true"
+    )
+    # 2. Injecte les règles dans le prompt
+    prompt = f"Classe cet email. Règles prioritaires: {format_rules(rules)}..."
+    response = await mistral.chat(prompt=prompt)
+    # 3. Retourne ActionResult standardisé
+    return ActionResult(
+        input_summary=f"Email de {email.sender}: {email.subject}",
+        output_summary=f"→ {response.category}",
+        confidence=response.score,
+        reasoning=f"Mots-clés: {response.keywords}..."
+    )
+```
+
+#### ActionResult (modèle Pydantic obligatoire)
+
+```python
+# agents/src/middleware/models.py
+class ActionResult(BaseModel):
+    input_summary: str       # Ce qui est entré
+    output_summary: str      # Ce qui a été fait
+    confidence: float        # 0.0-1.0, confidence MIN de tous les steps
+    reasoning: str           # Pourquoi cette décision
+    payload: dict = {}       # Données techniques optionnelles
+    steps: list[StepDetail] = []  # Sous-étapes détaillées
+```
+
+#### Feedback Loop (règles explicites, PAS de RAG)
+
+```python
+# ~50 règles max → un SELECT suffit, injectées dans le prompt
+# Cycle : correction Antonio → détection pattern (2 occurrences) →
+#   proposition de règle → validation Antonio → règle active
+```
+
+#### Tables SQL associées
+
+- `core.action_receipts` — Reçus de chaque action (migration `011_trust_system.sql`)
+- `core.correction_rules` — Règles de correction explicites
+- `core.trust_metrics` — Accuracy hebdomadaire par module/action
+
+#### Commandes Telegram Trust
+
+| Commande | Usage |
+|----------|-------|
+| `/status` | Dashboard temps réel (services, dernières actions) |
+| `/journal` | 20 dernières actions avec timestamps |
+| `/receipt <id>` | Détail complet d'une action (-v pour steps) |
+| `/confiance` | Tableau accuracy par module |
+| `/stats` | Métriques globales agrégées |
 
 ---
 
@@ -163,11 +239,18 @@ result = await presidio_deanonymize(response)
 **Format événements :** Dot notation
 
 ```python
-# Exemples
+# Exemples - Métier
 "email.received"           # Nouvel email ingéré
 "document.processed"       # Document OCR terminé
 "agent.completed"          # Agent a fini sa tâche
 "file.uploaded"            # Fichier uploadé via Telegram
+
+# Exemples - Observabilité & Trust
+"pipeline.error"           # Erreur dans un pipeline
+"service.down"             # Service lourd indisponible
+"trust.level.changed"      # Changement de trust level (auto/propose/blocked)
+"action.corrected"         # Antonio a corrigé une action → feedback loop
+"action.validated"         # Antonio a validé une action proposée
 ```
 
 **Communication patterns :**
@@ -254,18 +337,57 @@ async def test_presidio_anonymizes_all_pii(pii_samples):
             assert sensitive_value not in anonymized
 ```
 
-### Tests orchestrator RAM
+### Tests orchestrator RAM (VPS-4 48 Go)
 
 ```python
 # tests/unit/supervisor/test_orchestrator.py
 @pytest.mark.asyncio
-async def test_ram_profiles_prevent_conflicts():
-    orchestrator = RAMOrchestrator(total_ram_gb=16, reserved_gb=4)
-    await orchestrator.start_service("ollama-nemo")  # 8 GB
+async def test_ram_monitor_alerts_on_threshold():
+    monitor = RAMMonitor(total_ram_gb=48, alert_threshold_pct=85)
+    # Simuler charge élevée (>85%)
+    monitor.simulate_usage(used_gb=42)
+    alerts = await monitor.check()
+    assert alerts[0].level == "warning"
+    assert "85%" in alerts[0].message
 
-    # Whisper 4GB devrait échouer (besoin buffer)
-    with pytest.raises(InsufficientRAMError):
-        await orchestrator.start_service("faster-whisper")
+@pytest.mark.asyncio
+async def test_all_heavy_services_fit_in_ram():
+    monitor = RAMMonitor(total_ram_gb=48, alert_threshold_pct=85)
+    # Tous services lourds résidents simultanément
+    services = ["ollama-nemo", "faster-whisper", "kokoro-tts", "surya-ocr"]
+    for svc in services:
+        await monitor.register_service(svc)
+    assert monitor.total_allocated_gb <= 48 * 0.85  # Sous le seuil d'alerte
+```
+
+### Tests Trust Layer
+
+```python
+# tests/unit/middleware/test_trust.py
+@pytest.mark.asyncio
+async def test_friday_action_auto_executes_and_logs():
+    """Trust=auto : exécute l'action + crée un receipt"""
+    result = await classify_email(mock_email)
+    receipt = await db.fetchrow("SELECT * FROM core.action_receipts ORDER BY created_at DESC LIMIT 1")
+    assert receipt["status"] == "auto"
+    assert receipt["confidence"] > 0
+
+@pytest.mark.asyncio
+async def test_friday_action_propose_waits_validation():
+    """Trust=propose : crée receipt pending + envoie inline buttons Telegram"""
+    result = await draft_email_reply(mock_email)
+    receipt = await db.fetchrow("SELECT * FROM core.action_receipts ORDER BY created_at DESC LIMIT 1")
+    assert receipt["status"] == "pending"
+    assert receipt["trust_level"] == "propose"
+
+@pytest.mark.asyncio
+async def test_auto_retrogradation_below_90pct():
+    """Si accuracy < 90% sur 1 semaine → rétrograde auto → propose"""
+    # Simuler 10 actions dont 2 corrigées (80%)
+    await simulate_corrections(module="email", action="classify", total=10, corrected=2)
+    await run_nightly_metrics()
+    new_level = await get_trust_level("email", "classify")
+    assert new_level == "propose"
 ```
 
 ### Tests agents
@@ -292,7 +414,7 @@ async def test_email_classifier():
 |--------------|--------|-------------|
 | **ORM (SQLAlchemy/Tortoise)** | Système pipeline, pas CRUD | asyncpg brut + SQL optimisé |
 | **Celery** | Redondant avec n8n + FastAPI | n8n (workflows longs) + BackgroundTasks (courts) |
-| **Prometheus Day 1** | 400 Mo RAM, overkill VPS 16 Go | `scripts/monitor-ram.sh` (cron + Telegram) |
+| **Prometheus Day 1** | 400 Mo RAM, overkill même sur VPS-4 48 Go | `scripts/monitor-ram.sh` (cron + Telegram) |
 | **GraphQL** | Over-engineering utilisateur unique | REST + Pydantic suffit |
 | **Structure 3 niveaux Day 1** | Sur-organisation prématurée | Flat structure, refactor si douleur |
 | **localStorage direct pour auth** | Token expiré, pas de refresh | `api()` helper ou `getAuthHeaders()` |
@@ -334,7 +456,7 @@ flake8 agents/                          # Linting
 ./scripts/deploy.sh
 
 # Monitoring RAM
-./scripts/monitor-ram.sh                # Alerte si >90%
+./scripts/monitor-ram.sh                # Alerte si >85%
 
 # Backup
 ./scripts/backup.sh                     # Backup BDD + volumes
@@ -362,25 +484,41 @@ docker compose logs -f gateway          # Gateway uniquement
 - [ ] Configuration externalisée (pas de valeurs hardcodées)
 - [ ] Logs structurés JSON (pas de print())
 - [ ] Documentation mise à jour si API publique modifiée
+- [ ] `@friday_action` sur toute nouvelle action de module (trust level défini)
+- [ ] `ActionResult` retourné avec confidence et reasoning
+- [ ] Trust level approprié au risque (auto/propose/blocked)
 
 ---
 
 ## 🎯 First Implementation Priority
 
-**Story 1 : Infrastructure de base**
+**Story 1 : Infrastructure de base** (conçue, pas encore implémentée)
 
-1. ✅ Docker Compose (PostgreSQL 16, Redis 7, Qdrant, n8n 2.4.8, Caddy)
-2. ✅ Migrations SQL 001-009 (schemas core/ingestion/knowledge + tables)
-3. ✅ FastAPI Gateway + auth simple + OpenAPI
-4. ✅ Healthcheck endpoint (`GET /api/v1/health`)
-5. ✅ Tailscale configuré (VPS hostname `friday-vps`)
-6. ✅ Tests end-to-end (sanity check tous services)
+1. 📋 Docker Compose (PostgreSQL 16, Redis 7, Qdrant, n8n 2.4.8, Caddy)
+2. 📋 Migrations SQL 001-009 (schemas core/ingestion/knowledge + tables)
+3. 📋 FastAPI Gateway + auth simple + OpenAPI
+4. 📋 Healthcheck endpoint (`GET /api/v1/health`)
+5. 📋 Tailscale configuré (VPS hostname `friday-vps`)
+6. 📋 Tests end-to-end (sanity check tous services)
+
+**Story 1.5 : Observability & Trust Layer (AVANT tout module)**
+
+1. Migration SQL `011_trust_system.sql` (tables receipts, rules, metrics)
+2. Middleware `@friday_action` + modèle `ActionResult`
+3. Config trust levels par module (`agents/src/middleware/trust_levels.py`)
+4. Bot Telegram : commandes `/status`, `/journal`, `/receipt`, `/confiance`, `/stats`
+5. Validation inline buttons Telegram (approve/reject pour trust=propose)
+6. Alerting listener Redis (`services/alerting/listener.py`)
+7. Nightly metrics aggregation (`services/metrics/nightly.py`)
+8. Tests unitaires + intégration trust middleware
 
 **Dépendances critiques avant Story 2 :**
 - PostgreSQL 16 opérationnel avec 3 schemas
 - Redis 7 opérationnel (cache + pub/sub)
 - FastAPI Gateway opérationnel avec `/api/v1/health`
 - Tailscale mesh VPN configuré
+- **`@friday_action` middleware opérationnel** (tout module en dépend)
+- **Bot Telegram opérationnel** (canal unique de contrôle)
 
 ---
 
@@ -418,11 +556,26 @@ New-BurntToastNotification -Text "Claude", "Toujours en cours..."
 
 ## 📚 Documentation de référence
 
-- **Architecture complète** : [_docs/architecture-friday-2.0.md](_docs/architecture-friday-2.0.md) (1700+ lignes)
+### Documents principaux
+
+- **Architecture complète** : [_docs/architecture-friday-2.0.md](_docs/architecture-friday-2.0.md) (~2500 lignes)
+  *Source de vérité unique pour toutes décisions architecturales. Inclut : infrastructure, stack tech, sécurité RGPD, graphe de connaissances, Trust Layer, clarifications techniques complètes*
+
 - **Analyse besoins** : [_docs/friday-2.0-analyse-besoins.md](_docs/friday-2.0-analyse-besoins.md)
+  *Vision produit, 23 modules fonctionnels, sources de données, interconnexions, contraintes techniques (mise à jour 2026-02-05)*
+
 - **README** : [README.md](README.md)
+  *Quick start, setup développement, commandes utiles*
+
+### Documents techniques additionnels
+
+- **Workflows n8n** : [docs/n8n-workflows-spec.md](docs/n8n-workflows-spec.md)
+  *Spécifications complètes des 3 workflows critiques Day 1 (Email Ingestion, Briefing Daily, Backup Daily). Includes nodes, triggers, variables, tests*
+
+- **Stratégie tests IA** : [docs/testing-strategy-ai.md](docs/testing-strategy-ai.md)
+  *Pyramide de tests (80% unit mocks, 15% integ datasets, 5% E2E). Métriques qualité, datasets validation, tests critiques RGPD/RAM/Trust*
 
 ---
 
-**Version** : 1.0.0 (2026-02-02)
-**Status** : Architecture complétée ✅ - Prêt pour implémentation
+**Version** : 1.2.0 (2026-02-05)
+**Status** : Architecture complétée ✅ + Observability & Trust Layer ✅ + Analyse adversariale complète ✅ + 21 clarifications techniques ✅ - **Prêt pour implémentation Story 1**

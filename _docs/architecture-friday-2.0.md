@@ -139,6 +139,20 @@ Note : les domaines utilisateur (medecin, enseignant, financier, personnel) rest
 | Wake word / enceinte (ex-C5) | Pas prioritaire |
 | Commande automatique Carrefour Drive | Browser-Use non fiable (60% reel vs 89% annonce) |
 
+### Gaps & Limitations explicites
+
+> **Documentation des ecarts entre besoins initiaux et implementation technique.**
+
+| Gap/Limitation | Besoins initiaux | Implementation reelle | Impact | Workaround/Solution |
+|----------------|------------------|----------------------|--------|---------------------|
+| **Apple Watch Ultra** | Source de donnees prioritaire (sommeil, FC, activite) pour Coach sportif | Pas d'API serveur, pas d'integration Day 1 | Coach sportif fonctionne sans donnees physiologiques reelles | Export manuel CSV depuis Apple Health OU app tierce avec API (a evaluer) OU Coach base sur agenda + menus uniquement |
+| **Carrefour Drive commande auto** | Commande automatique courses | Browser-Use rejete (60% fiabilite), pas d'API Carrefour publique | Liste de courses generee mais pas de commande automatique | Friday genere liste → Antonio valide → Friday ouvre Carrefour Drive avec liste pre-remplie (semi-auto via Playwright) |
+| **Google Docs commentaires** | Tuteur These : Commentaires ancres dans Google Doc | API v1 : Pas de commentaires ancres, utiliser API Suggestions | UX differente : Suggestions modifiables vs Commentaires fixes | Utiliser Google Docs API Suggestions (etudiants voient suggestions a accepter/rejeter) + Note explicative dans le Doc |
+| **BeeStation Synology** | Photos stockees sur BeeStation | Pas d'API BSM, pas de support Tailscale/packages tiers | Flux indirect : Telephone → BeeStation → PC (copie manuelle/auto) → VPS (Syncthing) | Sync automatique BeeStation → PC (Synology Drive Client) + Syncthing PC → VPS |
+| **Plaud Note upload** | Transcriptions audio automatiques | Depend de l'integration GDrive de Plaud Note | Si Plaud Note n'upload pas auto sur GDrive, Antonio doit exporter manuellement | Verifier si Plaud Note Pro a auto-upload GDrive, sinon export manuel periodique |
+| **Budget initial** | 20-30 euros/mois (APIs cloud) | 50 euros/mois (VPS + APIs), estimation reelle 36-42 euros/mois | Budget 66% plus eleve que prevu initial | Acceptable si valeur ajoutee justifie. Plan B : VPS-3 24 Go (15 euros) + reduction perimetre |
+| **Thunderbird** | 4 comptes mails via Thunderbird | EmailEngine (auto-heberge Docker) comme backend sync | Thunderbird reste interface utilisateur optionnelle, Friday accede via EmailEngine | Thunderbird = lecture emails classique, EmailEngine = backend API pour Friday |
+
 ### Decisions techniques prises
 
 | Decision | Choix | Justification |
@@ -148,7 +162,7 @@ Note : les domaines utilisateur (medecin, enseignant, financier, personnel) rest
 | LLM classification | **Mistral Nemo cloud** | ~0.15 euros/mois pour 600 mails ($0.02/1M tokens input) |
 | LLM donnees sensibles | **Mistral Nemo 12B / Ministral 3B via Ollama sur VPS** | CPU suffisant, donnees ne sortent pas, ecosysteme Mistral unifie |
 | Hebergeur VPS | **OVH France** | Francais, sans engagement, deja connu (MiraIdesk) |
-| VPS cible | **Elite 16 Go / 8 vCPU / 320 Go NVMe** | ~24 euros/mois, services lourds a la demande |
+| VPS cible | **OVH VPS-4 : 48 Go RAM / 12 vCores / 300 Go NVMe** | ~25 euros TTC/mois, tous services lourds residents en simultane |
 | Stockage fichiers | **PC = stockage, VPS = cerveau** | Documents chez l'utilisateur, VPS garde index + metadonnees |
 | Sync VPS-PC | **Syncthing via Tailscale** | Zone de transit sur VPS, sync au rallumage du PC |
 | Securite reseau | **Tailscale** | Rien expose sur Internet public, tous services internes |
@@ -222,19 +236,22 @@ Recherche
 | Risque | Mitigation |
 |--------|-----------|
 | Complexite d'integration (15+ services Docker) | Architecture modulaire, chaque composant remplacable via API standard |
-| Zep+Graphiti immature (2025) | Fallback Neo4j, donnees exportables |
-| Budget VPS insuffisant | Services lourds (STT, TTS, OCR, Ollama) a la demande, pas 24/7 |
+| Zep+Graphiti immature (2025) | Fallback Neo4j, donnees exportables. Mode degrade : si Zep indisponible, recherche semantique via Qdrant seul (perte des relations temporelles du graphe, pas de la recherche vectorielle). Alerte Trust Layer (`service.down`) + circuit breaker dans `adapters/memorystore.py` |
+| Budget VPS insuffisant | VPS-4 48 Go laisse ~25 Go de marge apres tous services charges. Plan B : VPS-3 24 Go a 15 euros/mois (reactive exclusions mutuelles) |
 | Evolution rapide du marche IA | Composants decouplés par API, remplacement sans impact sur le reste |
+| Erreurs/hallucinations des agents IA | Observability & Trust Layer : niveaux de confiance (auto/propose/bloque), receipts verifiables, retrogradation automatique |
 
 ### Budget estime
 
 | Poste | Cout mensuel |
 |-------|-------------|
-| VPS OVH Elite 16 Go (France, sans engagement) | ~24 euros |
+| VPS OVH VPS-4 48 Go (France, sans engagement) | ~25 euros TTC |
 | Mistral API (Nemo classif + Medium 3.1 gen + Large 3 raisonnement + Embed) | ~6-9 euros |
 | Deepgram STT fallback (consultation express) | ~3-5 euros |
 | Divers (domaine, ntfy) | ~2-3 euros |
-| **Total estime** | **~35-41 euros** |
+| **Total estime** | **~36-42 euros (marge ~8-14 euros sur budget 50 euros)** |
+
+**Plan B budget** : Descente VPS-3 (24 Go, ~15 euros TTC) si besoin de reduire → total ~26-32 euros. Necessite reactivation des profils d'exclusion mutuelle services lourds.
 
 ---
 
@@ -305,50 +322,7 @@ tailscale up --hostname=friday-vps
 
 ### Structure projet
 
-```
-friday-2.0/
-├── docker-compose.yml              # Orchestration de tous les services
-├── docker-compose.dev.yml          # Override pour developpement local
-├── .env.example                    # Variables d'environnement
-├── agents/                         # Python 3.12 - LangGraph
-│   ├── pyproject.toml
-│   ├── langgraph.json
-│   └── src/
-│       ├── supervisor/             # Superviseur agent (routage)
-│       ├── agents/                 # Agents specialises
-│       │   ├── email/
-│       │   ├── archiver/
-│       │   ├── thesis/
-│       │   ├── finance/
-│       │   ├── legal/
-│       │   ├── coach/
-│       │   └── ...
-│       ├── memory/                 # Integration Zep + Graphiti
-│       ├── tools/                  # Outils partages (search, OCR, etc.)
-│       └── config/                 # Configuration Mistral, prompts
-├── bot/                            # Telegram bot (Python)
-│   ├── handlers/
-│   ├── keyboards/
-│   └── media/
-├── services/                       # Services Docker custom
-│   ├── stt/                        # Faster-Whisper
-│   ├── tts/                        # Kokoro
-│   ├── ocr/                        # Surya + Marker
-│   └── gateway/                    # FastAPI (API unifiee)
-├── n8n-workflows/                  # Workflows n8n exportes (JSON)
-│   ├── email-ingestion.json
-│   ├── file-processing.json
-│   ├── calendar-sync.json
-│   └── csv-import.json
-├── config/
-│   ├── tailscale/
-│   ├── syncthing/
-│   └── caddy/                      # Reverse proxy (remplace Nginx)
-└── scripts/
-    ├── setup.sh
-    ├── backup.sh
-    └── migrate-emails.sh
-```
+> **Note** : La structure initiale du starter a ete raffinee en Step 6. Voir la section "Structure complete du projet" (Step 6) pour l'arborescence definitive (~150 fichiers).
 
 ### Decisions techniques etablies par le starter
 
@@ -465,6 +439,111 @@ PostgreSQL (source de verite)
 | Syncthing | `adapters/filesync.py` | rsync, rclone |
 | EmailEngine | `adapters/email.py` | IMAP direct, autre bridge |
 
+#### 1f. Schema du graphe de connaissances (Zep + Graphiti)
+
+**Objectif** : Memoire eternelle — Toute information indexee avec relations semantiques. Recherche par sens, pas par mots-cles.
+
+**Types de nœuds (Node Types)**
+
+| Type | Description | Proprietes cles | Exemples |
+|------|-------------|-----------------|----------|
+| **Person** | Personne (contact, etudiant, collegue, famille) | name, role, email, phone, organization, tags | "Dr. Martin Dubois (cardiologue)", "Julie (etudiante these)" |
+| **Email** | Email recu ou envoye | subject, sender, recipients, date, category, priority, thread_id | Email "Relance facture" du 2026-02-01 |
+| **Document** | Document PDF, Docx, scan, article | title, filename, path, doc_type, date, category, author, metadata | Facture plombier, Article "SGLT2 inhibitors", These Julie v3 |
+| **Event** | Evenement agenda (RDV, reunion, deadline) | title, date_start, date_end, location, participants, event_type | RDV patient 15h, Soutenance these Julie 2026-04-15 |
+| **Task** | Tache a faire | title, description, status, priority, due_date, assigned_to, module | "Repondre email URSSAF", "Corriger intro these Julie" |
+| **Entity** | Entite extraite (NER) : organisation, lieu, concept medical, financier | entity_type, name, context, domain | "SGLT2 inhibiteurs" (medical), "SELARL" (financier), "CHU Toulouse" (organisation) |
+| **Conversation** | Conversation Telegram ou transcription Plaud | date, duration, participants, summary, topics | Transcription reunion equipe 2026-02-03 |
+| **Transaction** | Transaction financiere (depense, revenu) | amount, date, category, account, vendor, invoice_ref | Achat materiel bureau 250 euros (SELARL) |
+| **File** | Fichier physique (photo, audio, autre) | filename, path, mime_type, size, date, tags | Photo vacances 2025-08-15.jpg |
+| **Reminder** | Rappel proactif (entretien cyclique, garantie) | title, next_date, frequency, category, item_ref | Vidange voiture tous les 15000 km |
+
+**Types de relations (Edge Types)**
+
+| Relation | Source → Cible | Description | Proprietes |
+|----------|---------------|-------------|------------|
+| **SENT_BY** | Email → Person | Email envoye par une personne | timestamp |
+| **RECEIVED_BY** | Email → Person | Email recu par une personne | timestamp |
+| **ATTACHED_TO** | Document → Email | Document attache a un email | |
+| **MENTIONS** | Document/Email/Conversation → Entity | Mentionne une entite (personne, concept, organisation) | context (texte autour) |
+| **RELATED_TO** | Entity → Entity | Relation semantique entre deux entites | relation_type (similar, causes, treats, etc.) |
+| **ASSIGNED_TO** | Task → Person | Tache assignee a une personne | |
+| **CREATED_FROM** | Task → Email/Conversation | Tache creee depuis un email ou conversation | |
+| **SCHEDULED** | Event → Person | Evenement implique une personne | role (organizer, participant) |
+| **REFERENCES** | Document → Document | Document reference un autre document (citation, lien) | citation_context |
+| **PART_OF** | Document → Document | Document fait partie d'un ensemble (chapitre, version) | position, version |
+| **PAID_WITH** | Transaction → Document | Transaction liee a une facture | |
+| **BELONGS_TO** | Transaction → Entity | Transaction appartient a un perimetre financier | account_type (SELARL, SCM, SCI1, SCI2, perso) |
+| **REMINDS_ABOUT** | Reminder → Entity/Document | Rappel concerne une entite ou document | |
+| **SUPERSEDES** | Document → Document | Document remplace une version anterieure | version_diff |
+| **TEMPORAL_BEFORE** | Event/Task → Event/Task | Precedence temporelle | time_gap |
+| **DEPENDS_ON** | Task → Task | Dependance entre taches | dependency_type (blocks, requires) |
+
+**Proprietes temporelles (ajoutees par Graphiti)**
+
+Chaque nœud et relation inclut automatiquement :
+- `created_at` : Timestamp de creation
+- `updated_at` : Timestamp de derniere modification
+- `valid_from` : Debut de validite (pour versioning)
+- `valid_to` : Fin de validite (null si toujours valide)
+- `source` : Module Friday ayant cree le nœud (ex: "email-agent", "archiviste")
+
+**Exemples de requetes semantiques**
+
+```cypher
+// Retrouver tous les documents mentionnant SGLT2 ET diabete dans les 6 derniers mois
+MATCH (d:Document)-[:MENTIONS]->(e1:Entity {name: "SGLT2"}),
+      (d)-[:MENTIONS]->(e2:Entity {name: "diabete"})
+WHERE d.created_at > datetime() - duration('P6M')
+RETURN d.title, d.path, d.date
+
+// Trouver le dernier echange avec Julie (etudiante these)
+MATCH (p:Person {name: "Julie"})<-[:SENT_BY|RECEIVED_BY]-(e:Email)
+RETURN e.subject, e.date, e.category
+ORDER BY e.date DESC
+LIMIT 1
+
+// Lister toutes les factures non payees du plombier
+MATCH (d:Document {doc_type: "facture"})-[:MENTIONS]->(e:Entity {name: "plombier"})
+WHERE NOT EXISTS((t:Transaction)-[:PAID_WITH]->(d))
+RETURN d.title, d.date, d.path
+
+// Trouver les taches en retard assignees a Antonio
+MATCH (t:Task {status: "pending", assigned_to: "Antonio"})
+WHERE t.due_date < datetime()
+RETURN t.title, t.due_date, t.priority
+ORDER BY t.priority DESC
+
+// Recuperer l'historique complet d'un contrat (versions successives)
+MATCH path = (d:Document {title: "Bail cabinet"})-[:SUPERSEDES*]->(older:Document)
+RETURN nodes(path)
+ORDER BY older.date
+```
+
+**Integration avec Qdrant (vectorstore)**
+
+- **Graphe (Zep+Graphiti)** : Relations explicites, requetes structurees
+- **Vecteurs (Qdrant)** : Recherche semantique fuzzy, similarite
+- **Synergie** :
+  1. Recherche semantique Qdrant → Top 50 documents candidats
+  2. Filtre via graphe → Documents pertinents avec contexte relationnel
+  3. Reranking LLM → Top 5 documents finaux avec explications
+
+**Strategie de population du graphe**
+
+| Pipeline | Actions |
+|----------|---------|
+| **Email ingestion** | Creer nœuds Email + Person (sender/recipients) + relations SENT_BY/RECEIVED_BY + extraction entites NER → nœuds Entity + MENTIONS |
+| **Document archiviste** | Creer nœuds Document + extraction entites → MENTIONS + detection references → REFERENCES + lien avec Email si PJ → ATTACHED_TO |
+| **Plaud transcription** | Creer nœud Conversation + extraction entites/taches/evenements → relations vers Entity/Task/Event |
+| **Finance** | Creer nœuds Transaction + lien avec Document (facture) → PAID_WITH + classification perimetre → BELONGS_TO |
+| **Agenda** | Creer nœuds Event + lien avec Person → SCHEDULED + extraction depuis Email/Conversation → CREATED_FROM |
+| **Entretien cyclique** | Creer nœuds Reminder + lien avec Entity (voiture, chaudiere) → REMINDS_ABOUT |
+
+**Fallback si Zep/Graphiti indisponible**
+
+Mode degrade : recherche semantique via Qdrant seul (perte des relations temporelles du graphe, pas de la recherche vectorielle). Alerte Trust Layer (`service.down`) + circuit breaker dans `adapters/memorystore.py`.
+
 ---
 
 ### Categorie 2 : Authentification et securite
@@ -511,6 +590,137 @@ Donnee brute → Presidio (anonymisation) → LLM cloud Mistral
 
 Les donnees envoyees a Mistral cloud sont **toujours anonymisees**. Les donnees sensibles restent sur le VPS (Ollama local) ou sont anonymisees avant sortie.
 
+**Mecanisme d'anonymisation reversible (mapping chiffre)**
+
+**Probleme** : L'analyse besoins specifie "mapping chiffre local pour pouvoir requeter apres". Ex : chercher "Dupont" doit fonctionner meme si anonymise en `[PERSON_1]`.
+
+**Solution** : Table PostgreSQL `core.anonymization_mappings` avec chiffrement pgcrypto
+
+| Colonne | Type | Description |
+|---------|------|-------------|
+| `id` | uuid PRIMARY KEY | Identifiant unique du mapping |
+| `original_value` | bytea | Valeur originale chiffree (pgcrypto) |
+| `anonymized_token` | text | Token anonymise (ex: `[PERSON_1]`, `[DATE_5]`) |
+| `entity_type` | text | Type d'entite PII (PERSON, DATE, LOCATION, PHONE, EMAIL, etc.) |
+| `context_hash` | text | Hash SHA256 du contexte (document_id + field) pour deduplication |
+| `created_at` | timestamp | Date de creation du mapping |
+| `last_used_at` | timestamp | Derniere utilisation (pour purge eventuelle) |
+
+**Workflow anonymisation**
+
+```python
+# 1. Anonymisation (avant LLM cloud)
+async def anonymize_text(text: str, context: str) -> tuple[str, list[str]]:
+    # Presidio detecte les entites PII
+    entities = presidio_analyzer.analyze(text, language='fr')
+
+    # Pour chaque entite detectee
+    mappings = []
+    for entity in entities:
+        original = text[entity.start:entity.end]
+        context_hash = hashlib.sha256(f"{context}:{original}".encode()).hexdigest()
+
+        # Chercher mapping existant (deduplication)
+        existing = await db.fetchrow(
+            "SELECT anonymized_token FROM core.anonymization_mappings "
+            "WHERE context_hash = $1", context_hash
+        )
+
+        if existing:
+            token = existing['anonymized_token']
+        else:
+            # Creer nouveau mapping
+            token_count = await db.fetchval(
+                "SELECT COUNT(*) FROM core.anonymization_mappings "
+                "WHERE entity_type = $1", entity.entity_type
+            )
+            token = f"[{entity.entity_type}_{token_count + 1}]"
+
+            # Stocker avec chiffrement pgcrypto
+            await db.execute(
+                "INSERT INTO core.anonymization_mappings "
+                "(original_value, anonymized_token, entity_type, context_hash) "
+                "VALUES (pgp_sym_encrypt($1, current_setting('app.encryption_key')), "
+                "$2, $3, $4)",
+                original, token, entity.entity_type, context_hash
+            )
+
+        mappings.append((original, token))
+
+    # Remplacer dans le texte
+    anonymized = presidio_anonymizer.anonymize(text, entities)
+    return anonymized, [t for _, t in mappings]
+
+# 2. Des-anonymisation (apres reponse LLM)
+async def deanonymize_text(text: str, tokens: list[str]) -> str:
+    for token in tokens:
+        # Recuperer valeur originale dechiffree
+        original = await db.fetchval(
+            "SELECT pgp_sym_decrypt(original_value, "
+            "current_setting('app.encryption_key')) "
+            "FROM core.anonymization_mappings WHERE anonymized_token = $1", token
+        )
+        if original:
+            text = text.replace(token, original)
+            # Update last_used_at
+            await db.execute(
+                "UPDATE core.anonymization_mappings SET last_used_at = NOW() "
+                "WHERE anonymized_token = $1", token
+            )
+    return text
+
+# 3. Recherche semantique avec anonymisation
+async def search_with_anonymization(query: str) -> list[Document]:
+    # Si la requete contient des PII, anonymiser la requete
+    anonymized_query, tokens = await anonymize_text(query, "search_query")
+
+    # Recherche Qdrant avec requete anonymisee
+    results = await qdrant.search(anonymized_query)
+
+    # Des-anonymiser les resultats avant retour
+    for doc in results:
+        doc.content = await deanonymize_text(doc.content, tokens)
+
+    return results
+```
+
+**Configuration pgcrypto**
+
+```sql
+-- Migration 002_core_tables.sql
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+-- Stocker la cle de chiffrement dans PostgreSQL settings (changee via ALTER SYSTEM)
+-- Alternative : variable d'environnement chargee au demarrage
+ALTER DATABASE friday SET app.encryption_key = 'generated_secure_key_from_age';
+
+-- Table mappings
+CREATE TABLE core.anonymization_mappings (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    original_value BYTEA NOT NULL,  -- Chiffre via pgcrypto
+    anonymized_token TEXT NOT NULL UNIQUE,
+    entity_type TEXT NOT NULL,
+    context_hash TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW(),
+    last_used_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_anon_context ON core.anonymization_mappings(context_hash);
+CREATE INDEX idx_anon_token ON core.anonymization_mappings(anonymized_token);
+CREATE INDEX idx_anon_type ON core.anonymization_mappings(entity_type);
+```
+
+**Strategie de purge (optionnel)**
+
+Les mappings peuvent etre purges apres un delai (ex: 2 ans) si `last_used_at` depasse le seuil. Cela permet de respecter le principe RGPD de minimisation des donnees.
+
+**Trade-off : Anonymisation vs Recherche**
+
+L'analyse besoins previent : "A trop anonymiser, on perd la capacite de recherche". Solution retenue :
+- **Anonymisation selective** : Seules les donnees envoyees aux LLM cloud sont anonymisees
+- **Ollama VPS** : Donnees ultra-sensibles restent sur le VPS (pas d'anonymisation necessaire)
+- **Mapping persistant** : Permet la recherche apres anonymisation
+
 ---
 
 ### Categorie 3 : API et communication
@@ -556,14 +766,206 @@ A reconsiderer si extension famille (X3).
 
 #### 3e. Logs et observabilite
 
-**Decision** : Logs structures JSON + rotation
+**Decision** : Logs structures JSON + rotation + Observability & Trust Layer
 
 | Element | Outil |
 |---------|-------|
 | Format | JSON structure (timestamp, service, level, message, context) |
 | Agregation | `docker compose logs` + script de recherche |
-| Alertes | Telegram (notifications proactives si erreur critique) |
-| Monitoring avance | A evaluer post-MVP (Prometheus/Grafana si necessaire) |
+| Alertes | Telegram (notifications proactives si erreur critique via Redis pub/sub) |
+| Monitoring avance | Prometheus/Grafana rejeté (400 Mo RAM inutile). Monitoring via Trust Layer |
+
+#### 3f. Observability & Trust Layer (composant transversal)
+
+**Decision** : Systeme de confiance et tracabilite integre, obligatoire pour chaque module.
+
+**Problematique** : Friday agit au nom d'Antonio en arriere-plan (23 modules). Sans systeme de controle, les erreurs et hallucinations passent inapercues. La confiance utilisateur est une condition de viabilite du projet.
+
+**3 piliers :**
+
+| Pilier | Description | Composants |
+|--------|-------------|------------|
+| **Observabilite infra** | La salle des machines tourne ? | Healthcheck etendu, monitoring RAM, etat services lourds |
+| **Observabilite metier** | Friday a fait quoi exactement ? | Table `core.action_receipts`, journal, resume quotidien |
+| **Trust & Control** | Antonio garde le controle | Trust levels (auto/propose/bloque), feedback loop, retrogradation auto |
+
+##### Trust Levels (niveaux de confiance)
+
+Chaque action de Friday a un niveau de confiance configurable par Antonio :
+
+| Niveau | Comportement | Exemples |
+|--------|-------------|----------|
+| 🟢 **AUTO** | Friday agit, Antonio est notifie apres coup | OCR, renommage fichier, indexation, extraction PJ |
+| 🟡 **PROPOSE** | Friday prepare, Antonio valide avant execution (boutons inline Telegram) | Classification email, creation tache, ajout agenda, import finance |
+| 🔴 **BLOQUE** | Friday analyse et presente, jamais d'action autonome | Envoi mail, conseil medical, analyse juridique, communication thesards |
+
+**Initialisation Day 1 basee sur le risque :**
+- Risque bas (erreur = genante) → AUTO
+- Risque moyen (erreur = perte de temps) → PROPOSE pendant 2-4 semaines
+- Risque eleve (erreur = consequence reelle) → BLOQUE toujours
+
+**Promotion et retrogradation :**
+- PROPOSE → AUTO : accuracy >95% sur 3 semaines consecutives + validation Antonio
+- AUTO → PROPOSE (retrogradation) : accuracy <90% sur 1 semaine → **AUTOMATIQUE** (pas besoin d'intervention Antonio)
+- BLOQUE → PROPOSE : jamais automatique, decision Antonio uniquement
+
+##### Middleware `@friday_action`
+
+Decorateur Python obligatoire pour chaque action de chaque module :
+
+```python
+# agents/src/middleware/trust.py
+@friday_action(module="email", action="classify", trust_default="propose")
+async def classify_email(email: Email) -> ActionResult:
+    # L'agent fait son travail normalement
+    # Le decorateur gere : receipt, trust level, validation Telegram, feedback
+    return ActionResult(
+        input_summary="Email de dr.martin: Reunion planning",
+        output_summary="→ Cabinet",
+        confidence=0.94,
+        reasoning="Regle #12 appliquee (dr.martin → Cabinet)"
+    )
+```
+
+Le decorateur gere automatiquement :
+1. Creation du receipt dans `core.action_receipts`
+2. Verification du trust level
+3. Si AUTO → execute et log
+4. Si PROPOSE → envoie validation Telegram (boutons inline)
+5. Si BLOQUE → presente analyse sans agir
+6. Si erreur → alerte Telegram temps reel
+
+**Impact sur les modules** : minimal. Un decorateur + un `ActionResult` en retour. Le middleware fait le reste.
+
+##### Receipts (tracabilite)
+
+Chaque action genere un receipt verifiable :
+
+```sql
+-- database/migrations/011_trust_system.sql
+CREATE TABLE core.action_receipts (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    module TEXT NOT NULL,
+    action_type TEXT NOT NULL,
+    trust_level TEXT NOT NULL CHECK (trust_level IN ('auto','propose','blocked')),
+    input_summary TEXT NOT NULL,
+    output_summary TEXT NOT NULL,
+    confidence FLOAT,
+    reasoning TEXT,
+    steps JSONB DEFAULT '[]',
+    status TEXT NOT NULL DEFAULT 'pending'
+        CHECK (status IN ('pending','approved','rejected','auto','error')),
+    duration_ms INT,
+    error_detail TEXT,
+    validated_at TIMESTAMPTZ,
+    correction TEXT
+);
+```
+
+**Granularite** : 1 receipt parent par action visible + N sous-actions techniques.
+- `/journal` → affiche les receipts parents (1 ligne par action)
+- `/receipt [id]` → affiche le detail d'un receipt
+- `/receipt [id] -v` → affiche les sous-actions techniques
+
+**Confiance parent = MIN des confiances sous-actions.** Antonio voit le maillon faible.
+
+##### Feedback loop (correction → apprentissage)
+
+Quand Antonio corrige une action :
+
+1. La correction est stockee dans `core.action_receipts` (champ `correction`)
+2. Friday detecte les patterns recurrents automatiquement
+3. Apres 2 corrections du meme pattern → Friday propose une regle
+4. Antonio valide la regle → stockee dans `core.correction_rules`
+5. Les regles sont injectees dans les prompts LLM (SELECT + injection, pas de RAG)
+
+```sql
+CREATE TABLE core.correction_rules (
+    id SERIAL PRIMARY KEY,
+    module TEXT NOT NULL,
+    conditions JSONB NOT NULL,
+    output TEXT NOT NULL,
+    source_receipts UUID[] NOT NULL,
+    hit_count INT DEFAULT 0,
+    active BOOLEAN DEFAULT true,
+    approved_by TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+**Hierarchie de decision** : Regle explicite > Jugement LLM. Pas de RAG correctif (50 regles max = un SELECT suffit).
+
+##### Metriques de confiance
+
+Calculees chaque soir (cron) :
+
+```sql
+CREATE TABLE core.trust_metrics (
+    module TEXT NOT NULL,
+    action_type TEXT NOT NULL,
+    week_start DATE NOT NULL,
+    total INT DEFAULT 0,
+    correct INT DEFAULT 0,
+    corrected INT DEFAULT 0,
+    accuracy FLOAT GENERATED ALWAYS AS
+        (correct::float / NULLIF(total, 0)) STORED,
+    PRIMARY KEY (module, action_type, week_start)
+);
+```
+
+Deux metriques distinctes :
+- `model_confidence` : ce que le LLM pense (technique, interne au receipt)
+- `historical_accuracy` : taux de reussite reel base sur les corrections (metier, visible par Antonio)
+
+C'est `historical_accuracy` qui determine les promotions/retrogradations.
+
+##### Commandes Telegram (introspection)
+
+Un seul canal Telegram (pas de fragmentation). Friday communique proactivement (briefing, alertes, validations) et Antonio peut interroger a la demande :
+
+| Commande | Description |
+|----------|-------------|
+| `/status` | Etat salle des machines : infra, services lourds, pipelines, RAM, disque |
+| `/journal` | Ce que Friday a fait (aujourd'hui, hier, par module) |
+| `/journal finance` | Filtre par module |
+| `/receipt [id]` | Detail d'une action (entree, sortie, confiance, raisonnement) |
+| `/receipt [id] -v` | Detail technique complet (sous-actions, durees, modele utilise) |
+| `/confiance` | Metriques de confiance par module (accuracy historique) |
+| `/stats` | Statistiques de la semaine (volumes traites par module) |
+
+**Principe UX (progressive disclosure)** :
+- **Niveau 1 (surface)** : Resume soir = "47 actions, 2 doutes, tout OK" → Antonio voit sans rien faire
+- **Niveau 2 (detail)** : `/journal` → liste des actions avec statut
+- **Niveau 3 (profondeur)** : `/receipt -v` → raisonnement complet, sources, modele
+
+99% du temps Antonio reste au niveau 1. Le systeme de confiance fonctionne quand Antonio n'a PAS besoin de l'utiliser.
+
+##### Resume quotidien (filet de securite)
+
+Deux messages automatiques par jour dans le canal principal :
+
+**Briefing matin (06:30)** : agregation tous modules (existant dans l'architecture)
+
+**Resume soir (18:00)** : nouveau, specifique au Trust Layer :
+```
+📊 RÉSUMÉ 05/02
+✅ AUTO: 42 actions (OCR, indexation, renommage)
+🟡 VALIDÉ: 5 actions (2 emails, 2 taches, 1 agenda)
+⚠️ À VÉRIFIER: 1 anomalie financiere → /receipt fin-001
+📈 CONFIANCE JOUR: 94.2% (1 doute / 48 actions)
+```
+
+##### Alertes temps reel
+
+Via Redis Pub/Sub → Telegram :
+
+| Event | Declencheur | Exemple |
+|-------|-------------|---------|
+| `pipeline.error` | Exception non recuperable dans un pipeline | "❌ Pipeline emails KO (ConnectionError)" |
+| `service.down` | Service lourd injoignable depuis >5min | "🚨 Faster-Whisper down depuis 10min" |
+| `trust.level.changed` | Retrogradation automatique | "⚠️ Classification email retrogradee → PROPOSE (accuracy 84%)" |
+| `ram.threshold.exceeded` | RAM >85% pendant >5min | "🧠 RAM 87% - surveiller" |
 
 ---
 
@@ -612,41 +1014,458 @@ n8n fournit son propre dashboard pour l'administration des workflows. Aucun deve
 | Retention | 7 jours rotatifs sur le PC |
 | Estimation taille | ~467 Mo initial compresse, ~50 Mo/mois supplementaires |
 
-#### 5d. Profils RAM (VPS 16 Go)
+#### 5d. Profils RAM (VPS-4 48 Go)
 
-**Decision** : Services lourds mutuellement exclusifs, geres par profils
+**Decision** : Tous les services lourds residents en simultane. Plus d'exclusion mutuelle.
 
 | Service | RAM estimee | Mode |
 |---------|-------------|------|
-| PostgreSQL | ~500 Mo | Permanent |
+| PostgreSQL | ~1-1.5 Go | Permanent |
 | Redis | ~200 Mo | Permanent |
-| n8n | ~300 Mo | Permanent |
+| n8n | ~500 Mo | Permanent |
 | FastAPI Gateway | ~200 Mo | Permanent |
 | Telegram Bot | ~100 Mo | Permanent |
-| Qdrant | ~1 Go | Permanent |
+| Qdrant | ~1-2 Go | Permanent |
 | Zep | ~500 Mo | Permanent |
-| EmailEngine | ~300 Mo | Permanent |
+| EmailEngine | ~500 Mo | Permanent |
 | Caddy | ~50 Mo | Permanent |
-| **Sous-total permanent** | **~3.15 Go** | |
-| **Disponible pour services lourds** | **~12.85 Go** | A la demande |
+| Presidio + spaCy-fr | ~1-1.5 Go | Permanent |
+| **Sous-total permanent** | **~5-7 Go** | |
 
-| Service lourd | RAM | Compatible avec |
-|---------------|-----|-----------------|
-| Ollama Nemo 12B | ~8 Go | Surya (~2 Go), Playwright (~1 Go) |
-| Ollama Ministral 3B | ~3 Go | Faster-Whisper (~4 Go), Kokoro (~2 Go) |
-| Faster-Whisper | ~4 Go | Ministral 3B, Kokoro |
-| Kokoro TTS | ~2 Go | Tout sauf Nemo 12B + Whisper simultane |
-| Surya/Marker OCR | ~2 Go | Tout sauf Nemo 12B + Whisper simultane |
+| Service lourd | RAM | Mode |
+|---------------|-----|------|
+| Ollama Nemo 12B | ~8 Go | Resident |
+| Faster-Whisper | ~4 Go | Resident |
+| Kokoro TTS | ~2 Go | Resident |
+| Surya/Marker OCR | ~2 Go | Resident |
+| **Sous-total services lourds** | **~16 Go** | |
 
-**Regle critique** : Ollama Nemo 12B (8 Go) et Faster-Whisper (4 Go) ne peuvent PAS tourner simultanement. Le superviseur LangGraph doit gerer l'ordonnancement des services lourds.
+**Bilan RAM VPS-4 :**
 
-**Correction Party Mode** : Le profil RAM n'avait pas ete calcule initialement. L'analyse revele que les 16 Go suffisent mais uniquement avec une gestion stricte de l'exclusion mutuelle des services lourds.
+| | Go |
+|--|--|
+| Total VPS-4 | 48 Go |
+| Socle permanent | ~5-7 Go |
+| Services lourds (tous residents) | ~16 Go |
+| **Marge disponible** | **~25 Go** |
+
+**Avantage majeur** : Zero cold start. Ollama Nemo 12B met 30-60s a se charger en RAM. Avec 48 Go, tous les modeles sont pre-charges et repondent instantanement.
+
+**Orchestrator simplifie** : Le `config/profiles.py` passe de gestionnaire d'exclusions mutuelles a simple moniteur RAM. Il surveille la consommation et alerte si usage >85% mais ne bloque plus le demarrage des services.
+
+```python
+# config/profiles.py - SIMPLIFIE (plus d'exclusion mutuelle)
+SERVICE_RAM_PROFILES: dict[str, ServiceProfile] = {
+    "ollama-nemo": ServiceProfile(ram_gb=8),
+    "faster-whisper": ServiceProfile(ram_gb=4),
+    "kokoro-tts": ServiceProfile(ram_gb=2),
+    "surya-ocr": ServiceProfile(ram_gb=2),
+}
+
+RAM_ALERT_THRESHOLD_PCT = 85  # Alerte Telegram si depasse
+# Plus de champ "incompatible_with" → tous compatibles sur VPS-4
+```
+
+**Plan B (VPS-3, 24 Go, 15 euros TTC)** : Si besoin de reduire le budget, reduction obligatoire du perimetre fonctionnel. Modules non critiques retires : Coach sportif, Menus & Courses, Collection jeux video, CV academique. Les modules critiques (Moteur Vie, Archiviste, Agenda, Finance, These, Droit) representent ~14 Go services lourds + 7 Go socle = 21 Go sur 24 Go. Marge 3 Go suffisante. La config `profiles.py` supporte les deux modes via variable d'environnement `VPS_TIER`.
+
+---
+
+### Clarifications techniques complementaires
+
+#### n8n vs LangGraph : Frontiere et exemples
+
+**Regle de decision** :
+| Outil | Usage | Caracteristiques |
+|-------|-------|------------------|
+| **n8n** | Workflows data (ingestion, cron, webhooks, fichiers) | Orchestration visuelle, triggers externes, pas de logique metier complexe |
+| **LangGraph** | Logique agent IA (decisions, raisonnement, multi-steps) | State graph, decisions conditionnelles, appels LLM, logique metier |
+
+**Exemples par module** :
+
+| Module | Workflow n8n | Agent LangGraph |
+|--------|-------------|-----------------|
+| **Moteur Vie (Email)** | Webhook EmailEngine → Validation payload → Insert PostgreSQL → Publish Redis event | Classification email (appel LLM) → Extraction taches → Generation brouillon reponse |
+| **Archiviste** | Watch dossier uploads → OCR Surya → Insert PostgreSQL → Publish Redis event | Renommage intelligent (appel LLM) → Classification document → Extraction metadonnees |
+| **Briefing** | Cron 7h00 → Aggregate data PostgreSQL → HTTP call FastAPI Gateway → Send Telegram | Generation briefing (appel LLM) → Priorisation items → Structuration resume |
+| **Finance** | Watch dossier CSV → Parse Papa Parse → Insert PostgreSQL → Publish Redis event | Classification transactions (appel LLM) → Detection anomalies → Suggestions optimisation |
+| **Tuteur These** | Watch Google Drive → Detect changes → Notify agent → Publish Redis event | Analyse methodologique (appel LLM) → Generation commentaires → Detection erreurs stats |
+
+**Principe** : n8n = plomberie (ingestion, transport, cron), LangGraph = cerveau (decisions IA).
+
+#### Mistral cloud vs Ollama VPS : Justification
+
+**Decision** : Hybride Mistral cloud + Ollama VPS
+
+| Critere | Mistral cloud (Nemo) | Ollama VPS (Nemo 12B) | Choix |
+|---------|---------------------|----------------------|-------|
+| **Latence** | ~500-800ms (API) | ~2-5s (CPU) | Cloud plus rapide |
+| **Cout** | ~0.15 euros/mois (600 emails @ $0.02/1M tokens) | 0 euro (VPS deja paye) | Cloud negligeable |
+| **Confidentialite** | Donnees quittent le VPS | Donnees restent sur VPS | VPS meilleur |
+| **Fiabilite** | API externe (dependency) | Local (resilient) | VPS meilleur |
+
+**Strategie retenue** :
+- **Classification/tri rapide** (600+ items/mois) → **Mistral cloud** : Latence critique, cout negligeable (~0.15 euro/mois), pas de donnees sensibles (juste subject + preview 500 chars)
+- **Donnees sensibles** (medical, financier, juridique) → **Ollama VPS** : Donnees ne sortent jamais, latence acceptable pour analyses ponctuelles
+- **Raisonnement complexe** (briefing, generation, analyse) → **Mistral Large 3 cloud** : Qualite superieure, usage ponctuel (1-2x/jour), cout maitrise (~5-8 euros/mois)
+
+**Fallback** : Si budget trop eleve → basculer classification vers Ollama VPS (augmente latence mais economise ~2 euros/mois).
+
+#### Feedback loop : Portee des regles (par module vs globales)
+
+**Decision** : Regles **par module** par defaut, regles **globales** explicites
+
+**Table `core.correction_rules`** :
+
+```sql
+CREATE TABLE core.correction_rules (
+    id UUID PRIMARY KEY,
+    module TEXT NOT NULL,           -- "email", "archiviste", "finance", etc.
+    action TEXT NOT NULL,           -- "classify", "rename", "detect_anomaly", etc.
+    scope TEXT DEFAULT 'module',    -- "module" (local) ou "global" (tous modules)
+    conditions JSONB NOT NULL,      -- Conditions declenchement {keywords: [...], patterns: [...]}
+    output JSONB NOT NULL,          -- Correction a appliquer {category: "medical", priority: "high"}
+    priority INT DEFAULT 1,         -- Ordre application (1 = plus prioritaire)
+    active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT NOW(),
+    created_by TEXT DEFAULT 'Antonio'
+);
+
+CREATE INDEX idx_rules_module_action ON core.correction_rules(module, action, active);
+CREATE INDEX idx_rules_scope ON core.correction_rules(scope, active);
+```
+
+**Exemple regle module** :
+
+```json
+{
+  "module": "email",
+  "action": "classify",
+  "scope": "module",
+  "conditions": {"keywords": ["URSSAF", "cotisations"]},
+  "output": {"category": "finance", "priority": "high"}
+}
+```
+
+**Exemple regle globale** :
+
+```json
+{
+  "module": "*",
+  "action": "*",
+  "scope": "global",
+  "conditions": {"contains_pii": true},
+  "output": {"anonymize_before_llm": true, "trust_level": "propose"}
+}
+```
+
+**Injection dans prompts** :
+
+```python
+# Chargement regles module + globales
+rules_module = await db.fetch(
+    "SELECT conditions, output FROM core.correction_rules "
+    "WHERE (module=$1 AND action=$2 AND scope='module') "
+    "OR scope='global' AND active=true ORDER BY priority ASC",
+    module_name, action_name
+)
+
+# Injection prompt
+prompt = f"""
+Classe cet email en tenant compte des regles prioritaires suivantes :
+{format_rules(rules_module)}
+
+Email : {email.subject}
+...
+"""
+```
+
+#### Modules 11-13 et 21-23 : Esquisse architecture
+
+**Modules non detailles Day 1** (priorite 3/5 ou nice to have) :
+
+| Module | Architecture technique | Tools/APIs |
+|--------|----------------------|------------|
+| **11. Generateur TCS** | Template Jinja2 + Base programme RAG (Qdrant) + LLM Mistral Large 3 → Vignette JSON → Rendu Markdown | CrossRef API (verification references), Qdrant (recherche programme etudes) |
+| **12. Generateur ECOS** | Template Jinja2 + Methodes fournies Antonio (RAG) + LLM Mistral Large 3 → Stations ECOS JSON → Grilles evaluation | Qdrant (recherche methodes), Mistral Large 3 (generation scenarios) |
+| **13. Actualisateur cours** | Cours existant Markdown/Docx → Extraction sections → Recherche references recentes (PubMed/HAS) → LLM Mistral Large 3 → Generation sections mises a jour → Merge document | PubMed API, Legifrance PISTE (recos HAS), Mistral Large 3 |
+| **21. Collection jeux video** | Form Telegram (titre, plateforme, edition, etat) → Insert PostgreSQL (`knowledge.collection_items`) → eBay/PriceCharting scraping (Playwright) → Alerte variations cote >10% | Playwright (scraping eBay), PriceCharting API (si disponible) |
+| **22. CV academique** | Template LaTeX + Extraction donnees PostgreSQL (`knowledge.publications`, `knowledge.theses_supervised`, `knowledge.teaching_activities`) → Compilation PDF → Sync PC | PostgreSQL queries, LaTeX/Pandoc |
+| **23. Mode HS/Vacances** | Flag `core.user_settings.vacation_mode` → n8n workflow pause pipelines non critiques → Auto-reply emails → Alertes thesards Telegram → Briefing retour genere | n8n (pause workflows), Telegram (notifications), PostgreSQL (flag) |
+
+**Implementation post-Story 1** : Ces modules seront implémentes selon priorite utilisateur apres socle operationnel.
+
+#### Flux BeeStation : Schema exact
+
+**Decision** : Flux indirect via PC (pont Synology → Tailscale)
+
+```
+Telephone (photos) → BeeStation Synology (stockage)
+                         ↓
+           Synology Drive Client (auto-sync)
+                         ↓
+           PC Antonio (~/Photos/BeeStation/)
+                         ↓
+           Syncthing via Tailscale
+                         ↓
+           VPS (/data/transit/photos/)
+                         ↓
+           Agent Photos Friday (indexation + embeddings)
+                         ↓
+           Qdrant (vecteurs) + PostgreSQL (metadonnees)
+```
+
+**Configuration requise** :
+1. **BeeStation** : Synology Drive Server active
+2. **PC Antonio** : Synology Drive Client installe, sync `Photos/` → `~/Photos/BeeStation/`
+3. **PC Antonio** : Syncthing sync `~/Photos/BeeStation/` → VPS `/data/transit/photos/`
+4. **VPS** : Agent Photos watch `/data/transit/photos/` → Traitement → Suppression transit apres indexation
+
+**Rationale** : BeeStation (BSM) ne supporte ni Tailscale ni packages tiers. Le PC sert de pont.
+
+#### Apprentissage style redactionnel : Processus
+
+**Decision** : Few-shot learning automatique + Correction manuelle
+
+**Workflow** :
+
+1. **Initialisation** : Prompts generiques (ton formel/informel configurable via `core.user_settings.writing_style`)
+
+2. **Apprentissage automatique** :
+   - Chaque brouillon envoye par Antonio → Stocker dans `core.writing_examples` (marqueur `sent_by=Antonio`)
+   - Extraire caracteristiques : longueur moyenne, structure, vocabulaire frequent, formules de politesse
+   - Top 10 exemples recents → Injection dans prompt few-shot
+
+3. **Correction manuelle** :
+   - Antonio corrige brouillon Friday → Diff stocke dans `core.action_receipts.correction` (Trust Layer)
+   - Pattern detecte (2+ corrections similaires) → Proposition regle explicite : "Toujours utiliser 'Cordialement' au lieu de 'Bien a vous'"
+   - Antonio valide regle → Insert `core.correction_rules`
+
+4. **Injection few-shot** :
+
+```python
+# Charger exemples style Antonio
+examples = await db.fetch(
+    "SELECT subject, body FROM core.writing_examples "
+    "WHERE sent_by='Antonio' AND email_type=$1 ORDER BY created_at DESC LIMIT 5",
+    email_type
+)
+
+# Prompt avec few-shot
+prompt = f"""
+Redige une reponse dans le style suivant :
+
+Exemples de style Antonio :
+---
+{format_examples(examples)}
+---
+
+Email a repondre : {email.subject}
+...
+"""
+```
+
+**Table SQL** :
+
+```sql
+CREATE TABLE core.writing_examples (
+    id UUID PRIMARY KEY,
+    email_type TEXT,              -- "professional", "personal", "medical", "academic"
+    subject TEXT,
+    body TEXT,
+    sent_by TEXT DEFAULT 'Antonio',
+    created_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+#### Caddy : Utilite dans contexte Tailscale-only
+
+**Decision** : Caddy = Reverse proxy **interne** pour simplifier URLs + HTTPS mesh Tailscale
+
+**Rationale** :
+1. **URLs simplifiees** : `https://friday.local` au lieu de `http://172.25.0.5:8000`
+2. **HTTPS automatique** : Caddy genere certificats auto pour le mesh Tailscale (via Tailscale ACME)
+3. **Routage interne** : Un seul point d'entree pour tous services (gateway, n8n, Qdrant UI, etc.)
+
+**Configuration Caddy** :
+
+```caddyfile
+# config/caddy/Caddyfile
+friday.local {
+    reverse_proxy /api/* gateway:8000
+    reverse_proxy /n8n/* n8n:5678
+    reverse_proxy /qdrant/* qdrant:6333
+}
+```
+
+**Alternatives evaluees** :
+- **Nginx** : Plus verbeux, Caddy = zero-config HTTPS
+- **Traefik** : Over-engineering (service discovery inutile pour setup statique)
+- **Aucun proxy** : URLs complexes (`http://100.x.x.x:8000/api/v1/...`), pas de HTTPS
+
+**Conclusion** : Caddy = confort developpement + HTTPS gratuit, overhead negligeable (~50 Mo RAM).
+
+#### Redis : Configuration persistance
+
+**Decision** : Redis en mode **AOF (Append-Only File)** pour persistence
+
+| Mode | Avantages | Inconvenients | Choix Friday |
+|------|-----------|---------------|-------------|
+| **Volatile** | Rapide, pas de disque | Perte donnees si crash | ❌ Non (pub/sub critique) |
+| **RDB (snapshot)** | Compact, rapide restore | Perte donnees entre snapshots | ❌ Non (trop risque) |
+| **AOF (append-only)** | Aucune perte donnee, replay log | Fichier plus gros, fsync overhead | ✅ **OUI** |
+
+**Configuration `docker-compose.yml`** :
+
+```yaml
+services:
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes --appendfsync everysec
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+```
+
+**Rationale** :
+- Redis Pub/Sub = bus evenements critique (email.received, pipeline.error, trust.level.changed)
+- Si Redis crash sans persistence → evenements perdus → pipelines bloques
+- AOF `appendfsync everysec` = bon compromis (1s max perte en cas crash)
+
+**Backup** : AOF file inclus dans backup quotidien (`/data/appendonly.aof` → Sync Tailscale PC).
+
+#### Qdrant : Strategie backup
+
+**Decision** : Snapshot quotidien + Sync Tailscale
+
+**Probleme** : Regenerer embeddings = tres couteux (temps + API calls Mistral)
+- 10 000 documents × 512 tokens/doc × $0.02/1M tokens = ~$1
+- Temps : ~30 min (rate limits API)
+
+**Solution** : Snapshot Qdrant quotidien
+
+**Implementation n8n** : Deja specifie dans `n8n-workflows/backup-daily.json` (Node 4 : Backup Qdrant Snapshot)
+
+```bash
+# API Qdrant snapshot
+curl -X POST http://qdrant:6333/collections/friday_docs/snapshots
+
+# Response : {"snapshot_name": "friday_docs-2026-02-05-02-00-00.snapshot"}
+
+# Download snapshot
+curl -X GET http://qdrant:6333/collections/friday_docs/snapshots/friday_docs-2026-02-05-02-00-00.snapshot \
+  --output /backups/qdrant_20260205.snapshot
+```
+
+**Restore** :
+
+```bash
+# Upload snapshot
+curl -X POST http://qdrant:6333/collections/friday_docs/snapshots/upload \
+  -F "snapshot=@qdrant_20260205.snapshot"
+```
+
+**Retention** : 7 jours rotatifs (comme PostgreSQL).
+
+#### Migration SQL rollback : Gestion pipelines post-migration
+
+**Probleme** : Rollback migration apres que pipelines ont insere des donnees
+
+**Exemple** :
+1. Migration 011 cree table `core.action_receipts`
+2. Friday insere 1000 receipts
+3. Vouloir rollback migration 011 → Que faire des 1000 receipts ?
+
+**Solution retenue** : Backup pre-migration automatique + Rollback manuel
+
+**Workflow** :
+
+```python
+# scripts/apply_migrations.py
+async def apply_migration(migration_file):
+    # 1. Backup automatique pre-migration
+    backup_file = f"/backups/pre_migration_{migration_file}_{datetime.now()}.dump"
+    await run_command(f"pg_dump -Fc -f {backup_file} friday")
+
+    # 2. Appliquer migration
+    with open(migration_file) as f:
+        sql = f.read()
+        await db.execute(sql)
+
+    # 3. Insert tracking
+    await db.execute(
+        "INSERT INTO schema_migrations (version, applied_at) VALUES ($1, NOW())",
+        migration_file
+    )
+
+    print(f"✅ Migration {migration_file} appliquee. Backup: {backup_file}")
+```
+
+**Rollback manuel** :
+
+```bash
+# Restaurer backup pre-migration (ecrase TOUT)
+pg_restore -d friday -c /backups/pre_migration_011_trust_system.dump
+
+# OU rollback SQL manuel si migration simple
+psql friday -c "DROP TABLE core.action_receipts CASCADE;"
+psql friday -c "DELETE FROM schema_migrations WHERE version='011_trust_system.sql';"
+```
+
+**Rationale** : Rollback automatique = trop risque (peut casser dependances). Backup automatique + rollback manuel = plus sur.
+
+#### Versions exactes : Stack complet
+
+**Decision** : Versions precises pour eviter breaking changes
+
+**Python & Frameworks** :
+
+```toml
+# agents/pyproject.toml
+[tool.poetry.dependencies]
+python = "^3.12.0"
+fastapi = "^0.115.0"
+pydantic = "^2.9.0"
+langgraph = "^0.2.45"
+langchain = "^0.3.7"
+httpx = "^0.27.0"
+asyncpg = "^0.29.0"
+redis = "^5.2.0"
+python-telegram-bot = "^21.7"
+mistralai = "^1.2.0"
+presidio-analyzer = "^2.2.355"
+presidio-anonymizer = "^2.2.355"
+spacy = "^3.8.0"
+pytest = "^8.3.0"
+pytest-asyncio = "^0.24.0"
+pytest-cov = "^6.0.0"
+```
+
+**Services Docker** :
+
+```yaml
+# docker-compose.yml
+services:
+  postgres:
+    image: postgres:16.6-alpine
+  redis:
+    image: redis:7.4-alpine
+  qdrant:
+    image: qdrant/qdrant:v1.12.5
+  n8n:
+    image: n8nio/n8n:1.69.2
+  caddy:
+    image: caddy:2.8-alpine
+```
+
+**Rationale** : Versions figees = reproductibilite. Upgrades manuelles apres validation tests.
+
+---
 
 #### 5e. Scaling
 
 **Decision** : Pas de scaling horizontal Day 1. VPS unique.
 
-Upgrade vertical possible (OVH 32 Go ~48 euros/mois) si les 16 Go deviennent insuffisants. Le scaling horizontal n'a aucun sens pour un utilisateur unique.
+Le scaling horizontal n'a aucun sens pour un utilisateur unique. Si 48 Go deviennent insuffisants (peu probable), upgrade VPS-5 (64 Go, ~38 euros TTC) possible sans migration.
 
 ---
 
@@ -697,7 +1516,8 @@ OpenClaw est un agent IA autonome open-source lance fin 2025 (~3 mois d'existenc
 |----------------|-----------|--------|
 | Celery + Redis comme task queue | **Retire** → n8n + FastAPI BackgroundTasks + Redis Streams | Trois systemes de queuing = complexite inutile |
 | SQLAlchemy + Alembic | **Retire** → asyncpg brut + SQL numerotees | ORM inapproprie pour un systeme pipeline/agent |
-| RAM 16 Go non calcule | **Documente** → profils d'exclusion mutuelle | Nemo 12B + Whisper ne coexistent pas |
+| RAM 16 Go non calcule | **Resolu** → upgrade VPS-4 48 Go, tous services residents en simultane | Plus d'exclusion mutuelle, marge 25 Go |
+| Observabilite absente | **Ajoute** → Observability & Trust Layer (composant transversal) | Receipts, trust levels, alertes, feedback loop |
 | OpenClaw (10% interface) | **Retire Day 1** → reevaluation post-socle | Maturite insuffisante, 5/37 exigences couvertes |
 
 ---
@@ -707,15 +1527,17 @@ OpenClaw est un agent IA autonome open-source lance fin 2025 (~3 mois d'existenc
 **Sequence recommandee :**
 1. Infrastructure de base (Docker Compose, PostgreSQL, Redis, Tailscale, Caddy)
 2. FastAPI Gateway + schemas Pydantic
-3. Bot Telegram basique (connexion au Gateway)
-4. n8n + premiers workflows (ingestion email)
-5. LangGraph superviseur + premier agent
-6. Services lourds (Ollama, STT, TTS, OCR) avec gestion profils RAM
+3. **Observability & Trust Layer** (middleware `@friday_action`, table `core.action_receipts`, trust levels)
+4. Bot Telegram basique (connexion au Gateway + commandes `/status`, `/journal`, `/receipt`)
+5. n8n + premiers workflows (ingestion email)
+6. LangGraph superviseur + premier agent (utilise `@friday_action`)
+7. Services lourds (Ollama, STT, TTS, OCR) — tous residents en simultane sur VPS-4
 
 **Dependances croisees :**
 - Le superviseur LangGraph depend du Gateway FastAPI
 - Les adaptateurs (Qdrant, Zep) dependent du schema `knowledge` PostgreSQL
-- La gestion des profils RAM depend du superviseur (ordonnancement des services lourds)
+- L'Observability & Trust Layer depend de PostgreSQL (`core.action_receipts`) et Redis (alertes pub/sub)
+- **Chaque agent/module depend du middleware `@friday_action`** → le Trust Layer doit etre pret AVANT le premier module metier
 - Les pipelines d'anonymisation (Presidio) doivent etre operationnels AVANT tout appel LLM cloud
 
 ---
@@ -728,7 +1550,7 @@ OpenClaw est un agent IA autonome open-source lance fin 2025 (~3 mois d'existenc
 
 **Validation evolvabilite** : Chaque ajout ameliore ou preserve la capacite a faire evoluer le systeme sans refactoring massif.
 
-**Contrainte materielle** : VPS 16 Go avec gestion stricte RAM (services lourds mutuellement exclusifs).
+**Contrainte materielle** : VPS-4 48 Go, tous services lourds residents en simultane (marge ~25 Go).
 
 ---
 
@@ -763,8 +1585,8 @@ friday-2.0/
 │   ├── caddy/
 │   │   └── Caddyfile                  # Reverse proxy interne
 │   ├── logging.py                     # Configuration structlog centralisee
-│   ├── profiles.py                    # [AJOUT] Profils RAM services (SERVICE_RAM_PROFILES dict)
-│   ├── health_checks.py               # [AJOUT] Configuration healthchecks decouples
+│   ├── profiles.py                    # [AJOUT] Profils RAM services (moniteur, plus d'exclusion mutuelle)
+│   ├── health_checks.py               # [AJOUT] Configuration healthchecks decouples + pipelines metier
 │   └── exceptions/
 │       └── __init__.py                # Hierarchie FridayError + RETRYABLE_EXCEPTIONS
 │
@@ -780,6 +1602,7 @@ friday-2.0/
 │   │   ├── 008_knowledge_relations.sql
 │   │   ├── 009_knowledge_embeddings.sql
 │   │   ├── 010_pgcrypto.sql           # Extension chiffrement
+│   │   ├── 011_trust_system.sql       # [AJOUT] Tables: action_receipts, correction_rules, trust_metrics, trust_levels
 │   │   └── ...                        # Migrations incrementales (SQL simple, rollback via backup)
 │   ├── schema_migrations.sql          # Table tracking migrations
 │   └── README.md                      # Documentation conventions PostgreSQL
@@ -805,29 +1628,31 @@ friday-2.0/
 │       │       ├── email.txt
 │       │       └── ...
 │       │
+│       ├── middleware/                # [AJOUT] Trust Layer (deplace de config/ → importable par agents)
+│       │   ├── __init__.py
+│       │   ├── trust.py               # Decorateur @friday_action
+│       │   ├── models.py              # ActionResult, StepDetail (Pydantic)
+│       │   └── trust_levels.py        # Lecture trust levels depuis PostgreSQL
+│       │
 │       ├── supervisor/                # Superviseur LangGraph (routage + ordonnancement RAM)
 │       │   ├── __init__.py
 │       │   ├── graph.py               # Definition StateGraph LangGraph
 │       │   ├── router.py              # Routage vers agents specialises
-│       │   ├── orchestrator.py        # Ordonnancement services lourds (RAM 16 Go)
+│       │   ├── orchestrator.py        # Monitoring RAM services lourds (VPS-4 48 Go)
 │       │   └── state.py               # AgentState Pydantic
 │       │
-│       ├── agents/                    # Agents specialises (23 modules) - STRUCTURE PLATE
+│       ├── agents/                    # Agents specialises (23 modules) - STRUCTURE PLATE KISS
 │       │   ├── __init__.py
 │       │   ├── base.py                # BaseAgent abstrait
 │       │   │
 │       │   ├── email/                 # Module 1: Moteur Vie
 │       │   │   ├── __init__.py
-│       │   │   ├── agent.py           # EmailAgent
-│       │   │   ├── classifier.py      # Classification Mistral Nemo
-│       │   │   ├── summarizer.py      # Synthese Mistral Medium
+│       │   │   ├── agent.py           # EmailAgent (tout dans 1 fichier Day 1)
 │       │   │   └── schemas.py         # Pydantic models
 │       │   │
 │       │   ├── archiver/              # Module 2: Archiviste
 │       │   │   ├── __init__.py
-│       │   │   ├── agent.py
-│       │   │   ├── classifier.py
-│       │   │   ├── renamer.py
+│       │   │   ├── agent.py           # ArchiverAgent (tout dans 1 fichier Day 1)
 │       │   │   └── schemas.py
 │       │   │
 │       │   ├── calendar/              # Module 3: Agenda
@@ -838,7 +1663,8 @@ friday-2.0/
 │       │   ├── check_thesis/          # Module 10: Check These
 │       │   ├── finance/               # Module 14: Suivi financier (1 agent parametre, 5 contextes)
 │       │   ├── briefing/              # Module 4: Briefing matinal
-│       │   └── ...                    # Autres modules
+│       │   └── ...                    # Autres modules (meme pattern: agent.py + schemas.py)
+│       │   # KISS: Split classifier.py/summarizer.py SEULEMENT si agent.py depasse 500 lignes
 │       │
 │       ├── memory/                    # Integration Zep + Graphiti
 │       │   ├── __init__.py
@@ -904,13 +1730,21 @@ friday-2.0/
 │   │   ├── voice.py                   # Messages vocaux
 │   │   ├── document.py                # Documents/fichiers
 │   │   ├── photo.py                   # Photos
-│   │   ├── callback.py                # Boutons inline
-│   │   └── command.py                 # Commandes /start, /help
+│   │   └── callback.py                # Boutons inline (dont validation trust PROPOSE)
+│   │
+│   ├── commands/                      # Commandes Telegram (dispatch depuis handlers/command via router)
+│   │   ├── __init__.py
+│   │   ├── start.py                   # /start, /help
+│   │   ├── status.py                  # /status (etat salle des machines)
+│   │   ├── journal.py                 # /journal (activite Friday)
+│   │   ├── receipt.py                 # /receipt (detail action)
+│   │   ├── confiance.py               # /confiance (metriques trust)
+│   │   └── stats.py                   # /stats (volumes semaine)
 │   │
 │   ├── keyboards/                     # Claviers inline Telegram
 │   │   ├── __init__.py
 │   │   ├── actions.py                 # Boutons actions (Envoyer, Modifier, Reporter)
-│   │   └── contexts.py                # Selection casquette (medecin, enseignant)
+│   │   └── validation.py              # Boutons validation trust PROPOSE (Approuver/Rejeter)
 │   │
 │   ├── media/
 │   │   └── transit/                   # Zone transit fichiers recus
@@ -919,8 +1753,16 @@ friday-2.0/
 │       ├── __init__.py
 │       ├── api_client.py              # Client FastAPI Gateway
 │       └── formatting.py              # Formatage messages Telegram
-│
+│   │
 ├── services/                          # Services Docker custom
+│   │
+│   ├── alerting/                      # [AJOUT] Alertes temps reel
+│   │   ├── __init__.py
+│   │   └── listener.py                # Listener Redis pub/sub → Telegram
+│   │
+│   ├── metrics/                       # [AJOUT] Calcul metriques nightly
+│   │   ├── __init__.py
+│   │   └── nightly.py                 # Cron: trust_metrics + retrogradation auto + resume soir
 │   │
 │   ├── gateway/                       # FastAPI - API Gateway unifiee
 │   │   ├── Dockerfile
@@ -983,7 +1825,11 @@ friday-2.0/
 │   │   │   ├── test_archiver_agent.py
 │   │   │   └── ...
 │   │   ├── supervisor/
-│   │   │   └── test_orchestrator.py   # [AJOUT] Tests profils RAM (mock Docker stats)
+│   │   │   └── test_orchestrator.py   # [AJOUT] Tests monitoring RAM (mock Docker stats)
+│   │   ├── middleware/                # [AJOUT] Tests Trust Layer
+│   │   │   ├── test_trust.py          # Tests @friday_action (auto/propose/blocked)
+│   │   │   ├── test_receipts.py       # Tests creation/lecture receipts
+│   │   │   └── test_retrogradation.py # Tests promotion/retrogradation automatique
 │   │   ├── tools/
 │   │   │   ├── test_anonymize.py
 │   │   │   ├── test_ocr.py
@@ -997,6 +1843,7 @@ friday-2.0/
 │   │   ├── test_email_pipeline.py
 │   │   ├── test_document_pipeline.py
 │   │   ├── test_anonymization_pipeline.py  # [AJOUT] Tests Presidio exhaustifs (dataset PII)
+│   │   ├── test_trust_flow.py         # [AJOUT] Flow complet: propose → validate → feedback → regle
 │   │   └── test_memory_graph.py
 │   │
 │   └── e2e/                           # Tests end-to-end
@@ -1033,7 +1880,7 @@ friday-2.0/
 | 5. Scripts automatisation | `scripts/dev-setup.sh` + `scripts/monitor-ram.sh` | ✅ Neutre (outillage, pas runtime) | 45 min |
 
 **Total effort** : 3h50
-**RAM impact** : 0 Mo supplementaire (validation contrainte VPS 16 Go)
+**RAM impact** : 0 Mo supplementaire (VPS-4 48 Go, marge ~25 Go)
 
 ---
 
@@ -1117,29 +1964,29 @@ def get_llm_adapter() -> LLMAdapter:
 **Implementation** :
 
 ```python
-from typing import TypedDict, List
 from pydantic import BaseModel
 
 class ServiceProfile(BaseModel):
     """Profil RAM d'un service lourd"""
     ram_gb: int
-    incompatible_with: List[str] = []
 
 SERVICE_RAM_PROFILES: dict[str, ServiceProfile] = {
-    "ollama-nemo": ServiceProfile(ram_gb=8, incompatible_with=["faster-whisper"]),
-    "ollama-ministral": ServiceProfile(ram_gb=3, incompatible_with=[]),
-    "faster-whisper": ServiceProfile(ram_gb=4, incompatible_with=["ollama-nemo"]),
-    "kokoro-tts": ServiceProfile(ram_gb=2, incompatible_with=[]),
-    "surya-ocr": ServiceProfile(ram_gb=2, incompatible_with=[]),
+    "ollama-nemo": ServiceProfile(ram_gb=8),
+    "faster-whisper": ServiceProfile(ram_gb=4),
+    "kokoro-tts": ServiceProfile(ram_gb=2),
+    "surya-ocr": ServiceProfile(ram_gb=2),
 }
 
-# agents/src/supervisor/orchestrator.py
-from config.profiles import SERVICE_RAM_PROFILES
+RAM_ALERT_THRESHOLD_PCT = 85  # Alerte Telegram si depasse
+# Plus de champ "incompatible_with" → tous compatibles sur VPS-4 48 Go
 
-class RAMOrchestrator:
-    def __init__(self, total_ram_gb: int = 16):
-        self.profiles = SERVICE_RAM_PROFILES  # Charge depuis config
-        # ...
+# agents/src/supervisor/orchestrator.py
+from config.profiles import SERVICE_RAM_PROFILES, RAM_ALERT_THRESHOLD_PCT
+
+class RAMMonitor:
+    def __init__(self, total_ram_gb: int = 48):
+        self.profiles = SERVICE_RAM_PROFILES
+        # Moniteur RAM simplifie, plus d'exclusions mutuelles
 ```
 
 **Benefice evolvabilite** : Ajouter nouveau service lourd = modifier `config/profiles.py`, pas `orchestrator.py`.
@@ -1208,32 +2055,31 @@ async def health():
 
 #### 4. Tests critiques
 
-**Objectif** : Tester composants critiques (orchestrator RAM, anonymisation Presidio).
+**Objectif** : Tester composants critiques (monitoring RAM VPS-4, anonymisation Presidio, Trust Layer).
 
 **tests/unit/supervisor/test_orchestrator.py** :
 
 ```python
 import pytest
-from agents.supervisor.orchestrator import RAMOrchestrator, InsufficientRAMError
+from agents.supervisor.orchestrator import RAMMonitor
 
 @pytest.mark.asyncio
-async def test_ram_profiles_prevent_conflicts():
-    """Test que Nemo 12B bloque Whisper 4GB"""
-    orchestrator = RAMOrchestrator(total_ram_gb=16, reserved_gb=4)
+async def test_ram_monitor_alerts_on_threshold():
+    """Test alerte RAM quand seuil 85% depasse sur VPS-4 48 Go"""
+    monitor = RAMMonitor(total_ram_gb=48, alert_threshold_pct=85)
+    monitor.simulate_usage(used_gb=42)  # >85%
+    alerts = await monitor.check()
+    assert alerts[0].level == "warning"
+    assert "85%" in alerts[0].message
 
-    # Demarrer Nemo (8 GB)
-    await orchestrator.start_service("ollama-nemo")
-
-    # 16 GB - 4 GB reserved - 8 GB nemo = 4 GB disponible
-    # Whisper besoin 4 GB → devrait echouer (besoin buffer)
-    with pytest.raises(InsufficientRAMError) as exc_info:
-        await orchestrator.start_service("faster-whisper")
-
-    assert "12 GB required, only 8 GB available" in str(exc_info.value)
-
-    # Arreter Nemo, puis Whisper doit passer
-    await orchestrator.stop_service("ollama-nemo")
-    await orchestrator.start_service("faster-whisper")  # OK
+@pytest.mark.asyncio
+async def test_all_heavy_services_fit_in_ram():
+    """Tous services lourds residents en simultane (plus d'exclusion mutuelle)"""
+    monitor = RAMMonitor(total_ram_gb=48, alert_threshold_pct=85)
+    services = ["ollama-nemo", "faster-whisper", "kokoro-tts", "surya-ocr"]
+    for svc in services:
+        await monitor.register_service(svc)
+    assert monitor.total_allocated_gb <= 48 * 0.85  # Sous le seuil d'alerte
 ```
 
 **tests/integration/test_anonymization_pipeline.py** :
@@ -1345,11 +2191,11 @@ echo "✅ Setup complete! Run 'docker compose up' to start all services."
 
 ```bash
 #!/bin/bash
-# Monitoring RAM VPS - Alerte Telegram si >90%
+# Monitoring RAM VPS-4 48 Go - Alerte Telegram si >85%
 # Cron: 0 * * * * /opt/friday-2.0/scripts/monitor-ram.sh
 
 USAGE=$(free -m | awk 'NR==2{printf "%.0f", $3*100/$2}')
-THRESHOLD=90
+THRESHOLD=${RAM_ALERT_THRESHOLD_PCT:-85}
 
 if [ $USAGE -gt $THRESHOLD ]; then
     # Log local
@@ -1422,26 +2268,27 @@ Les 37 exigences techniques sont couvertes à 100% :
 - Contraintes (6/6) : Budget 35-41€/mois (<50€), chiffrement age/SOPS, architecture hybride VPS+PC+cloud
 
 **Non-Functional Requirements Coverage:**
-- **Performance** : Services lourds à la demande (Ollama, STT, TTS, OCR), profils RAM VPS 16 Go avec exclusion mutuelle Nemo 12B ⊗ Whisper 4GB, latence ≤30s (X5)
+- **Performance** : Services lourds tous residents en simultane (VPS-4 48 Go), zero cold start, latence ≤30s (X5)
 - **Security** : Tailscale (zéro exposition Internet public), age/SOPS (secrets chiffrés), Presidio (anonymisation RGPD obligatoire avant LLM cloud), pgcrypto (colonnes sensibles BDD), CVE-2026-25253 (OpenClaw non intégré Day 1)
-- **Scalability** : VPS 16 Go avec upgrade vertical possible (32 Go ~48€/mois), pas de scaling horizontal (utilisateur unique)
+- **Scalability** : VPS-4 48 Go avec upgrade vertical VPS-5 (64 Go ~38€ TTC) si necessaire, pas de scaling horizontal (utilisateur unique)
+- **Observability** : Observability & Trust Layer (receipts verifiables, trust levels auto/propose/bloque, retrogradation auto, alertes temps reel, feedback loop corrections)
 - **Compliance** : RGPD (Presidio + hébergement France OVH), données médicales chiffrées, Mistral EU-resident
 
 ### Implementation Readiness Validation ✅
 
 **Decision Completeness:**
-Toutes les décisions critiques sont documentées avec versions exactes (Python 3.12+, LangGraph 1.2.0, n8n 2.4.8, PostgreSQL 16, Redis 7). Les patterns d'implémentation sont complets : adaptateurs (5 fichiers avec interfaces abstraites), event-driven (Redis Pub/Sub), migrations SQL numérotées (script `apply_migrations.py`), error handling standardisé (`FridayError` hierarchy + `RETRYABLE_EXCEPTIONS`). Consistency rules explicites : KISS (flat structure Day 1), évolutibilité (pattern adaptateur), RAM profils (services mutuellement exclusifs). Exemples fournis pour tous les patterns majeurs : LLM adapter (45 lignes), RAM profiles (dict config), health checks (dict config), tests critiques (Presidio + orchestrator).
+Toutes les décisions critiques sont documentées avec versions exactes (Python 3.12+, LangGraph 1.2.0, n8n 2.4.8, PostgreSQL 16, Redis 7). Les patterns d'implémentation sont complets : adaptateurs (5 fichiers avec interfaces abstraites), event-driven (Redis Pub/Sub), migrations SQL numérotées (script `apply_migrations.py`), error handling standardisé (`FridayError` hierarchy + `RETRYABLE_EXCEPTIONS`), **Observability & Trust Layer** (middleware `@friday_action`, receipts, trust levels, feedback loop). Consistency rules explicites : KISS (flat structure Day 1), évolutibilité (pattern adaptateur), RAM VPS-4 48 Go (services lourds tous residents). Exemples fournis pour tous les patterns majeurs : LLM adapter (45 lignes), RAM profiles (dict config), health checks (dict config), tests critiques (Presidio + orchestrator), trust middleware (`@friday_action` + `ActionResult`).
 
 **Structure Completeness:**
 La structure projet est complète avec ~150 fichiers spécifiés dans l'arborescence Step 6. Tous les répertoires sont définis : `agents/` (23 modules), `services/` (gateway, stt, tts, ocr), `bot/` (Telegram), `n8n-workflows/` (7 workflows JSON), `database/` (migrations SQL), `tests/` (unit, integration, e2e), `docs/`, `scripts/` (setup, backup, deploy, monitor-ram). Integration points clairement spécifiés : FastAPI Gateway expose `/api/v1/*`, Redis Pub/Sub pour événements (`email.received`, `document.processed`), n8n pour workflows data (cron briefing, watch GDrive Plaud). Component boundaries : 3 schemas PostgreSQL (`core`, `ingestion`, `knowledge`), adapters/ séparés du code métier, Docker Compose multi-fichiers (principal + dev + services lourds).
 
 **Pattern Completeness:**
-Tous les conflict points sont adressés : profils RAM VPS 16 Go avec exclusion mutuelle (Ollama Nemo 12B ~8 Go ⊗ Faster-Whisper ~4 Go, gérés par `orchestrator.py` + `config/profiles.py`). Naming conventions complètes : migrations SQL numérotées (`001_*.sql`), events dot notation (`email.received`, `agent.completed`), Pydantic schemas (`models/*.py`), logs structlog JSON. Communication patterns fully specified : REST (sync, FastAPI), Redis Pub/Sub (async events), HTTP interne (Docker network). Process patterns documentés : retry via tenacity (`utils/retry.py`), error hierarchy (`FridayError` + `RETRYABLE_EXCEPTIONS`), logs JSON structurés (`config/logging.py`), backups quotidiens (`scripts/backup.sh` cron 3h00).
+Tous les conflict points sont adressés : VPS-4 48 Go permet tous services lourds residents en simultane (plus d'exclusion mutuelle), `orchestrator.py` simplifie en moniteur RAM, `config/profiles.py` alerte si >85%. Naming conventions complètes : migrations SQL numérotées (`001_*.sql`), events dot notation (`email.received`, `agent.completed`), Pydantic schemas (`models/*.py`), logs structlog JSON. Communication patterns fully specified : REST (sync, FastAPI), Redis Pub/Sub (async events), HTTP interne (Docker network). Process patterns documentés : retry via tenacity (`utils/retry.py`), error hierarchy (`FridayError` + `RETRYABLE_EXCEPTIONS`), logs JSON structurés (`config/logging.py`), backups quotidiens (`scripts/backup.sh` cron 3h00).
 
 ### Gap Analysis Results
 
 **Critical Gaps:** AUCUN
-Tous les éléments bloquants pour l'implémentation sont architecturalement couverts. Les 37 exigences techniques + 23 modules + contraintes matérielles (VPS 16 Go) sont spécifiés.
+Tous les éléments bloquants pour l'implémentation sont architecturalement couverts. Les 37 exigences techniques + 23 modules + contraintes matérielles (VPS-4 48 Go) + Observability & Trust Layer sont spécifiés.
 
 **Important Gaps:** AUCUN
 Tous les éléments importants sont spécifiés. Patterns d'implémentation complets, structure projet détaillée (~150 fichiers), integration points clairs.
@@ -1467,13 +2314,13 @@ Les 5 ajouts pour l'évolutibilité ont été validés lors du Step 6 :
 - ✅ Tests critiques (orchestrator RAM + Presidio RGPD) : neutre évolutibilité (validation, pas runtime)
 - ✅ Scripts automation (`dev-setup.sh` + `monitor-ram.sh`) : neutre évolutibilité (outillage, pas runtime)
 
-Total effort : 3h50. RAM impact : 0 Mo supplémentaire (contrainte VPS 16 Go respectée).
+Total effort : 3h50. RAM impact : 0 Mo supplémentaire (VPS-4 48 Go, marge ~25 Go).
 
 ### Architecture Completeness Checklist
 
 **✅ Requirements Analysis**
 
-- [x] Projet contextualisé (23 modules, 4 couches techniques, 37 exigences, VPS 16 Go, budget 50€/mois max)
+- [x] Projet contextualisé (23 modules, 4 couches techniques, 37 exigences, VPS-4 48 Go, budget 50€/mois max)
 - [x] Scale et complexité évalués (utilisateur unique Antonio, extension famille envisageable X3)
 - [x] Contraintes techniques identifiées (X1-X6 : budget, chiffrement, latence, architecture hybride)
 - [x] Cross-cutting concerns mappés (sécurité Tailscale + age/SOPS + Presidio, évolutibilité via adaptateurs, RGPD)
@@ -1483,7 +2330,8 @@ Total effort : 3h50. RAM impact : 0 Mo supplémentaire (contrainte VPS 16 Go res
 - [x] Décisions critiques documentées avec versions (Python 3.12, LangGraph 1.2.0, n8n 2.4.8, PostgreSQL 16, Redis 7, Mistral cloud+local)
 - [x] Tech stack complet (infrastructure I1-I4, traitement IA T1-T12, communication C1-C4, connecteurs S1-S12)
 - [x] Integration patterns définis (REST FastAPI, Redis Pub/Sub, HTTP interne Docker, n8n workflows)
-- [x] Performance considerations (services lourds à la demande, profils RAM 16 Go, latence ≤30s)
+- [x] Performance considerations (services lourds residents VPS-4 48 Go, zero cold start, latence ≤30s)
+- [x] Observability & Trust Layer (receipts, trust levels auto/propose/bloque, feedback loop, alertes temps reel)
 
 **✅ Implementation Patterns**
 
@@ -1511,23 +2359,24 @@ Justification :
 - Architecture validée en Party Mode (5 agents BMAD) puis Code Review adversarial
 - Corrections appliquées (retrait Celery/SQLAlchemy/Prometheus pour KISS)
 - Évolutibilité garantie (5 adaptateurs, pattern factory LLM)
-- Contraintes matérielles gérées (profils RAM VPS 16 Go)
+- Contraintes matérielles gérées (VPS-4 48 Go, services lourds residents)
+- Observability & Trust Layer integre (receipts, trust levels, feedback loop)
 
 **Key Strengths:**
 
 1. **Évolutibilité by design** : 5 adaptateurs (vectorstore, memorystore, filesync, email, llm) permettent remplacement d'un composant externe sans refactoring massif. Switch Mistral → Gemini/Claude = modifier `adapters/llm.py` uniquement, les 23 agents ne changent pas.
 
-2. **Contraintes matérielles gérées** : Profils RAM VPS 16 Go avec exclusion mutuelle des services lourds. Ollama Nemo 12B (8 Go) ⊗ Faster-Whisper (4 Go) ne peuvent coexister. Orchestrator LangGraph gère l'ordonnancement dynamique via `config/profiles.py`.
+2. **Contraintes matérielles resolues** : VPS-4 48 Go permet tous services lourds residents en simultane (Ollama Nemo 12B + Whisper + Kokoro + Surya = ~16 Go, marge ~25 Go). Plus d'exclusion mutuelle. Orchestrator simplifie en moniteur RAM via `config/profiles.py`.
 
 3. **Sécurité RGPD robuste** : Pipeline Presidio obligatoire avant tout appel LLM cloud (anonymisation réversible). Données médicales chiffrées (pgcrypto). Tailscale = zéro exposition Internet public. age/SOPS pour secrets. Hébergement France (OVH).
 
-4. **KISS principle appliqué rigoureusement** : Structure flat agents/ Day 1 (pas de sur-organisation prématurée). Pas d'ORM (asyncpg brut), pas de Celery (n8n + FastAPI BackgroundTasks), pas de Prometheus (scripts/monitor-ram.sh cron), pas de GraphQL (REST suffit). Refactoring si douleur réelle, pas par anticipation.
+4. **KISS principle appliqué rigoureusement** : Structure flat agents/ Day 1 (pas de sur-organisation prématurée). Pas d'ORM (asyncpg brut), pas de Celery (n8n + FastAPI BackgroundTasks), pas de Prometheus (monitoring via Trust Layer), pas de GraphQL (REST suffit). Refactoring si douleur réelle, pas par anticipation.
 
-5. **Budget respecté avec marge** : 35-41€/mois estimé (VPS 24€ + Mistral API 6-9€ + Deepgram 3-5€) < 50€/mois contrainte X1. Mistral unifié (cloud + Ollama local) évite multiplication des providers. Services lourds à la demande (pas 24/7).
+5. **Budget confortable** : ~36-42€/mois estimé (VPS-4 25€ TTC + Mistral API 6-9€ + Deepgram 3-5€) < 50€/mois contrainte X1. Marge ~8-14€. Plan B VPS-3 (24 Go, 15€ TTC) si besoin de reduire.
+
+6. **Observability & Trust Layer** : Composant transversal garantissant la confiance utilisateur. Chaque action tracee (receipts), niveaux de confiance configurables (auto/propose/bloque), retrogradation automatique si accuracy baisse, feedback loop par regles explicites. Antonio controle Friday, pas l'inverse.
 
 **Areas for Future Enhancement (post-MVP):**
-
-- **Monitoring avancé** (Prometheus/Grafana) : À réévaluer après 6 mois d'usage. `scripts/monitor-ram.sh` (cron horaire + alerte Telegram) suffit Day 1 (0 Mo RAM vs 400 Mo Prometheus).
 
 - **Scaling horizontal** : Si extension famille (contrainte X3) validée, architecture event-driven (Redis Pub/Sub) + adapters/ + FastAPI stateless facilitent l'ajout de workers. Non prioritaire (utilisateur unique).
 
@@ -1549,8 +2398,14 @@ Justification :
 
 3. **Tests obligatoires** :
    - Presidio anonymization (RGPD critique) : `tests/integration/test_anonymization_pipeline.py` avec dataset `tests/fixtures/pii_samples.json`
-   - Orchestrator RAM (VPS 16 Go) : `tests/unit/supervisor/test_orchestrator.py` avec mock Docker stats
+   - Monitoring RAM (VPS-4 48 Go) : `tests/unit/supervisor/test_orchestrator.py` avec mock Docker stats
+   - Trust Layer : `tests/unit/middleware/test_trust.py` (auto/propose/blocked), `tests/integration/test_trust_flow.py` (flow complet)
    - Tous agents avec mocks (pas d'appels LLM réels en tests unitaires)
+
+5. **Observability obligatoire** :
+   - Chaque action de chaque module DOIT utiliser le decorateur `@friday_action`
+   - Chaque action DOIT retourner un `ActionResult` (input_summary, output_summary, confidence, reasoning)
+   - Les trust levels par defaut DOIVENT etre configures dans `core.trust_levels` avant deploiement du module
 
 4. **Sécurité prioritaire** :
    - Tailscale = rien exposé sur Internet public (SSH uniquement via Tailscale)
@@ -1623,49 +2478,13 @@ Dépendances critiques avant story suivante :
 **📚 AI Agent Implementation Guide**
 
 - Tech stack avec versions vérifiées (compatibilité validée, corrections Party Mode appliquées)
-- Consistency rules prévenant les conflits d'implémentation (KISS Day 1, évolutibilité via adaptateurs, RAM profils VPS 16 Go)
+- Consistency rules prévenant les conflits d'implémentation (KISS Day 1, évolutibilité via adaptateurs, VPS-4 48 Go, Observability & Trust Layer)
 - Structure projet avec frontières claires (3 schemas PostgreSQL, flat agents/, adapters/ séparés)
 - Integration patterns et standards de communication (REST sync + Redis Pub/Sub async + HTTP interne Docker)
 
 ### Implementation Handoff
 
-**Pour AI Agents :**
-Ce document `architecture-friday-2.0.md` est votre guide complet pour implémenter Friday 2.0. Suivre toutes décisions, patterns, et structures exactement comme documenté.
-
-**First Implementation Priority :**
-
-Story 1 : Infrastructure de base
-
-```bash
-# 1. Structure projet
-mkdir friday-2.0 && cd friday-2.0
-git init
-
-# 2. Docker Compose (PostgreSQL 16, Redis 7, Qdrant, n8n 2.4.8, Caddy)
-# docker-compose.yml + docker-compose.dev.yml + docker-compose.services.yml
-docker compose up -d postgres redis qdrant
-
-# 3. Migrations SQL (001-009 : schemas core/ingestion/knowledge + tables)
-python scripts/apply_migrations.py
-
-# 4. FastAPI Gateway + auth simple (mot de passe) + OpenAPI auto-générée
-cd services/gateway && uvicorn main:app --reload
-
-# 5. Healthcheck endpoint (GET /api/v1/health) avec config/health_checks.py
-# Test : curl http://localhost:8000/api/v1/health
-# Attendu : {"status": "ok", "checks": {"postgres": "ok", "redis": "ok", "qdrant": "ok"}}
-
-# 6. Premier test end-to-end : sanity check tous services
-pytest tests/e2e/test_healthcheck.py -v
-```
-
-**Development Sequence :**
-
-1. Initialiser projet avec structure documentée (Step 6)
-2. Setup environnement dev (`scripts/dev-setup.sh` ou manuel)
-3. Implémenter fondations architecturales (PostgreSQL 3 schemas, FastAPI Gateway, Redis, Tailscale)
-4. Construire features suivant patterns établis (adaptateurs pour composants externes, flat agents/, event-driven)
-5. Maintenir cohérence avec règles documentées (KISS, évolutibilité, sécurité RGPD)
+> Voir la section "Implementation Handoff" dans "Architecture Validation Results" (Step 7) pour les guidelines completes, la sequence d'implementation et les dependances critiques.
 
 ### Quality Assurance Checklist
 
@@ -1711,7 +2530,7 @@ Sécurité RGPD robuste intégrée dès l'architecture (Presidio anonymisation o
 5 adaptateurs (vectorstore, memorystore, filesync, email, llm) permettent remplacement composants externes sans refactoring massif. Switch Mistral → Gemini/Claude = modifier 1 fichier uniquement.
 
 **💰 Budget Optimized**
-Architecture respecte contrainte budget 50€/mois (estimation 35-41€ : VPS 24€ + Mistral 6-9€ + Deepgram 3-5€). Services lourds à la demande, pas 24/7. Mistral unifié cloud + local évite multiplication providers.
+Architecture respecte contrainte budget 50€/mois (estimation ~36-42€ : VPS-4 25€ TTC + Mistral 6-9€ + Deepgram 3-5€ + divers 2-3€). Tous services lourds residents en simultane (VPS-4 48 Go). Mistral unifie cloud + local evite multiplication providers.
 
 ---
 

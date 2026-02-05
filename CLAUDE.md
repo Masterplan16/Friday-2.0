@@ -524,19 +524,18 @@ docker compose logs -f gateway          # Gateway uniquement
 8. Tests unitaires + intégration trust middleware
 
 **Dépendances critiques avant Story 2 :**
-- PostgreSQL 16 opérationnel avec 3 schemas (inclut `core.tasks`, `core.events`)
+- PostgreSQL 16 opérationnel avec 3 schemas + migrations 001-012 appliquées (inclut `core.tasks`, `core.events`, `ingestion.emails_legacy`)
 - Redis 7 opérationnel (cache + Streams pour événements critiques + Pub/Sub pour informatifs)
 - FastAPI Gateway opérationnel avec `/api/v1/health`
-- Tailscale mesh VPN configuré (2FA obligatoire)
+- Tailscale mesh VPN configuré (2FA obligatoire - **configuration manuelle** dans dashboard https://login.tailscale.com/admin/settings/auth)
 - **`@friday_action` middleware opérationnel** (tout module en dépend)
 - **Bot Telegram opérationnel** (canal unique de contrôle)
-- **Presidio + spaCy-fr installés** (RGPD avant tout appel LLM cloud)
+- **Presidio + spaCy-fr installés** (RGPD avant tout appel LLM cloud, mapping éphémère Redis TTL court)
+- **Note** : ~~Apple Watch Ultra~~ hors scope Day 1 (pas d'API serveur, réévaluation >12 mois)
 
 **Fichiers Story 1 + 1.5 :**
-- 📋 `docker-compose.yml` + `docker-compose.services.yml` — À créer (Story 1)
-- ✅ `database/migrations/001-010_*.sql` (Story 1) — **CRÉÉES**
-- ✅ `database/migrations/011_trust_system.sql` (Story 1.5) — **CRÉÉE**
-- ✅ `database/migrations/012_ingestion_emails_legacy.sql` — **CRÉÉE** (2026-02-05)
+- ✅ `docker-compose.yml` + `docker-compose.services.yml` — **CRÉÉS**
+- ✅ `database/migrations/001-012_*.sql` (Story 1 + 1.5) — **CRÉÉES** (12 migrations inclut emails_legacy)
 - 📋 `scripts/apply_migrations.py` — À créer (Story 1)
 - ✅ `scripts/migrate_emails.py` — **CRÉÉ** (corrigé 110k mails)
 - ✅ `config/trust_levels.yaml` — **CRÉÉ**

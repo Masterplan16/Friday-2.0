@@ -206,7 +206,7 @@ Le ton, le tutoiement/vouvoiement, l'humour, le style de communication sont conf
 - Planification de menus hebdomadaires
 - Prise en compte : préférences famille (3 personnes), saison, agenda (jour chargé = plat rapide), objectifs sportifs
 - Génération automatique de la liste de courses
-- **Commande automatique sur Carrefour Drive**
+- ~~**Commande automatique sur Carrefour Drive**~~ (hors scope - automation web non fiable, voir docs/playwright-automation-spec.md)
 - Recettes du jour envoyées chaque matin
 - Validation par Antonio (vocale possible)
 

@@ -131,7 +131,7 @@ menus:
 
 # MODULE 19: Coach remise en forme
 coach:
-  generate_workout: blocked  # Risque élevé - programme inadapté = blessure potentielle → BLOQUÉ jusqu'à validation médicale
+  generate_workout: blocked  # Risque élevé - programme inadapté = blessure potentielle → Validation Antonio requise (expertise médicale cardiologue)
   adjust_intensity: propose  # Risque moyen - ajustement = à valider
   track_progress: auto  # Risque bas - tracking = lecture
 

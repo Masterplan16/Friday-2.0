@@ -40,17 +40,28 @@ from dataclasses import dataclass
 # Pas de valeurs par défaut pour les secrets (age/SOPS pour secrets, voir architecture)
 POSTGRES_DSN = os.getenv("POSTGRES_DSN")
 MISTRAL_API_KEY = os.getenv("MISTRAL_API_KEY")
+
+# Validation
 if not POSTGRES_DSN or not MISTRAL_API_KEY:
     raise EnvironmentError(
         "POSTGRES_DSN et MISTRAL_API_KEY doivent etre definis via variable d'environnement ou .env "
         "(utiliser age/SOPS pour les secrets, jamais de credentials en clair)"
     )
+
+# Valider format POSTGRES_DSN
+import re
+DSN_PATTERN = r'^postgresql://[^@]+@[^/]+/[^?]+(\?.*)?$'
+if not re.match(DSN_PATTERN, POSTGRES_DSN):
+    raise EnvironmentError(
+        f"POSTGRES_DSN invalide: {POSTGRES_DSN}\n"
+        f"Format attendu: postgresql://user:password@host:port/database"
+    )
 CHECKPOINT_FILE = "data/migration_checkpoint.json"
 LOG_FILE = "logs/migration.log"
 BATCH_SIZE = 100  # Emails par batch
 MAX_RETRIES = 3
-RATE_LIMIT_RPM = 60  # Mistral rate limit (requests per minute)
-RATE_LIMIT_DELAY = 60 / RATE_LIMIT_RPM  # 1 seconde entre requêtes
+RATE_LIMIT_RPM = 20  # Mistral rate limit (requests per minute) - défaut tier gratuit
+RATE_LIMIT_DELAY = 60 / RATE_LIMIT_RPM  # Délai entre requêtes
 
 
 @dataclass
@@ -213,7 +224,7 @@ class EmailMigrator:
 
             # Appel Mistral (TODO: implémenter avec contenu anonymisé)
             # response = await self.mistral_client.chat(
-            #     model="mistral-nemo",
+            #     model="mistral-nemo-latest",  # IMPORTANT: toujours suffixe -latest
             #     messages=[{
             #         "role": "user",
             #         "content": f"Classe cet email:\n{anonymized_content}"
@@ -276,9 +287,10 @@ class EmailMigrator:
             # TODO: redis.publish('email.migrated', {'email_id': email['message_id']})
 
             # 4. Update cost estimation
-            # ~550 Mo texte / 110k emails = ~5 Ko/email = ~12.5 tokens/email input
-            # $0.30/1M tokens → ~$0.0000003/email (Mistral Nemo input+output)
-            self.state.estimated_cost += 0.0000003
+            # ~600 tokens/email avg (500 input + 100 output) selon roadmap
+            # Mistral Nemo: $0.15/1M input + $0.15/1M output = $0.30/1M total
+            # 600 tokens × $0.30/1M = $0.00018/email
+            self.state.estimated_cost += 0.00018
 
             self.state.processed += 1
             self.state.last_email_id = email['message_id']
@@ -380,7 +392,7 @@ async def main():
     parser.add_argument('--resume', action='store_true', help="Reprendre depuis dernier checkpoint")
     parser.add_argument('--dry-run', action='store_true', help="Simulation sans modification réelle")
     parser.add_argument('--batch-size', type=int, default=BATCH_SIZE, help=f"Taille batch (défaut: {BATCH_SIZE})")
-    parser.add_argument('--rate-limit', type=int, default=RATE_LIMIT_RPM, help=f"Rate limit Mistral API en req/min (défaut: {RATE_LIMIT_RPM}). Varie selon tier: gratuit=20, pay-as-you-go=60, enterprise=custom")
+    parser.add_argument('--rate-limit', type=int, default=RATE_LIMIT_RPM, help=f"Rate limit Mistral API en req/min (défaut: {RATE_LIMIT_RPM} = tier gratuit). Tiers: gratuit=20, pay-as-you-go=60, enterprise=custom")
     args = parser.parse_args()
 
     migrator = EmailMigrator(

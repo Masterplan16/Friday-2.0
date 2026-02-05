@@ -78,8 +78,9 @@ Socle technique fonctionnel avec tous services Docker opérationnels.
 - [ ] OpenAPI auto-générée (Swagger UI)
 
 #### **1.4 Tailscale**
-- [ ] Installation Tailscale VPS
+- [ ] Installation Tailscale VPS (script automatique)
 - [ ] Hostname `friday-vps`
+- [ ] ⚠️ **MANUEL** : Activer 2FA + device authorization dans dashboard Tailscale (https://login.tailscale.com/admin/settings/auth)
 - [ ] Firewall : AUCUN port ouvert sur Internet public (SSH via Tailscale uniquement)
 - [ ] Caddy configuré pour HTTPS interne mesh Tailscale
 
@@ -91,15 +92,15 @@ Socle technique fonctionnel avec tous services Docker opérationnels.
 
 - AC1 : `docker compose up -d` démarre tous les services sans erreur
 - AC2 : `GET /api/v1/health` retourne 200 avec statut de tous services
-- AC3 : PostgreSQL avec 3 schemas créés (core, ingestion, knowledge) + 10 migrations appliquées
-- AC4 : Tailscale mesh opérationnel (VPS accessible via hostname `friday-vps`)
+- AC3 : PostgreSQL avec 3 schemas créés (core, ingestion, knowledge) + 12 migrations appliquées (001-012 inclut emails_legacy)
+- AC4 : Tailscale mesh opérationnel (VPS accessible via hostname `friday-vps`) + 2FA activé manuellement
 - AC5 : Tests E2E passent (healthcheck OK)
 
 ### **Livrables**
 - Infrastructure Docker Compose complète
-- Base de données initialisée (10 migrations)
+- Base de données initialisée (12 migrations 001-012)
 - Gateway API fonctionnel
-- Tailscale configuré
+- Tailscale configuré (2FA manuel activé)
 - Tests E2E passent
 
 ---

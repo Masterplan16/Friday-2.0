@@ -26,8 +26,10 @@ Features:
 import asyncio
 import asyncpg
 import argparse
+import json
 import logging
 import os
+import tempfile
 import time
 from pathlib import Path
 from datetime import datetime, timedelta
@@ -35,8 +37,14 @@ from typing import Optional
 from dataclasses import dataclass
 
 # Configuration (chargée depuis variables d'environnement - jamais hardcodé)
-POSTGRES_DSN = os.getenv("POSTGRES_DSN", "postgresql://friday:password@localhost:5432/friday")
-MISTRAL_API_KEY = os.getenv("MISTRAL_API_KEY", "")
+# Pas de valeurs par défaut pour les secrets (age/SOPS pour secrets, voir architecture)
+POSTGRES_DSN = os.getenv("POSTGRES_DSN")
+MISTRAL_API_KEY = os.getenv("MISTRAL_API_KEY")
+if not POSTGRES_DSN:
+    raise EnvironmentError(
+        "POSTGRES_DSN doit etre defini via variable d'environnement ou .env "
+        "(utiliser age/SOPS pour les secrets, jamais de credentials en clair)"
+    )
 CHECKPOINT_FILE = "data/migration_checkpoint.json"
 LOG_FILE = "logs/migration.log"
 BATCH_SIZE = 100  # Emails par batch
@@ -95,11 +103,10 @@ class EmailMigrator:
         if not checkpoint_path.exists():
             return None
 
-        import json
         with open(checkpoint_path) as f:
             data = json.load(f)
 
-        self.logger.info(f"📂 Checkpoint trouvé: {data['processed']}/{data['total_emails']} emails traités")
+        self.logger.info("Checkpoint trouve: %d/%d emails traites", data['processed'], data['total_emails'])
         return MigrationState(
             total_emails=data['total_emails'],
             processed=data['processed'],
@@ -111,10 +118,10 @@ class EmailMigrator:
             estimated_time_remaining=None
         )
 
-    async def save_checkpoint(self):
-        """Sauvegarde le checkpoint"""
-        import json
-        Path(CHECKPOINT_FILE).parent.mkdir(exist_ok=True, parents=True)
+    async def save_checkpoint(self) -> None:
+        """Sauvegarde le checkpoint (atomic write pour eviter corruption)"""
+        checkpoint_dir = Path(CHECKPOINT_FILE).parent
+        checkpoint_dir.mkdir(exist_ok=True, parents=True)
 
         data = {
             'total_emails': self.state.total_emails,
@@ -126,13 +133,23 @@ class EmailMigrator:
             'estimated_cost': self.state.estimated_cost
         }
 
-        with open(CHECKPOINT_FILE, 'w') as f:
-            json.dump(data, f, indent=2)
+        # Atomic write: temp file + rename pour eviter corruption si crash mid-write
+        fd, tmp_path = tempfile.mkstemp(dir=str(checkpoint_dir), suffix='.tmp')
+        try:
+            with os.fdopen(fd, 'w') as f:
+                json.dump(data, f, indent=2)
+            Path(tmp_path).replace(CHECKPOINT_FILE)
+        except Exception:
+            Path(tmp_path).unlink(missing_ok=True)
+            raise
 
-        self.logger.debug(f"💾 Checkpoint sauvegardé: {self.state.processed}/{self.state.total_emails}")
+        self.logger.debug(
+            "Checkpoint sauvegarde: %d/%d",
+            self.state.processed, self.state.total_emails
+        )
 
-    async def get_emails_to_migrate(self, batch_size: int = BATCH_SIZE):
-        """Récupère les emails à migrer (avec resume si checkpoint existe)"""
+    async def get_emails_to_migrate(self, batch_size: int = BATCH_SIZE) -> list[dict]:
+        """Recupere les emails a migrer (avec resume si checkpoint existe)"""
         if self.state and self.state.last_email_id:
             # Resume depuis dernier checkpoint
             query = """
@@ -156,16 +173,27 @@ class EmailMigrator:
     async def anonymize_for_classification(self, email: dict) -> str:
         """
         Anonymise le contenu email via Presidio AVANT envoi au LLM cloud (RGPD obligatoire).
-        TODO: Brancher sur agents/src/tools/anonymize.py quand disponible.
+
+        IMPORTANT: Cette fonction DOIT anonymiser les PII avant tout appel LLM cloud.
+        En dry-run, retourne le texte brut (pas d'appel cloud).
+        En mode reel, REFUSE d'envoyer du PII non-anonymise.
         """
-        # RGPD: Presidio anonymisation AVANT tout appel LLM cloud
-        # from agents.tools.anonymize import anonymize_text
-        # anonymized, tokens = await anonymize_text(
-        #     f"Sujet: {email['subject']}\nDe: {email['sender']}\n{email['body_text'][:500]}",
-        #     context=f"migration_{email['message_id']}"
-        # )
+        raw_text = f"Sujet: {email['subject']}\nDe: {email['sender']}\n{email['body_text'][:500]}"
+
+        if self.dry_run:
+            return raw_text
+
+        # TODO(Story 1.5): Brancher sur agents/src/tools/anonymize.py
+        # from agents.src.tools.anonymize import anonymize_text
+        # anonymized, mapping = await anonymize_text(raw_text, context=f"migration_{email['message_id']}")
         # return anonymized
-        return f"Sujet: {email['subject']}\nDe: {email['sender']}\n{email['body_text'][:500]}"
+
+        # RGPD: JAMAIS envoyer de PII au cloud sans anonymisation
+        raise NotImplementedError(
+            "Presidio anonymization non implementee. "
+            "RGPD interdit l'envoi de PII au LLM cloud sans anonymisation. "
+            "Implementer agents/src/tools/anonymize.py (Story 1.5) avant d'utiliser ce script en mode reel."
+        )
 
     async def classify_email(self, email: dict, retry_count: int = 0) -> dict:
         """
@@ -210,15 +238,15 @@ class EmailMigrator:
             if retry_count < MAX_RETRIES:
                 # Retry exponentiel: 2^retry_count secondes
                 wait_time = 2 ** retry_count
-                self.logger.warning(f"⚠️ Erreur classification (tentative {retry_count+1}/{MAX_RETRIES}): {e}")
-                self.logger.info(f"   Retry dans {wait_time}s...")
+                self.logger.warning("Erreur classification (tentative %d/%d): %s", retry_count + 1, MAX_RETRIES, e)
+                self.logger.info("Retry dans %ds...", wait_time)
                 await asyncio.sleep(wait_time)
                 return await self.classify_email(email, retry_count + 1)
             else:
-                self.logger.error(f"❌ Échec classification après {MAX_RETRIES} tentatives: {e}")
+                self.logger.error("Echec classification apres %d tentatives: %s", MAX_RETRIES, e)
                 raise
 
-    async def migrate_email(self, email: dict):
+    async def migrate_email(self, email: dict) -> None:
         """Migre un email (classification + insertion)"""
         try:
             # 1. Classification
@@ -253,7 +281,7 @@ class EmailMigrator:
             self.state.last_email_id = email['message_id']
 
         except Exception as e:
-            self.logger.error(f"❌ Échec migration email {email['message_id']}: {e}")
+            self.logger.error("Echec migration email %s: %s", email['message_id'], e)
             self.state.failed += 1
             # Continue avec les autres emails (ne pas bloquer toute la migration)
 
@@ -278,12 +306,12 @@ class EmailMigrator:
                 estimated_cost=0.0,
                 estimated_time_remaining=None
             )
-            self.logger.info(f"🚀 Démarrage migration: {total_count} emails à traiter")
+            self.logger.info("Demarrage migration: %d emails a traiter", total_count)
         else:
-            self.logger.info(f"▶️ Reprise migration: {self.state.processed}/{self.state.total_emails} déjà traités")
+            self.logger.info("Reprise migration: %d/%d deja traites", self.state.processed, self.state.total_emails)
 
         if self.dry_run:
-            self.logger.warning("🧪 MODE DRY-RUN: Aucune modification réelle")
+            self.logger.warning("MODE DRY-RUN: Aucune modification reelle")
 
         # 3. Boucle de migration par batch
         start_time = time.time()
@@ -299,8 +327,11 @@ class EmailMigrator:
             for email in batch:
                 await self.migrate_email(email)
 
-                # Progress bar
-                progress_pct = (self.state.processed / self.state.total_emails) * 100
+                # Progress bar (guard division par zero si table legacy vide)
+                if self.state.total_emails > 0:
+                    progress_pct = (self.state.processed / self.state.total_emails) * 100
+                else:
+                    progress_pct = 100.0
                 elapsed = time.time() - start_time
                 if self.state.processed > 0:
                     avg_time_per_email = elapsed / self.state.processed
@@ -309,16 +340,15 @@ class EmailMigrator:
 
                 if self.state.processed % 10 == 0:  # Log tous les 10 emails
                     self.logger.info(
-                        f"📊 {self.state.processed}/{self.state.total_emails} "
-                        f"({progress_pct:.1f}%) - "
-                        f"Failed: {self.state.failed} - "
-                        f"ETA: {self.state.estimated_time_remaining} - "
-                        f"Cost: ${self.state.estimated_cost:.4f}"
+                        "Progress: %d/%d (%.1f%%) - Failed: %d - ETA: %s - Cost: $%.4f",
+                        self.state.processed, self.state.total_emails,
+                        progress_pct, self.state.failed,
+                        self.state.estimated_time_remaining, self.state.estimated_cost
                     )
 
-            # Checkpoint tous les BATCH_SIZE emails
+            # Checkpoint tous les BATCH_SIZE emails (constante, pas parametre)
             checkpoint_counter += len(batch)
-            if checkpoint_counter >= batch_size:
+            if checkpoint_counter >= BATCH_SIZE:
                 await self.save_checkpoint()
                 checkpoint_counter = 0
 
@@ -328,17 +358,17 @@ class EmailMigrator:
         # 5. Résumé
         elapsed_total = time.time() - start_time
         self.logger.info("=" * 60)
-        self.logger.info("✅ MIGRATION TERMINÉE")
-        self.logger.info(f"   Total traité: {self.state.processed}/{self.state.total_emails}")
-        self.logger.info(f"   Échecs: {self.state.failed}")
-        self.logger.info(f"   Durée: {timedelta(seconds=elapsed_total)}")
-        self.logger.info(f"   Coût estimé: ${self.state.estimated_cost:.2f}")
+        self.logger.info("MIGRATION TERMINEE")
+        self.logger.info("Total traite: %d/%d", self.state.processed, self.state.total_emails)
+        self.logger.info("Echecs: %d", self.state.failed)
+        self.logger.info("Duree: %s", timedelta(seconds=elapsed_total))
+        self.logger.info("Cout estime: $%.2f", self.state.estimated_cost)
         self.logger.info("=" * 60)
 
-        # 6. Cleanup checkpoint file si succès complet
+        # 6. Cleanup checkpoint file si succes complet
         if self.state.failed == 0 and self.state.processed == self.state.total_emails:
             Path(CHECKPOINT_FILE).unlink(missing_ok=True)
-            self.logger.info("🗑️ Checkpoint file supprimé (migration complète)")
+            self.logger.info("Checkpoint file supprime (migration complete)")
 
 
 async def main():

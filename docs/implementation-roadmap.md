@@ -56,7 +56,7 @@ Socle technique fonctionnel avec tous services Docker opérationnels.
 #### **1.2 Base de données PostgreSQL**
 - [ ] Migrations SQL 001-010 (alignées avec architecture Step 6) :
   - `001_init_schemas.sql` (schemas core, ingestion, knowledge)
-  - `002_core_tables.sql` (users, config, jobs, audit, system_logs)
+  - `002_core_tables.sql` (users, config, jobs, audit, system_logs, tasks, events)
   - `003_ingestion_emails.sql` (table emails avec indexes)
   - `004_ingestion_documents.sql` (table documents)
   - `005_ingestion_files.sql` (table files)
@@ -310,7 +310,21 @@ Pipeline document complet : upload → OCR → renommage intelligent → classem
 
 **Test** : `tests/e2e/test_backup_restore.sh` ✅ **CRÉÉ**
 
-**Fréquence tests** : Mensuel (premier dimanche du mois)
+**Frequence tests** : Mensuel (premier dimanche du mois)
+
+### **Fichiers restant a creer**
+
+Les fichiers suivants sont references dans l'architecture mais n'existent pas encore. Ils devront etre crees dans leurs stories respectives :
+
+| Fichier | Description | Story |
+|---------|-------------|-------|
+| `agents/src/tools/anonymize.py` | Integration Presidio (`anonymize_text()` + `deanonymize_text()`) | Story 1.5 |
+| `agents/src/middleware/models.py` | Modele Pydantic `ActionResult` | Story 1.5 |
+| `agents/src/middleware/trust.py` | Decorateur `@friday_action` | Story 1.5 |
+| `scripts/apply_migrations.py` | Script d'execution des migrations SQL | Story 1 |
+| `docker-compose.yml` | Services core (PostgreSQL, Redis, Qdrant, n8n, Caddy) | Story 1 |
+
+> **Note** : Les fichiers deja crees sont marques **CREE** dans ce document : `config/trust_levels.yaml`, `scripts/migrate_emails.py`, `tests/e2e/test_backup_restore.sh`.
 
 ---
 

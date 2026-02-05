@@ -44,6 +44,9 @@ Ce document spécifie les **3 workflows n8n critiques** pour le Day 1 de Friday 
 | 2 | **Validate Payload** | Function | Valider structure : `{account, messageId, from, to, subject, text, html, attachments}`<br>Rejeter si invalide → Log error |
 | 3 | **Extract Attachments** | Code | Extraire liste PJ : `attachments.map(a => ({filename: a.filename, contentId: a.contentId}))`<br>Stocker paths temporaires |
 | 4 | **Call Classification API** | HTTP Request | POST `http://gateway:8000/api/v1/emails/classify`<br>Body : `{subject, text_preview: text.slice(0, 500), sender: from.address}`<br>Headers : `Authorization: Bearer ${FRIDAY_API_KEY}`<br>Response : `{category, priority, confidence, keywords}` |
+
+> **Note** : Cet endpoint sera cree dans Story 2 (Email Agent). Il n'existe pas en Story 1.
+> En attendant, le workflow utilise un webhook passif qui stocke les emails bruts dans `ingestion.emails`.
 | 5 | **Insert Email PostgreSQL** | Postgres | Schema : `ingestion.emails`<br>Columns : `message_id, account, sender, recipients, subject, body_text, body_html, category, priority, confidence, received_at, processed_at`<br>Return `id` (UUID) |
 | 6 | **Publish Redis Event** | Redis Streams | Stream : `email.received`<br>Payload : `{email_id, category, priority, has_attachments}`<br>**Note : Redis Streams (pas Pub/Sub) pour garantir delivery même si consumer temporairement down** |
 | 7 | **Trigger Attachment Processing** | Condition | If `attachments.length > 0` :<br>  → POST `http://gateway:8000/api/v1/documents/process-attachments`<br>  Body : `{email_id, attachments}` |
@@ -95,8 +98,10 @@ curl -X POST http://emailengine:3000/v1/settings/webhooks \
 | # | Node | Type | Configuration |
 |---|------|------|---------------|
 | 1 | **Daily Trigger** | Cron | Schedule : `0 7 * * *` (7h00 tous les jours)<br>Timezone : `Europe/Paris` |
-| 2 | **Get Pending Tasks** | Postgres | Query : `SELECT title, priority, due_date FROM core.tasks WHERE status='pending' AND assigned_to='Antonio' ORDER BY priority DESC, due_date ASC LIMIT 10`<br>**⚠️ Table `core.tasks` à créer dans migration Story 2+ (non incluse dans 001-011)** |
-| 3 | **Get Today Events** | Postgres | Query : `SELECT title, date_start, location FROM core.events WHERE DATE(date_start) = CURRENT_DATE ORDER BY date_start ASC`<br>**⚠️ Table `core.events` à créer dans migration Story 2+ (non incluse dans 001-011)** |
+| 2 | **Get Pending Tasks** | Postgres | Query : `SELECT title, priority, due_date FROM core.tasks WHERE status='pending' AND assigned_to='Antonio' ORDER BY priority DESC, due_date ASC LIMIT 10` |
+| 3 | **Get Today Events** | Postgres | Query : `SELECT title, date_start, location FROM core.events WHERE DATE(date_start) = CURRENT_DATE ORDER BY date_start ASC` |
+
+> **Dependance** : Les tables `core.tasks` et `core.events` doivent etre creees dans la migration 002_core_tables.sql (Story 1). Le Briefing Daily (Story 4) ne fonctionnera pleinement qu'apres Story 2+ (donnees reelles).
 | 4 | **Get Urgent Emails** | Postgres | Query : `SELECT subject, sender, category FROM ingestion.emails WHERE priority='high' AND processed_at > NOW() - INTERVAL '24 hours' ORDER BY received_at DESC LIMIT 5` |
 | 5 | **Get Trust Alerts** | Postgres | Query : `SELECT module, action, status, confidence FROM core.action_receipts WHERE status='pending' AND created_at > NOW() - INTERVAL '24 hours'` |
 | 6 | **Get Module Summaries** | HTTP Request | POST `http://gateway:8000/api/v1/modules/daily-summaries`<br>Response : `{finance: {...}, thesis: {...}, legal: {...}}` |
@@ -151,10 +156,17 @@ Le briefing inclut automatiquement :
 |---|------|------|---------------|
 | 1 | **Nightly Trigger** | Cron | Schedule : `0 3 * * *` (3h00 tous les jours)<br>Timezone : `Europe/Paris` |
 | 2 | **Backup PostgreSQL** | Execute Command | Command : `pg_dump -h postgres -U friday -d friday -F c -f /backups/postgres_$(date +%Y%m%d_%H%M%S).dump`<br>Working dir : `/opt/friday/backups`<br>Timeout : 10 min |
+
+> **Configuration Docker** : Le volume `/backups` doit etre monte dans docker-compose.yml :
+> ```yaml
+> n8n:
+>   volumes:
+>     - friday_backups:/backups
+> ```
 | 3 | **Compress PostgreSQL Backup** | Execute Command | Command : `gzip -9 /backups/postgres_*.dump` (compress le dernier dump) |
 | 4 | **Backup Qdrant Snapshot** | HTTP Request | POST `http://qdrant:6333/collections/{collection}/snapshots`<br>Response : `{snapshot_name}`<br>Then GET `http://qdrant:6333/collections/{collection}/snapshots/{snapshot_name}` → Save to `/backups/qdrant_$(date).snapshot` |
 | 5 | **Backup Zep Memory** | HTTP Request | GET `http://zep:8000/api/v1/sessions?limit=1000` → Export all sessions to JSON<br>Save to `/backups/zep_$(date).json` |
-| 6 | **Sync to PC via Tailscale** | Execute Command | Command : `rsync -avz --progress /backups/ antonio@friday-pc:/mnt/backups/friday-vps/`<br>(Tailscale permet rsync direct VPS → PC via IP Tailscale)<br>Timeout : 30 min |
+| 6 | **Sync to PC via Tailscale** | Execute Command | Command : `rsync -avz --progress /backups/ antonio@${TAILSCALE_PC_HOSTNAME}:/mnt/backups/friday-vps/`<br>(Tailscale permet rsync direct VPS vers PC via hostname Tailscale)<br>Timeout : 30 min |
 | 7 | **Cleanup Old Backups (VPS)** | Execute Command | Command : `find /backups -name "*.dump.gz" -mtime +7 -delete && find /backups -name "*.snapshot" -mtime +7 -delete && find /backups -name "*.json" -mtime +7 -delete`<br>(Supprime fichiers >7 jours) |
 | 8 | **Verify Backup Size** | Code | Check file sizes :<br>`ls -lh /backups/postgres_latest.dump.gz`<br>If < 10 MB → Warning (backup potentiellement incomplet) |
 | 9 | **Log Success** | Postgres | Insert `core.system_logs` : `{event: 'backup.completed', status: 'success', backup_size_mb, timestamp}` |
@@ -167,10 +179,12 @@ Le briefing inclut automatiquement :
 POSTGRES_CONN=postgresql://friday:password@postgres:5432/friday
 QDRANT_URL=http://qdrant:6333
 ZEP_URL=http://zep:8000
-TAILSCALE_PC_IP=<antonio_pc_tailscale_ip>
+TAILSCALE_PC_HOSTNAME=antonio-pc
 TELEGRAM_BOT_TOKEN=<bot_token>
 TELEGRAM_CHAT_ID=<antonio_chat_id>
 ```
+
+> **Recommandation** : Utiliser le hostname Tailscale (`antonio-pc`) au lieu de l'IP pour eviter les problemes de rotation d'adresse. Ex: `TAILSCALE_PC_HOSTNAME=antonio-pc`
 
 ### Configuration SSH/rsync (PC)
 
@@ -258,11 +272,20 @@ curl -X GET http://n8n:5678/api/v1/executions?workflowId={workflow_id} \
 
 ### Logs
 
-Tous les workflows logguent via Redis Pub/Sub → `pipeline.completed` / `pipeline.error`
+Les workflows publient des evenements via Redis. **Important** : les evenements critiques utilisent **Redis Streams** (garantie de delivery), les evenements informatifs utilisent Pub/Sub (fire-and-forget).
+
+> **Redis Streams vs Pub/Sub** :
+> - **Redis Streams** (delivery garantie) : evenements critiques tels que `email.received`, `document.processed`, `pipeline.error`, `service.down`, `trust.level.changed`, `action.corrected`, `action.validated`
+> - **Redis Pub/Sub** (fire-and-forget) : evenements informatifs tels que `agent.completed`, `pipeline.completed`, logs de monitoring
+>
+> Les evenements critiques necessitent Redis Streams car un consumer temporairement indisponible ne doit pas perdre de messages. Les evenements informatifs tolerent la perte occasionnelle.
 
 ```bash
-# Suivre les logs en temps réel
+# Suivre les logs informatifs en temps reel (Pub/Sub)
 redis-cli SUBSCRIBE pipeline.completed pipeline.error
+
+# Lire les evenements critiques (Streams)
+redis-cli XREAD COUNT 10 STREAMS email.received document.processed 0 0
 ```
 
 ### Alertes

@@ -471,5 +471,207 @@ async def validate_graph_population():
 
 ---
 
-**Créé le** : 2026-02-05
-**Version** : 1.0
+---
+
+## 7. Trust Retrogradation - Definition formelle des metriques
+
+### 7.1 Problematique
+
+L'architecture dit "accuracy <90% sur 1 semaine" mais ne definit pas formellement la formule, la granularite, ni les seuils minimaux.
+
+### 7.2 Formule d'accuracy
+
+```
+accuracy(module, action, semaine) = 1 - (corrections / total_actions)
+
+Ou :
+- corrections = nombre d'actions corrigees par Antonio dans la semaine
+- total_actions = nombre total d'actions executees (status: auto, propose validee)
+```
+
+### 7.3 Regles de retrogradation
+
+| Condition | Action | Direction |
+|-----------|--------|-----------|
+| accuracy < 90% sur 1 semaine ET total_actions >= 10 | auto -> propose | Retrogradation |
+| accuracy < 70% sur 1 semaine ET total_actions >= 5 | propose -> blocked | Retrogradation |
+| accuracy >= 95% sur 2 semaines consecutives ET total_actions >= 20 | propose -> auto | Promotion |
+| accuracy >= 90% sur 4 semaines consecutives ET total_actions >= 10 | blocked -> propose | Promotion |
+
+**Seuil minimum d'echantillon** : Pas de changement de trust level si total_actions < 5 dans la semaine (echantillon insuffisant).
+
+### 7.4 Granularite
+
+La retrogradation s'applique **par module ET par action** (pas globalement) :
+- `email.classify` peut etre retrograde sans affecter `email.draft_reply`
+- Chaque paire (module, action) a son propre historique d'accuracy
+
+### 7.5 Timing
+
+- Calcul : Cron nightly a 02:00 (nightly_metrics)
+- Fenetre : 7 jours glissants (pas semaine calendaire)
+- Notification : Antonio recoit un message Telegram si un trust level change
+- Override : Antonio peut forcer un trust level via `/confiance set email.classify auto`
+
+### 7.6 Anti-oscillation
+
+Pour eviter les oscillations AUTO <-> PROPOSE :
+- Apres retrogradation, minimum 2 semaines avant promotion possible
+- Apres promotion, minimum 1 semaine avant retrogradation possible
+
+---
+
+## 8. Healthcheck - Liste complete des services
+
+### 8.1 Configuration healthcheck etendue
+
+```python
+HEALTH_CHECKS: dict[str, HealthCheckConfig] = {
+    # Services critiques (overall health = CRITICAL si down)
+    "postgres": HealthCheckConfig(
+        func=check_postgres,
+        timeout_ms=2000,
+        critical=True,
+        dependencies=[],
+    ),
+    "redis": HealthCheckConfig(
+        func=check_redis,
+        timeout_ms=1000,
+        critical=True,
+        dependencies=[],
+    ),
+    "qdrant": HealthCheckConfig(
+        func=lambda: check_http("http://qdrant:6333/health"),
+        timeout_ms=3000,
+        critical=True,
+        dependencies=[],
+    ),
+    # Services importants (overall health = DEGRADED si down)
+    "n8n": HealthCheckConfig(
+        func=lambda: check_http("http://n8n:5678/healthz"),
+        timeout_ms=3000,
+        critical=False,
+        dependencies=["postgres", "redis"],
+    ),
+    "emailengine": HealthCheckConfig(
+        func=lambda: check_http("http://emailengine:3000/health"),
+        timeout_ms=3000,
+        critical=False,
+        dependencies=["postgres"],
+    ),
+    "presidio": HealthCheckConfig(
+        func=lambda: check_http("http://presidio-analyzer:5001/health"),
+        timeout_ms=2000,
+        critical=False,
+        dependencies=[],
+    ),
+    # Services lourds residents
+    "ollama": HealthCheckConfig(
+        func=lambda: check_http("http://ollama:11434/api/tags"),
+        timeout_ms=5000,
+        critical=False,
+        dependencies=[],
+    ),
+    "faster-whisper": HealthCheckConfig(
+        func=lambda: check_http("http://whisper:8080/health"),
+        timeout_ms=3000,
+        critical=False,
+        dependencies=[],
+    ),
+    "kokoro-tts": HealthCheckConfig(
+        func=lambda: check_http("http://kokoro:8001/health"),
+        timeout_ms=3000,
+        critical=False,
+        dependencies=[],
+    ),
+    "surya-ocr": HealthCheckConfig(
+        func=lambda: check_http("http://surya:8002/health"),
+        timeout_ms=3000,
+        critical=False,
+        dependencies=[],
+    ),
+}
+
+# Cache healthcheck pour eviter surcharge (5 secondes TTL)
+HEALTH_CHECK_CACHE_TTL_SECONDS = 5
+```
+
+### 8.2 Semantique des resultats
+
+| Resultat | Condition | Signification |
+|----------|-----------|---------------|
+| `healthy` | Tous les checks critical=True passent | Systeme pleinement operationnel |
+| `degraded` | Checks critical OK, 1+ non-critical echoue | Systeme partiellement operationnel |
+| `unhealthy` | 1+ check critical echoue | Systeme non operationnel |
+
+---
+
+## 9. Securite - Complements
+
+### 9.1 Anonymisation - Lifecycle du mapping
+
+Les mappings Presidio (ex: `[PERSON_1] -> "Jean Dupont"`) suivent ce cycle :
+
+| Phase | Duree | Stockage | RGPD |
+|-------|-------|----------|------|
+| En cours (session LLM) | Duree de la requete | Memoire uniquement | OK (ephemere) |
+| Post-deanonymisation | Immediat | Supprime de memoire | OK |
+| Audit trail | 30 jours | `core.action_receipts.payload` (chiffre pgcrypto) | OK (chiffre) |
+| Purge | Apres 30 jours | Supprime definitivement | OK (droit a l'oubli) |
+
+**Regle** : Les mappings NE SONT JAMAIS stockes en clair. En base, seul le texte anonymise est stocke. Le mapping temporaire existe uniquement en memoire pendant la duree de la requete LLM.
+
+### 9.2 Redis ACL
+
+Chaque service a ses propres permissions Redis :
+
+```
+# redis.conf
+user gateway on >gateway_password ~friday:* &* +@read +@write +@pubsub
+user n8n on >n8n_password ~n8n:* &* +@read +@write
+user alerting on >alerting_password ~* &* +@read +@pubsub -@write
+user default off
+```
+
+**Principe** : Moindre privilege. Le service alerting ne peut QUE lire et s'abonner, pas ecrire.
+
+### 9.3 Tailscale - Authentification renforcee
+
+**Obligatoire avant mise en production** :
+- 2FA active sur le compte Tailscale (TOTP ou hardware key)
+- Device authorization active (nouveaux devices requierent approbation)
+- Key expiry = 90 jours (rotation automatique)
+- SSH via Tailscale uniquement (port 22 ferme sur l'interface publique)
+
+### 9.4 Backups - Chiffrement en transit et au repos
+
+| Phase | Chiffrement | Methode |
+|-------|-------------|---------|
+| En transit (VPS -> PC) | TLS via Tailscale (WireGuard) | Automatique |
+| Au repos (VPS) | age (fichier .dump) | `age -R recipients.txt backup.dump > backup.dump.age` |
+| Au repos (PC) | Volume chiffre OS | BitLocker (Windows) / LUKS (Linux) |
+
+---
+
+## 10. Zep/Graphiti - Avertissement maturite
+
+> **Avertissement (Feb 2026)** : Zep a cesse ses operations en 2024. Graphiti est en phase early-stage.
+>
+> **Decision provisoire** : Demarrer avec `adapters/memorystore.py` abstraction. Implementer d'abord
+> une version simplifiee basee sur PostgreSQL (tables knowledge.*) + Qdrant (embeddings).
+> Si Graphiti atteint la maturite v1.0 stable, migration via adaptateur.
+> Sinon, Neo4j Community Edition comme alternative.
+>
+> **Criteres de migration vers Graphiti** :
+> - Version stable >= 1.0 publiee
+> - Communaute active (>500 stars GitHub, releases regulieres)
+> - Documentation API complete
+> - Tests de charge valides sur dataset comparable (100k+ entites)
+
+Les references a Zep dans les sections precedentes (6.2 notamment) doivent etre lues comme utilisant l'abstraction `adapters/memorystore.py` qui pourra pointer vers PostgreSQL, Graphiti, ou Neo4j selon la decision finale.
+
+---
+
+**Cree le** : 2026-02-05
+**Mis a jour** : 2026-02-05 (review adversariale - ajout sections 7-10)
+**Version** : 1.1

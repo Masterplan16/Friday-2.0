@@ -80,8 +80,8 @@ def get_llm_adapter() -> LLMAdapter:
 | Kokoro TTS | ~2 Go | Résident |
 | Surya OCR | ~2 Go | Résident |
 | **Total services lourds** | **~16 Go** | |
-| **Socle permanent** | **~5-7 Go** | |
-| **Marge disponible** | **~25 Go** | |
+| **Socle permanent (corrigé)** | **~7-9 Go** | Inclut PG, Redis, Qdrant, n8n, Presidio, Zep, EmailEngine, Caddy, OS |
+| **Marge disponible** | **~23-25 Go** | |
 
 **Orchestrator simplifié (moniteur RAM, pas gestionnaire d'exclusions) :**
 ```python
@@ -114,10 +114,12 @@ result = await presidio_deanonymize(response)
 ```
 
 **Autres règles sécurité :**
-- Tailscale = RIEN exposé sur Internet public (SSH uniquement via Tailscale)
-- age/SOPS pour secrets (JAMAIS de `.env` en clair dans git)
+- Tailscale = RIEN exposé sur Internet public (SSH uniquement via Tailscale, 2FA obligatoire)
+- age/SOPS pour secrets (JAMAIS de `.env` en clair dans git, JAMAIS de credentials en default dans le code)
 - pgcrypto pour colonnes sensibles BDD (données médicales, financières)
 - Ollama local VPS pour données ultra-sensibles (pas de sortie cloud)
+- Redis ACL : moindre privilège par service (voir addendum section 9.2)
+- Mapping Presidio : éphémère en mémoire uniquement, JAMAIS stocké en clair (voir addendum section 9.1)
 
 ---
 
@@ -133,7 +135,7 @@ result = await presidio_deanonymize(response)
 | `propose` | Prépare + attend validation Telegram (inline buttons) | Brouillon réponse mail, classement financier |
 | `blocked` | Analyse uniquement, jamais d'action | Données médicales, investissement, modification contrat |
 
-**Initialisation par risque :** Low risk → `auto`, Medium → `propose`, High → `blocked`. Promotion/rétrogradation automatique basée sur accuracy hebdomadaire (seuil 90%).
+**Initialisation par risque :** Low risk → `auto`, Medium → `propose`, High → `blocked`. Promotion/rétrogradation automatique basée sur accuracy hebdomadaire (seuil 90%). Voir [addendum section 7](_docs/architecture-addendum-20260205.md) pour la définition formelle (formule, granularité par action, seuils minimaux, anti-oscillation).
 
 #### Middleware `@friday_action`
 
@@ -234,28 +236,30 @@ class ActionResult(BaseModel):
 
 ---
 
-### Event-driven - Redis Pub/Sub
+### Event-driven - Redis Streams + Pub/Sub
 
 **Format événements :** Dot notation
 
-```python
-# Exemples - Métier
-"email.received"           # Nouvel email ingéré
-"document.processed"       # Document OCR terminé
-"agent.completed"          # Agent a fini sa tâche
-"file.uploaded"            # Fichier uploadé via Telegram
+**Transport : Redis Streams (événements critiques) vs Pub/Sub (informatifs)**
 
-# Exemples - Observabilité & Trust
-"pipeline.error"           # Erreur dans un pipeline
-"service.down"             # Service lourd indisponible
-"trust.level.changed"      # Changement de trust level (auto/propose/blocked)
-"action.corrected"         # Antonio a corrigé une action → feedback loop
-"action.validated"         # Antonio a validé une action proposée
-```
+| Événement | Transport | Justification |
+|-----------|-----------|---------------|
+| `email.received` | **Redis Streams** | Critique - perte = email non traité |
+| `document.processed` | **Redis Streams** | Critique - perte = document ignoré |
+| `pipeline.error` | **Redis Streams** | Critique - perte = erreur silencieuse |
+| `service.down` | **Redis Streams** | Critique - perte = panne non détectée |
+| `trust.level.changed` | **Redis Streams** | Critique - perte = incohérence trust |
+| `action.corrected` | **Redis Streams** | Critique - perte = feedback perdu |
+| `action.validated` | **Redis Streams** | Critique - perte = validation perdue |
+| `agent.completed` | Redis Pub/Sub | Non critique - retry possible |
+| `file.uploaded` | Redis Pub/Sub | Non critique - détectable par scan |
+
+**Règle** : Tout événement dont la perte entraîne une action manquée ou une incohérence d'état → Redis Streams. Événements informatifs/retry-safe → Redis Pub/Sub.
 
 **Communication patterns :**
 - **Sync** : REST (FastAPI) pour requêtes
-- **Async** : Redis Pub/Sub pour événements
+- **Async critique** : Redis Streams pour événements métier (delivery garanti)
+- **Async informatif** : Redis Pub/Sub pour logs/notifications (fire-and-forget)
 - **HTTP interne** : Docker network pour services (qdrant, n8n, etc.)
 
 ---
@@ -495,7 +499,7 @@ docker compose logs -f gateway          # Gateway uniquement
 **Story 1 : Infrastructure de base** (conçue, pas encore implémentée)
 
 1. 📋 Docker Compose (PostgreSQL 16, Redis 7, Qdrant, n8n 1.69.2+, Caddy)
-2. 📋 Migrations SQL 001-010 (schemas core/ingestion/knowledge + tables)
+2. 📋 Migrations SQL 001-010 (schemas core/ingestion/knowledge + tables, inclut `core.tasks` et `core.events`)
 3. 📋 FastAPI Gateway + auth simple + OpenAPI
 4. 📋 Healthcheck endpoint (`GET /api/v1/health`)
 5. 📋 Tailscale configuré (VPS hostname `friday-vps`)
@@ -513,12 +517,23 @@ docker compose logs -f gateway          # Gateway uniquement
 8. Tests unitaires + intégration trust middleware
 
 **Dépendances critiques avant Story 2 :**
-- PostgreSQL 16 opérationnel avec 3 schemas
-- Redis 7 opérationnel (cache + pub/sub)
+- PostgreSQL 16 opérationnel avec 3 schemas (inclut `core.tasks`, `core.events`)
+- Redis 7 opérationnel (cache + Streams pour événements critiques + Pub/Sub pour informatifs)
 - FastAPI Gateway opérationnel avec `/api/v1/health`
-- Tailscale mesh VPN configuré
+- Tailscale mesh VPN configuré (2FA obligatoire)
 - **`@friday_action` middleware opérationnel** (tout module en dépend)
 - **Bot Telegram opérationnel** (canal unique de contrôle)
+- **Presidio + spaCy-fr installés** (RGPD avant tout appel LLM cloud)
+
+**Fichiers à créer (Story 1 + 1.5) :**
+- `docker-compose.yml` + `docker-compose.services.yml`
+- `database/migrations/001-011_*.sql`
+- `scripts/apply_migrations.py`
+- `agents/src/tools/anonymize.py` (Presidio integration)
+- `agents/src/middleware/models.py` (ActionResult)
+- `agents/src/middleware/trust.py` (@friday_action)
+
+**Avertissement Zep/Graphiti** : Zep a cessé ses opérations en 2024. Démarrer avec l'abstraction `adapters/memorystore.py` pointant vers PostgreSQL + Qdrant. Voir [addendum section 10](_docs/architecture-addendum-20260205.md) pour les critères de migration.
 
 ---
 
@@ -579,7 +594,7 @@ New-BurntToastNotification -Text "Claude", "Toujours en cours..."
   *Stories détaillées (1-9+), séquence implémentation, Acceptance Criteria, dépendances, durées estimées*
 
 - **Addendum architecture (2026-02-05)** : [_docs/architecture-addendum-20260205.md](_docs/architecture-addendum-20260205.md)
-  *Clarifications techniques complémentaires : Presidio benchmark, pattern detection algo, profils RAM sources, critères OpenClaw, population graphe initiale*
+  *Clarifications techniques : Presidio benchmark, pattern detection algo, profils RAM, critères OpenClaw, population graphe, trust retrogradation formelle (section 7), healthcheck complet (section 8), sécurité compléments (section 9), avertissement Zep (section 10)*
 
 ### Configuration & Scripts implémentation
 
@@ -597,5 +612,5 @@ New-BurntToastNotification -Text "Claude", "Toujours en cours..."
 
 ---
 
-**Version** : 1.3.0 (2026-02-05)
-**Status** : Architecture complétée ✅ + Observability & Trust Layer ✅ + Analyse adversariale complète ✅ + **12 corrections analyse méta** ✅ - **Prêt pour implémentation Story 1**
+**Version** : 1.4.0 (2026-02-05)
+**Status** : Architecture completee + Observability & Trust Layer + Analyse adversariale v2 (45+ findings fixes) - **Pret pour implementation Story 1**

@@ -1,14 +1,18 @@
 #!/bin/bash
 # Test End-to-End: Backup & Restore complet
-# Vérifie que les backups Friday 2.0 sont restaurables et complets
+# Verifie que les backups Friday 2.0 sont restaurables et complets
 #
 # Usage:
 #   ./tests/e2e/test_backup_restore.sh
 #
-# Prérequis:
+# Prerequis:
 #   - Docker Compose running
-#   - Tailscale connecté
-#   - Services PostgreSQL, Qdrant, Zep opérationnels
+#   - Tailscale connecte
+#   - Services PostgreSQL, Qdrant, Zep operationnels
+#
+# Portabilite:
+#   - Linux/macOS : Natif
+#   - Windows : Requiert WSL 2 ou Git Bash (wsl ./tests/e2e/test_backup_restore.sh)
 
 set -euo pipefail
 
@@ -118,18 +122,34 @@ echo ""
 echo -e "${YELLOW}[3/6] Backup Qdrant...${NC}"
 
 if docker ps | grep -q "qdrant"; then
-    # Créer snapshot Qdrant
-    QDRANT_SNAPSHOT=$(curl -s -X POST http://localhost:6333/collections/friday_docs/snapshots | jq -r '.result.name')
+    # Creer snapshot Qdrant (avec validation HTTP)
+    QDRANT_RESPONSE_FILE="$TEST_BACKUP_DIR/qdrant_response.json"
+    QDRANT_HTTP_CODE=$(curl -s -o "$QDRANT_RESPONSE_FILE" -w "%{http_code}" \
+        --connect-timeout 10 --max-time 30 \
+        -X POST http://localhost:6333/collections/friday_docs/snapshots)
 
-    if [ -n "$QDRANT_SNAPSHOT" ] && [ "$QDRANT_SNAPSHOT" != "null" ]; then
-        curl -s "http://localhost:6333/collections/friday_docs/snapshots/$QDRANT_SNAPSHOT" \
-            --output "$TEST_BACKUP_DIR/qdrant_test.snapshot"
-        echo -e "${GREEN}✅ Qdrant snapshot créé: $QDRANT_SNAPSHOT${NC}"
+    if [ "$QDRANT_HTTP_CODE" != "200" ]; then
+        echo -e "${YELLOW}Qdrant snapshot HTTP $QDRANT_HTTP_CODE - skipped${NC}"
     else
-        echo -e "${YELLOW}⚠️ Qdrant collection vide - snapshot skipped${NC}"
+        QDRANT_SNAPSHOT=$(jq -r '.result.name' "$QDRANT_RESPONSE_FILE" 2>/dev/null)
+
+        if [ -n "$QDRANT_SNAPSHOT" ] && [ "$QDRANT_SNAPSHOT" != "null" ]; then
+            DL_HTTP_CODE=$(curl -s -o "$TEST_BACKUP_DIR/qdrant_test.snapshot" -w "%{http_code}" \
+                --connect-timeout 10 --max-time 120 \
+                "http://localhost:6333/collections/friday_docs/snapshots/$QDRANT_SNAPSHOT")
+
+            if [ "$DL_HTTP_CODE" = "200" ]; then
+                echo -e "${GREEN}Qdrant snapshot cree: $QDRANT_SNAPSHOT${NC}"
+            else
+                echo -e "${YELLOW}Qdrant snapshot download HTTP $DL_HTTP_CODE - skipped${NC}"
+            fi
+        else
+            echo -e "${YELLOW}Qdrant collection vide - snapshot skipped${NC}"
+        fi
     fi
+    rm -f "$QDRANT_RESPONSE_FILE"
 else
-    echo -e "${YELLOW}⚠️ Qdrant non disponible - skipped${NC}"
+    echo -e "${YELLOW}Qdrant non disponible - skipped${NC}"
 fi
 
 #############################################

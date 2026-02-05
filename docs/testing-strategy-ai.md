@@ -655,5 +655,31 @@ Si accuracy < seuil sur dataset :
 
 ---
 
-**Version** : 1.0
-**Dernière mise à jour** : 2026-02-05
+## 11. Tests manquants identifies (review adversariale 2026-02-05)
+
+La review adversariale du 2026-02-05 a identifie les tests suivants comme manquants dans la couverture actuelle. Ils devront etre implementes dans leurs stories respectives.
+
+| Test | Categorie | Story | Priorite |
+|------|-----------|-------|----------|
+| Presidio partial anonymization failure | Integration | 1.5 | CRITIQUE |
+| Mistral API rate limit handling | Integration | 2 | HAUTE |
+| Ollama fallback si indisponible | Integration | 2 | HAUTE |
+| Redis Streams delivery guarantee | Integration | 1 | HAUTE |
+| Trust retrogradation edge cases (sample size <10) | Unit | 1.5 | MOYENNE |
+| Checkpoint JSON corruption recovery | Unit | 2 | MOYENNE |
+| EmailEngine token expiration detection | Integration | 2 | MOYENNE |
+
+**Details** :
+
+- **Presidio partial anonymization failure** : Tester le comportement quand Presidio n'anonymise que partiellement un texte (ex: detecte le nom mais pas le numero de telephone). Le pipeline doit rejeter le texte si des PII connues subsistent.
+- **Mistral API rate limit handling** : Verifier que le retry exponentiel fonctionne correctement quand Mistral renvoie un 429 (rate limit). Inclure le test du backoff et du nombre maximal de retries.
+- **Ollama fallback si indisponible** : Quand Ollama (LLM local) est down, verifier que le systeme bascule correctement sur Mistral cloud (avec anonymisation Presidio prealable).
+- **Redis Streams delivery guarantee** : Verifier qu'un message publie dans un Stream est bien consomme meme si le consumer redemarre entre-temps (consumer groups + ACK).
+- **Trust retrogradation edge cases** : Que se passe-t-il si un module n'a que 3 actions sur la semaine ? Le seuil de 90% sur 3 actions (= 1 erreur = retrogradation) est-il trop sensible ? Definir un sample size minimum.
+- **Checkpoint JSON corruption recovery** : Tester la recuperation quand le fichier JSON de checkpoint de migration est corrompu (ecriture interrompue). Le script doit detecter la corruption et reprendre depuis le dernier checkpoint valide.
+- **EmailEngine token expiration detection** : Verifier que le systeme detecte quand le token OAuth/IMAP d'EmailEngine expire et envoie une alerte Telegram au lieu de silencieusement echouer.
+
+---
+
+**Version** : 1.1
+**Derniere mise a jour** : 2026-02-05

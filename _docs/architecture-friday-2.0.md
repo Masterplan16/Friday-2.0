@@ -81,8 +81,8 @@ Note : les domaines utilisateur (medecin, enseignant, financier, personnel) rest
 
 | ID | Exigence | Solution retenue |
 |----|----------|-----------------|
-| T1 | LLM cloud (raisonnement complexe) | Mistral (Nemo classification, Medium 3.1 generation, Large 3 raisonnement) |
-| T2 | LLM local VPS (donnees sensibles) | Mistral Nemo 12B / Ministral 3B via Ollama sur VPS (pas sur laptop) |
+| T1 | LLM cloud (raisonnement complexe) | Mistral (mistral-small-latest classification, mistral-large-latest generation + raisonnement) |
+| T2 | LLM local VPS (donnees sensibles) | Mistral Nemo 12B / mistral-small-latest via Ollama sur VPS (pas sur laptop) |
 | T3 | OCR | Surya + Marker |
 | T4 | Extraction d'entites nommees (NER) | spaCy fr + GLiNER (zero-shot flexible) |
 | T5 | Anonymisation reversible | Presidio + spaCy-fr |
@@ -160,7 +160,7 @@ Note : les domaines utilisateur (medecin, enseignant, financier, personnel) rest
 | Canal principal | **Telegram** | Mobile-first, vocal natif bidirectionnel, meilleure confidentialite, bot API superieure a Discord |
 | LLM laptop | **Aucun** | Ventilation excessive constatee lors du test Ollama qwen3:8b |
 | LLM classification | **Mistral Nemo cloud** | ~0.15 euros/mois pour 600 mails ($0.02/1M tokens input) |
-| LLM donnees sensibles | **Mistral Nemo 12B / Ministral 3B via Ollama sur VPS** | CPU suffisant, donnees ne sortent pas, ecosysteme Mistral unifie |
+| LLM donnees sensibles | **Mistral Nemo 12B / mistral-small-latest via Ollama sur VPS** | CPU suffisant, donnees ne sortent pas, ecosysteme Mistral unifie |
 | Hebergeur VPS | **OVH France** | Francais, sans engagement, deja connu (MiraIdesk) |
 | VPS cible | **OVH VPS-4 : 48 Go RAM / 12 vCores / 300 Go NVMe** | ~25 euros TTC/mois, tous services lourds residents en simultane |
 | Stockage fichiers | **PC = stockage, VPS = cerveau** | Documents chez l'utilisateur, VPS garde index + metadonnees |
@@ -236,8 +236,8 @@ Recherche
 | Risque | Mitigation |
 |--------|-----------|
 | Complexite d'integration (15+ services Docker) | Architecture modulaire, chaque composant remplacable via API standard |
-| Zep+Graphiti immature (2025) | Fallback Neo4j, donnees exportables. Mode degrade : si Zep indisponible, recherche semantique via Qdrant seul (perte des relations temporelles du graphe, pas de la recherche vectorielle). Alerte Trust Layer (`service.down`) + circuit breaker dans `adapters/memorystore.py` |
-| Budget VPS insuffisant | VPS-4 48 Go laisse ~25 Go de marge apres tous services charges. Plan B : VPS-3 24 Go a 15 euros/mois (reactive exclusions mutuelles) |
+| Zep+Graphiti immature (2025) | Zep a cesse ses operations en 2024, Graphiti early-stage. Decision provisoire : `adapters/memorystore.py` abstraction → PostgreSQL (knowledge.*) + Qdrant (embeddings) Day 1. Migration Graphiti si v1.0 stable atteinte (criteres : >500 stars GitHub, doc API complete, tests charge 100k+ entites). Sinon → Neo4j Community Edition. Mode degrade : recherche semantique via Qdrant seul. Alerte Trust Layer (`service.down`) + circuit breaker dans `adapters/memorystore.py` |
+| Budget VPS insuffisant | VPS-4 48 Go laisse ~23-25 Go de marge apres tous services charges (~23-25 Go utilises). Plan B : VPS-3 24 Go a 15 euros/mois (reactive exclusions mutuelles) |
 | Evolution rapide du marche IA | Composants decouplés par API, remplacement sans impact sur le reste |
 | Erreurs/hallucinations des agents IA | Observability & Trust Layer : niveaux de confiance (auto/propose/bloque), receipts verifiables, retrogradation automatique |
 
@@ -246,7 +246,7 @@ Recherche
 | Poste | Cout mensuel |
 |-------|-------------|
 | VPS OVH VPS-4 48 Go (France, sans engagement) | ~25 euros TTC |
-| Mistral API (Nemo classif + Medium 3.1 gen + Large 3 raisonnement + Embed) | ~6-9 euros |
+| Mistral API (mistral-small-latest classif + mistral-large-latest gen/raisonnement + Embed) | ~6-9 euros |
 | Deepgram STT fallback (consultation express) | ~3-5 euros |
 | Divers (domaine, ntfy) | ~2-3 euros |
 | **Total estime** | **~36-42 euros (marge ~8-14 euros sur budget 50 euros)** |
@@ -285,11 +285,27 @@ Recherche
 | Modele | Usage | Cout |
 |--------|-------|------|
 | Mistral Nemo | Classification, tri, routage ($0.02/1M input) | ~0.15 euros/mois |
-| Mistral Medium 3.1 | Generation, synthese, brouillons ($0.40/$2.00/1M) | ~3-5 euros/mois |
-| Mistral Large 3 | Raisonnement complexe, analyse contrats, theses | ~2-4 euros/mois (ponctuel) |
+| mistral-large-latest | Generation, synthese, brouillons, raisonnement complexe, analyse contrats, theses | ~5-9 euros/mois |
 | Mistral Embed | Embeddings vectoriels ($0.01/1M) | ~0.50 euros/mois |
 | Mistral Nemo 12B (Ollama VPS) | Donnees sensibles, inference locale | 0 euros (CPU VPS) |
-| Ministral 3B (Ollama VPS) | Classification locale rapide | 0 euros (CPU VPS) |
+| mistral-small-latest (Ollama VPS) | Classification locale rapide | 0 euros (CPU VPS) |
+
+> **Note** : Les model IDs Mistral evoluent frequemment. Utiliser les suffixes `-latest` pour toujours pointer vers la version stable la plus recente. Verifier la compatibilite sur https://docs.mistral.ai avant deploiement.
+
+#### Selection modele LLM par action
+
+| Module | Action | Modele | Temperature | Max tokens | Justification |
+|--------|--------|--------|-------------|------------|---------------|
+| email | classify | mistral-small-latest | 0.1 | 200 | Classification rapide, peu de creativite |
+| email | draft_reply | mistral-large-latest | 0.7 | 2000 | Redaction necessite creativite |
+| archiviste | rename | mistral-small-latest | 0.1 | 100 | Renommage deterministe |
+| archiviste | summarize | mistral-large-latest | 0.3 | 1000 | Resume fidele au contenu |
+| finance | classify_transaction | mistral-small-latest | 0.1 | 150 | Classification deterministe |
+| tuteur_these | review | mistral-large-latest | 0.5 | 3000 | Analyse profonde requise |
+| briefing | generate | mistral-large-latest | 0.5 | 2000 | Synthese qualitative |
+| *donnees sensibles* | * | Ollama Nemo 12B (local) | variable | variable | RGPD - pas de sortie cloud |
+
+> **Regle de routage** : Si `trust_level == 'blocked'` OU donnees contiennent PII medicales/financieres → Ollama local. Sinon → Mistral cloud (plus rapide).
 
 **Note** : GPT-4o-mini retire le 13 fevrier 2026. Migration deja anticipee vers Mistral.
 
@@ -335,7 +351,7 @@ tailscale up --hostname=friday-vps
 | Base de donnees | PostgreSQL 16 | Exigence I3 |
 | Stockage vectoriel | Qdrant | Exigence I4 |
 | Memoire graphe | Zep + Graphiti | Exigence I2 |
-| Inference locale | Ollama (Mistral Nemo 12B / Ministral 3B) | Exigences T1/T2 |
+| Inference locale | Ollama (Mistral Nemo 12B / mistral-small-latest) | Exigences T1/T2 |
 | Reverse proxy | Caddy | Simplicite HTTPS auto |
 | Containerisation | Docker Compose v2 | Standard |
 | API gateway | FastAPI | Performance Python async |
@@ -357,7 +373,7 @@ tailscale up --hostname=friday-vps
 - BDD : PostgreSQL 16
 - Vectoriel : Qdrant
 - Memoire graphe : Zep + Graphiti
-- Inference locale : Ollama (Mistral Nemo 12B / Ministral 3B)
+- Inference locale : Ollama (Mistral Nemo 12B / mistral-small-latest)
 - Bot : python-telegram-bot
 - API Gateway : FastAPI
 - Reverse proxy : Caddy
@@ -544,6 +560,18 @@ ORDER BY older.date
 
 Mode degrade : recherche semantique via Qdrant seul (perte des relations temporelles du graphe, pas de la recherche vectorielle). Alerte Trust Layer (`service.down`) + circuit breaker dans `adapters/memorystore.py`.
 
+> **Avertissement (Feb 2026)** : Zep a cesse ses operations en 2024. Graphiti est en phase early-stage.
+> **Decision provisoire** : Demarrer avec `adapters/memorystore.py` abstraction. Implementer d'abord
+> une version simplifiee basee sur PostgreSQL (tables knowledge.*) + Qdrant (embeddings).
+> Si Graphiti atteint la maturite v1.0 stable → migration via adaptateur.
+> Sinon → Neo4j Community Edition comme alternative.
+>
+> **Criteres de migration vers Graphiti** :
+> - Version stable >= 1.0 publiee
+> - Communaute active (>500 stars GitHub, releases regulieres)
+> - Documentation API complete
+> - Tests de charge valides sur dataset comparable (100k+ entites)
+
 ---
 
 ### Categorie 2 : Authentification et securite
@@ -708,6 +736,37 @@ CREATE TABLE core.anonymization_mappings (
 CREATE INDEX idx_anon_context ON core.anonymization_mappings(context_hash);
 CREATE INDEX idx_anon_token ON core.anonymization_mappings(anonymized_token);
 CREATE INDEX idx_anon_type ON core.anonymization_mappings(entity_type);
+
+-- Tables core.tasks et core.events (requis par Briefing Daily et Agenda)
+-- Incluses dans migration 002_core_tables.sql
+CREATE TABLE core.tasks (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    title TEXT NOT NULL,
+    description TEXT,
+    status TEXT NOT NULL DEFAULT 'pending',  -- pending, in_progress, completed, cancelled
+    priority TEXT NOT NULL DEFAULT 'medium',  -- low, medium, high, urgent
+    due_date TIMESTAMPTZ,
+    assigned_to TEXT DEFAULT 'Antonio',
+    tags TEXT[] DEFAULT '{}',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE core.events (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    title TEXT NOT NULL,
+    description TEXT,
+    date_start TIMESTAMPTZ NOT NULL,
+    date_end TIMESTAMPTZ,
+    location TEXT,
+    calendar TEXT NOT NULL DEFAULT 'personal',  -- personal, medical, thesis, professional
+    all_day BOOLEAN DEFAULT FALSE,
+    recurrence_rule TEXT,  -- iCal RRULE format
+    source TEXT,  -- 'google_calendar', 'manual', 'telegram'
+    external_id TEXT,  -- ID dans le systeme source (Google Calendar event ID)
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 ```
 
 **Strategie de purge (optionnel)**
@@ -760,6 +819,22 @@ L'analyse besoins previent : "A trop anonymiser, on perd la capacite de recherch
 | Jobs infra avec garantie de livraison | Redis Streams (complement n8n) |
 
 > **Note** : Redis Pub/Sub est **fire-and-forget** — si aucun subscriber n'ecoute au moment de la publication, le message est perdu. C'est acceptable pour les notifications temps reel (alertes, trust events). Pour les evenements critiques necessitant une garantie de livraison (ex: `email.received` declenchant un pipeline), utiliser Redis Streams ou n8n webhooks qui persistent les messages.
+
+#### Mapping evenements → transport Redis
+
+| Evenement | Transport | Justification |
+|-----------|-----------|---------------|
+| `email.received` | **Redis Streams** | Critique - perte = email non traite |
+| `document.processed` | **Redis Streams** | Critique - perte = document ignore |
+| `pipeline.error` | **Redis Streams** | Critique - perte = erreur silencieuse |
+| `service.down` | **Redis Streams** | Critique - perte = panne non detectee |
+| `trust.level.changed` | **Redis Streams** | Critique - perte = incoherence trust |
+| `action.corrected` | **Redis Streams** | Critique - perte = feedback perdu |
+| `action.validated` | **Redis Streams** | Critique - perte = validation perdue |
+| `agent.completed` | Redis Pub/Sub | Non critique - retry possible |
+| `file.uploaded` | Redis Pub/Sub | Non critique - detectable par scan |
+
+**Regle generale** : Tout evenement dont la perte entraine une action manquee ou une incoherence d'etat → Redis Streams. Evenements informatifs/retry-safe → Redis Pub/Sub.
 
 #### 3d. Rate limiting
 
@@ -884,23 +959,25 @@ Quand Antonio corrige une action :
 5. Les regles sont injectees dans les prompts LLM (SELECT + injection, pas de RAG)
 
 ```sql
--- Définition simplifiée (voir version complète dans la clarification "Feedback loop" ci-dessous)
--- La table complète inclut : UUID PK, module, action, scope, conditions JSONB,
--- output JSONB, priority, active, created_at, created_by + indexes
 CREATE TABLE core.correction_rules (
-    id UUID PRIMARY KEY,
-    module TEXT NOT NULL,
-    action TEXT NOT NULL,
-    scope TEXT DEFAULT 'module',
-    conditions JSONB NOT NULL,
-    output JSONB NOT NULL,
-    priority INT DEFAULT 1,
-    source_receipts UUID[] NOT NULL,
-    hit_count INT DEFAULT 0,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    module TEXT NOT NULL,            -- 'email', 'archiviste', 'finance', '*' pour global
+    action TEXT NOT NULL,            -- 'classify', 'rename', '*' pour toutes actions
+    scope TEXT NOT NULL DEFAULT 'module',  -- 'module' ou 'global'
+    conditions JSONB NOT NULL,       -- Pattern a matcher : {"keywords": ["URSSAF"], "confidence_lt": 0.8}
+    output JSONB NOT NULL,           -- Corrections a appliquer : {"category": "administrative"}
+    priority INT NOT NULL DEFAULT 1, -- Plus bas = execute en premier
+    source_receipts UUID[] DEFAULT '{}',  -- Receipts qui ont declenche la proposition de cette regle
+    hit_count INT DEFAULT 0,         -- Nombre de fois ou cette regle a ete appliquee
+    last_triggered_at TIMESTAMPTZ,   -- Derniere application
     active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     created_by TEXT DEFAULT 'Antonio'
 );
+
+CREATE INDEX idx_correction_rules_lookup ON core.correction_rules(module, action, active);
+CREATE INDEX idx_correction_rules_priority ON core.correction_rules(priority) WHERE active = TRUE;
 ```
 
 **Hierarchie de decision** : Regle explicite > Jugement LLM. Pas de RAG correctif (50 regles max = un SELECT suffit).
@@ -1039,7 +1116,8 @@ n8n fournit son propre dashboard pour l'administration des workflows. Aucun deve
 | EmailEngine | ~500 Mo | Permanent |
 | Caddy | ~50 Mo | Permanent |
 | Presidio + spaCy-fr | ~1-1.5 Go | Permanent |
-| **Sous-total permanent** | **~5-7 Go** | |
+| OS + overhead Docker | ~1-2 Go | Permanent |
+| **Sous-total permanent** | **~7-9 Go** | |
 
 | Service lourd | RAM | Mode |
 |---------------|-----|------|
@@ -1051,12 +1129,13 @@ n8n fournit son propre dashboard pour l'administration des workflows. Aucun deve
 
 **Bilan RAM VPS-4 :**
 
-| | Go |
-|--|--|
+| Composant | RAM estimee |
+|-----------|-------------|
 | Total VPS-4 | 48 Go |
-| Socle permanent | ~5-7 Go |
-| Services lourds (tous residents) | ~16 Go |
-| **Marge disponible** | **~25 Go** |
+| Socle permanent (corrige) | ~7-9 Go |
+| Services lourds residents | ~16 Go |
+| **Total estime** | **~23-25 Go** |
+| **Marge disponible** | **~23-25 Go** |
 
 **Avantage majeur** : Zero cold start. Ollama Nemo 12B met 30-60s a se charger en RAM. Avec 48 Go, tous les modeles sont pre-charges et repondent instantanement.
 
@@ -1115,7 +1194,7 @@ RAM_ALERT_THRESHOLD_PCT = 85  # Alerte Telegram si depasse
 **Strategie retenue** :
 - **Classification/tri rapide** (600+ items/mois) → **Mistral cloud** : Latence critique, cout negligeable (~0.15 euro/mois), pas de donnees sensibles (juste subject + preview 500 chars)
 - **Donnees sensibles** (medical, financier, juridique) → **Ollama VPS** : Donnees ne sortent jamais, latence acceptable pour analyses ponctuelles
-- **Raisonnement complexe** (briefing, generation, analyse) → **Mistral Large 3 cloud** : Qualite superieure, usage ponctuel (1-2x/jour), cout maitrise (~5-8 euros/mois)
+- **Raisonnement complexe** (briefing, generation, analyse) → **mistral-large-latest cloud** : Qualite superieure, usage ponctuel (1-2x/jour), cout maitrise (~5-8 euros/mois)
 
 **Fallback** : Si budget trop eleve → basculer classification vers Ollama VPS (augmente latence mais economise ~2 euros/mois).
 
@@ -1126,21 +1205,26 @@ RAM_ALERT_THRESHOLD_PCT = 85  # Alerte Telegram si depasse
 **Table `core.correction_rules`** :
 
 ```sql
+-- Version complete (identique a la definition dans migration 011_trust_system.sql)
 CREATE TABLE core.correction_rules (
-    id UUID PRIMARY KEY,
-    module TEXT NOT NULL,           -- "email", "archiviste", "finance", etc.
-    action TEXT NOT NULL,           -- "classify", "rename", "detect_anomaly", etc.
-    scope TEXT DEFAULT 'module',    -- "module" (local) ou "global" (tous modules)
-    conditions JSONB NOT NULL,      -- Conditions declenchement {keywords: [...], patterns: [...]}
-    output JSONB NOT NULL,          -- Correction a appliquer {category: "medical", priority: "high"}
-    priority INT DEFAULT 1,         -- Ordre application (1 = plus prioritaire)
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    module TEXT NOT NULL,            -- 'email', 'archiviste', 'finance', '*' pour global
+    action TEXT NOT NULL,            -- 'classify', 'rename', '*' pour toutes actions
+    scope TEXT NOT NULL DEFAULT 'module',  -- 'module' ou 'global'
+    conditions JSONB NOT NULL,       -- Pattern a matcher : {"keywords": ["URSSAF"], "confidence_lt": 0.8}
+    output JSONB NOT NULL,           -- Corrections a appliquer : {"category": "administrative"}
+    priority INT NOT NULL DEFAULT 1, -- Plus bas = execute en premier
+    source_receipts UUID[] DEFAULT '{}',  -- Receipts qui ont declenche la proposition de cette regle
+    hit_count INT DEFAULT 0,         -- Nombre de fois ou cette regle a ete appliquee
+    last_triggered_at TIMESTAMPTZ,   -- Derniere application
     active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP DEFAULT NOW(),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     created_by TEXT DEFAULT 'Antonio'
 );
 
-CREATE INDEX idx_rules_module_action ON core.correction_rules(module, action, active);
-CREATE INDEX idx_rules_scope ON core.correction_rules(scope, active);
+CREATE INDEX idx_correction_rules_lookup ON core.correction_rules(module, action, active);
+CREATE INDEX idx_correction_rules_priority ON core.correction_rules(priority) WHERE active = TRUE;
 ```
 
 **Exemple regle module** :
@@ -1194,9 +1278,9 @@ Email : {email.subject}
 
 | Module | Architecture technique | Tools/APIs |
 |--------|----------------------|------------|
-| **11. Generateur TCS** | Template Jinja2 + Base programme RAG (Qdrant) + LLM Mistral Large 3 → Vignette JSON → Rendu Markdown | CrossRef API (verification references), Qdrant (recherche programme etudes) |
-| **12. Generateur ECOS** | Template Jinja2 + Methodes fournies Antonio (RAG) + LLM Mistral Large 3 → Stations ECOS JSON → Grilles evaluation | Qdrant (recherche methodes), Mistral Large 3 (generation scenarios) |
-| **13. Actualisateur cours** | Cours existant Markdown/Docx → Extraction sections → Recherche references recentes (PubMed/HAS) → LLM Mistral Large 3 → Generation sections mises a jour → Merge document | PubMed API, Legifrance PISTE (recos HAS), Mistral Large 3 |
+| **11. Generateur TCS** | Template Jinja2 + Base programme RAG (Qdrant) + LLM mistral-large-latest → Vignette JSON → Rendu Markdown | CrossRef API (verification references), Qdrant (recherche programme etudes) |
+| **12. Generateur ECOS** | Template Jinja2 + Methodes fournies Antonio (RAG) + LLM mistral-large-latest → Stations ECOS JSON → Grilles evaluation | Qdrant (recherche methodes), mistral-large-latest (generation scenarios) |
+| **13. Actualisateur cours** | Cours existant Markdown/Docx → Extraction sections → Recherche references recentes (PubMed/HAS) → LLM mistral-large-latest → Generation sections mises a jour → Merge document | PubMed API, Legifrance PISTE (recos HAS), mistral-large-latest |
 | **21. Collection jeux video** | Form Telegram (titre, plateforme, edition, etat) → Insert PostgreSQL (`knowledge.collection_items`) → eBay/PriceCharting scraping (Playwright) → Alerte variations cote >10% | Playwright (scraping eBay), PriceCharting API (si disponible) |
 | **22. CV academique** | Template LaTeX + Extraction donnees PostgreSQL (`knowledge.publications`, `knowledge.theses_supervised`, `knowledge.teaching_activities`) → Compilation PDF → Sync PC | PostgreSQL queries, LaTeX/Pandoc |
 | **23. Mode HS/Vacances** | Flag `core.user_settings.vacation_mode` → n8n workflow pause pipelines non critiques → Auto-reply emails → Alertes thesards Telegram → Briefing retour genere | n8n (pause workflows), Telegram (notifications), PostgreSQL (flag) |
@@ -1525,7 +1609,7 @@ OpenClaw est un agent IA autonome open-source lance fin 2025 (~3 mois d'existenc
 |----------------|-----------|--------|
 | Celery + Redis comme task queue | **Retire** → n8n + FastAPI BackgroundTasks + Redis Streams | Trois systemes de queuing = complexite inutile |
 | SQLAlchemy + Alembic | **Retire** → asyncpg brut + SQL numerotees | ORM inapproprie pour un systeme pipeline/agent |
-| RAM 16 Go non calcule | **Resolu** → upgrade VPS-4 48 Go, tous services residents en simultane | Plus d'exclusion mutuelle, marge 25 Go |
+| RAM 16 Go non calcule | **Resolu** → upgrade VPS-4 48 Go, tous services residents en simultane | Plus d'exclusion mutuelle, marge ~23-25 Go |
 | Observabilite absente | **Ajoute** → Observability & Trust Layer (composant transversal) | Receipts, trust levels, alertes, feedback loop |
 | OpenClaw (10% interface) | **Retire Day 1** → reevaluation post-socle | Maturite insuffisante, 5/37 exigences couvertes |
 
@@ -1559,7 +1643,7 @@ OpenClaw est un agent IA autonome open-source lance fin 2025 (~3 mois d'existenc
 
 **Validation evolvabilite** : Chaque ajout ameliore ou preserve la capacite a faire evoluer le systeme sans refactoring massif.
 
-**Contrainte materielle** : VPS-4 48 Go, tous services lourds residents en simultane (marge ~25 Go).
+**Contrainte materielle** : VPS-4 48 Go, tous services lourds residents en simultane (marge ~23-25 Go).
 
 ---
 
@@ -1602,7 +1686,7 @@ friday-2.0/
 ├── database/
 │   ├── migrations/
 │   │   ├── 001_init_schemas.sql       # Creation schemas: core, ingestion, knowledge
-│   │   ├── 002_core_tables.sql        # users, jobs, audit, system_config
+│   │   ├── 002_core_tables.sql        # users, jobs, audit, system_config, tasks, events
 │   │   ├── 003_ingestion_emails.sql   # Table emails avec indexes
 │   │   ├── 004_ingestion_documents.sql
 │   │   ├── 005_ingestion_files.sql
@@ -1889,7 +1973,7 @@ friday-2.0/
 | 5. Scripts automatisation | `scripts/dev-setup.sh` + `scripts/monitor-ram.sh` | ✅ Neutre (outillage, pas runtime) | 45 min |
 
 **Total effort** : 3h50
-**RAM impact** : 0 Mo supplementaire (VPS-4 48 Go, marge ~25 Go)
+**RAM impact** : 0 Mo supplementaire (VPS-4 48 Go, marge ~23-25 Go)
 
 ---
 
@@ -1929,9 +2013,9 @@ class MistralAdapter(LLMAdapter):
     """Implementation Mistral API"""
 
     MODEL_MAP = {
-        "auto": "mistral-medium",
-        "fast": "mistral-nemo",
-        "strong": "mistral-large"
+        "auto": "mistral-large-latest",
+        "fast": "mistral-small-latest",
+        "strong": "mistral-large-latest"
     }
 
     def __init__(self, api_key: str):
@@ -2324,7 +2408,7 @@ Les 5 ajouts pour l'évolutibilité ont été validés lors du Step 6 :
 - ✅ Tests critiques (orchestrator RAM + Presidio RGPD) : neutre évolutibilité (validation, pas runtime)
 - ✅ Scripts automation (`dev-setup.sh` + `monitor-ram.sh`) : neutre évolutibilité (outillage, pas runtime)
 
-Total effort : 3h50. RAM impact : 0 Mo supplémentaire (VPS-4 48 Go, marge ~25 Go).
+Total effort : 3h50. RAM impact : 0 Mo supplementaire (VPS-4 48 Go, marge ~23-25 Go).
 
 ### Architecture Completeness Checklist
 
@@ -2376,7 +2460,7 @@ Justification :
 
 1. **Évolutibilité by design** : 5 adaptateurs (vectorstore, memorystore, filesync, email, llm) permettent remplacement d'un composant externe sans refactoring massif. Switch Mistral → Gemini/Claude = modifier `adapters/llm.py` uniquement, les 23 agents ne changent pas.
 
-2. **Contraintes matérielles resolues** : VPS-4 48 Go permet tous services lourds residents en simultane (Ollama Nemo 12B + Whisper + Kokoro + Surya = ~16 Go, marge ~25 Go). Plus d'exclusion mutuelle. Orchestrator simplifie en moniteur RAM via `config/profiles.py`.
+2. **Contraintes materielles resolues** : VPS-4 48 Go permet tous services lourds residents en simultane (Ollama Nemo 12B + Whisper + Kokoro + Surya = ~16 Go, socle permanent ~7-9 Go, marge ~23-25 Go). Plus d'exclusion mutuelle. Orchestrator simplifie en moniteur RAM via `config/profiles.py`.
 
 3. **Sécurité RGPD robuste** : Pipeline Presidio obligatoire avant tout appel LLM cloud (anonymisation réversible). Données médicales chiffrées (pgcrypto). Tailscale = zéro exposition Internet public. age/SOPS pour secrets. Hébergement France (OVH).
 

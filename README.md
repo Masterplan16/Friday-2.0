@@ -64,12 +64,12 @@ Friday 2.0 est un système d'IA personnel qui agit comme un **second cerveau** p
 | **Langage principal** | Python | 3.12+ |
 | **Framework agents IA** | LangGraph | 0.2.45+ |
 | **Orchestration workflows** | n8n | 1.69.2+ |
-| **LLM cloud** | Mistral API | Nemo / Medium 3.1 / Large 3 / Embed |
+| **LLM cloud** | Mistral API | mistral-nemo-latest / mistral-medium-latest / mistral-large-latest / mistral-embed |
 | **LLM local (VPS)** | Ollama | Mistral Nemo 12B / Ministral 3B |
 | **Base de données** | PostgreSQL | 16.6 |
 | **Cache + Pub/Sub** | Redis | 7.4 |
 | **Vectoriel** | Qdrant | 1.12.5 |
-| **Mémoire graphe** | Zep + Graphiti | Latest (fallback Neo4j) |
+| **Mémoire graphe** | PostgreSQL + Qdrant (via memorystore.py) | Abstraction (migration Graphiti/Neo4j envisageable) |
 | **API Gateway** | FastAPI | 0.115+ |
 | **Bot conversationnel** | python-telegram-bot | 21.7+ |
 | **Reverse proxy** | Caddy | 2.8 |
@@ -200,7 +200,7 @@ friday-2.0/
 | Divers (domaine, ntfy) | ~2-3€ |
 | **Total estimé** | **~36-42€/mois** |
 
-Marge ~8-14€ sur budget max 50€/mois. Plan B : VPS-3 (24 Go, ~15€ TTC) si besoin de réduire.
+**Note budget:** Estimation optimiste. Prévoir ~45-48€ premiers mois (tests intensifs, migration 55k emails, dépassements API possibles). Marge ~2-5€ sur budget max 50€/mois. Plan B : VPS-3 (24 Go, ~15€ TTC) si besoin de réduire.
 
 ---
 

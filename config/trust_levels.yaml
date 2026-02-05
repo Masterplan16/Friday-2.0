@@ -167,6 +167,7 @@ system:
 
 # Notes:
 # - Trust levels peuvent être ajustés manuellement via Telegram: /trust set <module> <action> <level>
-# - Promotion: propose → auto si accuracy >95% sur 3 semaines + validation Antonio
-# - Rétrogradation auto: auto → propose si accuracy <90% sur 1 semaine
+# - Promotion: propose → auto si accuracy ≥95% sur 3 semaines + validation Antonio (échantillon ≥10 actions)
+# - Rétrogradation auto: auto → propose si accuracy <90% sur 1 semaine (échantillon ≥10 actions)
+# - Anti-oscillation: Après rétrogradation, minimum 2 semaines avant nouvelle promotion
 # - blocked → propose: JAMAIS automatique, décision Antonio uniquement

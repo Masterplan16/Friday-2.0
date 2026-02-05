@@ -1,0 +1,234 @@
+# Friday 2.0 - Services lourds résidents (VPS-4 48 Go)
+# Ollama, Faster-Whisper, Kokoro TTS, Surya OCR, Presidio, EmailEngine
+# Version: 1.0.0 (2026-02-05)
+#
+# Usage: docker compose -f docker-compose.yml -f docker-compose.services.yml up -d
+
+version: '3.9'
+
+services:
+  # ============================================
+  # Ollama - Mistral Nemo 12B local (VPS)
+  # RAM: ~8 Go
+  # ============================================
+  ollama:
+    image: ollama/ollama:latest
+    container_name: friday-ollama
+    restart: unless-stopped
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+      - OLLAMA_MODELS=/models
+    volumes:
+      - ./data/ollama:/root/.ollama
+      - ./data/models:/models
+    ports:
+      - "127.0.0.1:11434:11434"
+    networks:
+      friday-network:
+        ipv4_address: 172.20.0.30
+    deploy:
+      resources:
+        limits:
+          memory: 10G
+        reservations:
+          memory: 8G
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # ============================================
+  # Faster-Whisper - STT local
+  # RAM: ~4 Go
+  # ============================================
+  stt:
+    build:
+      context: ./services/stt
+      dockerfile: Dockerfile
+    container_name: friday-stt
+    restart: unless-stopped
+    environment:
+      - MODEL_SIZE=large-v3
+      - DEVICE=cpu
+      - COMPUTE_TYPE=int8
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    volumes:
+      - ./services/stt:/app:ro
+      - ./data/whisper-models:/models
+    ports:
+      - "127.0.0.1:8001:8001"
+    networks:
+      friday-network:
+        ipv4_address: 172.20.0.31
+    deploy:
+      resources:
+        limits:
+          memory: 6G
+        reservations:
+          memory: 4G
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+
+  # ============================================
+  # Kokoro TTS - Synthèse vocale
+  # RAM: ~2 Go
+  # ============================================
+  tts:
+    build:
+      context: ./services/tts
+      dockerfile: Dockerfile
+    container_name: friday-tts
+    restart: unless-stopped
+    environment:
+      - MODEL=kokoro
+      - VOICE=fr-FR
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    volumes:
+      - ./services/tts:/app:ro
+      - ./data/tts-models:/models
+    ports:
+      - "127.0.0.1:8002:8002"
+    networks:
+      friday-network:
+        ipv4_address: 172.20.0.32
+    deploy:
+      resources:
+        limits:
+          memory: 3G
+        reservations:
+          memory: 2G
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8002/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+
+  # ============================================
+  # Surya OCR - Reconnaissance optique
+  # RAM: ~2 Go
+  # ============================================
+  ocr:
+    build:
+      context: ./services/ocr
+      dockerfile: Dockerfile
+    container_name: friday-ocr
+    restart: unless-stopped
+    environment:
+      - MODELS_PATH=/models
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    volumes:
+      - ./services/ocr:/app:ro
+      - ./data/ocr-models:/models
+    ports:
+      - "127.0.0.1:8003:8003"
+    networks:
+      friday-network:
+        ipv4_address: 172.20.0.33
+    deploy:
+      resources:
+        limits:
+          memory: 3G
+        reservations:
+          memory: 2G
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8003/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
+
+  # ============================================
+  # Presidio - Anonymisation RGPD obligatoire
+  # RAM: ~1 Go
+  # ============================================
+  presidio-analyzer:
+    image: mcr.microsoft.com/presidio-analyzer:latest
+    container_name: friday-presidio-analyzer
+    restart: unless-stopped
+    environment:
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - SPACY_MODEL=fr_core_news_lg
+    ports:
+      - "127.0.0.1:5001:5001"
+    networks:
+      friday-network:
+        ipv4_address: 172.20.0.34
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 1G
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:5001/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+
+  presidio-anonymizer:
+    image: mcr.microsoft.com/presidio-anonymizer:latest
+    container_name: friday-presidio-anonymizer
+    restart: unless-stopped
+    environment:
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    ports:
+      - "127.0.0.1:5002:5002"
+    networks:
+      friday-network:
+        ipv4_address: 172.20.0.35
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:5002/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  # ============================================
+  # EmailEngine - Interface IMAP/SMTP
+  # RAM: ~500 Mo
+  # ============================================
+  emailengine:
+    image: postalsys/emailengine:latest
+    container_name: friday-emailengine
+    restart: unless-stopped
+    environment:
+      - EENGINE_HOST=0.0.0.0
+      - EENGINE_PORT=3000
+      - EENGINE_REDIS=redis://redis:6379/2
+      - EENGINE_SECRET=${EMAILENGINE_SECRET}
+      - EENGINE_ENCRYPTION_KEY=${EMAILENGINE_ENCRYPTION_KEY}
+      - EENGINE_LOG_LEVEL=${LOG_LEVEL:-info}
+    ports:
+      - "127.0.0.1:3000:3000"
+    networks:
+      friday-network:
+        ipv4_address: 172.20.0.36
+    depends_on:
+      redis:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s

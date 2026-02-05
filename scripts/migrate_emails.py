@@ -40,9 +40,9 @@ from dataclasses import dataclass
 # Pas de valeurs par défaut pour les secrets (age/SOPS pour secrets, voir architecture)
 POSTGRES_DSN = os.getenv("POSTGRES_DSN")
 MISTRAL_API_KEY = os.getenv("MISTRAL_API_KEY")
-if not POSTGRES_DSN:
+if not POSTGRES_DSN or not MISTRAL_API_KEY:
     raise EnvironmentError(
-        "POSTGRES_DSN doit etre defini via variable d'environnement ou .env "
+        "POSTGRES_DSN et MISTRAL_API_KEY doivent etre definis via variable d'environnement ou .env "
         "(utiliser age/SOPS pour les secrets, jamais de credentials en clair)"
     )
 CHECKPOINT_FILE = "data/migration_checkpoint.json"
@@ -67,9 +67,12 @@ class MigrationState:
 
 
 class EmailMigrator:
-    def __init__(self, dry_run: bool = False, resume: bool = False):
+    def __init__(self, dry_run: bool = False, resume: bool = False, batch_size: int = BATCH_SIZE, rate_limit_rpm: int = RATE_LIMIT_RPM):
         self.dry_run = dry_run
         self.resume = resume
+        self.batch_size = batch_size
+        self.rate_limit_rpm = rate_limit_rpm
+        self.rate_limit_delay = 60 / rate_limit_rpm
         self.db = None
         self.mistral_client = None
         self.state: Optional[MigrationState] = None
@@ -203,7 +206,7 @@ class EmailMigrator:
         """
         try:
             # Rate limiting
-            await asyncio.sleep(RATE_LIMIT_DELAY)
+            await asyncio.sleep(self.rate_limit_delay)
 
             # RGPD: Anonymiser AVANT l'appel LLM cloud
             anonymized_content = await self.anonymize_for_classification(email)
@@ -328,11 +331,12 @@ class EmailMigrator:
                 await self.migrate_email(email)
 
                 # Progress bar (guard division par zero si table legacy vide)
+                elapsed = time.time() - start_time
                 if self.state.total_emails > 0:
                     progress_pct = (self.state.processed / self.state.total_emails) * 100
                 else:
                     progress_pct = 100.0
-                elapsed = time.time() - start_time
+
                 if self.state.processed > 0:
                     avg_time_per_email = elapsed / self.state.processed
                     remaining_emails = self.state.total_emails - self.state.processed
@@ -346,9 +350,9 @@ class EmailMigrator:
                         self.state.estimated_time_remaining, self.state.estimated_cost
                     )
 
-            # Checkpoint tous les BATCH_SIZE emails (constante, pas parametre)
+            # Checkpoint tous les batch_size emails
             checkpoint_counter += len(batch)
-            if checkpoint_counter >= BATCH_SIZE:
+            if checkpoint_counter >= self.batch_size:
                 await self.save_checkpoint()
                 checkpoint_counter = 0
 
@@ -376,9 +380,15 @@ async def main():
     parser.add_argument('--resume', action='store_true', help="Reprendre depuis dernier checkpoint")
     parser.add_argument('--dry-run', action='store_true', help="Simulation sans modification réelle")
     parser.add_argument('--batch-size', type=int, default=BATCH_SIZE, help=f"Taille batch (défaut: {BATCH_SIZE})")
+    parser.add_argument('--rate-limit', type=int, default=RATE_LIMIT_RPM, help=f"Rate limit Mistral API en req/min (défaut: {RATE_LIMIT_RPM}). Varie selon tier: gratuit=20, pay-as-you-go=60, enterprise=custom")
     args = parser.parse_args()
 
-    migrator = EmailMigrator(dry_run=args.dry_run, resume=args.resume)
+    migrator = EmailMigrator(
+        dry_run=args.dry_run,
+        resume=args.resume,
+        batch_size=args.batch_size,
+        rate_limit_rpm=args.rate_limit
+    )
     await migrator.run(batch_size=args.batch_size)
 
 

@@ -1,0 +1,309 @@
+# Friday 2.0 - Docker Compose Principal
+# Services core pour Story 1 : Infrastructure de base
+# Version: 1.0.0 (2026-02-05)
+
+version: '3.9'
+
+networks:
+  friday-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+volumes:
+  postgres-data:
+  redis-data:
+  qdrant-data:
+  n8n-data:
+  caddy-data:
+  caddy-config:
+
+services:
+  # ============================================
+  # PostgreSQL 16 - Base de données principale
+  # ============================================
+  postgres:
+    image: postgres:16.6-alpine
+    container_name: friday-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-friday}
+      POSTGRES_USER: ${POSTGRES_USER:-friday}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./database/migrations:/migrations:ro
+    ports:
+      - "127.0.0.1:5432:5432"
+    networks:
+      friday-network:
+        ipv4_address: 172.20.0.10
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-friday} -d ${POSTGRES_DB:-friday}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    command:
+      - "postgres"
+      - "-c"
+      - "max_connections=200"
+      - "-c"
+      - "shared_buffers=256MB"
+      - "-c"
+      - "effective_cache_size=1GB"
+      - "-c"
+      - "maintenance_work_mem=64MB"
+      - "-c"
+      - "checkpoint_completion_target=0.9"
+      - "-c"
+      - "wal_buffers=16MB"
+      - "-c"
+      - "default_statistics_target=100"
+      - "-c"
+      - "random_page_cost=1.1"
+      - "-c"
+      - "effective_io_concurrency=200"
+      - "-c"
+      - "work_mem=1048kB"
+
+  # ============================================
+  # Redis 7 - Cache + Pub/Sub + Streams
+  # ============================================
+  redis:
+    image: redis:7.4-alpine
+    container_name: friday-redis
+    restart: unless-stopped
+    command: >
+      redis-server
+      --appendonly yes
+      --appendfsync everysec
+      --maxmemory 2gb
+      --maxmemory-policy allkeys-lru
+      --save 900 1
+      --save 300 10
+      --save 60 10000
+    volumes:
+      - redis-data:/data
+    ports:
+      - "127.0.0.1:6379:6379"
+    networks:
+      friday-network:
+        ipv4_address: 172.20.0.11
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # ============================================
+  # Qdrant 1.12.5 - Vector database
+  # ============================================
+  qdrant:
+    image: qdrant/qdrant:v1.12.5
+    container_name: friday-qdrant
+    restart: unless-stopped
+    environment:
+      QDRANT__SERVICE__HTTP_PORT: 6333
+      QDRANT__SERVICE__GRPC_PORT: 6334
+    volumes:
+      - qdrant-data:/qdrant/storage
+    ports:
+      - "127.0.0.1:6333:6333"
+      - "127.0.0.1:6334:6334"
+    networks:
+      friday-network:
+        ipv4_address: 172.20.0.12
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:6333/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  # ============================================
+  # n8n 1.69.2+ - Workflow automation
+  # ============================================
+  n8n:
+    image: n8nio/n8n:1.69.2
+    container_name: friday-n8n
+    restart: unless-stopped
+    environment:
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=${N8N_USER:-admin}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_PASSWORD}
+      - N8N_HOST=${N8N_HOST:-n8n.friday.local}
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - WEBHOOK_URL=http://n8n.friday.local:5678/
+      - GENERIC_TIMEZONE=Europe/Paris
+      - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY}
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=postgres
+      - DB_POSTGRESDB_PORT=5432
+      - DB_POSTGRESDB_DATABASE=${POSTGRES_DB:-friday}
+      - DB_POSTGRESDB_USER=${POSTGRES_USER:-friday}
+      - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD}
+      - DB_POSTGRESDB_SCHEMA=n8n
+      - EXECUTIONS_DATA_SAVE_ON_ERROR=all
+      - EXECUTIONS_DATA_SAVE_ON_SUCCESS=all
+      - EXECUTIONS_DATA_SAVE_MANUAL_EXECUTIONS=true
+    volumes:
+      - n8n-data:/home/node/.n8n
+      - ./n8n-workflows:/workflows:ro
+    ports:
+      - "127.0.0.1:5678:5678"
+    networks:
+      friday-network:
+        ipv4_address: 172.20.0.13
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:5678/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # ============================================
+  # Caddy 2.8 - Reverse proxy HTTPS auto
+  # ============================================
+  caddy:
+    image: caddy:2.8-alpine
+    container_name: friday-caddy
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:80:80"
+      - "127.0.0.1:443:443"
+      - "127.0.0.1:443:443/udp"
+    volumes:
+      - ./config/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks:
+      friday-network:
+        ipv4_address: 172.20.0.14
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:80/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # ============================================
+  # FastAPI Gateway - API principale
+  # ============================================
+  gateway:
+    build:
+      context: ./services/gateway
+      dockerfile: Dockerfile
+    container_name: friday-gateway
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DSN=postgresql://${POSTGRES_USER:-friday}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-friday}
+      - REDIS_URL=redis://redis:6379/0
+      - QDRANT_URL=http://qdrant:6333
+      - MISTRAL_API_KEY=${MISTRAL_API_KEY}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - ENVIRONMENT=${ENVIRONMENT:-production}
+    volumes:
+      - ./services/gateway:/app:ro
+      - ./agents/src:/agents:ro
+    ports:
+      - "127.0.0.1:8000:8000"
+    networks:
+      friday-network:
+        ipv4_address: 172.20.0.20
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8000/api/v1/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  # ============================================
+  # Bot Telegram - Canal unique de contrôle
+  # ============================================
+  telegram-bot:
+    build:
+      context: ./bot
+      dockerfile: Dockerfile
+    container_name: friday-telegram-bot
+    restart: unless-stopped
+    environment:
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
+      - POSTGRES_DSN=postgresql://${POSTGRES_USER:-friday}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-friday}
+      - REDIS_URL=redis://redis:6379/0
+      - GATEWAY_URL=http://gateway:8000
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    volumes:
+      - ./bot:/app:ro
+      - ./bot/media/transit:/app/media/transit
+    networks:
+      friday-network:
+        ipv4_address: 172.20.0.21
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      gateway:
+        condition: service_healthy
+
+  # ============================================
+  # Alerting Service - Écoute Redis → Telegram
+  # ============================================
+  alerting:
+    build:
+      context: ./services/alerting
+      dockerfile: Dockerfile
+    container_name: friday-alerting
+    restart: unless-stopped
+    environment:
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
+      - REDIS_URL=redis://redis:6379/0
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    volumes:
+      - ./services/alerting:/app:ro
+    networks:
+      friday-network:
+        ipv4_address: 172.20.0.22
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  # ============================================
+  # Metrics Service - Calcul nightly trust metrics
+  # ============================================
+  metrics:
+    build:
+      context: ./services/metrics
+      dockerfile: Dockerfile
+    container_name: friday-metrics
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DSN=postgresql://${POSTGRES_USER:-friday}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-friday}
+      - REDIS_URL=redis://redis:6379/0
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - CRON_SCHEDULE=${METRICS_CRON_SCHEDULE:-0 2 * * *}
+    volumes:
+      - ./services/metrics:/app:ro
+    networks:
+      friday-network:
+        ipv4_address: 172.20.0.23
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy

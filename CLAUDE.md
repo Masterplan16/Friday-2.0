@@ -80,8 +80,8 @@ def get_llm_adapter() -> LLMAdapter:
 | Kokoro TTS | ~2 Go | Résident |
 | Surya OCR | ~2 Go | Résident |
 | **Total services lourds** | **~16 Go** | |
-| **Socle permanent (corrigé)** | **~7-9 Go** | Inclut PG, Redis, Qdrant, n8n, Presidio, Zep, EmailEngine, Caddy, OS |
-| **Marge disponible** | **~23-25 Go** | |
+| **Socle permanent (corrigé)** | **~6-7 Go** | Inclut PG, Redis, Qdrant, n8n, Presidio, EmailEngine, Caddy, OS (Zep retiré, mort 2024) |
+| **Marge disponible** | **~25-26 Go** | |
 
 **Orchestrator simplifié (moniteur RAM, pas gestionnaire d'exclusions) :**
 ```python
@@ -135,7 +135,14 @@ result = await presidio_deanonymize(response)
 | `propose` | Prépare + attend validation Telegram (inline buttons) | Brouillon réponse mail, classement financier |
 | `blocked` | Analyse uniquement, jamais d'action | Données médicales, investissement, modification contrat |
 
-**Initialisation par risque :** Low risk → `auto`, Medium → `propose`, High → `blocked`. Promotion/rétrogradation automatique basée sur accuracy hebdomadaire (seuil 90%). Voir [addendum section 7](_docs/architecture-addendum-20260205.md) pour la définition formelle (formule, granularité par action, seuils minimaux, anti-oscillation).
+**Initialisation par risque :** Low risk → `auto`, Medium → `propose`, High → `blocked`.
+
+**Promotion/rétrogradation :**
+- **Rétrogradation auto** : `auto` → `propose` si accuracy <90% sur 1 semaine (échantillon ≥10 actions)
+- **Promotion manuelle** : `propose` → `auto` si accuracy ≥95% sur 3 semaines + validation Antonio
+- **Anti-oscillation** : Après rétrogradation, minimum 2 semaines avant nouvelle promotion
+
+Voir [addendum section 7](_docs/architecture-addendum-20260205.md) pour la définition formelle complète (formule, granularité par action, seuils minimaux).
 
 #### Middleware `@friday_action`
 

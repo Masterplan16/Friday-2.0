@@ -12,7 +12,8 @@
 #
 # Portabilite:
 #   - Linux/macOS : Natif
-#   - Windows : Requiert WSL 2 ou Git Bash (wsl ./tests/e2e/test_backup_restore.sh)
+#   - Windows : Requiert WSL 2 UNIQUEMENT (Git Bash incompatible avec heredoc psql)
+#   - Installer jq dans WSL: sudo apt-get install jq
 
 set -euo pipefail
 
@@ -122,26 +123,26 @@ echo ""
 echo -e "${YELLOW}[3/6] Backup Qdrant...${NC}"
 
 if docker ps | grep -q "qdrant"; then
-    # Creer snapshot Qdrant (avec validation HTTP)
+    # Creer snapshot Qdrant (avec validation HTTP + curl exit code)
     QDRANT_RESPONSE_FILE="$TEST_BACKUP_DIR/qdrant_response.json"
-    QDRANT_HTTP_CODE=$(curl -s -o "$QDRANT_RESPONSE_FILE" -w "%{http_code}" \
+    if ! QDRANT_HTTP_CODE=$(curl -s -o "$QDRANT_RESPONSE_FILE" -w "%{http_code}" \
         --connect-timeout 10 --max-time 30 \
-        -X POST http://localhost:6333/collections/friday_docs/snapshots)
-
-    if [ "$QDRANT_HTTP_CODE" != "200" ]; then
-        echo -e "${YELLOW}Qdrant snapshot HTTP $QDRANT_HTTP_CODE - skipped${NC}"
+        -X POST http://localhost:6333/collections/friday_docs/snapshots); then
+        echo -e "${YELLOW}⚠️  Qdrant curl failed (network error) - skipped${NC}"
+    elif [ "$QDRANT_HTTP_CODE" != "200" ]; then
+        echo -e "${YELLOW}⚠️  Qdrant snapshot HTTP $QDRANT_HTTP_CODE - skipped${NC}"
     else
         QDRANT_SNAPSHOT=$(jq -r '.result.name' "$QDRANT_RESPONSE_FILE" 2>/dev/null)
 
         if [ -n "$QDRANT_SNAPSHOT" ] && [ "$QDRANT_SNAPSHOT" != "null" ]; then
-            DL_HTTP_CODE=$(curl -s -o "$TEST_BACKUP_DIR/qdrant_test.snapshot" -w "%{http_code}" \
+            if ! DL_HTTP_CODE=$(curl -s -o "$TEST_BACKUP_DIR/qdrant_test.snapshot" -w "%{http_code}" \
                 --connect-timeout 10 --max-time 120 \
-                "http://localhost:6333/collections/friday_docs/snapshots/$QDRANT_SNAPSHOT")
-
-            if [ "$DL_HTTP_CODE" = "200" ]; then
+                "http://localhost:6333/collections/friday_docs/snapshots/$QDRANT_SNAPSHOT"); then
+                echo -e "${YELLOW}⚠️  Qdrant snapshot download curl failed - skipped${NC}"
+            elif [ "$DL_HTTP_CODE" = "200" ]; then
                 echo -e "${GREEN}Qdrant snapshot cree: $QDRANT_SNAPSHOT${NC}"
             else
-                echo -e "${YELLOW}Qdrant snapshot download HTTP $DL_HTTP_CODE - skipped${NC}"
+                echo -e "${YELLOW}⚠️  Qdrant snapshot download HTTP $DL_HTTP_CODE - skipped${NC}"
             fi
         else
             echo -e "${YELLOW}Qdrant collection vide - snapshot skipped${NC}"

@@ -1,0 +1,30 @@
+# SOPS Configuration - Friday 2.0
+# Date: 2026-02-05
+# Usage: Configuration pour chiffrement/déchiffrement des secrets avec age
+#
+# Setup requis:
+# 1. Générer clé age: age-keygen -o ~/.age/friday-key.txt
+# 2. Remplacer YOUR_AGE_PUBLIC_KEY ci-dessous par votre clé publique
+# 3. Chiffrer: sops -e .env > .env.enc
+# 4. Déchiffrer: sops -d .env.enc > .env
+#
+# Documentation complète: docs/secrets-management.md
+
+creation_rules:
+  # Fichiers .env chiffrés
+  - path_regex: \.env\.enc$
+    age: YOUR_AGE_PUBLIC_KEY_HERE  # Remplacer par la clé publique age (age1...)
+
+  # Fichiers secrets YAML/JSON chiffrés
+  - path_regex: secrets.*\.(yaml|json)\.enc$
+    age: YOUR_AGE_PUBLIC_KEY_HERE  # Remplacer par la clé publique age (age1...)
+
+# IMPORTANT:
+# - Ce fichier PEUT être commité (contient seulement la clé publique)
+# - La clé PRIVÉE (~/.age/friday-key.txt) ne doit JAMAIS être commitée
+# - Pour partager avec un nouveau dev: ajouter sa clé publique ici (séparées par virgules)
+#
+# Exemple multi-dev:
+#   age: >-
+#     age1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq,
+#     age1yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy

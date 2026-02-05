@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Migration des 55 000 emails existants vers Friday 2.0
+Migration des 110 000 emails existants vers Friday 2.0
 Stratégie: Checkpointing + Retry + Resume + Progress tracking
 
 Usage:
@@ -8,7 +8,7 @@ Usage:
 
 Prérequis:
 - Table `ingestion.emails_legacy` doit exister (migration dédiée à créer avant exécution).
-  Cette table contient les 55k emails importés depuis les 4 comptes via EmailEngine bulk export.
+  Cette table contient les 110k emails importés depuis les 4 comptes via EmailEngine bulk export.
   Migration suggérée: `012_ingestion_emails_legacy.sql` (à créer dans Story 2).
 - Répertoire `data/` doit exister (créé automatiquement si absent):
   - data/checkpoints/ : fichiers checkpoint JSON
@@ -276,9 +276,9 @@ class EmailMigrator:
             # TODO: redis.publish('email.migrated', {'email_id': email['message_id']})
 
             # 4. Update cost estimation
-            # ~275 Mo texte / 55k emails = ~5 Ko/email = ~12.5 tokens/email input
-            # $0.02/1M tokens → ~$0.00000025/email
-            self.state.estimated_cost += 0.00000025
+            # ~550 Mo texte / 110k emails = ~5 Ko/email = ~12.5 tokens/email input
+            # $0.30/1M tokens → ~$0.0000003/email (Mistral Nemo input+output)
+            self.state.estimated_cost += 0.0000003
 
             self.state.processed += 1
             self.state.last_email_id = email['message_id']

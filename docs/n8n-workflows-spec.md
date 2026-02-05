@@ -1,7 +1,7 @@
 # n8n Workflows - Spécifications Day 1
 
 **Date** : 2026-02-05
-**Version** : 1.0
+**Version** : 1.1.0
 **Auteur** : Architecture Friday 2.0
 
 ---
@@ -313,5 +313,5 @@ Les erreurs workflow déclenchent automatiquement :
 
 ---
 
-**Version** : 1.0
+**Version** : 1.1.0
 **Dernière mise à jour** : 2026-02-05

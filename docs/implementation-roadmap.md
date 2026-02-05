@@ -1,7 +1,7 @@
 # Friday 2.0 - Roadmap d'implémentation
 
 **Date** : 2026-02-05
-**Version** : 1.1 (corrigé review cohérence documentaire)
+**Version** : 1.2.0 (corrigé review adversariale v2: 110k mails, budget, migrations)
 **Status** : Architecture complète ✅ - Prêt pour implémentation
 
 ---
@@ -290,23 +290,23 @@ Pipeline document complet : upload → OCR → renommage intelligent → classem
 **Script** : `scripts/migrate_emails.py` ✅ **CRÉÉ**
 
 **Contenu** :
-- 55 000 emails existants (4 comptes via EmailEngine)
+- 110 000 emails existants (4 comptes via EmailEngine)
 - Checkpointing tous les 100 emails
 - Retry exponentiel sur erreur
 - Resume depuis dernier checkpoint
 - Anonymisation Presidio avant classification (RGPD)
-- **Durée estimée** : ~10-12h (incluant Presidio overhead + retry/backoff)
-- **Coût estimé** : ~$10-12 USD (Mistral API)
+- **Durée estimée** : ~18-24h (incluant Presidio overhead + retry/backoff)
+- **Coût estimé** : ~$20-24 USD (Mistral API)
 
-**Calcul détaillé** (corrigé suite code review adversarial 2026-02-05) :
-- 55k emails × ~600 tokens avg (500 input + 100 output) = 33M tokens
+**Calcul détaillé** (corrigé suite code review adversarial 2026-02-05 + volume réel 110k) :
+- 110k emails × ~600 tokens avg (500 input + 100 output) = 66M tokens
 - Mistral Nemo pricing : $0.15/1M tokens input + $0.15/1M tokens output
-- Coût classification : 33M tokens × $0.30/1M = **$9.90 USD**
-- Rate limit Mistral : 200 RPM → 55k / 200 = **275 minutes = 4.6h (classification seule)**
-- Presidio overhead : ~150-200ms par email → 55k × 0.15s = **2.3h supplémentaires**
-- Retry + backoff (estimation 5% échecs temporaires) : ~30-45 min
-- **Durée totale réaliste** : 4.6h + 2.3h + 0.5h + marge sécurité = **~10-12h**
-- **Coût total avec marge** : $9.90 + 20% buffer = **~$10-12 USD**
+- Coût classification : 66M tokens × $0.30/1M = **$19.80 USD**
+- Rate limit Mistral : 200 RPM → 110k / 200 = **550 minutes = 9.2h (classification seule)**
+- Presidio overhead : ~150-200ms par email → 110k × 0.15s = **4.6h supplémentaires**
+- Retry + backoff (estimation 5% échecs temporaires) : ~60-90 min
+- **Durée totale réaliste** : 9.2h + 4.6h + 1.5h + marge sécurité = **~18-24h**
+- **Coût total avec marge** : $19.80 + 20% buffer = **~$20-24 USD**
 
 **Validation** :
 - Test dry-run d'abord (`--dry-run`)
@@ -396,5 +396,5 @@ python scripts/story_progress.py
 
 ---
 
-**Version** : 1.1
+**Version** : 1.2.0
 **Dernière mise à jour** : 2026-02-05

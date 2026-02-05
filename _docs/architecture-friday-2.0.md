@@ -6,12 +6,19 @@ workflowType: 'architecture'
 workflowStatus: 'complete'
 lastStep: 8
 completedAt: '2026-02-02'
+lastReview: '2026-02-05'
+version: '1.2.0'
 project_name: 'Friday 2.0 - Second Cerveau Personnel'
 user_name: 'Antonio'
 date: '2026-02-02'
 ---
 
 # Architecture Decision Document
+
+**Version** : 1.2.0
+**Date initiale** : 2 février 2026
+**Dernière mise à jour** : 5 février 2026
+**Statut** : Complet + corrections review adversariale v2 (Zep→PostgreSQL+Qdrant, Redis Streams/Pub/Sub, VPS 25,5€, budget 37-43€)
 
 _Ce document se construit collaborativement par etapes. Chaque section est ajoutee au fur et a mesure des decisions architecturales prises ensemble._
 
@@ -73,7 +80,7 @@ Note : les domaines utilisateur (medecin, enseignant, financier, personnel) rest
 | ID | Exigence | Solution retenue |
 |----|----------|-----------------|
 | I1 | Orchestration multi-agents et workflows | n8n (workflows data) + LangGraph (logique agent IA) |
-| I2 | Memoire persistante avec graphe relationnel temporel | Zep + Graphiti (fallback : Neo4j) |
+| I2 | Memoire persistante avec graphe relationnel temporel | PostgreSQL (knowledge.*) + Qdrant via abstraction memorystore.py. **Note 2026-02-05** : Zep fermé (2024), Graphiti immature → Day 1 = PostgreSQL + Qdrant. Ré-évaluation Graphiti dans 6 mois (critères : >500★, doc API complète, tests 100k+ entités) sinon Neo4j Community. |
 | I3 | Base de donnees relationnelle | PostgreSQL |
 | I4 | Stockage vectoriel / recherche semantique | Qdrant |
 
@@ -236,7 +243,7 @@ Recherche
 | Risque | Mitigation |
 |--------|-----------|
 | Complexite d'integration (15+ services Docker) | Architecture modulaire, chaque composant remplacable via API standard |
-| Zep+Graphiti immature (2025) | Zep a cesse ses operations en 2024, Graphiti early-stage. Decision provisoire : `adapters/memorystore.py` abstraction → PostgreSQL (knowledge.*) + Qdrant (embeddings) Day 1. Migration Graphiti si v1.0 stable atteinte (criteres : >500 stars GitHub, doc API complete, tests charge 100k+ entites). Sinon → Neo4j Community Edition. Mode degrade : recherche semantique via Qdrant seul. Alerte Trust Layer (`service.down`) + circuit breaker dans `adapters/memorystore.py` |
+| Graphe de connaissances (2026) | **Decision 2026-02-05** : Zep fermé (2024), Graphiti immature → Day 1 = PostgreSQL (knowledge.*) + Qdrant (embeddings) via `adapters/memorystore.py`. Ré-évaluation Graphiti dans 6 mois (critères : >500★ GitHub, doc API complète, tests 100k+ entités) sinon → Neo4j Community Edition. Mode dégradé : recherche sémantique Qdrant seul. Alerte Trust Layer (`service.down`) + circuit breaker dans `adapters/memorystore.py`. |
 | Budget VPS insuffisant | VPS-4 48 Go laisse ~23-25 Go de marge apres tous services charges (~23-25 Go utilises). Plan B : VPS-3 24 Go a 15 euros/mois (reactive exclusions mutuelles) |
 | Evolution rapide du marche IA | Composants decouplés par API, remplacement sans impact sur le reste |
 | Erreurs/hallucinations des agents IA | Observability & Trust Layer : niveaux de confiance (auto/propose/bloque), receipts verifiables, retrogradation automatique |
@@ -245,13 +252,13 @@ Recherche
 
 | Poste | Cout mensuel |
 |-------|-------------|
-| VPS OVH VPS-4 48 Go (France, sans engagement) | ~25 euros TTC |
-| Mistral API (mistral-small-latest classif + mistral-large-latest gen/raisonnement + Embed) | ~6-9 euros |
-| Deepgram STT fallback (consultation express) | ~3-5 euros |
-| Divers (domaine, ntfy) | ~2-3 euros |
-| **Total estime** | **~36-42 euros (marge ~8-14 euros sur budget 50 euros)** |
+| VPS OVH VPS-4 48 Go (France, sans engagement) | 25,5€ TTC |
+| Mistral API (mistral-small-latest classif + mistral-large-latest gen/raisonnement + Embed) | ~6-9€ |
+| Deepgram STT fallback (consultation express) | ~3-5€ |
+| Divers (domaine, ntfy) | ~2-3€ |
+| **Total estimé** | **~37-43€ (marge ~7-13€ sur budget 50€)** |
 
-**Plan B budget** : Descente VPS-3 (24 Go, ~15 euros TTC) si besoin de reduire → total ~26-32 euros. Necessite reactivation des profils d'exclusion mutuelle services lourds.
+**Plan B budget** : Descente VPS-3 (24 Go, ~15€ TTC) si besoin de réduire → total ~26-32€. Nécessite réactivation des profils d'exclusion mutuelle services lourds.
 
 ---
 
@@ -350,7 +357,7 @@ tailscale up --hostname=friday-vps
 | Provider LLM | Mistral (ecosysteme complet) | Decision utilisateur |
 | Base de donnees | PostgreSQL 16 | Exigence I3 |
 | Stockage vectoriel | Qdrant | Exigence I4 |
-| Memoire graphe | Zep + Graphiti | Exigence I2 |
+| Memoire graphe | PostgreSQL (knowledge.*) + Qdrant via memorystore.py | Exigence I2 (Zep fermé 2024) |
 | Inference locale | Ollama (Mistral Nemo 12B / mistral-small-latest) | Exigences T1/T2 |
 | Reverse proxy | Caddy | Simplicite HTTPS auto |
 | Containerisation | Docker Compose v2 | Standard |
@@ -372,7 +379,7 @@ tailscale up --hostname=friday-vps
 - LLM : Mistral (ecosysteme complet)
 - BDD : PostgreSQL 16
 - Vectoriel : Qdrant
-- Memoire graphe : Zep + Graphiti
+- Memoire graphe : PostgreSQL (knowledge.*) + Qdrant via abstraction memorystore.py (Zep fermé 2024, Graphiti immature)
 - Inference locale : Ollama (Mistral Nemo 12B / mistral-small-latest)
 - Bot : python-telegram-bot
 - API Gateway : FastAPI
@@ -414,8 +421,8 @@ tailscale up --hostname=friday-vps
 | Usage | Detail |
 |-------|--------|
 | Cache | Resultats LLM, sessions utilisateur, metadonnees temporaires |
-| Pub/Sub | Evenements inter-services (nouveau mail, fichier traite, etc.) |
-| File d'attente legere | Jobs rapides via Redis Streams (complement n8n pour taches infra) |
+| **Redis Streams** | Événements critiques (delivery garanti) : `email.received`, `document.processed`, `pipeline.error`, `service.down`, `trust.level.changed`, `action.corrected`, `action.validated` |
+| **Redis Pub/Sub** | Événements informatifs (fire-and-forget) : `agent.completed`, `file.uploaded` |
 | Store sessions | Etat des conversations Telegram en cours |
 
 **Note** : Redis remplace Celery. n8n orchestre les workflows longs, FastAPI BackgroundTasks gere les taches async courtes, Redis fournit le pub/sub et le cache.
@@ -440,9 +447,9 @@ tailscale up --hostname=friday-vps
 ```
 PostgreSQL (source de verite)
   → INSERT/UPDATE declenche notification
-  → Redis Pub/Sub propage l'evenement
+  → Redis Streams (critiques) ou Pub/Sub (informatifs) propage l'evenement
   → Adaptateur Qdrant : met a jour les embeddings vectoriels
-  → Adaptateur Zep/Graphiti : met a jour le graphe de connaissances
+  → Adaptateur memorystore.py : met a jour le graphe de connaissances (PostgreSQL knowledge.* + Qdrant embeddings)
   → Adaptateur Syncthing : synchronise les fichiers vers le PC
 ```
 
@@ -451,11 +458,11 @@ PostgreSQL (source de verite)
 | Composant | Adaptateur | Remplacable par |
 |-----------|-----------|-----------------|
 | Qdrant | `adapters/vectorstore.py` | Milvus, Weaviate, pgvector |
-| Zep/Graphiti | `adapters/memorystore.py` | Neo4j, MemGPT, custom |
+| Graphe connaissances | `adapters/memorystore.py` | Neo4j, Graphiti (si mature), MemGPT, custom |
 | Syncthing | `adapters/filesync.py` | rsync, rclone |
 | EmailEngine | `adapters/email.py` | IMAP direct, autre bridge |
 
-#### 1f. Schema du graphe de connaissances (Zep + Graphiti)
+#### 1f. Schema du graphe de connaissances (PostgreSQL knowledge.* + Qdrant)
 
 **Objectif** : Memoire eternelle — Toute information indexee avec relations semantiques. Recherche par sens, pas par mots-cles.
 
@@ -809,16 +816,18 @@ L'analyse besoins previent : "A trop anonymiser, on perd la capacite de recherch
 
 #### 3c. Communication interne
 
-**Decision** : Redis Pub/Sub pour les evenements, appels HTTP directs pour les requetes synchrones
+**Decision** : Redis Streams (critiques) + Pub/Sub (informatifs) pour les evenements, appels HTTP directs pour les requetes synchrones
 
 | Type | Mecanisme |
 |------|-----------|
-| Evenements async (nouveau mail, fichier traite) | Redis Pub/Sub |
+| Evenements async critiques (delivery garanti) | **Redis Streams** (`email.received`, `document.processed`, `pipeline.error`, etc.) |
+| Evenements async informatifs (fire-and-forget) | **Redis Pub/Sub** (`agent.completed`, `file.uploaded`) |
 | Requetes sync (demande STT, appel LLM) | HTTP interne via Docker network |
 | Workflows orchestres | n8n (webhooks + nodes custom) |
-| Jobs infra avec garantie de livraison | Redis Streams (complement n8n) |
 
-> **Note** : Redis Pub/Sub est **fire-and-forget** — si aucun subscriber n'ecoute au moment de la publication, le message est perdu. C'est acceptable pour les notifications temps reel (alertes, trust events). Pour les evenements critiques necessitant une garantie de livraison (ex: `email.received` declenchant un pipeline), utiliser Redis Streams ou n8n webhooks qui persistent les messages.
+> **Note Redis Streams vs Pub/Sub** :
+> - **Redis Streams** : Delivery garanti, persistence, consumer groups, ACK required. Utilisé pour événements critiques dont la perte entrainerait une action manquée ou incohérence d'état.
+> - **Redis Pub/Sub** : Fire-and-forget, pas de persistence. Si aucun subscriber n'écoute, le message est perdu. Acceptable pour notifications temps réel non critiques.
 
 #### Mapping evenements → transport Redis
 
@@ -1095,7 +1104,7 @@ n8n fournit son propre dashboard pour l'administration des workflows. Aucun deve
 |---------|--------|
 | BDD | `pg_dump` compresse quotidien (~50 Mo initial, ~50 Mo/mois croissance) |
 | Fichiers config | Versionnes dans git (secrets chiffres SOPS) |
-| Volumes Docker | Qdrant + Zep : snapshot quotidien |
+| Volumes Docker | Qdrant : snapshot quotidien (graphe dans PostgreSQL knowledge.*) |
 | Transport | Syncthing via Tailscale vers le PC |
 | Retention | 7 jours rotatifs sur le PC |
 | Estimation taille | ~467 Mo initial compresse, ~50 Mo/mois supplementaires |
@@ -1112,7 +1121,7 @@ n8n fournit son propre dashboard pour l'administration des workflows. Aucun deve
 | FastAPI Gateway | ~200 Mo | Permanent |
 | Telegram Bot | ~100 Mo | Permanent |
 | Qdrant | ~1-2 Go | Permanent |
-| Zep | ~500 Mo | Permanent |
+| Graphe (knowledge.*) | ~500 Mo | Permanent (inclut dans PostgreSQL) |
 | EmailEngine | ~500 Mo | Permanent |
 | Caddy | ~50 Mo | Permanent |
 | Presidio + spaCy-fr | ~1-1.5 Go | Permanent |
@@ -1759,11 +1768,11 @@ friday-2.0/
 │       │   └── ...                    # Autres modules (meme pattern: agent.py + schemas.py)
 │       │   # KISS: Split classifier.py/summarizer.py SEULEMENT si agent.py depasse 500 lignes
 │       │
-│       ├── memory/                    # Integration Zep + Graphiti
+│       ├── memory/                    # Integration graphe connaissances
 │       │   ├── __init__.py
 │       │   ├── adapter.py             # Adaptateur memorystore (remplacable)
-│       │   ├── zep_client.py          # Client Zep
-│       │   ├── graphiti_client.py     # Client Graphiti (fallback Neo4j si immature)
+│       │   ├── graph_queries.py       # Requêtes PostgreSQL knowledge.*
+│       │   ├── graphiti_client.py     # Client Graphiti (si mature, sinon Neo4j)
 │       │   └── schemas.py
 │       │
 │       ├── tools/                     # Outils partages entre agents

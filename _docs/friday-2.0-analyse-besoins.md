@@ -1,9 +1,11 @@
 # FRIDAY 2.0 - Analyse des Besoins
 
 > **Document produit par** : Mary (Business Analyst BMAD)
-> **Date** : 1er février 2026
+> **Date initiale** : 1er février 2026
+> **Dernière mise à jour** : 5 février 2026
+> **Version** : 1.1.0
 > **Utilisateur** : Antonio
-> **Statut** : Analyse terminée, prêt pour l'Architect
+> **Statut** : Analyse terminée + corrections review adversariale v2 (VPS 25,5€, 110k mails, Apple Watch retiré)
 
 ---
 
@@ -300,8 +302,8 @@ Briefing ←─────(agrège tout)────→ Tous les modules
 
 | Contrainte | Valeur |
 |------------|--------|
-| **Budget** | 50€/mois maximum (VPS + APIs cloud). Estimation réelle : ~36-42€/mois (VPS-4 25€ + Mistral 6-9€ + Deepgram 3-5€ + divers 2-3€) |
-| **Serveur** | OVH VPS-4 : 48 Go RAM / 12 vCores / 300 Go NVMe (~25€ TTC/mois) - Tous services lourds résidents simultanément |
+| **Budget** | 50€/mois maximum (VPS + APIs cloud). Estimation réelle : ~37-43€/mois (VPS-4 25,5€ + Mistral 6-9€ + Deepgram 3-5€ + divers 2-3€) |
+| **Serveur** | OVH VPS-4 : 48 Go RAM / 12 vCores / 300 Go NVMe (25,5€ TTC/mois) - Tous services lourds résidents simultanément |
 | **Laptop utilisateur** | Dell Pro Max 16 (Core Ultra 7 255H, 32 Go RAM, pas de GPU). **AUCUN modèle IA ne tourne sur le laptop** - rôle = stockage documents uniquement |
 | **Stockage** | Synology BeeStation (photos) + PC (documents locaux) + VPS (index + métadonnées uniquement) |
 | **Confidentialité** | Anonymisation réversible via Presidio + spaCy-fr AVANT tout traitement LLM cloud (obligatoire RGPD) |
@@ -310,7 +312,7 @@ Briefing ←─────(agrège tout)────→ Tous les modules
 | **Interface principale** | Telegram bot (mobile-first, vocal natif bidirectionnel, meilleure confidentialité que Discord) - 100% Day 1 |
 | **Mails** | 4 comptes via EmailEngine (auto-hébergé Docker). Thunderbird reste interface utilisateur optionnelle |
 | **Thèses** | Google Docs partagés avec étudiants (API v1 - limitation : Suggestions au lieu de commentaires ancrés) |
-| **Données santé** | Apple Watch Ultra (sommeil, FC, activité) - **Intégration à définir** (export manuel CSV ou app tierce) |
+| **Données santé** | ~~Apple Watch Ultra~~ (hors scope Day 1 - pas d'API serveur, complexité excessive, réévaluation >12 mois si besoin réel) |
 | **Usage** | Strictement individuel, jamais commercialisé |
 | **Extension** | Foyer de 3 (épouse + fille 10 ans), extension famille envisageable plus tard |
 

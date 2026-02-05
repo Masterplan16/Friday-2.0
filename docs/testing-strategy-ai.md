@@ -1,7 +1,7 @@
 # Stratégie de Tests IA - Friday 2.0
 
 **Date** : 2026-02-05
-**Version** : 1.0
+**Version** : 1.1.0
 **Auteur** : Architecture Friday 2.0
 
 ---
@@ -681,5 +681,5 @@ La review adversariale du 2026-02-05 a identifie les tests suivants comme manqua
 
 ---
 
-**Version** : 1.1
-**Derniere mise a jour** : 2026-02-05
+**Version** : 1.1.0
+**Dernière mise à jour** : 2026-02-05

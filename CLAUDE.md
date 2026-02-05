@@ -533,16 +533,20 @@ docker compose logs -f gateway          # Gateway uniquement
 - **Presidio + spaCy-fr installés** (RGPD avant tout appel LLM cloud)
 
 **Fichiers Story 1 + 1.5 :**
-- ✅ `docker-compose.yml` + `docker-compose.services.yml` — **CRÉÉS**
+- 📋 `docker-compose.yml` + `docker-compose.services.yml` — À créer (Story 1)
 - ✅ `database/migrations/001-010_*.sql` (Story 1) — **CRÉÉES**
 - ✅ `database/migrations/011_trust_system.sql` (Story 1.5) — **CRÉÉE**
-- ✅ `scripts/apply_migrations.py` — **CRÉÉ**
-- ✅ `scripts/migrate_emails.py` — **CRÉÉ**
+- ✅ `database/migrations/012_ingestion_emails_legacy.sql` — **CRÉÉE** (2026-02-05)
+- 📋 `scripts/apply_migrations.py` — À créer (Story 1)
+- ✅ `scripts/migrate_emails.py` — **CRÉÉ** (corrigé 110k mails)
 - ✅ `config/trust_levels.yaml` — **CRÉÉ**
 - ✅ `tests/fixtures/README.md` (plan datasets) — **CRÉÉ**
-- 📋 `agents/src/tools/anonymize.py` (Presidio integration) — À créer
-- 📋 `agents/src/middleware/models.py` (ActionResult) — À créer
-- 📋 `agents/src/middleware/trust.py` (@friday_action) — À créer
+- ✅ `.sops.yaml` — **CRÉÉ** (template secrets management)
+- ✅ `docs/DECISION_LOG.md` — **CRÉÉ** (historique décisions)
+- ✅ `docs/playwright-automation-spec.md` — **CRÉÉ** (spec Browser automation)
+- 📋 `agents/src/tools/anonymize.py` (Presidio integration) — À créer (Story 1.5.1)
+- 📋 `agents/src/middleware/models.py` (ActionResult) — À créer (Story 1.5.2)
+- 📋 `agents/src/middleware/trust.py` (@friday_action) — À créer (Story 1.5.2)
 
 **Décision memorystore (2026-02-05)** : Zep a cessé ses opérations en 2024. **Day 1** : Démarrer avec `adapters/memorystore.py` pointant vers **PostgreSQL (knowledge.*) + Qdrant (embeddings)**. **Ré-évaluation Graphiti** : 6 mois après Story 1 (~août 2026) si v1.0 stable atteinte (critères : >500 stars GitHub, doc API complète, tests charge 100k+ entités). Sinon → Neo4j Community Edition. Voir [addendum section 10](_docs/architecture-addendum-20260205.md).
 
@@ -641,7 +645,13 @@ New-BurntToastNotification -Text "Claude", "Toujours en cours..."
 - **Redis Streams Setup** : [docs/redis-streams-setup.md](docs/redis-streams-setup.md)
   *Configuration complète Redis Streams : consumer groups, retry, recovery, monitoring*
 
+- **Playwright Automation** : [docs/playwright-automation-spec.md](docs/playwright-automation-spec.md)
+  *Spécification automatisation web (Carrefour Drive, etc.) - Alternative fiable à Browser-Use*
+
+- **Decision Log** : [docs/DECISION_LOG.md](docs/DECISION_LOG.md)
+  *Historique chronologique des décisions architecturales majeures*
+
 ---
 
-**Version** : 1.4.0 (2026-02-05)
-**Status** : Architecture complète + Observability & Trust Layer + Code Review Adversarial (22 issues fixes) + Fichiers critiques créés - **Prêt pour implémentation Story 1**
+**Version** : 1.5.0 (2026-02-05)
+**Status** : Architecture complète + Observability & Trust Layer + Code Review Adversarial v2 (17 issues fixes) + Fichiers critiques créés + Corrections VPS/emails/Apple Watch - **Prêt pour implémentation Story 1**

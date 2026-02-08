@@ -5,7 +5,7 @@ Ce module définit les modèles de données standardisés pour le système d'obs
 et de confiance (Trust Layer). Chaque action de module doit retourner un ActionResult.
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any, Optional
 from uuid import UUID, uuid4
 
@@ -90,7 +90,7 @@ class ActionResult(BaseModel):
 
     # Métadonnées de traçabilité
     timestamp: datetime = Field(
-        default_factory=datetime.utcnow, description="Timestamp UTC de l'action"
+        default_factory=lambda: datetime.now(UTC), description="Timestamp UTC de l'action"
     )
     duration_ms: Optional[int] = Field(
         None, description="Durée totale d'exécution en millisecondes"
@@ -187,7 +187,7 @@ class CorrectionRule(BaseModel):
     )
     active: bool = Field(default=True, description="Règle active ou non")
     created_at: datetime = Field(
-        default_factory=datetime.utcnow, description="Date de création"
+        default_factory=lambda: datetime.now(UTC), description="Date de création"
     )
     created_by: str = Field(
         default="Antonio", description="Créateur de la règle"

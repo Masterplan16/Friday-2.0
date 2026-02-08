@@ -663,6 +663,9 @@ New-BurntToastNotification -Text "Claude", "Toujours en cours..."
 - **Analyse besoins** : [_docs/friday-2.0-analyse-besoins.md](_docs/friday-2.0-analyse-besoins.md)
   *Vision produit, 23 modules fonctionnels, sources de données, interconnexions, contraintes techniques (mise à jour 2026-02-05)*
 
+- **Validation architecture** : [_docs/analyse-fonctionnelle-complete.md](_docs/analyse-fonctionnelle-complete.md)
+  *Document de contrôle qualité (5 février 2026) - Vérifie cohérence architecture/besoins/implémentation. Inclut : diagrammes flux PC/VPS/BeeStation, répartition stockage, mesures sécurité transversales, 23 modules détaillés*
+
 - **README** : [README.md](README.md)
   *Quick start, setup développement, commandes utiles*
 
@@ -678,7 +681,13 @@ New-BurntToastNotification -Text "Claude", "Toujours en cours..."
   *Stories détaillées (1-9+), séquence implémentation, Acceptance Criteria, dépendances, durées estimées*
 
 - **Addendum architecture (2026-02-05)** : [_docs/architecture-addendum-20260205.md](_docs/architecture-addendum-20260205.md)
-  *Clarifications techniques : Presidio benchmark, pattern detection algo, profils RAM, critères OpenClaw, population graphe, trust retrogradation formelle (section 7), healthcheck complet (section 8), sécurité compléments (section 9), avertissement Zep (section 10)*
+  *Clarifications techniques : Presidio benchmark, pattern detection algo, profils RAM, critères OpenClaw, population graphe, trust retrogradation formelle (section 7), healthcheck complet (section 8), sécurité compléments (section 9), avertissement Zep (section 10), stratégie notification Telegram Topics (section 11)*
+
+- **Politique modèles IA** : [docs/ai-models-policy.md](docs/ai-models-policy.md)
+  *Versionnage modèles (dev -latest vs prod version fixe), procédure upgrade, matrix décision (Large vs Small vs Ollama), surveillance accuracy/coûts, gestion budgets mensuels*
+
+- **Setup PC Backup** : [docs/pc-backup-setup.md](docs/pc-backup-setup.md)
+  *Configuration complète PC Antonio pour recevoir backups quotidiens VPS via rsync/Tailscale. Guides par OS (Windows/WSL, Linux, macOS), SSH setup, tests validation*
 
 ### Configuration & Scripts implémentation
 

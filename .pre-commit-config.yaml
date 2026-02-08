@@ -1,0 +1,50 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: '^(database/migrations|_bmad|_bmad-output)/'
+      - id: end-of-file-fixer
+        exclude: '^(database/migrations|_bmad|_bmad-output)/'
+      - id: check-yaml
+      - id: check-json
+      - id: check-added-large-files
+        args: ['--maxkb=500']
+      - id: detect-private-key
+      - id: check-merge-conflict
+
+  - repo: https://github.com/psf/black
+    rev: 24.10.0
+    hooks:
+      - id: black
+        args: ['--line-length=100']
+        language_version: python3.11
+
+  - repo: https://github.com/pycqa/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        args: ['--profile=black', '--line-length=100']
+
+  - repo: https://github.com/pycqa/flake8
+    rev: 7.1.1
+    hooks:
+      - id: flake8
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.13.0
+    hooks:
+      - id: mypy
+        args: ['--strict', '--ignore-missing-imports']
+        additional_dependencies:
+          - pydantic>=2.10.0
+          - types-redis>=4.6.0
+        pass_filenames: false
+        entry: mypy agents/src/ services/
+
+  - repo: https://github.com/sqlfluff/sqlfluff
+    rev: 3.2.5
+    hooks:
+      - id: sqlfluff-lint
+        args: ['--dialect=postgres']
+        files: '^database/migrations/.*\.sql$'

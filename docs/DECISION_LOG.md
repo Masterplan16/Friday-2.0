@@ -4,6 +4,87 @@
 
 ---
 
+## 2026-02-08 : Self-Healing Infrastructure - Automatisation 4 Tiers
+
+**Décision** : Implémenter Story 1.7 avec architecture à 4 tiers (Tier 1-2 Day 1, Tier 3-4 progressifs)
+
+**Problématique identifiée** :
+- Maintenance Friday 2.0 estimée à 2-4h/mois (monitoring, mises à jour, connecteurs cassés)
+- Risque fatigue opérationnelle sur projet long terme (10 ans visés)
+- Question Antonio : *"Est-ce que la maintenance peut s'automatiser ?"*
+
+**Architecture retenue** :
+
+**Philosophie** : Automatiser le "contenant" (infrastructure), garder la main sur le "contenu" (logique métier)
+
+| Tier | Niveau | Automatisation | Validation humaine | Gain temps/mois |
+|------|--------|----------------|-------------------|-----------------|
+| **Tier 1** | OS/Linux | ✅ Auto (unattended-upgrades, cleanup) | ❌ Aucune | ~45 min |
+| **Tier 2** | Services Docker | ✅ Auto-restart + Alerte | ⚠️ Après coup | ~60 min |
+| **Tier 3** | Connecteurs externes | ❌ Détection uniquement | ✅ Avant fix | ~35 min |
+| **Tier 4** | Logique métier | ❌ Proposition uniquement | ✅ Obligatoire | ~50 min |
+
+**Total gain** : ~3h/mois (maintenance résiduelle : ~1h/mois validations Tier 4)
+
+**Composants Tier 1-2 (Day 1 - Story 1.7)** :
+- `unattended-upgrades` : Mises à jour sécurité Linux auto + reboot 4h
+- `cleanup-disk.sh` : Nettoyage logs/backups (cron 3h)
+- `watchtower` : Détection nouvelles versions Docker (mode MONITOR_ONLY)
+- `monitor-restarts.sh` : Alerte redémarrages anormaux (cron 15min)
+- `auto-recover-ram.sh` : Kill service lourd si RAM >90% (cron 5min)
+- `check-external-apis.sh` : Healthcheck APIs externes (cron 30min)
+
+**Composants Tier 3-4 (progressif - Stories futures)** :
+- `check-playwright-scripts.sh` : Test login Carrefour (sans action réelle)
+- `pattern_detector.py` : Détection patterns corrections (proposition règles)
+- `trust_drift_detector.py` : Alerte baisse accuracy modules
+
+**Rationale** :
+- **Infrastructure fail-safe** : Services crashent → Redémarrent auto. RAM critique → Tue service lourd auto (préserve PostgreSQL/Gateway)
+- **Logique fail-explicit** : Presidio crash → STOP + alerte. Playwright cassé → Alerte + fix manuel (évite commande erronée Carrefour)
+- **Validation humaine préservée** : Cohérent avec Trust Layer (humain dans la boucle pour décisions métier)
+- **RGPD/Médical** : Panne franche > réparation auto risquée (zéro tolérance erreurs silencieuses)
+
+**Alternatives considérées** :
+1. **Zero Maintenance (auto-fix tout)** : Rejetée car risque dérive silencieuse (ex: auto-adjust prompts → perte qualité invisible)
+2. **Kubernetes + rolling updates** : Rejetée car budget (50€/mois) incompatible cluster multi-nœuds
+3. **Tier 1-2 auto (retenue) + Tier 3-4 détection/alerte** : Équilibre stabilité/contrôle optimal
+
+**Frontière critique** :
+```
+CONTENANT (Auto OK) :
+- Patch kernel Linux → Auto + reboot 4h
+- PostgreSQL 16.6→16.7 (bugfix) → Détection auto, upgrade manuel
+- Redémarrage Redis crashé → Auto (Docker restart policy)
+- RAM >90% → Kill Kokoro TTS auto + alerte
+
+CONTENU (Manuel obligatoire) :
+- n8n 1.69→1.70 → Manuel (breaking changes possibles)
+- LangGraph 0.2.45→0.3.0 → Manuel (API change)
+- Script carrefour_drive.py cassé → Détection + fix manuel (risque 50 paquets pâtes)
+- Prompt système email classifier → Proposition via Trust Layer (dérive silencieuse)
+```
+
+**Documents impactés** :
+- `docs/DECISION_LOG.md` (ce fichier)
+- `docs/implementation-roadmap.md` (ajout Story 1.7)
+- `CLAUDE.md` (section First Implementation Priority)
+- `scripts/tier1-os/setup-unattended-upgrades.sh` (à créer)
+- `scripts/tier2-docker/monitor-restarts.sh` (à créer)
+- `scripts/tier2-docker/auto-recover-ram.sh` (à créer)
+- `docker-compose.services.yml` (ajout watchtower)
+- `config/crontab-friday.txt` (à créer - centralise tous crons)
+
+**Implémentation** : Story 1.7 (8-12h dev + tests) après Story 1.5, avant Story 2
+
+**Rollback plan** : Si auto-recovery RAM cause instabilités → Désactiver `auto-recover-ram.sh`, garder alerting uniquement
+
+**Ressources** :
+- Discussion Gemini analyse : 2026-02-08 (comparaison Friday vs OpenClaw, maintenance)
+- Consultation BMad Master : 2026-02-08 (proposition 4 tiers)
+
+---
+
 ## 2026-02-05 : Stratégie de Notification - Telegram Topics Architecture
 
 **Décision** : Supergroup Telegram avec 5 topics spécialisés (vs canal unique initial)

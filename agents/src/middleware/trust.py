@@ -15,6 +15,7 @@ import time
 from typing import Any, Callable, Optional
 
 import asyncpg
+import yaml
 
 from agents.src.middleware.models import ActionResult, CorrectionRule
 
@@ -50,16 +51,12 @@ class TrustManager:
         Args:
             config_path: Chemin vers trust_levels.yaml
         """
-        import yaml
-
         try:
             with open(config_path, "r", encoding="utf-8") as f:
                 config = yaml.safe_load(f)
                 self.trust_levels = config.get("modules", {})
                 self._loaded = True
-                logger.info(
-                    "Trust levels loaded for %d modules", len(self.trust_levels)
-                )
+                logger.info("Trust levels loaded for %d modules", len(self.trust_levels))
         except FileNotFoundError:
             logger.error("Trust levels config not found: %s", config_path)
             raise
@@ -107,12 +104,12 @@ class TrustManager:
             Liste des CorrectionRule triées par priorité (1=max priorité)
         """
         query = """
-            SELECT id, module, action, scope, priority, conditions, output,
+            SELECT id, module, action_type, scope, priority, conditions, output,
                    source_receipts, hit_count, active, created_at, created_by
             FROM core.correction_rules
             WHERE module = $1
               AND active = true
-              AND (action = $2 OR action IS NULL)
+              AND (action_type = $2 OR action_type IS NULL)
             ORDER BY priority ASC
             LIMIT 50
         """
@@ -124,7 +121,7 @@ class TrustManager:
             CorrectionRule(
                 id=row["id"],
                 module=row["module"],
-                action=row["action"],
+                action_type=row["action_type"],
                 scope=row["scope"],
                 priority=row["priority"],
                 conditions=row["conditions"],
@@ -172,10 +169,9 @@ class TrustManager:
         """
         query = """
             INSERT INTO core.action_receipts (
-                id, module, action, input_summary, output_summary,
-                confidence, reasoning, payload, steps, timestamp,
-                duration_ms, trust_level, status
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+                id, module, action_type, input_summary, output_summary,
+                confidence, reasoning, payload, duration_ms, trust_level, status
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
             RETURNING id
         """
 
@@ -186,20 +182,18 @@ class TrustManager:
                 query,
                 receipt_data["id"],
                 receipt_data["module"],
-                receipt_data["action"],
+                receipt_data["action_type"],
                 receipt_data["input_summary"],
                 receipt_data["output_summary"],
                 receipt_data["confidence"],
                 receipt_data["reasoning"],
                 receipt_data["payload"],
-                receipt_data["steps"],
-                receipt_data["timestamp"],
                 receipt_data["duration_ms"],
                 receipt_data["trust_level"],
                 receipt_data["status"],
             )
 
-        logger.info("Receipt created: %s (%s.%s)", receipt_id, result.module, result.action)
+        logger.info("Receipt created: %s (%s.%s)", receipt_id, result.module, result.action_type)
         return str(receipt_id)
 
     async def send_telegram_validation(self, result: ActionResult) -> str:
@@ -217,7 +211,7 @@ class TrustManager:
         logger.warning(
             "Telegram validation required for %s.%s (receipt %s) - NOT IMPLEMENTED YET",
             result.module,
-            result.action,
+            result.action_type,
             result.action_id,
         )
         return "PENDING_TELEGRAM"
@@ -255,9 +249,7 @@ def get_trust_manager() -> TrustManager:
         RuntimeError: Si TrustManager pas encore initialisé
     """
     if _trust_manager is None:
-        raise RuntimeError(
-            "TrustManager not initialized. Call init_trust_manager() first."
-        )
+        raise RuntimeError("TrustManager not initialized. Call init_trust_manager() first.")
     return _trust_manager
 
 
@@ -317,20 +309,23 @@ def friday_action(
             # 4. Exécuter l'action
             try:
                 result = await func(*args, **kwargs)
+                # Assigner module et action_type (remplis par décorateur)
+                result.module = module
+                result.action_type = action
             except Exception as e:
                 # En cas d'erreur, créer un ActionResult d'erreur
                 duration_ms = int((time.time() - start_time) * 1000)
                 result = ActionResult(
                     module=module,
-                    action=action,
-                    input_summary=f"Args: {args[:2]}, Kwargs keys: {list(kwargs.keys())}",
+                    action_type=action,
+                    input_summary=f"Args count: {len(args)}, Kwargs: {list(kwargs.keys())[:5]}",
                     output_summary=f"ERROR: {type(e).__name__}: {str(e)[:200]}",
                     confidence=0.0,
                     reasoning=f"Exception raised during execution: {str(e)}",
                     payload={"error_type": type(e).__name__, "error_message": str(e)},
                     duration_ms=duration_ms,
                     trust_level=trust_level,
-                    status="error",
+                    status="rejected",  # Action failed due to exception
                 )
                 logger.error(
                     "Action %s.%s failed: %s",

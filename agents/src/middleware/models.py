@@ -20,9 +20,7 @@ class StepDetail(BaseModel):
     confidence: float = Field(
         ..., ge=0.0, le=1.0, description="Confidence de cette étape (0.0-1.0)"
     )
-    duration_ms: Optional[int] = Field(
-        None, description="Durée d'exécution en millisecondes"
-    )
+    duration_ms: Optional[int] = Field(None, description="Durée d'exécution en millisecondes")
     metadata: dict[str, Any] = Field(
         default_factory=dict, description="Métadonnées supplémentaires"
     )
@@ -47,9 +45,11 @@ class ActionResult(BaseModel):
     # Identifiants
     action_id: UUID = Field(default_factory=uuid4, description="ID unique de l'action")
 
-    # Contexte de l'action
-    module: str = Field(..., description="Module source (ex: 'email', 'archiviste')")
-    action_type: str = Field(..., description="Nom de l'action (ex: 'classify', 'draft')")
+    # Contexte de l'action (rempli par @friday_action)
+    module: Optional[str] = Field(None, description="Module source (rempli par @friday_action)")
+    action_type: Optional[str] = Field(
+        None, description="Nom de l'action (rempli par @friday_action)"
+    )
 
     # Résumés obligatoires
     input_summary: str = Field(
@@ -84,9 +84,7 @@ class ActionResult(BaseModel):
         default_factory=dict,
         description="Données techniques optionnelles (non affichées à l'utilisateur)",
     )
-    steps: list[StepDetail] = Field(
-        default_factory=list, description="Détails des sous-étapes"
-    )
+    steps: list[StepDetail] = Field(default_factory=list, description="Détails des sous-étapes")
 
     # Métadonnées de traçabilité
     timestamp: datetime = Field(
@@ -96,12 +94,12 @@ class ActionResult(BaseModel):
         None, description="Durée totale d'exécution en millisecondes"
     )
 
-    # Trust level appliqué
-    trust_level: str = Field(
-        ..., description="Trust level appliqué (auto/propose/blocked)"
+    # Trust level appliqué (rempli par @friday_action)
+    trust_level: Optional[str] = Field(
+        None, description="Trust level appliqué (rempli par @friday_action)"
     )
-    status: str = Field(
-        ..., description="Statut de l'action (auto/pending/rejected/completed)"
+    status: Optional[str] = Field(
+        None, description="Statut de l'action (rempli par @friday_action)"
     )
 
     @field_validator("confidence")
@@ -114,8 +112,10 @@ class ActionResult(BaseModel):
 
     @field_validator("trust_level")
     @classmethod
-    def validate_trust_level(cls, v: str) -> str:
+    def validate_trust_level(cls, v: Optional[str]) -> Optional[str]:
         """Valide que trust_level est valide."""
+        if v is None:
+            return v
         valid_levels = {"auto", "propose", "blocked"}
         if v not in valid_levels:
             raise ValueError(f"trust_level must be one of {valid_levels}")
@@ -123,9 +123,11 @@ class ActionResult(BaseModel):
 
     @field_validator("status")
     @classmethod
-    def validate_status(cls, v: str) -> str:
+    def validate_status(cls, v: Optional[str]) -> Optional[str]:
         """Valide que status est valide."""
-        valid_statuses = {"auto", "pending", "rejected", "completed"}
+        if v is None:
+            return v
+        valid_statuses = {"auto", "pending", "approved", "rejected", "corrected"}
         if v not in valid_statuses:
             raise ValueError(f"status must be one of {valid_statuses}")
         return v
@@ -135,7 +137,22 @@ class ActionResult(BaseModel):
         Export formaté pour stockage dans core.action_receipts.
 
         Retourne un dict compatible avec la structure de la table SQL.
+        Les steps sont fusionnés dans payload (JSONB), pas un champ séparé.
+
+        Raises:
+            ValueError: Si module ou action_type sont None (doivent être remplis par @friday_action)
         """
+        # Validation obligatoire : module et action_type NOT NULL en SQL
+        if self.module is None or self.action_type is None:
+            raise ValueError(
+                "module and action_type must be set by @friday_action before creating receipt"
+            )
+
+        # Fusionner steps dans payload (pas un champ séparé en SQL)
+        payload_with_steps = {**self.payload}
+        if self.steps:
+            payload_with_steps["steps"] = [step.model_dump() for step in self.steps]
+
         return {
             "id": str(self.action_id),
             "module": self.module,
@@ -144,9 +161,7 @@ class ActionResult(BaseModel):
             "output_summary": self.output_summary,
             "confidence": self.confidence,
             "reasoning": self.reasoning,
-            "payload": self.payload,
-            "steps": [step.model_dump() for step in self.steps],
-            "timestamp": self.timestamp.isoformat(),
+            "payload": payload_with_steps,  # JSONB avec steps inclus
             "duration_ms": self.duration_ms,
             "trust_level": self.trust_level,
             "status": self.status,
@@ -166,32 +181,20 @@ class CorrectionRule(BaseModel):
     action_type: Optional[str] = Field(
         None, description="Action spécifique (None = toutes actions du module)"
     )
-    scope: str = Field(
-        ..., description="Portée de la règle (ex: 'classification', 'drafting')"
-    )
-    priority: int = Field(
-        ..., ge=1, le=100, description="Priorité (1=max, 100=min)"
-    )
-    conditions: dict[str, Any] = Field(
-        ..., description="Conditions d'application (format JSON)"
-    )
-    output: dict[str, Any] = Field(
-        ..., description="Correction à appliquer (format JSON)"
-    )
+    scope: str = Field(..., description="Portée de la règle (ex: 'classification', 'drafting')")
+    priority: int = Field(..., ge=1, le=100, description="Priorité (1=max, 100=min)")
+    conditions: dict[str, Any] = Field(..., description="Conditions d'application (format JSON)")
+    output: dict[str, Any] = Field(..., description="Correction à appliquer (format JSON)")
     source_receipts: list[str] = Field(
         default_factory=list,
         description="IDs des receipts ayant généré cette règle",
     )
-    hit_count: int = Field(
-        default=0, description="Nombre de fois où la règle a été appliquée"
-    )
+    hit_count: int = Field(default=0, description="Nombre de fois où la règle a été appliquée")
     active: bool = Field(default=True, description="Règle active ou non")
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC), description="Date de création"
     )
-    created_by: str = Field(
-        default="Antonio", description="Créateur de la règle"
-    )
+    created_by: str = Field(default="Antonio", description="Créateur de la règle")
 
     def format_for_prompt(self) -> str:
         """
@@ -216,21 +219,11 @@ class TrustMetric(BaseModel):
     module: str = Field(..., description="Module concerné")
     action_type: str = Field(..., description="Action concernée")
     week_start: datetime = Field(..., description="Début de la semaine (lundi 00:00)")
-    total_actions: int = Field(
-        ..., ge=0, description="Nombre total d'actions cette semaine"
-    )
-    corrected_actions: int = Field(
-        ..., ge=0, description="Nombre d'actions corrigées"
-    )
-    accuracy: float = Field(
-        ..., ge=0.0, le=1.0, description="Accuracy = 1 - (corrected / total)"
-    )
-    avg_confidence: float = Field(
-        ..., ge=0.0, le=1.0, description="Confidence moyenne"
-    )
-    current_trust_level: str = Field(
-        ..., description="Trust level actuel (auto/propose/blocked)"
-    )
+    total_actions: int = Field(..., ge=0, description="Nombre total d'actions cette semaine")
+    corrected_actions: int = Field(..., ge=0, description="Nombre d'actions corrigées")
+    accuracy: float = Field(..., ge=0.0, le=1.0, description="Accuracy = 1 - (corrected / total)")
+    avg_confidence: float = Field(..., ge=0.0, le=1.0, description="Confidence moyenne")
+    current_trust_level: str = Field(..., description="Trust level actuel (auto/propose/blocked)")
     recommended_trust_level: Optional[str] = Field(
         None, description="Trust level recommandé basé sur accuracy"
     )
@@ -250,9 +243,7 @@ class TrustMetric(BaseModel):
         Règle : accuracy <90% sur 1 semaine + échantillon >=10 actions
         """
         return (
-            self.total_actions >= 10
-            and self.accuracy < 0.90
-            and self.current_trust_level == "auto"
+            self.total_actions >= 10 and self.accuracy < 0.90 and self.current_trust_level == "auto"
         )
 
     def can_promotion(self) -> bool:

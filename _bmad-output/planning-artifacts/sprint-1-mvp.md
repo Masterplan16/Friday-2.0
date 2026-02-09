@@ -1,3 +1,5 @@
+> **Mis a jour 2026-02-09** : D17 (Claude remplace Mistral), D19 (pgvector remplace Qdrant Day 1)
+
 # Sprint 1 — MVP Day 1 (Epics 1-7)
 
 **45 stories | 82 FRs | Priorite CRITIQUE**
@@ -20,7 +22,7 @@ So that l'infrastructure Friday 2.0 soit operationnelle sur le VPS-3.
 
 **Given** un VPS-3 OVH (24 Go RAM, 8 vCores, 160 Go NVMe) vierge avec Docker installe
 **When** j'execute `docker compose up -d`
-**Then** PostgreSQL 16, Redis 7, Qdrant, n8n 1.69.2+, et Caddy demarrent sans erreur
+**Then** PostgreSQL 16 (avec pgvector), Redis 7, n8n 1.69.2+, et Caddy demarrent sans erreur [D19]
 **And** chaque service repond a son healthcheck interne
 
 **Given** tous les services sont demarres
@@ -69,7 +71,7 @@ So that je puisse connaitre l'etat du systeme en un coup d'oeil.
 
 **Given** le FastAPI Gateway est demarre
 **When** j'appelle `GET /api/v1/health`
-**Then** je recois un JSON avec l'etat de 10 services (postgres, redis, qdrant, n8n, emailengine, presidio, whisper, kokoro, surya, caddy)
+**Then** je recois un JSON avec l'etat de 9 services (postgres, redis, n8n, emailengine, presidio, whisper, kokoro, surya, caddy) [D19 : Qdrant retire, pgvector integre a postgres]
 **And** 3 etats possibles : healthy (tous critical OK), degraded (non-critical down), unhealthy (critical down)
 
 **Given** un service non-critique (ex: Kokoro TTS) est arrete
@@ -615,7 +617,7 @@ So que je retrouve n'importe quel document en quelques secondes.
 **Acceptance Criteria:**
 
 **Given** Antonio envoie une requete texte (ex: "facture EDF janvier 2026")
-**When** la requete est convertie en embedding et comparee dans Qdrant
+**When** la requete est convertie en embedding et comparee dans pgvector (PostgreSQL) [D19]
 **Then** les top-5 resultats les plus pertinents sont retournes en < 3s (NFR3)
 **And** chaque resultat contient : nom du fichier, score de pertinence, extrait du contenu
 
@@ -902,7 +904,7 @@ So que les informations soient liees entre elles et exploitables.
 
 ---
 
-### Story 6.2 : Embeddings Qdrant
+### Story 6.2 : Embeddings pgvector (PostgreSQL)
 
 As a systeme Friday,
 I want generer des embeddings pour chaque contenu traite,
@@ -912,10 +914,10 @@ So que la recherche semantique soit precise et rapide.
 
 **Given** un nouveau contenu est traite (email, document, transcription)
 **When** l'embedding est genere
-**Then** il est stocke dans Qdrant via l'adaptateur vectorstore.py (FR39)
+**Then** il est stocke dans pgvector (PostgreSQL) via l'adaptateur vectorstore.py (FR39) [D19]
 **And** l'index est mis a jour incrementalement
 
-**Given** l'index Qdrant contient N documents
+**Given** l'index pgvector contient N documents [D19]
 **When** une requete semantique est executee
 **Then** les top-K resultats sont retournes en < 3s (NFR3)
 
@@ -930,7 +932,7 @@ So que je puisse changer de backend sans toucher au code metier.
 **Acceptance Criteria:**
 
 **Given** l'interface abstraite MemoryStore est definie
-**When** l'implementation PostgreSQL + Qdrant est utilisee (D3)
+**When** l'implementation PostgreSQL + pgvector est utilisee (D3, D19)
 **Then** les operations CRUD sur les entites et relations fonctionnent
 **And** la recherche par embedding retourne des resultats pertinents
 
@@ -951,7 +953,7 @@ So que Friday ait une base de connaissances riche des le Day 1.
 
 **Given** les 110k emails sont accessibles via les 4 comptes IMAP
 **When** le script de migration est lance (batch nuit)
-**Then** la sequence s'execute : PG d'abord (~9h) → graphe (~15-20h) → Qdrant embeddings (~6-8h) (ADD12)
+**Then** la sequence s'execute : PG d'abord (~9h) → graphe (~15-20h) → pgvector embeddings (~6-8h) (ADD12, D19)
 **And** le cout total est <= 50 EUR Claude API (NFR26)
 
 **Given** la migration est interrompue (crash, timeout)

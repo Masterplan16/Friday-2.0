@@ -1,13 +1,15 @@
 -- Migration 011: Trust System (Observability & Trust Layer)
 -- Story 1.5 - Tables pour receipts, correction rules, et trust metrics
 
+BEGIN;
+
 -- =====================================================================
 -- Table: core.action_receipts
 -- Description: Reçus de chaque action exécutée par les modules Friday
 -- =====================================================================
 
 CREATE TABLE IF NOT EXISTS core.action_receipts (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
 
     -- Identification
     module VARCHAR(50) NOT NULL,           -- Ex: "email", "archiviste", "finance"
@@ -33,8 +35,8 @@ CREATE TABLE IF NOT EXISTS core.action_receipts (
     feedback_comment TEXT,                 -- Commentaire additionnel d'Antonio
 
     -- Métadonnées
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
     -- Index
     CONSTRAINT valid_trust_level CHECK (trust_level IN ('auto', 'propose', 'blocked')),
@@ -42,24 +44,16 @@ CREATE TABLE IF NOT EXISTS core.action_receipts (
 );
 
 -- Index pour requêtes fréquentes
-CREATE INDEX idx_action_receipts_module_action ON core.action_receipts(module, action_type);
-CREATE INDEX idx_action_receipts_status ON core.action_receipts(status);
-CREATE INDEX idx_action_receipts_created_at ON core.action_receipts(created_at DESC);
-CREATE INDEX idx_action_receipts_correction ON core.action_receipts(correction) WHERE correction IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_action_receipts_module_action ON core.action_receipts(module, action_type);
+CREATE INDEX IF NOT EXISTS idx_action_receipts_status ON core.action_receipts(status);
+CREATE INDEX IF NOT EXISTS idx_action_receipts_created_at ON core.action_receipts(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_action_receipts_correction ON core.action_receipts(correction) WHERE correction IS NOT NULL;
 
--- Trigger pour updated_at automatique
-CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.updated_at = NOW();
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
+-- Trigger pour updated_at automatique (réutilise core.update_updated_at() de migration 002)
 CREATE TRIGGER action_receipts_updated_at
 BEFORE UPDATE ON core.action_receipts
 FOR EACH ROW
-EXECUTE FUNCTION update_updated_at_column();
+EXECUTE FUNCTION core.update_updated_at();
 
 -- =====================================================================
 -- Table: core.correction_rules
@@ -67,7 +61,7 @@ EXECUTE FUNCTION update_updated_at_column();
 -- =====================================================================
 
 CREATE TABLE IF NOT EXISTS core.correction_rules (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
 
     -- Identification
     module VARCHAR(50) NOT NULL,
@@ -87,15 +81,15 @@ CREATE TABLE IF NOT EXISTS core.correction_rules (
     source_receipts UUID[],                -- Receipts ayant conduit à cette règle
     hit_count INTEGER NOT NULL DEFAULT 0,  -- Nombre de fois où la règle a matché
 
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     created_by VARCHAR(100),               -- "antonio" ou "auto-detected"
 
     -- Index
     CONSTRAINT valid_scope CHECK (scope IN ('global', 'module', 'specific'))
 );
 
-CREATE INDEX idx_correction_rules_module_action ON core.correction_rules(module, action_type) WHERE active = true;
-CREATE INDEX idx_correction_rules_priority ON core.correction_rules(priority);
+CREATE INDEX IF NOT EXISTS idx_correction_rules_module_action ON core.correction_rules(module, action_type) WHERE active = true;
+CREATE INDEX IF NOT EXISTS idx_correction_rules_priority ON core.correction_rules(priority);
 
 -- =====================================================================
 -- Table: core.trust_metrics
@@ -103,7 +97,7 @@ CREATE INDEX idx_correction_rules_priority ON core.correction_rules(priority);
 -- =====================================================================
 
 CREATE TABLE IF NOT EXISTS core.trust_metrics (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
 
     -- Identification
     module VARCHAR(50) NOT NULL,
@@ -124,7 +118,7 @@ CREATE TABLE IF NOT EXISTS core.trust_metrics (
     trust_changed BOOLEAN NOT NULL DEFAULT false,
 
     -- Métadonnées
-    calculated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    calculated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
     -- Contraintes
     CONSTRAINT valid_trust_level_current CHECK (current_trust_level IN ('auto', 'propose', 'blocked')),
@@ -132,9 +126,9 @@ CREATE TABLE IF NOT EXISTS core.trust_metrics (
     CONSTRAINT unique_week_module_action UNIQUE (module, action_type, week_start)
 );
 
-CREATE INDEX idx_trust_metrics_module_action ON core.trust_metrics(module, action_type);
-CREATE INDEX idx_trust_metrics_week_start ON core.trust_metrics(week_start DESC);
-CREATE INDEX idx_trust_metrics_trust_changed ON core.trust_metrics(trust_changed) WHERE trust_changed = true;
+CREATE INDEX IF NOT EXISTS idx_trust_metrics_module_action ON core.trust_metrics(module, action_type);
+CREATE INDEX IF NOT EXISTS idx_trust_metrics_week_start ON core.trust_metrics(week_start DESC);
+CREATE INDEX IF NOT EXISTS idx_trust_metrics_trust_changed ON core.trust_metrics(trust_changed) WHERE trust_changed = true;
 
 -- =====================================================================
 -- Commentaires
@@ -149,3 +143,5 @@ COMMENT ON COLUMN core.action_receipts.payload IS 'JSONB: steps détaillés, key
 COMMENT ON COLUMN core.correction_rules.conditions IS 'JSONB: {keywords: [...], min_match: 1, sender_pattern: ".*@urssaf.fr"}';
 COMMENT ON COLUMN core.correction_rules.output IS 'JSONB: {category: "finance", priority: "high", confidence_boost: 0.1}';
 COMMENT ON COLUMN core.trust_metrics.accuracy IS 'Formule: 1 - (corrected_actions / total_actions)';
+
+COMMIT;

@@ -116,7 +116,7 @@ creation_rules:
 cat > .env <<EOF
 DATABASE_URL=postgresql://friday:password@localhost:5432/friday
 REDIS_PASSWORD=super_secret_redis
-MISTRAL_API_KEY=abc123def456
+ANTHROPIC_API_KEY=sk-ant-abc123def456
 TELEGRAM_BOT_TOKEN=1234567890:ABCdefGHI
 EOF
 

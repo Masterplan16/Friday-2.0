@@ -18,7 +18,7 @@ class DocumentIndexerConsumer:
     Workflow:
     1. Écoute stream "document.processed" via consumer group "document-indexer"
     2. Pour chaque événement, indexe le document dans:
-       - Qdrant (embeddings pour recherche sémantique)
+       - pgvector dans PostgreSQL (embeddings pour recherche sémantique, D19)
        - PostgreSQL knowledge.* (métadonnées + graphe)
     3. ACK l'événement après indexation réussie
     """
@@ -37,7 +37,7 @@ class DocumentIndexerConsumer:
 
     async def start(self):
         """Démarre le consumer (boucle infinie)"""
-        logger.info(f"🔄 Starting Document Indexer Consumer: {self.group}/{self.consumer_name}")
+        logger.info("Starting Document Indexer Consumer: %s/%s", self.group, self.consumer_name)
 
         while True:
             try:
@@ -60,13 +60,13 @@ class DocumentIndexerConsumer:
                             await self.redis.xack(self.stream, self.group, event_id)
 
                         except Exception as e:
-                            logger.error(f"❌ Error processing {event_id}: {e}", exc_info=True)
+                            logger.error("Error processing %s: %s", event_id, e, exc_info=True)
 
             except asyncio.CancelledError:
-                logger.info("🛑 Consumer stopped")
+                logger.info("Consumer stopped")
                 break
             except Exception as e:
-                logger.error(f"❌ Consumer error: {e}", exc_info=True)
+                logger.error("Consumer error: %s", e, exc_info=True)
                 await asyncio.sleep(5)
 
     def _deserialize_payload(self, payload: Dict[str, str]) -> Dict[str, Any]:
@@ -89,33 +89,33 @@ class DocumentIndexerConsumer:
         doc_type = data.get("doc_type")
         ocr_text = data.get("ocr_text", "")
 
-        logger.info(f"📄 Indexing document {document_id} ({doc_type})")
+        logger.info("Indexing document %s (%s)", document_id, doc_type)
 
         # 1. Générer embeddings du texte OCR
         await self._generate_embeddings(document_id, ocr_text)
 
-        # 2. Indexer dans Qdrant pour recherche sémantique
-        await self._index_to_qdrant(document_id, ocr_text)
+        # 2. Indexer dans pgvector pour recherche sémantique (D19)
+        await self._index_to_pgvector(document_id, ocr_text)
 
         # 3. Extraire entités et relations pour graphe de connaissances
         await self._extract_entities_and_relations(document_id, ocr_text, doc_type)
 
-        logger.info(f"✅ Document {document_id} indexed successfully")
+        logger.info("Document %s indexed successfully", document_id)
 
     async def _generate_embeddings(self, document_id: str, text: str):
-        """Génère embeddings via Mistral Embed API"""
+        """Génère embeddings via LLM adapter (embeddings API)"""
         # TODO Story 3: Implémenter génération embeddings
-        logger.info(f"🧠 [TODO] Generate embeddings for document {document_id}")
+        logger.info("[TODO] Generate embeddings for document %s", document_id)
 
-    async def _index_to_qdrant(self, document_id: str, text: str):
-        """Indexe document dans Qdrant pour recherche sémantique"""
-        # TODO Story 3: Implémenter indexation Qdrant
-        logger.info(f"🔍 [TODO] Index document {document_id} to Qdrant")
+    async def _index_to_pgvector(self, document_id: str, text: str):
+        """Indexe document dans pgvector pour recherche sémantique (D19)"""
+        # TODO Story 3: Implémenter indexation pgvector via memorystore adapter
+        logger.info("[TODO] Index document %s to pgvector", document_id)
 
     async def _extract_entities_and_relations(self, document_id: str, text: str, doc_type: str):
         """Extrait entités (NER) et relations pour graphe de connaissances"""
         # TODO Story 3: Implémenter extraction entités + insertion knowledge.*
-        logger.info(f"🕸️ [TODO] Extract entities from document {document_id}")
+        logger.info("[TODO] Extract entities from document %s", document_id)
 
     async def claim_pending_events(self, idle_time_ms: int = 60000):
         """Recovery des événements pending (cf email-processor)"""
@@ -130,7 +130,7 @@ class DocumentIndexerConsumer:
         if not pending:
             return
 
-        logger.warning(f"⚠️  Found {len(pending)} pending events, attempting recovery...")
+        logger.warning("Found %d pending events, attempting recovery...", len(pending))
 
         for entry in pending:
             event_id = entry['message_id']
@@ -149,7 +149,7 @@ class DocumentIndexerConsumer:
 
             if claimed:
                 event_id_claimed, payload = claimed[0]
-                logger.info(f"🔁 Reclaimed event {event_id} from previous consumer")
+                logger.info("Reclaimed event %s from previous consumer", event_id)
                 data = self._deserialize_payload(payload)
                 await self.process_document(event_id_claimed, data)
                 await self.redis.xack(self.stream, self.group, event_id_claimed)

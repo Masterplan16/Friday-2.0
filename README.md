@@ -16,10 +16,10 @@ Friday 2.0 est un système d'IA personnel qui agit comme un **second cerveau** p
 |--------|--------|
 | **Utilisateur** | Antonio (extension famille envisageable) |
 | **Modules** | 23 agents spécialisés (médecin, enseignant, financier, personnel) |
-| **Tech Stack** | Python 3.12 + LangGraph + n8n + Mistral + PostgreSQL 16 + Redis 7 |
-| **Budget** | ~36-42€/mois (VPS OVH VPS-4 + APIs cloud) |
+| **Tech Stack** | Python 3.12 + LangGraph + n8n + Claude Sonnet 4.5 + PostgreSQL 16 + Redis 7 |
+| **Budget** | ~63€/mois (VPS OVH VPS-3 ~15€ + Claude API ~45€ + veille ~3€) |
 | **Philosophie** | KISS Day 1, évolutibilité by design (5 adaptateurs) |
-| **Hébergement** | VPS-4 OVH France — 48 Go RAM / 12 vCores / 300 Go NVMe |
+| **Hébergement** | VPS-3 OVH France — 24 Go RAM / 8 vCores / 160 Go NVMe |
 | **Stockage** | Hybride : VPS (cerveau, index, métadonnées) + PC (fichiers) |
 | **Sécurité** | Tailscale (zéro exposition Internet) + Presidio (RGPD) + age/SOPS |
 | **Interface** | Telegram (canal unique, 100% Day 1) |
@@ -64,12 +64,11 @@ Friday 2.0 est un système d'IA personnel qui agit comme un **second cerveau** p
 | **Langage principal** | Python | 3.12+ |
 | **Framework agents IA** | LangGraph | ==0.2.45 |
 | **Orchestration workflows** | n8n | 1.69.2 |
-| **LLM cloud** | Mistral API | mistral-nemo-latest / mistral-medium-latest / mistral-large-latest / mistral-embed |
-| **LLM local (VPS)** | Ollama | Mistral Nemo 12B / Ministral 3B |
+| **LLM** | Claude Sonnet 4.5 (Anthropic API) | claude-sonnet-4-5-20250929 (D17 : modèle unique, zéro routing) |
 | **Base de données** | PostgreSQL | 16.6 |
 | **Cache + Pub/Sub** | Redis | 7.4 |
-| **Vectoriel** | Qdrant | 1.12.5 |
-| **Mémoire graphe** | PostgreSQL + Qdrant (via memorystore.py) | Abstraction (migration Graphiti/Neo4j envisageable) |
+| **Vectoriel** | pgvector (extension PostgreSQL) | D19 : intégré dans PG16, réévaluation Qdrant si >300k vecteurs |
+| **Mémoire graphe** | PostgreSQL + pgvector (via memorystore.py) | Abstraction (migration Graphiti/Neo4j envisageable) |
 | **API Gateway** | FastAPI | 0.115+ |
 | **Bot conversationnel** | python-telegram-bot | 21.7+ |
 | **Reverse proxy** | Caddy | 2.8 |
@@ -109,7 +108,7 @@ friday-2.0/
 │
 ├── docker-compose.yml           # Services principaux
 ├── docker-compose.dev.yml       # Override dev
-├── docker-compose.services.yml  # Services lourds (tous résidents VPS-4)
+├── docker-compose.services.yml  # Services lourds (tous résidents VPS-3)
 ├── .env.example
 ├── Makefile
 │
@@ -160,7 +159,7 @@ friday-2.0/
 | **Secrets (.env, API keys)** | age/SOPS (chiffrement dans git) |
 | **Anonymisation avant LLM cloud** | Presidio obligatoire (pipeline RGPD) |
 | **Hébergement** | OVH France (RGPD compliant) |
-| **LLM pour données sensibles** | Ollama local VPS (Mistral Nemo 12B / Ministral 3B) |
+| **LLM** | Claude Sonnet 4.5 (Anthropic API) — Presidio anonymise AVANT tout appel (D17) |
 | **SSH** | Uniquement via Tailscale (pas de port 22 ouvert) |
 
 ---
@@ -183,9 +182,9 @@ friday-2.0/
 
 ### Contraintes matérielles
 
-- VPS-4 OVH : 48 Go RAM / 12 vCores / 300 Go NVMe (~25€ TTC/mois)
-- Tous services lourds résidents en simultané (Ollama + Whisper + Kokoro + Surya = ~16 Go)
-- Marge disponible : ~25 Go
+- VPS-3 OVH : 24 Go RAM / 8 vCores / 160 Go NVMe (~15€ TTC/mois)
+- Tous services lourds résidents en simultané (Whisper + Kokoro + Surya = ~8 Go)
+- Marge disponible : ~4-6 Go
 - Orchestrator simplifié : moniteur RAM, plus d'exclusion mutuelle
 
 ---
@@ -246,13 +245,13 @@ pip freeze > agents/requirements-lock.txt
 
 | Poste | Coût mensuel |
 |-------|-------------|
-| VPS OVH VPS-4 48 Go (France, sans engagement) | ~25€ TTC |
-| Mistral API (Nemo + Medium + Large + Embed) | ~6-9€ |
-| Deepgram STT fallback | ~3-5€ |
+| VPS OVH VPS-3 24 Go (France, sans engagement) | ~15€ TTC |
+| Claude Sonnet 4.5 API (Anthropic) | ~45€ |
 | Divers (domaine, ntfy) | ~2-3€ |
-| **Total estimé** | **~36-42€/mois** |
+| Benchmark veille mensuel | ~3€ |
+| **Total estimé** | **~65-66€/mois** |
 
-**Note budget:** Estimation optimiste. Prévoir ~45-48€ premiers mois (tests intensifs, migration 110k emails, dépassements API possibles). Marge ~2-5€ sur budget max 50€/mois. Plan B : VPS-3 (24 Go, ~15€ TTC) si besoin de réduire.
+**Note budget:** Budget max ~75€/mois. Premiers mois potentiellement plus chers (migration 110k emails ~$45 one-shot).
 
 ---
 

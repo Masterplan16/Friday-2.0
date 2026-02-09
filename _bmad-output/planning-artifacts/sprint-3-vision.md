@@ -1,3 +1,5 @@
+> **Mis a jour 2026-02-09** : D17 (Claude remplace Mistral), D19 (pgvector remplace Qdrant Day 1)
+
 # Sprint 3 — Vision 3+ mois (Epics 14-20)
 
 **36 FRs | ~25 stories**
@@ -220,7 +222,7 @@ So que Friday puisse creer du contenu pedagogique aligne.
 **Acceptance Criteria:**
 
 **Given** les documents du programme d'etudes sont fournis
-**When** l'indexation RAG dans Qdrant s'execute (S12)
+**When** l'indexation RAG dans pgvector (PostgreSQL) s'execute (S12) [D19]
 **Then** les documents sont disponibles pour recherche semantique (FR116)
 **And** les items de competence sont identifies et stockes
 
@@ -297,7 +299,7 @@ So que je n'aie pas a parcourir des dossiers.
 
 **Acceptance Criteria:**
 
-**Given** les photos sont indexees avec embeddings dans Qdrant
+**Given** les photos sont indexees avec embeddings dans pgvector (PostgreSQL) [D19]
 **When** Antonio envoie une requete de recherche
 **Then** les photos correspondantes sont retournees via Telegram (FR93, FR140)
 
@@ -429,7 +431,7 @@ So que Friday utilise le meilleur outil disponible.
 **Given** nous sommes en aout 2026 (ADD13)
 **When** l'evaluation technique est menee
 **Then** les criteres sont verifies : Graphiti > 500 stars GitHub, doc API complete, tests 100k+ entites
-**And** une recommandation est formulee : migrer vers Graphiti, migrer vers Neo4j CE, ou rester sur PostgreSQL + Qdrant (KISS)
+**And** une recommandation est formulee : migrer vers Graphiti, migrer vers Neo4j CE, ou rester sur PostgreSQL + pgvector (KISS) [D19]
 **And** aucune migration n'est effectuee sans validation explicite d'Antonio
 
 ---

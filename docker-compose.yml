@@ -1,8 +1,6 @@
 # Friday 2.0 - Docker Compose Principal
 # Services core pour Story 1 : Infrastructure de base
-# Version: 1.0.0 (2026-02-05)
-
-version: '3.9'
+# Version: 1.1.0 (2026-02-08)
 
 networks:
   friday-network:
@@ -14,7 +12,6 @@ networks:
 volumes:
   postgres-data:
   redis-data:
-  qdrant-data:
   n8n-data:
   caddy-data:
   caddy-config:
@@ -24,7 +21,7 @@ services:
   # PostgreSQL 16 - Base de données principale
   # ============================================
   postgres:
-    image: postgres:16.6-alpine
+    image: pgvector/pgvector:pg16
     container_name: friday-postgres
     restart: unless-stopped
     environment:
@@ -72,7 +69,7 @@ services:
   # Redis 7 - Cache + Pub/Sub + Streams
   # ============================================
   redis:
-    image: redis:7.4-alpine
+    image: redis:7.8-alpine
     container_name: friday-redis
     restart: unless-stopped
     command: >
@@ -84,60 +81,46 @@ services:
       --save 900 1
       --save 300 10
       --save 60 10000
+      --aclfile /etc/redis/users.acl
     volumes:
       - redis-data:/data
+      - ./config/redis.acl:/etc/redis/users.acl:ro
     ports:
       - "127.0.0.1:6379:6379"
     networks:
       friday-network:
         ipv4_address: 172.20.0.11
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "-u", "redis://admin:${REDIS_ADMIN_PASSWORD:-REDACTED_ADMIN_PASSWORD}@localhost:6379", "ping"]
       interval: 10s
       timeout: 3s
       retries: 5
 
   # ============================================
-  # Qdrant 1.12.5 - Vector database
+  # [RETIRÉ D19] Qdrant → pgvector dans PostgreSQL
+  # Raison: 100k vecteurs, 1 utilisateur = pgvector suffit
+  # Réévaluation Qdrant si >300k vecteurs ou latence >100ms
   # ============================================
-  qdrant:
-    image: qdrant/qdrant:v1.12.5
-    container_name: friday-qdrant
-    restart: unless-stopped
-    environment:
-      QDRANT__SERVICE__HTTP_PORT: 6333
-      QDRANT__SERVICE__GRPC_PORT: 6334
-    volumes:
-      - qdrant-data:/qdrant/storage
-    ports:
-      - "127.0.0.1:6333:6333"
-      - "127.0.0.1:6334:6334"
-    networks:
-      friday-network:
-        ipv4_address: 172.20.0.12
-    healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:6333/healthz"]
-      interval: 15s
-      timeout: 5s
-      retries: 5
 
   # ============================================
-  # n8n 1.69.2+ - Workflow automation
+  # n8n 2.2.4 - Workflow automation
   # ============================================
   n8n:
-    image: n8nio/n8n:1.69.2
+    image: n8nio/n8n:2.2.4
     container_name: friday-n8n
     restart: unless-stopped
     environment:
-      - N8N_BASIC_AUTH_ACTIVE=true
-      - N8N_BASIC_AUTH_USER=${N8N_USER:-admin}
-      - N8N_BASIC_AUTH_PASSWORD=${N8N_PASSWORD}
+      # Auth - n8n v2 user management (basic auth supprimé en v2)
+      # Owner account créé via UI au premier accès
+      # Docs: https://docs.n8n.io/hosting/authentication/
+      # General
       - N8N_HOST=${N8N_HOST:-n8n.friday.local}
       - N8N_PORT=5678
       - N8N_PROTOCOL=http
       - WEBHOOK_URL=http://n8n.friday.local:5678/
       - GENERIC_TIMEZONE=Europe/Paris
       - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY}
+      # Database (PostgreSQL only - MySQL/MariaDB removed in v2)
       - DB_TYPE=postgresdb
       - DB_POSTGRESDB_HOST=postgres
       - DB_POSTGRESDB_PORT=5432
@@ -145,9 +128,13 @@ services:
       - DB_POSTGRESDB_USER=${POSTGRES_USER:-friday}
       - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD}
       - DB_POSTGRESDB_SCHEMA=n8n
+      # Executions
       - EXECUTIONS_DATA_SAVE_ON_ERROR=all
       - EXECUTIONS_DATA_SAVE_ON_SUCCESS=all
       - EXECUTIONS_DATA_SAVE_MANUAL_EXECUTIONS=true
+      # n8n v2 security defaults
+      - N8N_RESTRICT_FILE_ACCESS_TO=/home/node/.n8n
+      - N8N_BLOCK_ENV_ACCESS_IN_NODE=true
     volumes:
       - n8n-data:/home/node/.n8n
       - ./n8n-workflows:/workflows:ro
@@ -169,10 +156,10 @@ services:
       start_period: 60s
 
   # ============================================
-  # Caddy 2.8 - Reverse proxy HTTPS auto
+  # Caddy 2.10.2 - Reverse proxy HTTPS auto
   # ============================================
   caddy:
-    image: caddy:2.8-alpine
+    image: caddy:2.10.2-alpine
     container_name: friday-caddy
     restart: unless-stopped
     ports:
@@ -187,7 +174,7 @@ services:
       friday-network:
         ipv4_address: 172.20.0.14
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:80/"]
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:80/health"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -203,9 +190,8 @@ services:
     restart: unless-stopped
     environment:
       - POSTGRES_DSN=postgresql://${POSTGRES_USER:-friday}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-friday}
-      - REDIS_URL=redis://redis:6379/0
-      - QDRANT_URL=http://qdrant:6333
-      - MISTRAL_API_KEY=${MISTRAL_API_KEY}
+      - REDIS_URL=redis://friday_gateway:${REDIS_GATEWAY_PASSWORD:-REDACTED_GW_PASSWORD}@redis:6379/0
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
       - ENVIRONMENT=${ENVIRONMENT:-production}
     volumes:
@@ -220,8 +206,6 @@ services:
       postgres:
         condition: service_healthy
       redis:
-        condition: service_healthy
-      qdrant:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:8000/api/v1/health"]
@@ -243,7 +227,7 @@ services:
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
       - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
       - POSTGRES_DSN=postgresql://${POSTGRES_USER:-friday}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-friday}
-      - REDIS_URL=redis://redis:6379/0
+      - REDIS_URL=redis://friday_agents:${REDIS_AGENTS_PASSWORD:-REDACTED_AGENTS_PASSWORD}@redis:6379/0
       - GATEWAY_URL=http://gateway:8000
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
     volumes:
@@ -259,6 +243,12 @@ services:
         condition: service_healthy
       gateway:
         condition: service_healthy
+    # TODO Story 1.9: Ajouter healthcheck quand le bot est implémenté
+    # healthcheck:
+    #   test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/health"]
+    #   interval: 30s
+    #   timeout: 5s
+    #   retries: 3
 
   # ============================================
   # Alerting Service - Écoute Redis → Telegram
@@ -272,7 +262,7 @@ services:
     environment:
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
       - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
-      - REDIS_URL=redis://redis:6379/0
+      - REDIS_URL=redis://friday_alerting:${REDIS_ALERTING_PASSWORD:-REDACTED_ALERTING_PASSWORD}@redis:6379/0
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
     volumes:
       - ./services/alerting:/app:ro
@@ -282,6 +272,12 @@ services:
     depends_on:
       redis:
         condition: service_healthy
+    # TODO Story 1.13: Ajouter healthcheck quand alerting est implémenté
+    # healthcheck:
+    #   test: ["CMD", "wget", "--spider", "-q", "http://localhost:8090/health"]
+    #   interval: 30s
+    #   timeout: 5s
+    #   retries: 3
 
   # ============================================
   # Metrics Service - Calcul nightly trust metrics
@@ -294,7 +290,7 @@ services:
     restart: unless-stopped
     environment:
       - POSTGRES_DSN=postgresql://${POSTGRES_USER:-friday}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-friday}
-      - REDIS_URL=redis://redis:6379/0
+      - REDIS_URL=redis://friday_metrics:${REDIS_METRICS_PASSWORD:-REDACTED_METRICS_PASSWORD}@redis:6379/0
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
       - CRON_SCHEDULE=${METRICS_CRON_SCHEDULE:-0 2 * * *}
     volumes:
@@ -307,3 +303,9 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    # TODO Story 1.8: Ajouter healthcheck quand metrics est implémenté
+    # healthcheck:
+    #   test: ["CMD", "wget", "--spider", "-q", "http://localhost:8091/health"]
+    #   interval: 30s
+    #   timeout: 5s
+    #   retries: 3

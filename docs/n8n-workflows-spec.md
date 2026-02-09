@@ -1,7 +1,7 @@
 # n8n Workflows - Spécifications Day 1
 
-**Date** : 2026-02-05
-**Version** : 1.1.0
+**Date** : 2026-02-09
+**Version** : 1.2.0 (D19 : pgvector remplace Qdrant Day 1)
 **Auteur** : Architecture Friday 2.0
 
 ---
@@ -136,19 +136,23 @@ Le briefing inclut automatiquement :
 
 **Fichier** : `n8n-workflows/backup-daily.json`
 **Priorité** : **CRITIQUE** (résilience système)
-**Description** : Backup quotidien PostgreSQL + Qdrant + Zep → Sync vers PC via Tailscale → Retention 7 jours
+**Description** : Backup quotidien PostgreSQL (+ pgvector D19) → Sync vers PC via Tailscale → Retention 7 jours
 
 ### Diagramme
 
 ```
-[Cron 3h00] → [Backup PostgreSQL] → [Backup Qdrant] → [Backup Zep]
-                    ↓                    ↓                    ↓
-              [Compress .gz]      [Snapshot API]      [Export JSON]
-                    ↓                    ↓                    ↓
-              [Sync Tailscale] ← [Sync Tailscale] ← [Sync Tailscale]
+[Cron 3h00] → [Backup PostgreSQL (+ pgvector D19)]
+                    ↓
+              [Compress .gz]
+                    ↓
+              [Sync Tailscale]
                     ↓
               [Cleanup old backups (>7 jours)]
 ```
+
+> **[D19] pgvector remplace Qdrant Day 1** : Les embeddings sont stockes dans PostgreSQL via pgvector.
+> Le pg_dump sauvegarde tout (schemas core, ingestion, knowledge + embeddings pgvector) en une seule operation.
+> Pas de snapshot Qdrant separe necessaire.
 
 ### Nodes détaillés
 
@@ -164,27 +168,30 @@ Le briefing inclut automatiquement :
 >     - friday_backups:/backups
 > ```
 | 3 | **Compress PostgreSQL Backup** | Execute Command | Command : `gzip -9 /backups/postgres_*.dump` (compress le dernier dump) |
-| 4 | **Backup Qdrant Snapshots** | HTTP Request | POST `http://qdrant:6333/collections/{collection}/snapshots` pour chaque collection (embeddings, documents)<br>Response : `{snapshot_name}`<br>Then GET snapshot → Save to `/backups/qdrant_{collection}_$(date).snapshot` |
-| 5 | **Backup Knowledge Schema** | Execute Command | Command : `pg_dump -h postgres -U friday -d friday -n knowledge -F c -f /backups/knowledge_$(date +%Y%m%d_%H%M%S).dump`<br>(Backup spécifique du schema knowledge.* pour graphe de connaissances PostgreSQL+Qdrant, remplace Zep) |
-| 6 | **Compress Knowledge Backup** | Execute Command | Command : `gzip -9 /backups/knowledge_*.dump` (compress le dernier dump knowledge) |
+| ~~4~~ | ~~**Backup Qdrant Snapshots**~~ | ~~HTTP Request~~ | **[D19] Supprime.** pgvector integre dans PostgreSQL, sauvegarde via pg_dump (pas de snapshot Qdrant separe). Les embeddings sont inclus dans le dump PostgreSQL du node 2. |
+| ~~5~~ | ~~**Backup Knowledge Schema**~~ | ~~Execute Command~~ | **[D19] Supprime.** Le schema knowledge.* (incluant les tables pgvector) est sauvegarde par le pg_dump global du node 2. Un backup separe du schema knowledge n'est plus necessaire. |
+| ~~6~~ | ~~**Compress Knowledge Backup**~~ | ~~Execute Command~~ | **[D19] Supprime.** Plus de dump knowledge separe a compresser. |
 | 7 | **Sync to PC via Tailscale** | Execute Command | Command : `rsync -avz --progress /backups/ antonio@${TAILSCALE_PC_HOSTNAME}:/mnt/backups/friday-vps/`<br>(Tailscale permet rsync direct VPS vers PC via hostname Tailscale)<br>Timeout : 30 min |
-| 8 | **Cleanup Old Backups (VPS)** | Execute Command | Command : `find /backups -name "*.dump.gz" -mtime +7 -delete && find /backups -name "*.snapshot" -mtime +7 -delete`<br>(Supprime fichiers >7 jours) |
-| 9 | **Verify Backup Size** | Code | Check file sizes :<br>`ls -lh /backups/postgres_latest.dump.gz`<br>`ls -lh /backups/knowledge_latest.dump.gz`<br>If < 10 MB → Warning (backup potentiellement incomplet) |
+| 8 | **Cleanup Old Backups (VPS)** | Execute Command | Command : `find /backups -name "*.dump.gz" -mtime +7 -delete`<br>(Supprime fichiers >7 jours) [D19] Plus de fichiers .snapshot Qdrant a nettoyer. |
+| 9 | **Verify Backup Size** | Code | Check file sizes :<br>`ls -lh /backups/postgres_latest.dump.gz`<br>If < 10 MB → Warning (backup potentiellement incomplet)<br>[D19] Un seul dump PostgreSQL a verifier (inclut pgvector). |
 | 10 | **Log Success** | Postgres | Insert `core.system_logs` : `{event: 'backup.completed', status: 'success', backup_size_mb, timestamp}` |
-| 11 | **Send Telegram Confirmation** | HTTP Request | POST Telegram : "✅ Backup quotidien terminé — PostgreSQL: X MB (core+ingestion), Knowledge: Y MB, Qdrant: Z MB" |
+| 11 | **Send Telegram Confirmation** | HTTP Request | POST Telegram : "Backup quotidien termine — PostgreSQL (+ pgvector D19): X MB (core+ingestion+knowledge)" |
 | 11 | **Error Handler** | On Error | Log error → Telegram alert "🚨 Backup échoué — Vérifier logs VPS" |
 
 ### Variables d'environnement requises
 
 ```env
 POSTGRES_CONN=postgresql://friday:password@postgres:5432/friday
-QDRANT_URL=http://qdrant:6333
 TAILSCALE_PC_HOSTNAME=antonio-pc
 TELEGRAM_BOT_TOKEN=<bot_token>
 TELEGRAM_CHAT_ID=<antonio_chat_id>
 ```
 
-> **Note (2026-02-05)** : La variable `ZEP_URL` a été supprimée suite au code review adversarial. Zep a cessé ses opérations en 2024. Le graphe de connaissances utilise désormais PostgreSQL (schema knowledge.*) + Qdrant (embeddings) via `adapters/memorystore.py`.
+> **[D19]** : La variable `QDRANT_URL` a ete retiree. pgvector remplace Qdrant Day 1 — les embeddings sont dans PostgreSQL, sauvegardes via pg_dump.
+
+> **Note (2026-02-05)** : La variable `ZEP_URL` a ete supprimee suite au code review adversarial. Zep a cesse ses operations en 2024.
+>
+> **Note (2026-02-09, D19)** : `QDRANT_URL` retiree. pgvector remplace Qdrant Day 1. Le graphe de connaissances utilise desormais PostgreSQL (+ pgvector D19) pour le schema knowledge.* et les embeddings, via `adapters/memorystore.py`. Reevaluation Qdrant possible post-Day 1 si besoin de recherche vectorielle avancee (filtrage, scoring hybride).
 
 > **Recommandation** : Utiliser le hostname Tailscale (`antonio-pc`) au lieu de l'IP pour eviter les problemes de rotation d'adresse. Ex: `TAILSCALE_PC_HOSTNAME=antonio-pc`
 
@@ -204,28 +211,18 @@ chmod 755 /mnt/backups/friday-vps
 cat vps_id_rsa.pub >> ~/.ssh/authorized_keys
 ```
 
-### Stratégie de restauration
+### Strategie de restauration
 
 En cas de disaster recovery :
 ```bash
-# 1. Restaurer PostgreSQL (core + ingestion)
-gunzip postgres_20260205_020000.dump.gz
-pg_restore -h localhost -U friday -d friday -c postgres_20260205_020000.dump
-
-# 2. Restaurer schema knowledge (graphe de connaissances)
-gunzip knowledge_20260205_020000.dump.gz
-pg_restore -h localhost -U friday -d friday -n knowledge -c knowledge_20260205_020000.dump
-
-# 3. Restaurer Qdrant (embeddings)
-# Pour chaque collection
-curl -X POST http://qdrant:6333/collections/embeddings/snapshots/upload \
-  -F "snapshot=@qdrant_embeddings_20260205.snapshot"
-
-curl -X POST http://qdrant:6333/collections/documents/snapshots/upload \
-  -F "snapshot=@qdrant_documents_20260205.snapshot"
+# 1. Restaurer PostgreSQL complet (core + ingestion + knowledge + pgvector embeddings)
+gunzip postgres_20260205_030000.dump.gz
+pg_restore -h localhost -U friday -d friday -c postgres_20260205_030000.dump
 ```
 
-> **Note (2026-02-05)** : Les étapes de restauration Zep ont été supprimées. Le graphe de connaissances est désormais stocké dans PostgreSQL (knowledge.*) + Qdrant.
+> **[D19] pgvector restaure automatiquement avec pg_restore.** Un seul dump contient tout : schemas core, ingestion, knowledge, et les embeddings pgvector. Pas de restauration Qdrant separee necessaire.
+>
+> **Note historique (2026-02-05)** : Les etapes de restauration Zep ont ete supprimees (Zep ferme 2024). Les etapes de restauration Qdrant ont ete supprimees avec D19 (pgvector remplace Qdrant Day 1). Reevaluation Qdrant possible post-Day 1.
 
 ---
 
@@ -313,5 +310,5 @@ Les erreurs workflow déclenchent automatiquement :
 
 ---
 
-**Version** : 1.1.0
-**Dernière mise à jour** : 2026-02-05
+**Version** : 1.2.0
+**Derniere mise a jour** : 2026-02-09 (D19 : pgvector remplace Qdrant Day 1)

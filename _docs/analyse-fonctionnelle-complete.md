@@ -41,9 +41,9 @@
 │                  │   │                  │   │                │
 │ • Documents      │   │ • PostgreSQL     │   │ • Photos       │
 │ • Archives       │   │ • Redis          │   │ • Synology     │
-│ • Photos synchro │   │ • Qdrant         │   │   Drive        │
+│ • Photos synchro │   │ • pgvector (D19) │   │   Drive        │
 │ • Téléchargements│   │ • n8n            │   │ • PAS de       │
-│ • CSV bancaires  │   │ • Mistral Ollama │   │   Tailscale    │
+│ • CSV bancaires  │   │ • Claude API     │   │   Tailscale    │
 │ • Scans          │   │ • FastAPI        │   │ • PAS de       │
 │                  │   │ • Telegram Bot   │   │   packages     │
 │ Syncthing client │   │ • Presidio       │   │   tiers        │
@@ -52,10 +52,10 @@
 │ /downloads/      │   │ • Kokoro TTS     │          │
 │                  │   │ • Surya OCR      │          │
 └──────────────────┘   │                  │          │
-         ▲             │ VPS-4 48 Go RAM  │          │
-         │             │ 12 vCores        │          │
-         │             │ 300 Go NVMe      │          │
-         │             │ ~25 € TTC/mois   │          │
+         ▲             │ VPS-3 24 Go RAM  │          │
+         │             │ 8 vCores         │          │
+         │             │ 160 Go NVMe      │          │
+         │             │ ~15 € TTC/mois   │          │
          │             └──────────────────┘          │
          │                                            │
          └────────────────────────────────────────────┘
@@ -78,7 +78,7 @@
 |-----------------|---------------|----------------|------------------------|
 | **Fichiers originaux** | ✅ OUI (source de vérité) | ❌ NON (zone transit éphémère) | Photos uniquement |
 | **Index / métadonnées** | ❌ NON | ✅ OUI (PostgreSQL) | ❌ NON |
-| **Embeddings vectoriels** | ❌ NON | ✅ OUI (Qdrant) | ❌ NON |
+| **Embeddings vectoriels** | ❌ NON | ✅ OUI (pgvector dans PostgreSQL) (D19) | ❌ NON |
 | **Graphe de connaissances** | ❌ NON | ✅ OUI (PostgreSQL knowledge.*) | ❌ NON |
 | **Emails bruts** | ❌ NON (dans EmailEngine) | ✅ OUI (PostgreSQL ingestion.emails) | ❌ NON |
 | **Photos** | ✅ OUI (copie via Synology Drive) | ❌ NON (transit éphémère) | ✅ OUI (stockage principal) |
@@ -112,7 +112,7 @@ Mail arrive (IMAP) → EmailEngine (VPS)
 - Email brut : PostgreSQL VPS (ingestion.emails_raw)
 - Métadonnées : PostgreSQL VPS (ingestion.emails + knowledge.*)
 - PJ traitée : PC (~/Documents/Archives/...)
-- Index PJ : Qdrant VPS
+- Index PJ : pgvector VPS (D19)
 
 #### 2.2.2 Scanner physique
 
@@ -143,7 +143,7 @@ Scan → PC (~/Documents/Uploads/)
 - Fichier original : PC (~/Documents/Archives/...)
 - Métadonnées : PostgreSQL VPS (ingestion.documents)
 - Contenu OCR : PostgreSQL VPS (knowledge.documents_content)
-- Index vectoriel : Qdrant VPS
+- Index vectoriel : pgvector VPS (D19)
 
 #### 2.2.3 Photos BeeStation
 
@@ -161,7 +161,7 @@ Téléphone → BeeStation (stockage Synology)
       - Génération embeddings visuels (via LLM vision)
       - Classification (événement, lieu, personnes)
                 ↓
-    Indexation PostgreSQL + Qdrant
+    Indexation PostgreSQL + pgvector (D19)
                 ↓
     Suppression du transit VPS
 ```
@@ -170,7 +170,7 @@ Téléphone → BeeStation (stockage Synology)
 - Photos originales : BeeStation (source de vérité)
 - Copie locale : PC (~/Photos/BeeStation/)
 - Métadonnées : PostgreSQL VPS (ingestion.photos)
-- Embeddings visuels : Qdrant VPS
+- Embeddings visuels : pgvector VPS (D19)
 
 **IMPORTANT** : Le VPS ne garde JAMAIS les photos en permanence (transit éphémère uniquement).
 
@@ -288,7 +288,7 @@ Téléchargement CSV banque → PC (~/Documents/Finance/Import/)
 - Nettoyage automatique : Cron quotidien (3h00) supprime tout fichier >1h dans /data/transit/
 
 **Justification** :
-- VPS = 300 Go NVMe (limité)
+- VPS = 160 Go NVMe (limité)
 - Éviter saturation disque
 - Sécurité (données sensibles ne restent pas)
 
@@ -343,7 +343,7 @@ async def classify_email(email: Email) -> ActionResult:
     )
     # 2. Injecte règles dans le prompt (hiérarchie: règle > LLM)
     prompt = f"Règles prioritaires: {format_rules(rules)}..."
-    response = await mistral.chat(prompt=prompt)
+    response = await llm_adapter.complete(prompt=prompt)
     # 3. Retourne ActionResult standardisé
     return ActionResult(
         input_summary=f"Email de {email.sender}: {email.subject}",
@@ -551,7 +551,7 @@ Contexte récupéré :
   - Dernière activité : 10h15 (consultation)
   - Prochain événement : 15h00 (patient suivant)
          ↓
-LLM décide (Mistral Small) :
+LLM décide (Claude Sonnet 4.5) :
   - check_urgent_emails : HIGH → EXÉCUTER (toujours)
   - check_financial_alerts : MEDIUM → EXÉCUTER (échéance URSSAF 28/02 proche)
   - check_thesis_reminders : LOW → SKIP (pas prioritaire maintenant)
@@ -636,7 +636,7 @@ async def create_task_from_alert(alert: FinancialAlert) -> ActionResult:
 2. **Desktop Search Sémantique** :
    - Recherche par sens dans tous fichiers locaux PC
    - PDF, Docx, articles, thèses, cours
-   - Index vectoriel (Qdrant)
+   - Index vectoriel (pgvector dans PostgreSQL) (D19)
 
 #### 4.1.2 Exemple d'usage concret avec Telegram
 
@@ -874,14 +874,14 @@ PC (~/Documents/)
   ↓
 VPS - Module Desktop Search
   ↓ Extraction contenu (OCR si nécessaire)
-  ↓ Génération embeddings (Mistral Embed)
-  ↓ Insert Qdrant + PostgreSQL metadata
+  ↓ Génération embeddings (via adaptateur)
+  ↓ Insert pgvector + PostgreSQL metadata (D19)
   ↓
 Index à jour en permanence
 
 Requête Antonio (Telegram) → Embedding query
                                    ↓
-                         Qdrant similarity search
+                         pgvector similarity search (D19)
                                    ↓
                          Résultats → Telegram
 ```
@@ -908,7 +908,7 @@ Requête Antonio (Telegram) → Embedding query
          ┌─────────────┴─────────────┐
          │                           │
     Classification              Extraction PJ
-    (Mistral Nemo)              (save transit VPS)
+    (Claude Sonnet 4.5)         (save transit VPS)
          │                           │
          │                           ↓
          │                     Archiviste traite PJ
@@ -933,15 +933,15 @@ Fichiers PC (~/Documents/) → Watchdog détecte changements
                                   ↓
                    Extraction contenu (OCR si PDF image)
                                   ↓
-                   Génération embeddings (Mistral Embed)
+                   Génération embeddings (via adaptateur)
                                   ↓
-                   Insert Qdrant (collection: desktop_files)
+                   Insert pgvector (table: knowledge.embeddings) (D19)
                                   ↓
                    Insert PostgreSQL metadata
 
 Requête Antonio (Telegram vocal) → Embedding query
                                          ↓
-                               Qdrant similarity search
+                               pgvector similarity search (D19)
                                          ↓
                                Top 5 résultats → Telegram
 ```
@@ -953,9 +953,9 @@ Requête Antonio (Telegram vocal) → Embedding query
 | Email brut | ❌ | ✅ PostgreSQL (ingestion.emails_raw) | Source de vérité emails = VPS |
 | Metadata email | ❌ | ✅ PostgreSQL (ingestion.emails) | Index et classification |
 | PJ email | ✅ ~/Documents/Archives/ | ❌ Transit éphémère | Stockage permanent = PC |
-| Embeddings PJ | ❌ | ✅ Qdrant | Recherche sémantique VPS |
+| Embeddings PJ | ❌ | ✅ pgvector (knowledge.embeddings) (D19) | Recherche sémantique VPS |
 | Documents desktop | ✅ ~/Documents/ | ❌ PAS de copie | Source de vérité = PC |
-| Index desktop | ❌ | ✅ Qdrant + PostgreSQL metadata | Recherche sémantique VPS |
+| Index desktop | ❌ | ✅ pgvector + PostgreSQL metadata (D19) | Recherche sémantique VPS |
 
 #### 4.1.6 Mesures de sécurité spécifiques
 
@@ -1014,7 +1014,7 @@ Requête Antonio (Telegram vocal) → Embedding query
    - Alerte avant expiration (60j, 30j, 7j)
 
 6. **Recherche sémantique** :
-   - Index vectoriel (Qdrant)
+   - Index vectoriel (pgvector dans PostgreSQL) (D19)
    - Recherche par sens (via Module 1 Desktop Search)
 
 #### 4.2.2 Exemple d'usage concret avec Telegram
@@ -1263,7 +1263,7 @@ Renommage :
 Classement :
   ~/Documents/Veille/Cardio/2025/2025_Smith_SGLT2_inhibitors_HF_NEJM.pdf
          ↓
-Indexation vectorielle (Qdrant)
+Indexation vectorielle (pgvector) (D19)
          ↓
 Syncthing sync → PC
 ```
@@ -1341,7 +1341,7 @@ Sources multiples :
                     ↓
       Agent Archiviste (agents/src/agents/archiviste/agent.py)
                     ↓
-      Analyse contenu (Mistral Nemo cloud ou Ollama VPS si sensible)
+      Analyse contenu (Claude Sonnet 4.5, anonymisé via Presidio)
                     ↓
       Extraction :
         - Type (facture, contrat, article, brochure, etc.)
@@ -1373,8 +1373,8 @@ Sources multiples :
       └─────────────┬─────────────┘
                     ↓
       Indexation vectorielle :
-        - Génération embeddings (Mistral Embed)
-        - Insert Qdrant (collection: archived_documents)
+        - Génération embeddings (via adaptateur)
+        - Insert pgvector (table: knowledge.embeddings) (D19)
         - Insert PostgreSQL metadata (ingestion.documents)
                     ↓
       Syncthing sync → PC (chemin final)
@@ -1390,7 +1390,7 @@ Sources multiples :
 |--------|----|-----|---------------|
 | **Documents originaux** | ✅ ~/Documents/[catégorie]/ | ❌ Transit éphémère | Source de vérité = PC |
 | **Metadata documents** | ❌ | ✅ PostgreSQL (ingestion.documents) | Index et classification |
-| **Embeddings** | ❌ | ✅ Qdrant (collection: archived_documents) | Recherche sémantique |
+| **Embeddings** | ❌ | ✅ pgvector (table: knowledge.embeddings) (D19) | Recherche sémantique |
 | **Warranties tracking** | ❌ | ✅ PostgreSQL (knowledge.warranties) | Alertes expiration |
 | **Liens symboliques garanties** | ✅ ~/Documents/Achats/Garanties_Actives/ | ❌ | Vue synthétique locale |
 

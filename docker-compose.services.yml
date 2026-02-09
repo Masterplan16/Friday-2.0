@@ -1,43 +1,44 @@
-# Friday 2.0 - Services lourds résidents (VPS-4 48 Go)
-# Ollama, Faster-Whisper, Kokoro TTS, Surya OCR, Presidio, EmailEngine
-# Version: 1.0.0 (2026-02-05)
+# Friday 2.0 - Services lourds résidents (VPS-3 24 Go)
+# Faster-Whisper, Kokoro TTS, Surya OCR, Presidio, EmailEngine
+# Version: 1.1.0 (2026-02-08)
 #
 # Usage: docker compose -f docker-compose.yml -f docker-compose.services.yml up -d
-
-version: '3.9'
+#
+# Note: Ollama retiré (Décision D12 - pas de GPU VPS, Presidio suffit, zéro données ultra-sensibles)
 
 services:
   # ============================================
-  # Ollama - Mistral Nemo 12B local (VPS)
-  # RAM: ~8 Go
+  # Ollama - RETIRÉ (Décision D12)
+  # Raison: Pas de GPU sur VPS, Presidio suffit pour anonymisation,
+  # zéro données ultra-sensibles nécessitant LLM local
   # ============================================
-  ollama:
-    image: ollama/ollama:latest
-    container_name: friday-ollama
-    restart: unless-stopped
-    environment:
-      - OLLAMA_HOST=0.0.0.0
-      - OLLAMA_MODELS=/models
-    volumes:
-      - ./data/ollama:/root/.ollama
-      - ./data/models:/models
-    ports:
-      - "127.0.0.1:11434:11434"
-    networks:
-      friday-network:
-        ipv4_address: 172.20.0.30
-    deploy:
-      resources:
-        limits:
-          memory: 10G
-        reservations:
-          memory: 8G
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:11434/api/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 60s
+  # ollama:
+  #   image: ollama/ollama:latest
+  #   container_name: friday-ollama
+  #   restart: unless-stopped
+  #   environment:
+  #     - OLLAMA_HOST=0.0.0.0
+  #     - OLLAMA_MODELS=/models
+  #   volumes:
+  #     - ./data/ollama:/root/.ollama
+  #     - ./data/models:/models
+  #   ports:
+  #     - "127.0.0.1:11434:11434"
+  #   networks:
+  #     friday-network:
+  #       ipv4_address: 172.20.0.30
+  #   deploy:
+  #     resources:
+  #       limits:
+  #         memory: 10G
+  #       reservations:
+  #         memory: 8G
+  #   healthcheck:
+  #     test: ["CMD", "curl", "-f", "http://localhost:11434/api/health"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
+  #     start_period: 60s
 
   # ============================================
   # Faster-Whisper - STT local
@@ -208,7 +209,7 @@ services:
     environment:
       - EENGINE_HOST=0.0.0.0
       - EENGINE_PORT=3000
-      - EENGINE_REDIS=redis://redis:6379/2
+      - EENGINE_REDIS=redis://friday_emailengine:${REDIS_EMAILENGINE_PASSWORD:-REDACTED_EE_PASSWORD}@redis:6379/2
       - EENGINE_SECRET=${EMAILENGINE_SECRET}
       - EENGINE_ENCRYPTION_KEY=${EMAILENGINE_ENCRYPTION_KEY}
       - EENGINE_LOG_LEVEL=${LOG_LEVEL:-info}

@@ -333,7 +333,7 @@ Retourne JSON : {{"selected": ["check1", "check2"]}}
             response = await llm.chat(
                 prompt=prompt,
                 response_format={"type": "json_object"},
-                model="mistral-small-latest"  # Décision rapide
+                model="claude-sonnet-4-5-20250929"  # D17: modèle unique
             )
 
             selected.extend(response['selected'])

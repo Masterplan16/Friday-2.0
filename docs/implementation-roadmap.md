@@ -1,7 +1,9 @@
 # Friday 2.0 - Roadmap d'implémentation
 
-**Date** : 2026-02-05
-**Version** : 1.3.0 (ajout documents de référence, Story 1.7 Self-Healing, Story 2.5 Heartbeat)
+> **Mis à jour 2026-02-09** : Numérotation alignée BMAD. D17 (Claude remplace Mistral), D19 (pgvector remplace Qdrant Day 1)
+
+**Date** : 2026-02-09
+**Version** : 1.4.0 (numérotation BMAD, retrait Ollama D12, Claude Sonnet 4.5 D17)
 **Status** : Architecture complète ✅ - Prêt pour implémentation
 
 ---
@@ -23,25 +25,25 @@ Ce PRD s'appuie sur la documentation suivante. Toute modification à ces documen
 
 | Document | Story associée | Contenu |
 |----------|---------------|---------|
-| [`docs/n8n-workflows-spec.md`](docs/n8n-workflows-spec.md) | Story 2, 4 | Spécifications 3 workflows Day 1 (Email, Briefing, Backup) |
+| [`docs/n8n-workflows-spec.md`](docs/n8n-workflows-spec.md) | Stories 2.1-2.7, Epic 5 | Spécifications 3 workflows Day 1 (Email, Briefing, Backup) |
 | [`docs/testing-strategy-ai.md`](docs/testing-strategy-ai.md) | Toutes stories | Pyramide tests (80/15/5), métriques qualité, datasets |
 | [`docs/secrets-management.md`](docs/secrets-management.md) | Story 1.4 | Guide age/SOPS : chiffrement, partage clés, rotation |
 | [`docs/redis-streams-setup.md`](docs/redis-streams-setup.md) | Story 1.1 | Configuration Redis Streams : consumer groups, retry, recovery |
 | [`docs/redis-acl-setup.md`](docs/redis-acl-setup.md) | Story 1.1 | Configuration Redis ACL : moindre privilège par service |
 | [`docs/tailscale-setup.md`](docs/tailscale-setup.md) | Story 1.4 | Installation Tailscale, 2FA, device authorization |
-| [`docs/presidio-mapping-decision.md`](docs/presidio-mapping-decision.md) | Story 1.5.1 | Décision mapping Presidio éphémère Redis (TTL 1h, pas PostgreSQL) |
-| [`docs/ai-models-policy.md`](docs/ai-models-policy.md) | Story 2+ | Politique versionnage modèles IA, procédure upgrade, matrix décision |
+| [`docs/presidio-mapping-decision.md`](docs/presidio-mapping-decision.md) | Story 1.5 | Décision mapping Presidio éphémère Redis (TTL 1h, pas PostgreSQL) |
+| [`docs/ai-models-policy.md`](docs/ai-models-policy.md) | Epic 2+ | Politique versionnage modèles IA, procédure upgrade, matrix décision |
 | [`docs/pc-backup-setup.md`](docs/pc-backup-setup.md) | Backup | Guide setup PC Antonio pour rsync/Tailscale |
-| [`docs/telegram-topics-setup.md`](docs/telegram-topics-setup.md) | Story 1.5.3 | Setup supergroup Telegram 5 topics, extraction script |
-| [`docs/telegram-user-guide.md`](docs/telegram-user-guide.md) | Story 1.5.3 | Guide utilisateur commandes Telegram |
-| [`docs/playwright-automation-spec.md`](docs/playwright-automation-spec.md) | Story 10+ | Spécification automatisation web (Carrefour Drive, etc.) |
-| [`agents/docs/heartbeat-engine-spec.md`](agents/docs/heartbeat-engine-spec.md) | Story 2.5 | Spécification Heartbeat Engine (proactivité native) |
+| [`docs/telegram-topics-setup.md`](docs/telegram-topics-setup.md) | Story 1.9 | Setup supergroup Telegram 5 topics, extraction script |
+| [`docs/telegram-user-guide.md`](docs/telegram-user-guide.md) | Story 1.9 | Guide utilisateur commandes Telegram |
+| [`docs/playwright-automation-spec.md`](docs/playwright-automation-spec.md) | Epic 10+ | Spécification automatisation web (Carrefour Drive, etc.) |
+| [`agents/docs/heartbeat-engine-spec.md`](agents/docs/heartbeat-engine-spec.md) | Story 4.1 | Spécification Heartbeat Engine (proactivité native) |
 
 ### Configuration et scripts
 
 | Fichier | Story associée | Contenu |
 |---------|---------------|---------|
-| [`config/trust_levels.yaml`](config/trust_levels.yaml) | Story 1.5.2 | Configuration initiale trust levels 23 modules |
+| [`config/trust_levels.yaml`](config/trust_levels.yaml) | Story 1.6 | Configuration initiale trust levels 23 modules |
 | [`tests/fixtures/README.md`](tests/fixtures/README.md) | Toutes stories | Guide création datasets tests IA |
 | [`docs/DECISION_LOG.md`](docs/DECISION_LOG.md) | Document vivant | Historique chronologique décisions architecturales |
 
@@ -62,27 +64,28 @@ Friday 2.0 sera implémenté en **stories incrémentales** suivant le principe *
 
 ## 🎯 **Stories - Vue chronologique**
 
-| Story | Nom | Durée | Dépendances | Status |
-|-------|-----|-------|-------------|--------|
-| **1** | Infrastructure de base | 3-5j | - | 📋 Conçue |
-| **1.5** | Observability & Trust Layer | 3-4j | Story 1 | 📋 Conçue |
-| **1.7** | Self-Healing Infrastructure | 1-2j | Story 1 | 📋 Conçue |
-| **2** | Moteur Vie (Email) | 5-7j | Story 1.5, 1.7 | ⏳ En attente |
-| **2.5** | Heartbeat Engine (Proactivité) | 1-2j | Story 2 | 📋 Conçue |
-| **3** | Archiviste (OCR + Renommage) | 4-6j | Story 1.5 | ⏳ En attente |
-| **4** | Briefing matinal | 2-3j | Story 2, 3 | ⏳ En attente |
-| **5** | Plaud Note (Transcription) | 3-4j | Story 1.5, 2 | ⏳ En attente |
-| **6** | Suivi Financier | 4-5j | Story 1.5, 3 | ⏳ En attente |
-| **7** | Tuteur Thèse | 5-6j | Story 1.5 | ⏳ En attente |
-| **8** | Veilleur Droit | 3-4j | Story 1.5 | ⏳ En attente |
-| **9** | Agenda (multi-casquettes) | 3-4j | Story 2, 5 | ⏳ En attente |
-| **10+** | Modules restants (Coach, Menus, Playwright, etc.) | Variable | Variable | ⏳ En attente |
+| Epic/Story | Nom | Durée | Dépendances | Status |
+|------------|-----|-------|-------------|--------|
+| **Epic 1 (1.1-1.4)** | Infrastructure de base | 3-5j | - | 📋 Conçue |
+| **Epic 1 (1.5-1.8)** | Observability & Trust Layer | 3-4j | Stories 1.1-1.4 | 📋 Conçue |
+| **Story 1.9** | Telegram Topics (Supergroup 5 topics) | inclus 1.5-1.8 | Stories 1.1-1.4 | 📋 Conçue |
+| **Story 1.13** | Self-Healing Infrastructure | 1-2j | Stories 1.1-1.4 | 📋 Conçue |
+| **Epic 2 (2.1-2.7)** | Moteur Vie (Email) | 5-7j | Stories 1.5-1.8, 1.13 | ⏳ En attente |
+| **Story 4.1** | Heartbeat Engine (Proactivité) | 1-2j | Epic 2 | 📋 Conçue |
+| **Epic 3** | Archiviste (OCR + Renommage) | 4-6j | Stories 1.5-1.8 | ⏳ En attente |
+| **Epic 5** | Briefing matinal | 2-3j | Epic 2, Epic 3 | ⏳ En attente |
+| **Epic 6** | Plaud Note (Transcription) | 3-4j | Stories 1.5-1.8, Epic 2 | ⏳ En attente |
+| **Epic 8** | Suivi Financier | 4-5j | Stories 1.5-1.8, Epic 3 | ⏳ En attente |
+| **Epic 7** | Tuteur Thèse | 5-6j | Stories 1.5-1.8 | ⏳ En attente |
+| **Epic 9** | Veilleur Droit | 3-4j | Stories 1.5-1.8 | ⏳ En attente |
+| **Epic 10** | Agenda (multi-casquettes) | 3-4j | Epic 2, Epic 6 | ⏳ En attente |
+| **Epic 11+** | Modules restants (Coach, Menus, Playwright, etc.) | Variable | Variable | ⏳ En attente |
 
-**Durée totale estimée** : ~38-54 jours de développement (Stories 1-9 + 1.7 + 2.5)
+**Durée totale estimée** : ~38-54 jours de développement (Epics 1-10 + Story 1.13 + Story 4.1)
 
 ---
 
-## 📦 **Story 1 : Infrastructure de base**
+## 📦 **Epic 1 (Stories 1.1-1.4) : Infrastructure de base**
 
 ### **Objectif**
 Socle technique fonctionnel avec tous services Docker opérationnels.
@@ -90,9 +93,9 @@ Socle technique fonctionnel avec tous services Docker opérationnels.
 ### **Scope**
 
 #### **1.1 Docker Compose**
-- [ ] `docker-compose.yml` principal (PostgreSQL 16, Redis 7, Qdrant, n8n, Caddy)
+- [ ] `docker-compose.yml` principal (PostgreSQL 16 + pgvector, Redis 7, n8n, Caddy) — D19 : Qdrant retiré
 - [ ] `docker-compose.dev.yml` (overrides dev)
-- [ ] `docker-compose.services.yml` (services lourds résidents : Ollama, Whisper, Kokoro, Surya)
+- [ ] `docker-compose.services.yml` (services lourds résidents : Whisper, Kokoro, Surya)
 - [ ] `.env.example` avec toutes les variables requises
 - [ ] `Makefile` (shortcuts : `make up`, `make logs`, `make restart`)
 - **Réf.** : [`docs/redis-streams-setup.md`](docs/redis-streams-setup.md) (consumer groups), [`docs/redis-acl-setup.md`](docs/redis-acl-setup.md) (ACL moindre privilège)
@@ -118,7 +121,7 @@ Socle technique fonctionnel avec tous services Docker opérationnels.
   - `schemas/` (Pydantic models)
   - `middleware/` (CORS, logging)
   - `config.py` (settings)
-- [ ] Endpoint `/api/v1/health` (healthcheck étendu : PostgreSQL, Redis, Qdrant, n8n, services lourds)
+- [ ] Endpoint `/api/v1/health` (healthcheck étendu : PostgreSQL + pgvector, Redis, n8n, services lourds)
 - [ ] OpenAPI auto-générée (Swagger UI)
 
 #### **1.4 Tailscale + Sécurité**
@@ -151,20 +154,20 @@ Socle technique fonctionnel avec tous services Docker opérationnels.
 
 ---
 
-## 📦 **Story 1.5 : Observability & Trust Layer**
+## 📦 **Epic 1 (Stories 1.5-1.8) : Observability & Trust Layer**
 
 ### **Objectif**
 Système de confiance et traçabilité opérationnel **AVANT tout module métier**.
 
 ### **Scope**
 
-#### **1.5.1 Pipeline Presidio (RGPD - prérequis Story 2+)**
+#### **Story 1.5 : Pipeline Presidio (RGPD - prérequis Epic 2+)**
 - [ ] Installation Presidio + spaCy-fr (`presidio-analyzer`, `presidio-anonymizer`, `fr_core_news_lg`)
 - [ ] `agents/src/tools/anonymize.py` (fonctions `anonymize_text()` + `deanonymize_text()`)
 - [ ] Tests unitaires anonymisation (dataset `tests/fixtures/pii_samples.json`)
 - **Réf.** : [`docs/presidio-mapping-decision.md`](docs/presidio-mapping-decision.md) (mapping éphémère Redis TTL 1h, JAMAIS PostgreSQL)
 
-#### **1.5.2 Middleware Trust**
+#### **Story 1.6 : Middleware Trust**
 - [ ] Migration SQL `011_trust_system.sql` (tables : action_receipts, correction_rules, trust_metrics)
 - [ ] `agents/src/middleware/trust.py` :
   - Décorateur `@friday_action`
@@ -172,7 +175,7 @@ Système de confiance et traçabilité opérationnel **AVANT tout module métier
   - Gestion trust levels (auto/propose/blocked)
 - [ ] `config/trust_levels.yaml` (configuration initiale 23 modules) ✅ **CRÉÉ**
 
-#### **1.5.3 Bot Telegram (Supergroup 5 Topics)**
+#### **Story 1.9 : Bot Telegram (Supergroup 5 Topics)**
 - [ ] Structure `bot/`
   - `handlers/` (message, voice, document, callback)
   - `commands/` (start, status, journal, receipt, confiance, stats, trust)
@@ -193,12 +196,12 @@ Système de confiance et traçabilité opérationnel **AVANT tout module métier
   - `/trust set <module> <action> <level>` : Ajuster trust level manuellement
 - **Réf.** : [`docs/telegram-topics-setup.md`](docs/telegram-topics-setup.md) (setup technique), [`docs/telegram-user-guide.md`](docs/telegram-user-guide.md) (guide utilisateur), [addendum §11](_docs/architecture-addendum-20260205.md) (spec complète)
 
-#### **1.5.4 Validation inline Telegram**
+#### **Story 1.7 : Validation inline Telegram**
 - [ ] Trust=propose → Message Telegram avec boutons `[✅ Approuver] [❌ Rejeter] [✏️ Corriger]`
 - [ ] Callback handlers (approve, reject, correct)
 - [ ] Update `core.action_receipts.status` selon choix Antonio
 
-#### **1.5.5 Alerting**
+#### **Story 1.8a : Alerting**
 - [ ] `services/alerting/listener.py` (écoute Redis pub/sub)
 - [ ] Events surveillés :
   - `pipeline.error` → Alerte Telegram immédiate
@@ -206,12 +209,12 @@ Système de confiance et traçabilité opérationnel **AVANT tout module métier
   - `trust.level.changed` → Notification rétrogradation auto
   - `ram.threshold.exceeded` → Alerte si RAM >85%
 
-#### **1.5.6 Metrics nightly**
+#### **Story 1.8b : Metrics nightly**
 - [ ] `services/metrics/nightly.py` (calcul accuracy hebdomadaire)
 - [ ] Cron 02:00 : Agrégation `core.trust_metrics`
 - [ ] Auto-rétrogradation : accuracy <90% → trust level descend (auto → propose)
 
-#### **1.5.7 Tests**
+#### **Tests Epic 1 (1.5-1.8)**
 - [ ] Tests unitaires `@friday_action` decorator
 - [ ] Tests intégration validation Telegram
 - [ ] Tests auto-rétrogradation
@@ -238,40 +241,40 @@ Système de confiance et traçabilité opérationnel **AVANT tout module métier
 
 ---
 
-## 📦 **Story 1.7 : Self-Healing Infrastructure**
+## 📦 **Story 1.13 : Self-Healing Infrastructure**
 
 ### **Objectif**
 Automatiser la maintenance "contenant" (OS, Docker, monitoring) pour réduire charge opérationnelle de 4h/mois → 1h/mois.
 
 ### **Scope**
 
-#### **1.7.1 Tier 1 : OS Auto-Maintenance**
+#### **1.13.1 Tier 1 : OS Auto-Maintenance**
 - [ ] Config `unattended-upgrades` (auto-updates sécurité Linux + reboot 4h)
 - [ ] Script `scripts/tier1-os/setup-unattended-upgrades.sh`
 - [ ] Script `scripts/tier1-os/cleanup-disk.sh` (rotation logs Docker 7j, journald 30j, backups 30 dernières)
 - [ ] Cron `0 3 * * *` pour cleanup-disk
 
-#### **1.7.2 Tier 2 : Docker Auto-Recovery**
+#### **1.13.2 Tier 2 : Docker Auto-Recovery**
 - [ ] Service `watchtower` dans `docker-compose.services.yml` (mode MONITOR_ONLY)
 - [ ] Script `scripts/tier2-docker/monitor-restarts.sh` (alerte si >2 restarts/heure)
 - [ ] Script `scripts/tier2-docker/auto-recover-ram.sh` (kill service lourd si RAM >90%)
-- [ ] Script `scripts/tier2-docker/check-external-apis.sh` (healthcheck Mistral, EmailEngine, Qdrant)
+- [ ] Script `scripts/tier2-docker/check-external-apis.sh` (healthcheck Anthropic, EmailEngine, pgvector)
 - [ ] Crons :
   - `*/15 * * * *` : monitor-restarts
   - `*/5 * * * *` : auto-recover-ram
   - `*/30 * * * *` : check-external-apis
 
-#### **1.7.3 Configuration centralisée**
+#### **1.13.3 Configuration centralisée**
 - [ ] `config/crontab-friday.txt` (tous les crons Tier 1-2)
 - [ ] `docker-compose.services.yml` : Ajout service watchtower
 - [ ] Healthcheck avancés PostgreSQL/Redis (labels `com.friday.critical=true` + `max_restarts_per_hour`)
 
-#### **1.7.4 Tests**
+#### **1.13.4 Tests**
 - [ ] Test unitaire `auto-recover-ram.sh` (simulation RAM >90% sans crasher VPS)
 - [ ] Test E2E `test_self_healing.sh` :
   - Crash PostgreSQL → Auto-restart + Alerte Telegram
   - RAM 92% simulée → Kill Kokoro + Alerte
-  - API Mistral down → Alerte (sans action)
+  - API Anthropic down → Alerte (sans action)
 
 ### **Acceptance Criteria**
 
@@ -279,7 +282,7 @@ Automatiser la maintenance "contenant" (OS, Docker, monitoring) pour réduire ch
 - AC2 : `cleanup-disk.sh` tourne daily (logs <7j, backups <30 dernières)
 - AC3 : Watchtower détecte nouvelle version PostgreSQL → Telegram notif (pas de mise à jour auto)
 - AC4 : PostgreSQL crash → Redémarre auto <30s + Alerte Telegram
-- AC5 : RAM >90% → Service lourd (Kokoro/Surya/Ollama) tué + Alerte + Logs sauvegardés
+- AC5 : RAM >90% → Service lourd (Kokoro/Surya) tué + Alerte + Logs sauvegardés
 - AC6 : Tous crons installés et fonctionnels (vérif `crontab -l`)
 
 ### **Livrables**
@@ -296,7 +299,7 @@ Tier 3 (détection connecteurs Playwright) et Tier 4 (pattern detection, trust d
 
 ---
 
-## 📦 **Story 2 : Moteur Vie (Email Pipeline)**
+## 📦 **Epic 2 (Stories 2.1-2.7) : Moteur Vie (Email Pipeline)**
 
 ### **Objectif**
 Pipeline email complet : ingestion → classification → extraction → brouillons.
@@ -316,15 +319,15 @@ Pipeline email complet : ingestion → classification → extraction → brouill
 #### **2.3 Agent Email (LangGraph)**
 - [ ] `agents/src/agents/email/agent.py` :
   - `@friday_action(module="email", action="classify", trust_default="propose")`
-  - Classification email (Mistral Nemo cloud)
+  - Classification email (Claude Sonnet 4.5)
   - Extraction tâches (détection TODO, deadlines)
-  - Génération brouillon réponse (Mistral Medium, trust=blocked Day 1)
+  - Génération brouillon réponse (Claude Sonnet 4.5, trust=blocked Day 1)
 - [ ] Adaptateur LLM (`agents/src/adapters/llm.py`)
-- [ ] Pipeline Presidio obligatoire avant classification (branché sur Story 1.5)
+- [ ] Pipeline Presidio obligatoire avant classification (branché sur Story 1.5 Presidio)
 - **Réf.** : [`docs/ai-models-policy.md`](docs/ai-models-policy.md) (versionnage modèles : `-latest` dev, version explicite prod), [`docs/n8n-workflows-spec.md`](docs/n8n-workflows-spec.md) (workflow email-ingestion)
 
 #### **2.4 Tests**
-- [ ] Tests unitaires agent (mocks Mistral)
+- [ ] Tests unitaires agent (mocks LLM (Claude))
 - [ ] Tests intégration classification (dataset `tests/fixtures/email_classification_dataset.json`) **REQUIS**
 - [ ] Test E2E : Email webhook → Classification → Receipt créé → Telegram notif
 
@@ -345,7 +348,7 @@ Pipeline email complet : ingestion → classification → extraction → brouill
 
 ---
 
-## 📦 **Story 3 : Archiviste (OCR + Renommage)**
+## 📦 **Epic 3 : Archiviste (OCR + Renommage)**
 
 ### **Objectif**
 Pipeline document complet : upload → OCR → renommage intelligent → classement → indexation.
@@ -358,7 +361,7 @@ Pipeline document complet : upload → OCR → renommage intelligent → classem
 #### **3.2 Agent Archiviste**
 - [ ] `agents/src/agents/archiviste/agent.py` :
   - `@friday_action(module="archiviste", action="rename", trust_default="propose")`
-  - Renommage intelligent (analyse OCR + Mistral)
+  - Renommage intelligent (analyse OCR + Claude)
   - Classification document (facture, contrat, article, etc.)
   - Extraction métadonnées (date, montant, vendeur)
 - [ ] OCR integration (Surya + Marker)
@@ -382,14 +385,14 @@ Pipeline document complet : upload → OCR → renommage intelligent → classem
 
 ---
 
-## 📦 **Story 2.5 : Heartbeat Engine (Proactivité native)**
+## 📦 **Story 4.1 (Epic 4) : Heartbeat Engine (Proactivité native)**
 
 ### **Objectif**
 Implémenter moteur de proactivité natif Friday (vs OpenClaw) : checks contextuels périodiques avec LLM décideur.
 
 ### **Scope**
 
-#### **2.5.1 Core Heartbeat**
+#### **4.1.1 Core Heartbeat**
 - [ ] Class `FridayHeartbeat` dans `agents/src/core/heartbeat.py` :
   - Interval configurable (default 30min)
   - LLM décide dynamiquement quoi vérifier (context-aware)
@@ -397,29 +400,29 @@ Implémenter moteur de proactivité natif Friday (vs OpenClaw) : checks contextu
   - Registration checks avec priorités (high/medium/low)
 - **Réf.** : [`agents/docs/heartbeat-engine-spec.md`](agents/docs/heartbeat-engine-spec.md) (spec complète Heartbeat Engine)
 
-#### **2.5.2 Context Provider**
+#### **4.1.2 Context Provider**
 - [ ] `agents/src/core/context.py` :
   - `get_current_time_context()` : Heure, jour, weekend
   - `get_last_activity()` : Dernière interaction Antonio
   - `get_next_calendar_event()` : Prochain événement agenda
 
-#### **2.5.3 Checks Day 1**
+#### **4.1.3 Checks Day 1**
 - [ ] `check_urgent_emails()` (priorité high) : Emails non lus >2h urgents
 - [ ] `check_financial_alerts()` (priorité medium) : Anomalies financières
 - [ ] `check_thesis_reminders()` (priorité low) : Deadlines thèses supervisées
 
-#### **2.5.4 Configuration**
+#### **4.1.4 Configuration**
 - [ ] `config/heartbeat.yaml` :
   - `interval_minutes: 30`
   - `quiet_hours: ["22:00", "08:00"]`
   - Activation par module (enabled: true/false)
 
-#### **2.5.5 Intégration**
+#### **4.1.5 Intégration**
 - [ ] `agents/src/main.py` : Démarrage Heartbeat au boot
 - [ ] `/api/v1/heartbeat/status` : Endpoint monitoring (last run, next run, stats)
 - [ ] Topic Telegram "💬 Chat & Proactive" : Messages heartbeat
 
-#### **2.5.6 Tests**
+#### **4.1.6 Tests**
 - [ ] Tests unitaires context provider
 - [ ] Tests intégration checks (mocks emails/finance)
 - [ ] Test E2E : Heartbeat détecte email urgent → Notification Telegram Chat topic
@@ -440,22 +443,22 @@ Implémenter moteur de proactivité natif Friday (vs OpenClaw) : checks contextu
 - Endpoint monitoring
 - Tests passent
 
-**Note** : Story 2.5 implémentée APRÈS Story 2 (Email Pipeline) car dépend module Email opérationnel.
+**Note** : Story 4.1 implémentée APRÈS Epic 2 (Email Pipeline) car dépend module Email opérationnel.
 
 ---
 
-## 📦 **Stories 4-9 : Modules métier**
+## 📦 **Epics 5-11+ : Modules métier**
 
 *(Spécifications détaillées créées au fur et à mesure, selon priorisation Antonio)*
 
 **Séquence suggérée** :
-1. **Story 4** : Briefing matinal (agrégation données modules 2-3) — **Réf.** : [`docs/n8n-workflows-spec.md`](docs/n8n-workflows-spec.md) (workflow briefing-daily)
-2. **Story 5** : Plaud Note (transcription → cascade actions)
-3. **Story 6** : Suivi Financier (CSV import → classification → anomalies)
-4. **Story 7** : Tuteur Thèse (analyse Google Docs → commentaires)
-5. **Story 8** : Veilleur Droit (analyse contrats)
-6. **Story 9** : Agenda (extraction événements emails/Plaud)
-7. **Story 10+** : Modules restants (Coach sportif, Menus, Browser automation Playwright) — **Réf.** : [`docs/playwright-automation-spec.md`](docs/playwright-automation-spec.md)
+1. **Epic 5** : Briefing matinal (agrégation données Epics 2-3) — **Réf.** : [`docs/n8n-workflows-spec.md`](docs/n8n-workflows-spec.md) (workflow briefing-daily)
+2. **Epic 6** : Plaud Note (transcription → cascade actions)
+3. **Epic 8** : Suivi Financier (CSV import → classification → anomalies) — Sprint 2
+4. **Epic 7** : Tuteur Thèse (analyse Google Docs → commentaires)
+5. **Epic 9** : Veilleur Droit (analyse contrats)
+6. **Epic 10** : Agenda (extraction événements emails/Plaud)
+7. **Epic 11+** : Modules restants (Coach sportif, Menus, Browser automation Playwright) — **Réf.** : [`docs/playwright-automation-spec.md`](docs/playwright-automation-spec.md)
 
 ---
 
@@ -463,7 +466,7 @@ Implémenter moteur de proactivité natif Friday (vs OpenClaw) : checks contextu
 
 ### **Migration données existantes**
 
-**Timing** : Après Story 2 (Email agent opérationnel)
+**Timing** : Après Epic 2 (Email agent opérationnel)
 
 **Script** : `scripts/migrate_emails.py` ✅ **CRÉÉ**
 
@@ -473,18 +476,22 @@ Implémenter moteur de proactivité natif Friday (vs OpenClaw) : checks contextu
 - Retry exponentiel sur erreur
 - Resume depuis dernier checkpoint
 - Anonymisation Presidio avant classification (RGPD)
-- **Durée estimée** : ~18-24h (incluant Presidio overhead + retry/backoff)
-- **Coût estimé** : ~$20-24 USD (Mistral API)
+- **Durée estimée** : variable selon rate limit tier Anthropic (+ Presidio overhead + retry/backoff)
+- **Coût estimé** : ~$330 USD (Claude Sonnet 4.5 API, one-shot)
 
-**Calcul détaillé** (corrigé suite code review adversarial 2026-02-05 + volume réel 110k) :
-- 110k emails × ~600 tokens avg (500 input + 100 output) = 66M tokens
-- Mistral Nemo pricing : $0.15/1M tokens input + $0.15/1M tokens output
-- Coût classification : 66M tokens × $0.30/1M = **$19.80 USD**
-- Rate limit Mistral : 200 RPM → 110k / 200 = **550 minutes = 9.2h (classification seule)**
+**Calcul détaillé** (corrigé suite code review adversarial 2026-02-05 + volume réel 110k + migration D17 Claude Sonnet 4.5) :
+- 110k emails × ~500 tokens input = 55M tokens input
+- 110k emails × ~100 tokens output = 11M tokens output
+- Claude Sonnet 4.5 pricing : $3/1M tokens input + $15/1M tokens output
+- Coût input : 55M × $3/1M = **$165 USD**
+- Coût output : 11M × $15/1M = **$165 USD**
+- **Coût classification total** : **$330 USD**
+- Rate limit Anthropic : selon tier → durée dépend du tier souscrit
 - Presidio overhead : ~150-200ms par email → 110k × 0.15s = **4.6h supplémentaires**
 - Retry + backoff (estimation 5% échecs temporaires) : ~60-90 min
-- **Durée totale réaliste** : 9.2h + 4.6h + 1.5h + marge sécurité = **~18-24h**
-- **Coût total avec marge** : $19.80 + 20% buffer = **~$20-24 USD**
+- **Durée totale réaliste** : variable selon rate limit tier + 4.6h Presidio + marge = **à estimer selon tier**
+- **Coût total** : **~$330 USD** (one-shot, Claude Sonnet 4.5 — $3/$15 per 1M tokens input/output)
+- **Note** : Vérifier si batch API Anthropic disponible pour réduire le coût
 
 **Validation** :
 - Test dry-run d'abord (`--dry-run`)
@@ -510,10 +517,10 @@ Les fichiers suivants sont references dans l'architecture mais n'existent pas en
 | Fichier | Description | Story |
 |---------|-------------|-------|
 | `agents/src/tools/anonymize.py` | Integration Presidio (`anonymize_text()` + `deanonymize_text()`) | Story 1.5 |
-| `agents/src/middleware/models.py` | Modele Pydantic `ActionResult` | Story 1.5 |
-| `agents/src/middleware/trust.py` | Decorateur `@friday_action` | Story 1.5 |
-| `scripts/apply_migrations.py` | Script d'execution des migrations SQL | Story 1 |
-| `docker-compose.yml` | Services core (PostgreSQL, Redis, Qdrant, n8n, Caddy) | Story 1 |
+| `agents/src/middleware/models.py` | Modele Pydantic `ActionResult` | Story 1.6 |
+| `agents/src/middleware/trust.py` | Decorateur `@friday_action` | Story 1.6 |
+| `scripts/apply_migrations.py` | Script d'execution des migrations SQL | Stories 1.1-1.4 |
+| `docker-compose.yml` | Services core (PostgreSQL + pgvector, Redis, n8n, Caddy) — D19 | Story 1.1 |
 
 > **Note** : Les fichiers deja crees sont marques **CREE** dans ce document : `config/trust_levels.yaml`, `scripts/migrate_emails.py`, `tests/e2e/test_backup_restore.sh`.
 
@@ -523,11 +530,12 @@ Les fichiers suivants sont references dans l'architecture mais n'existent pas en
 
 ### **Métriques Story**
 
-| Story | Status | Tests | Coverage | Acceptance Criteria |
-|-------|--------|-------|----------|---------------------|
-| 1 | 📋 Conçue | - | - | 0/5 |
-| 1.5 | 📋 Conçue | - | - | 0/6 |
-| 2 | ⏳ En attente | - | - | 0/5 |
+| Epic/Story | Status | Tests | Coverage | Acceptance Criteria |
+|------------|--------|-------|----------|---------------------|
+| Epic 1 (1.1-1.4) | 📋 Conçue | - | - | 0/5 |
+| Epic 1 (1.5-1.8) | 📋 Conçue | - | - | 0/6 |
+| Story 1.13 | 📋 Conçue | - | - | 0/6 |
+| Epic 2 (2.1-2.7) | ⏳ En attente | - | - | 0/5 |
 | ... | ... | ... | ... | ... |
 
 **Légende** :
@@ -543,11 +551,12 @@ Les fichiers suivants sont references dans l'architecture mais n'existent pas en
 python scripts/story_progress.py
 
 # Output:
-# Story 1: Infrastructure 📋 (0/5 ACs)
-# Story 1.5: Trust Layer 📋 (0/6 ACs)
-# Story 2: Moteur Vie ⏳ (0/5 ACs)
+# Epic 1 (1.1-1.4): Infrastructure 📋 (0/5 ACs)
+# Epic 1 (1.5-1.8): Trust Layer 📋 (0/6 ACs)
+# Story 1.13: Self-Healing 📋 (0/6 ACs)
+# Epic 2 (2.1-2.7): Moteur Vie ⏳ (0/5 ACs)
 # ...
-# TOTAL: 0/10 stories terminées (0%)
+# TOTAL: 0/11 epics+stories terminées (0%)
 ```
 
 ---
@@ -577,5 +586,5 @@ python scripts/story_progress.py
 
 ---
 
-**Version** : 1.3.0
-**Dernière mise à jour** : 2026-02-08
+**Version** : 1.4.0
+**Dernière mise à jour** : 2026-02-09

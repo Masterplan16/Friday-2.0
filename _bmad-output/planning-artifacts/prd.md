@@ -77,7 +77,7 @@ decisions:
   - id: D2
     description: "Vocal STT/TTS Day 1 (Faster-Whisper + Kokoro TTS via Telegram)"
   - id: D3
-    description: "Graphe de connaissances Day 1 = PostgreSQL knowledge.* + Qdrant embeddings (pas Graphiti)"
+    description: "Graphe de connaissances Day 1 = PostgreSQL knowledge.* + pgvector embeddings (pas Graphiti) [D19 : Qdrant remplace par pgvector Day 1]"
   - id: D4
     description: "n8n = orchestrateur/trigger, Python = logique IA metier"
   - id: D5
@@ -101,7 +101,7 @@ decisions:
   - id: D14
     description: "[SUPERSEDE par D17] Gemini Flash retire"
   - id: D15
-    description: "Downgrade VPS-4 (48 Go, 25 EUR) → VPS-3 (24 Go, 15 EUR) — Ollama retire libere assez de marge"
+    description: "VPS-3 (24 Go, 15 EUR) comme baseline — Ollama retire libere assez de marge, VPS-4 inutile"
   - id: D16
     description: "Cold start emails non lus = batch par lots 10-20, trust=propose, calibrage initial Friday"
   - id: D17
@@ -109,6 +109,8 @@ decisions:
   - id: D18
     description: "Veille mensuelle modele LLM — benchmark automatise + alerte si modele alternatif significativement superieur"
 ---
+
+> **Mis a jour 2026-02-09** : D17 (Claude remplace Mistral), D19 (pgvector remplace Qdrant Day 1)
 
 # Product Requirements Document - Friday 2.0
 
@@ -168,7 +170,7 @@ Infrastructure et premiers modules metier formant un systeme autonome et stable.
 
 | Composant | Description |
 |-----------|-------------|
-| **Infrastructure** | Docker Compose (PostgreSQL 16, Redis 7, Qdrant, n8n 1.69.2+, Caddy), Tailscale VPN, age/SOPS secrets |
+| **Infrastructure** | Docker Compose (PostgreSQL 16 avec pgvector, Redis 7, n8n 1.69.2+, Caddy), Tailscale VPN, age/SOPS secrets [D19] |
 | **Trust Layer** | @friday_action middleware, ActionResult, 3 trust levels (auto/propose/blocked), correction_rules |
 | **Anonymisation** | Presidio + spaCy-fr, mapping ephemere Redis TTL court |
 | **Bot Telegram** | 5 topics (Chat, Email, Actions, System, Metrics), commandes /status /journal /receipt /confiance /stats, inline buttons validation |
@@ -176,8 +178,8 @@ Infrastructure et premiers modules metier formant un systeme autonome et stable.
 | **Archiviste** | OCR (Surya), renommage intelligent, classement automatique, suivi garanties |
 | **Agenda** | Extraction evenements depuis mails/transcriptions, multi-casquettes |
 | **Briefing matinal** | Agregation quotidienne tous modules, envoye via Telegram |
-| **Desktop Search** | Recherche semantique fichiers locaux PC via Qdrant embeddings |
-| **Graphe de connaissances** | PostgreSQL knowledge.* + Qdrant embeddings (pas Graphiti Day 1) |
+| **Desktop Search** | Recherche semantique fichiers locaux PC via pgvector (PostgreSQL) embeddings [D19] |
+| **Graphe de connaissances** | PostgreSQL knowledge.* + pgvector embeddings (pas Graphiti Day 1) [D19] |
 | **Vocal** | Faster-Whisper STT + Kokoro TTS via Telegram |
 | **Heartbeat Engine** | Proactivite context-aware (interval 30min, quiet hours 22h-8h) |
 | **Self-Healing Tier 1-2** | Docker restart, unattended-upgrades, auto-recover-ram, monitor-restarts |
@@ -224,7 +226,7 @@ Infrastructure et premiers modules metier formant un systeme autonome et stable.
 
 Antonio lit en 90 secondes. Un email du doyen est mal classe — il corrige via inline button. Friday note la correction.
 
-**8h30 — En voiture.** Antonio envoie un vocal Telegram : "Friday, qu'est-ce que j'avais lu sur les inhibiteurs SGLT2 le mois dernier ?". Friday transcrit (Faster-Whisper), cherche dans Qdrant, repond en vocal (Kokoro TTS) avec les 3 documents les plus pertinents.
+**8h30 — En voiture.** Antonio envoie un vocal Telegram : "Friday, qu'est-ce que j'avais lu sur les inhibiteurs SGLT2 le mois dernier ?". Friday transcrit (Faster-Whisper), cherche dans pgvector (PostgreSQL), repond en vocal (Kokoro TTS) avec les 3 documents les plus pertinents.
 
 **9h-12h — Consultations.** Friday travaille en silence. Emails classes en continu. PJ facture OCR-ee, renommee `2026-02-08_Facture_Labo-Cerba_145EUR.pdf`, classee dans Finances/SELARL/2026/02-Fevrier. Email VIP (comptable) → notification dans topic Email.
 
@@ -388,7 +390,7 @@ Voir section consolidee **Project Scoping > Risques et mitigations** pour la tab
 
 **Supprime** : Ollama local (pas de GPU, Presidio suffit), Mistral (remplace par Claude), Gemini Flash (remplace par Claude).
 
-**Impact RAM** : Ollama retire → downgrade VPS-4 (48 Go) vers VPS-3 (24 Go, ~15 EUR/mois). Marge ~4-6 Go.
+**Impact RAM** : Ollama retire → VPS-3 (24 Go, ~15 EUR/mois) suffit. Marge ~4-6 Go.
 
 **Tarification** : $3/$15 per 1M tokens (input/output). Estimation ~45 EUR/mois pour le volume Friday.
 
@@ -435,7 +437,7 @@ Architecture event-driven single-user sur VPS personnel (Docker Compose). Interf
 | Logique metier IA | Python (LangGraph 0.2.45+) | Agents, classification, generation |
 | API interne | FastAPI | Gateway, healthcheck, endpoints |
 | BDD | PostgreSQL 16 (3 schemas) | core, ingestion, knowledge |
-| Vectorstore | Qdrant | Embeddings, Desktop Search |
+| Vectorstore | pgvector (PostgreSQL) | Embeddings, Desktop Search [D19] |
 | Cache/Events | Redis 7 | Streams (critique) + Pub/Sub (informatif) |
 | Reverse proxy | Caddy | TLS interne, routing services |
 | VPN | Tailscale | Zero exposition publique |
@@ -473,8 +475,8 @@ Architecture event-driven single-user sur VPS personnel (Docker Compose). Interf
 | Adaptateur | Day 1 | Remplacable par |
 |------------|-------|-----------------|
 | llm.py | Claude Sonnet 4.5 (Anthropic) | Tout provider LLM (migration via D18 veille) |
-| vectorstore.py | Qdrant | Milvus, pgvector |
-| memorystore.py | PostgreSQL + Qdrant | Graphiti/Neo4j (reevaluation aout 2026) |
+| vectorstore.py | pgvector (PostgreSQL) [D19] | Qdrant (si >300k vecteurs), Milvus |
+| memorystore.py | PostgreSQL + pgvector [D19] | Graphiti/Neo4j (reevaluation aout 2026) |
 | filesync.py | Syncthing | rsync, rclone |
 | email.py | EmailEngine | IMAP direct |
 

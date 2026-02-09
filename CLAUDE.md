@@ -51,51 +51,49 @@ agents/src/agents/email/
 
 | Adaptateur | Fichier | Remplaçable par |
 |------------|---------|-----------------|
-| LLM | `adapters/llm.py` | Mistral → Gemini/Claude (1 fichier) |
-| Vectorstore | `adapters/vectorstore.py` | Qdrant → Milvus/pgvector |
-| Memorystore | `adapters/memorystore.py` | PostgreSQL+Qdrant (Day 1) → Graphiti/Neo4j (si maturité atteinte) |
+| LLM | `adapters/llm.py` | Claude Sonnet 4.5 (D17) → tout autre provider (1 fichier) |
+| Vectorstore | `adapters/memorystore.py` | pgvector dans PostgreSQL (D19 Day 1) → Qdrant/Milvus si >300k vecteurs |
+| Memorystore | `adapters/memorystore.py` | PostgreSQL+pgvector (Day 1, D19) → Graphiti/Neo4j (si maturité atteinte) |
 | Filesync | `adapters/filesync.py` | Syncthing → rsync/rclone |
 | Email | `adapters/email.py` | EmailEngine → IMAP direct |
 
 **Factory pattern obligatoire :**
 ```python
 def get_llm_adapter() -> LLMAdapter:
-    provider = os.getenv("LLM_PROVIDER", "mistral")
-    if provider == "mistral":
-        return MistralAdapter(api_key=os.getenv("MISTRAL_API_KEY"))
-    # Extensible : ajouter Gemini, Claude, etc.
+    provider = os.getenv("LLM_PROVIDER", "anthropic")
+    if provider == "anthropic":
+        return AnthropicAdapter(api_key=os.getenv("ANTHROPIC_API_KEY"))
+    # Extensible : ajouter d'autres providers si veille D18 le justifie
     raise ValueError(f"Unknown LLM provider: {provider}")
 ```
 
 ---
 
-### 3. Contraintes matérielles - VPS-4 OVH 48 Go RAM
+### 3. Contraintes matérielles - VPS-3 OVH 24 Go RAM
 
 **Tous services lourds résidents en simultané. Plus d'exclusion mutuelle.**
 
 | Service lourd | RAM | Mode |
 |---------------|-----|------|
-| Ollama Nemo 12B | ~8 Go | Résident |
 | Faster-Whisper | ~4 Go | Résident |
 | Kokoro TTS | ~2 Go | Résident |
 | Surya OCR | ~2 Go | Résident |
-| **Total services lourds** | **~16 Go** | |
-| **Socle permanent (corrigé)** | **~6.5-8.5 Go** | Inclut PG, Redis, Qdrant, n8n, Presidio, EmailEngine, Caddy, OS (SANS Zep - fermé 2024) |
-| **Marge disponible** | **~24-25.5 Go** | |
+| **Total services lourds** | **~8 Go** | Ollama retiré (D12), LLM = Claude Sonnet 4.5 API (D17) |
+| **Socle permanent (corrigé)** | **~6-8 Go** | Inclut PG (+pgvector D19), Redis, n8n, Presidio, EmailEngine, Caddy, OS (SANS Zep - fermé 2024, SANS Qdrant - D19) |
+| **Marge disponible** | **~7.5-9.5 Go** | |
 
 **Orchestrator simplifié (moniteur RAM, pas gestionnaire d'exclusions) :**
 ```python
 # config/profiles.py
 SERVICE_RAM_PROFILES: dict[str, ServiceProfile] = {
-    "ollama-nemo": ServiceProfile(ram_gb=8),
     "faster-whisper": ServiceProfile(ram_gb=4),
     "kokoro-tts": ServiceProfile(ram_gb=2),
     "surya-ocr": ServiceProfile(ram_gb=2),
 }
-RAM_ALERT_THRESHOLD_PCT = 85  # Alerte si dépasse
+RAM_ALERT_THRESHOLD_PCT = 85  # Alerte si dépasse (20.4 Go sur 24 Go)
 ```
 
-**Plan B (VPS-3, 24 Go, 15€ TTC) :** Si besoin de réduire le budget → réactive les exclusions mutuelles via `VPS_TIER` env var.
+**Upgrade possible (VPS-4, 48 Go, ~25€ TTC) :** Si besoin de plus de marge RAM → upgrade via `VPS_TIER` env var.
 
 ---
 
@@ -105,11 +103,11 @@ RAM_ALERT_THRESHOLD_PCT = 85  # Alerte si dépasse
 
 ```python
 # ❌ INTERDIT
-response = await mistral_client.chat(messages=[{"role": "user", "content": text_with_pii}])
+response = await anthropic_client.messages.create(messages=[{"role": "user", "content": text_with_pii}])
 
 # ✅ CORRECT
 anonymized_text = await presidio_anonymize(text_with_pii)
-response = await mistral_client.chat(messages=[{"role": "user", "content": anonymized_text}])
+response = await anthropic_client.messages.create(messages=[{"role": "user", "content": anonymized_text}])
 result = await presidio_deanonymize(response)
 ```
 
@@ -117,7 +115,6 @@ result = await presidio_deanonymize(response)
 - Tailscale = RIEN exposé sur Internet public (SSH uniquement via Tailscale, 2FA obligatoire)
 - age/SOPS pour secrets (JAMAIS de `.env` en clair dans git, JAMAIS de credentials en default dans le code)
 - pgcrypto pour colonnes sensibles BDD (données médicales, financières)
-- Ollama local VPS pour données ultra-sensibles (pas de sortie cloud)
 - Redis ACL : moindre privilège par service (voir addendum section 9.2)
 - Mapping Presidio : éphémère en mémoire uniquement, JAMAIS stocké en clair (voir addendum section 9.1)
 
@@ -157,7 +154,7 @@ async def classify_email(email: Email) -> ActionResult:
     )
     # 2. Injecte les règles dans le prompt
     prompt = f"Classe cet email. Règles prioritaires: {format_rules(rules)}..."
-    response = await mistral.chat(prompt=prompt)
+    response = await llm_adapter.complete(prompt=prompt)
     # 3. Retourne ActionResult standardisé
     return ActionResult(
         input_summary=f"Email de {email.sender}: {email.subject}",
@@ -289,7 +286,7 @@ class ActionResult(BaseModel):
 - **Sync** : REST (FastAPI) pour requêtes
 - **Async critique** : Redis Streams pour événements métier (delivery garanti)
 - **Async informatif** : Redis Pub/Sub pour logs/notifications (fire-and-forget)
-- **HTTP interne** : Docker network pour services (qdrant, n8n, etc.)
+- **HTTP interne** : Docker network pour services (n8n, emailengine, etc.)
 
 ---
 
@@ -370,27 +367,27 @@ async def test_presidio_anonymizes_all_pii(pii_samples):
             assert sensitive_value not in anonymized
 ```
 
-### Tests orchestrator RAM (VPS-4 48 Go)
+### Tests orchestrator RAM (VPS-3 24 Go)
 
 ```python
 # tests/unit/supervisor/test_orchestrator.py
 @pytest.mark.asyncio
 async def test_ram_monitor_alerts_on_threshold():
-    monitor = RAMMonitor(total_ram_gb=48, alert_threshold_pct=85)
-    # Simuler charge élevée (>85%)
-    monitor.simulate_usage(used_gb=42)
+    monitor = RAMMonitor(total_ram_gb=24, alert_threshold_pct=85)
+    # Simuler charge élevée (>85% de 24 Go = 20.4 Go)
+    monitor.simulate_usage(used_gb=21)
     alerts = await monitor.check()
     assert alerts[0].level == "warning"
     assert "85%" in alerts[0].message
 
 @pytest.mark.asyncio
 async def test_all_heavy_services_fit_in_ram():
-    monitor = RAMMonitor(total_ram_gb=48, alert_threshold_pct=85)
-    # Tous services lourds résidents simultanément
-    services = ["ollama-nemo", "faster-whisper", "kokoro-tts", "surya-ocr"]
+    monitor = RAMMonitor(total_ram_gb=24, alert_threshold_pct=85)
+    # Tous services lourds résidents simultanément (Ollama retiré D12)
+    services = ["faster-whisper", "kokoro-tts", "surya-ocr"]
     for svc in services:
         await monitor.register_service(svc)
-    assert monitor.total_allocated_gb <= 48 * 0.85  # Sous le seuil d'alerte
+    assert monitor.total_allocated_gb <= 24 * 0.85  # Sous le seuil d'alerte (20.4 Go)
 ```
 
 ### Tests Trust Layer
@@ -429,14 +426,14 @@ async def test_auto_retrogradation_below_90pct():
 
 ```python
 # ✅ CORRECT
-@patch("agents.tools.apis.mistral.MistralClient")
-async def test_email_classifier(mock_mistral):
-    mock_mistral.return_value.chat.return_value = "medical"
+@patch("agents.src.adapters.llm.AnthropicAdapter")
+async def test_email_classifier(mock_llm):
+    mock_llm.return_value.complete.return_value = "medical"
     # ...
 
 # ❌ INCORRECT
 async def test_email_classifier():
-    # Appel réel à Mistral API = coûteux + instable
+    # Appel réel à Claude API = coûteux + instable
 ```
 
 ---
@@ -447,7 +444,7 @@ async def test_email_classifier():
 |--------------|--------|-------------|
 | **ORM (SQLAlchemy/Tortoise)** | Système pipeline, pas CRUD | asyncpg brut + SQL optimisé |
 | **Celery** | Redondant avec n8n + FastAPI | n8n (workflows longs) + BackgroundTasks (courts) |
-| **Prometheus Day 1** | 400 Mo RAM, overkill même sur VPS-4 48 Go | `scripts/monitor-ram.sh` (cron + Telegram) |
+| **Prometheus Day 1** | 400 Mo RAM, overkill sur VPS-3 24 Go | `scripts/monitor-ram.sh` (cron + Telegram) |
 | **GraphQL** | Over-engineering utilisateur unique | REST + Pydantic suffit |
 | **Structure 3 niveaux Day 1** | Sur-organisation prématurée | Flat structure, refactor si douleur |
 | **localStorage direct pour auth** | Token expiré, pas de refresh | `api()` helper ou `getAuthHeaders()` |
@@ -464,7 +461,7 @@ async def test_email_classifier():
 ./scripts/dev-setup.sh
 
 # Démarrer services core
-docker compose up -d postgres redis qdrant
+docker compose up -d postgres redis
 
 # Migrations
 python scripts/apply_migrations.py
@@ -523,101 +520,89 @@ docker compose logs -f gateway          # Gateway uniquement
 
 ---
 
-## 🎯 First Implementation Priority
+## 🎯 Implémentation — Numérotation BMAD
 
-**Story 1 : Infrastructure de base** (partiellement implémentée)
+> **Source de vérité** : [sprint-status.yaml](_bmad-output/implementation-artifacts/sprint-status.yaml) + [epics-mvp.md](_bmad-output/planning-artifacts/epics-mvp.md)
+>
+> Sprint 1 MVP = **7 Epics, 45 stories, 82 FRs**. Sprint 2 Growth = Epics 8-13. Sprint 3 Vision = Epics 14-20.
 
-1. ✅ Docker Compose (PostgreSQL 16, Redis 7, Qdrant, n8n 1.69.2, Caddy) — **CRÉÉ**
-2. ✅ Migrations SQL 001-010 (schemas core/ingestion/knowledge + tables, inclut `core.tasks` et `core.events`) — **CRÉÉES**
-3. 📋 FastAPI Gateway + auth simple + OpenAPI
-4. 📋 Healthcheck endpoint (`GET /api/v1/health`)
-5. 📋 Tailscale configuré (VPS hostname `friday-vps`)
-6. 📋 Tests end-to-end (sanity check tous services)
+### Epic 1 : Socle Opérationnel & Contrôle (15 stories | 28 FRs)
 
-**Story 1.5 : Observability & Trust Layer (AVANT tout module)**
+Prérequis à tout. Infrastructure, Trust Layer, sécurité RGPD, Telegram, Self-Healing, opérations.
 
-1. ✅ Migration SQL `011_trust_system.sql` (tables receipts, rules, metrics) — **CRÉÉE**
-2. Middleware `@friday_action` + modèle `ActionResult`
-3. Config trust levels par module (`agents/src/middleware/trust_levels.py`)
-4. Bot Telegram : commandes `/status`, `/journal`, `/receipt`, `/confiance`, `/stats`
-5. Validation inline buttons Telegram (approve/reject pour trust=propose)
-6. Alerting listener Redis (`services/alerting/listener.py`)
-7. Nightly metrics aggregation (`services/metrics/nightly.py`)
-8. Tests unitaires + intégration trust middleware
+| Story | Titre | Status | Fichiers existants |
+|-------|-------|--------|-------------------|
+| **1.1** | Infrastructure Docker Compose | **review** | `docker-compose.yml`, `docker-compose.services.yml`, `tests/unit/infra/test_docker_compose.py`, `config/Caddyfile`, `config/redis.acl` |
+| **1.2** | Schemas PostgreSQL & Migrations | ready-for-dev | `database/migrations/001-012_*.sql`, `scripts/apply_migrations.py` |
+| **1.3** | FastAPI Gateway & Healthcheck | backlog | — |
+| **1.4** | Tailscale VPN & Sécurité Réseau | backlog | `config/redis.acl` |
+| **1.5** | Presidio Anonymisation & Fail-Explicit | ready-for-dev | `agents/src/tools/anonymize.py` |
+| **1.6** | Trust Layer Middleware | ready-for-dev | `agents/src/middleware/trust.py`, `agents/src/middleware/models.py`, `config/trust_levels.yaml` |
+| **1.7** | Feedback Loop & Correction Rules | backlog | — |
+| **1.8** | Trust Metrics & Rétrogradation | ready-for-dev | `services/metrics/nightly.py` |
+| **1.9** | Bot Telegram Core & Topics | backlog | — |
+| **1.10** | Inline Buttons & Validation | backlog | — |
+| **1.11** | Commandes Telegram Trust & Budget | backlog | — |
+| **1.12** | Backup Chiffré & Sync PC | ready-for-dev | `tests/e2e/test_backup_restore.sh`, `scripts/monitor-ram.sh` |
+| **1.13** | Self-Healing Tier 1-2 | ready-for-dev | `scripts/monitor-ram.sh` |
+| **1.14** | Monitoring Docker Images | backlog | — |
+| **1.15** | Cleanup & Purge RGPD | backlog | — |
 
-**Story 2 : Module Email (premier module métier)**
+### Epics 2-7 (Sprint 1 MVP — tous backlog, dépendent d'Epic 1)
 
-1. Agent Email (`agents/src/agents/email/agent.py`)
-2. Classification emails (4 comptes IMAP)
-3. Extraction PJ → transit VPS → Archiviste
-4. Trust Level PROPOSE (validation humaine Day 1)
-5. Tests unitaires + intégration
+| Epic | Stories | Titre | Dépendances |
+|------|---------|-------|-------------|
+| **2** | 2.1-2.7 | Pipeline Email Intelligent | Epic 1 complet |
+| **3** | 3.1-3.7 | Archiviste & Recherche Documentaire | Epic 1 + Epic 2 |
+| **4** | 4.1-4.5 | Intelligence Proactive & Briefings (incl. Heartbeat Engine) | Epic 1 + 2 + 3 |
+| **5** | 5.1-5.4 | Interaction Vocale & Personnalité | Epic 1 |
+| **6** | 6.1-6.4 | Mémoire Éternelle & Migration 110k emails | Epic 1 |
+| **7** | 7.1-7.3 | Agenda & Calendrier Multi-casquettes | Epic 1 + 2 |
 
-**Story 2.5 : Heartbeat Engine (proactivité native)** (~10h)
+### Séquence d'implémentation suggérée
 
-**Décision (2026-02-05)** : Implémenter Heartbeat natif Friday (vs OpenClaw complet ROI -86%)
+1. **Epic 1** (Socle) — prérequis à tout, stories 1.1→1.15 séquentielles
+2. **Epic 6** (Mémoire) — PostgreSQL knowledge.* + pgvector nécessaires pour Epic 3
+3. **Epic 2** (Email) — besoin #1 Antonio
+4. **Epic 3** (Archiviste) — inséparable du pipeline email (PJ)
+5. **Epic 5** (Vocal) — STT/TTS transversal
+6. **Epic 7** (Agenda) — détecte événements dans emails
+7. **Epic 4** (Proactivité) — briefing nécessite tous les modules précédents
 
-1. ✅ Spec technique complète — **CRÉÉE** ([agents/docs/heartbeat-engine-spec.md](agents/docs/heartbeat-engine-spec.md))
-2. Class `FridayHeartbeat` (`agents/src/core/heartbeat.py`)
-   - Interval configurable (default 30min)
-   - LLM décide dynamiquement quoi vérifier (contexte-aware)
-   - Checks registration avec priorités (high/medium/low)
-   - Quiet hours (22h-8h)
-3. `ContextProvider` (`agents/src/core/context.py`)
-   - Heure, jour, weekend
-   - Dernière activité Antonio
-   - Prochain événement calendrier
-4. Checks Day 1 :
-   - `check_urgent_emails` (high)
-   - `check_financial_alerts` (medium)
-   - `check_thesis_reminders` (low)
-5. Configuration (`config/heartbeat.yaml`)
-6. Intégration main (`agents/src/main.py`)
-7. Monitoring endpoint (`/api/v1/heartbeat/status`)
-8. Tests unitaires + intégration
+### Dépendances critiques avant Epic 2
 
-**Rationale** : Antonio a besoin heartbeat proactif (critique Day 1) MAIS pas multi-chat ni skills OpenClaw → Heartbeat natif = 100% bénéfice recherché pour 14% coût OpenClaw.
+- PostgreSQL 16 + pgvector opérationnel avec 3 schemas + migrations 001-012 appliquées (Stories 1.1 + 1.2)
+- Redis 7 opérationnel avec ACL par service (Story 1.1 + 1.4)
+- FastAPI Gateway opérationnel avec `/api/v1/health` (Story 1.3)
+- Tailscale mesh VPN configuré, 2FA obligatoire (Story 1.4)
+- `@friday_action` middleware opérationnel (Story 1.6)
+- Bot Telegram opérationnel avec 5 topics (Story 1.9)
+- Presidio + spaCy-fr installés, fail-explicit (Story 1.5)
 
-**Porte de sortie** : Réévaluation OpenClaw août 2026 si besoins évoluent (multi-chat, skills auditées identifiées).
+### Fichiers transversaux déjà créés
 
-**Story 3 : Module Finance + Archiviste**
+- ✅ `docker-compose.yml` + `docker-compose.services.yml` (Story 1.1)
+- ✅ `database/migrations/001-012_*.sql` (Stories 1.1 + 1.2)
+- ✅ `scripts/apply_migrations.py` (Story 1.2)
+- ✅ `scripts/migrate_emails.py` (Story 6.4)
+- ✅ `config/trust_levels.yaml` (Story 1.6)
+- ✅ `config/redis.acl` + `config/Caddyfile` (Story 1.1 + 1.4)
+- ✅ `agents/src/tools/anonymize.py` (Story 1.5)
+- ✅ `agents/src/middleware/models.py` + `trust.py` (Story 1.6)
+- ✅ `services/alerting/` (Story 1.9 dépendance)
+- ✅ `services/metrics/nightly.py` (Story 1.8)
+- ✅ `agents/docs/heartbeat-engine-spec.md` (Story 4.1 spec)
+- ✅ `.sops.yaml`, `docs/DECISION_LOG.md`, `tests/fixtures/README.md`
+- 📋 `services/gateway/` — À créer (Story 1.3)
+- 📋 `bot/` — À créer (Story 1.9)
+- 📋 `agents/src/core/heartbeat.py` + `context.py` — À créer (Story 4.1)
 
-1. Module Finance (classification transactions)
-2. Module Archiviste (OCR, renommage, classement)
-3. Intégration checks heartbeat (`check_financial_alerts`)
+### Décisions architecturales clés
 
-**Dépendances critiques avant Story 2 :**
-- PostgreSQL 16 opérationnel avec 3 schemas + migrations 001-012 appliquées (inclut `core.tasks`, `core.events`, `ingestion.emails_legacy`)
-- Redis 7 opérationnel (cache + Streams pour événements critiques + Pub/Sub pour informatifs)
-- FastAPI Gateway opérationnel avec `/api/v1/health`
-- Tailscale mesh VPN configuré (2FA obligatoire - **configuration manuelle** dans dashboard https://login.tailscale.com/admin/settings/auth)
-- **`@friday_action` middleware opérationnel** (tout module en dépend)
-- **Bot Telegram opérationnel** (canal unique de contrôle)
-- **Presidio + spaCy-fr installés** (RGPD avant tout appel LLM cloud, mapping éphémère Redis TTL court)
-- **Note** : ~~Apple Watch Ultra~~ hors scope Day 1 (pas d'API serveur, réévaluation >12 mois)
-
-**Fichiers Story 1 + 1.5 + 2.5 :**
-- ✅ `docker-compose.yml` + `docker-compose.services.yml` — **CRÉÉS**
-- ✅ `database/migrations/001-012_*.sql` (Story 1 + 1.5) — **CRÉÉES** (12 migrations inclut emails_legacy)
-- 📋 `scripts/apply_migrations.py` — À créer (Story 1)
-- ✅ `scripts/migrate_emails.py` — **CRÉÉ** (corrigé 110k mails)
-- ✅ `config/trust_levels.yaml` — **CRÉÉ**
-- ✅ `tests/fixtures/README.md` (plan datasets) — **CRÉÉ**
-- ✅ `.sops.yaml` — **CRÉÉ** (template secrets management)
-- ✅ `docs/DECISION_LOG.md` — **CRÉÉ** (historique décisions + décision OpenClaw 2026-02-05)
-- ✅ `docs/playwright-automation-spec.md` — **CRÉÉ** (spec Browser automation)
-- ✅ `agents/src/tools/anonymize.py` (Presidio integration) — **CRÉÉ** (Story 1.5.1)
-- ✅ `agents/src/middleware/models.py` (ActionResult) — **CRÉÉ** (Story 1.5.2)
-- ✅ `agents/src/middleware/trust.py` (@friday_action) — **CRÉÉ** (Story 1.5.2)
-- ✅ `services/alerting/` — **CRÉÉ** (listener Redis Streams + Telegram)
-- ✅ `services/metrics/` — **CRÉÉ** (nightly aggregation trust metrics)
-- ✅ `agents/docs/heartbeat-engine-spec.md` — **CRÉÉ** (spec Heartbeat Engine Story 2.5)
-- ✅ `_docs/architecture-addendum-20260205.md` — **MIS À JOUR** (section 4 : décision OpenClaw + alternative Heartbeat)
-- 📋 `agents/src/core/heartbeat.py` — À créer (Story 2.5)
-- 📋 `agents/src/core/context.py` — À créer (Story 2.5)
-- 📋 `config/heartbeat.yaml` — À créer (Story 2.5)
-
-**Décision memorystore (2026-02-05)** : Zep a cessé ses opérations en 2024. **Day 1** : Démarrer avec `adapters/memorystore.py` pointant vers **PostgreSQL (knowledge.*) + Qdrant (embeddings)**. **Ré-évaluation Graphiti** : 6 mois après Story 1 (~août 2026) si v1.0 stable atteinte (critères : >500 stars GitHub, doc API complète, tests charge 100k+ entités). Sinon → Neo4j Community Edition. Voir [addendum section 10](_docs/architecture-addendum-20260205.md).
+- **Memorystore (D19, 2026-02-09)** : PostgreSQL + pgvector Day 1. Qdrant retiré. Réévaluation si >300k vecteurs ou latence >100ms.
+- **Heartbeat (2026-02-05)** : Natif Friday (pas OpenClaw). Réévaluation août 2026.
+- **Graphiti (2026-02-05)** : Zep fermé 2024. Day 1 = PG + pgvector. Réévaluation Graphiti 6 mois (~août 2026).
+- **LLM (D17, 2026-02-09)** : 100% Claude Sonnet 4.5. Zéro routing multi-provider.
 
 ---
 
@@ -684,7 +669,7 @@ New-BurntToastNotification -Text "Claude", "Toujours en cours..."
   *Clarifications techniques : Presidio benchmark, pattern detection algo, profils RAM, critères OpenClaw, population graphe, trust retrogradation formelle (section 7), healthcheck complet (section 8), sécurité compléments (section 9), avertissement Zep (section 10), stratégie notification Telegram Topics (section 11)*
 
 - **Politique modèles IA** : [docs/ai-models-policy.md](docs/ai-models-policy.md)
-  *Versionnage modèles (dev -latest vs prod version fixe), procédure upgrade, matrix décision (Large vs Small vs Ollama), surveillance accuracy/coûts, gestion budgets mensuels*
+  *Versionnage modèle unique Claude Sonnet 4.5 (D17), procédure upgrade, veille mensuelle D18, surveillance accuracy/coûts, gestion budget mensuel*
 
 - **Setup PC Backup** : [docs/pc-backup-setup.md](docs/pc-backup-setup.md)
   *Configuration complète PC Antonio pour recevoir backups quotidiens VPS via rsync/Tailscale. Guides par OS (Windows/WSL, Linux, macOS), SSH setup, tests validation*
@@ -731,5 +716,5 @@ New-BurntToastNotification -Text "Claude", "Toujours en cours..."
 
 ---
 
-**Version** : 1.5.0 (2026-02-05)
-**Status** : Architecture complète + Observability & Trust Layer + Code Review Adversarial v2 (17 issues fixes) + Fichiers critiques créés + Corrections VPS/emails/Apple Watch - **Prêt pour implémentation Story 1**
+**Version** : 1.6.0 (2026-02-09)
+**Status** : Architecture complète + D17 100% Claude Sonnet 4.5 (remplace Mistral/Gemini/Ollama) + Trust Layer + Code Review v2 — **Prêt pour implémentation Story 1**

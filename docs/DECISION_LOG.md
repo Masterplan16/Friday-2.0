@@ -4,9 +4,117 @@
 
 ---
 
+## 2026-02-09 : D19 - pgvector remplace Qdrant Day 1
+
+**Décision** : Utiliser pgvector (extension PostgreSQL) au lieu de Qdrant pour le stockage vectoriel Day 1
+
+**Raison** :
+- 100k vecteurs max Day 1, 1 seul utilisateur → pgvector suffit largement (~31ms latence)
+- Économie RAM : ~500 Mo - 2.5 Go (suppression container Qdrant)
+- 1 service Docker en moins = moins de complexité opérationnelle
+- HNSW index dans pgvector = performances comparables pour ce volume
+- PostgreSQL déjà présent dans le stack → zéro dépendance additionnelle
+
+**Impact code** (4 fichiers modifiés) :
+- `docker-compose.yml` : Suppression service Qdrant + volume + env var + depends_on
+- `database/migrations/008_knowledge_embeddings.sql` : Réécrit avec `vector(1024)` + HNSW index
+- `agents/src/adapters/memorystore.py` : Réécrit de `AsyncQdrantClient` vers `asyncpg` + pgvector
+- `services/document-indexer/consumer.py` : `_index_to_qdrant` → `_index_to_pgvector`
+- `tests/unit/infra/test_docker_compose.py` : `test_qdrant_version` → `test_qdrant_not_active`
+
+**Seuils réévaluation Qdrant** :
+- Volume >300k vecteurs
+- Latence recherche sémantique >100ms
+- Besoin filtres métadonnées complexes (payload filtering)
+
+**Alternatives considérées** :
+1. **Qdrant dédié Day 1** : Rejetée car over-engineering pour 100k vecteurs / 1 utilisateur
+2. **pgvector Day 1 + migration Qdrant si douleur (retenue)** : Start simple, split when pain
+3. **Milvus/Weaviate** : Rejetées car encore plus lourds que Qdrant
+
+**Documents impactés** : docker-compose.yml, migration 008, memorystore.py, consumer.py, tests, CLAUDE.md, README.md, architecture docs
+
+**Rollback plan** : Restaurer service Qdrant dans docker-compose + adapter memorystore.py (interface identique)
+
+---
+
+## 2026-02-09 : D20 - Claude Code Skills comme interface complémentaire
+
+**Décision** : Utiliser les Claude Code skills (`.claude/commands/`) comme interface développeur complémentaire à Telegram
+
+**Raison** :
+- Découverte via vidéo YouTube : Claude Code CLI supporte des skills personnalisées
+- Les skills permettent des interactions développeur directes avec Friday (requêtes, debug, queries)
+- Complémentaire à Telegram (dev workflow vs mobile/proactif)
+- Pas documenté dans l'architecture initiale → lacune identifiée
+
+**Implémentation** :
+- Créer `.claude/commands/` avec skills utiles (status, query, debug)
+- Documenter dans CLAUDE.md comme interface complémentaire
+- Stories futures : créer skills au fur et à mesure des besoins
+
+**Alternatives considérées** :
+1. **Ignorer les skills** : Rejetée car valeur ajoutée évidente pour workflow dev
+2. **Remplacer Telegram par skills** : Rejetée car skills = dev only, Telegram = mobile + proactif
+
+---
+
+## 2026-02-09 : D21 - Veille écosystème obligatoire avant chaque Story
+
+**Décision** : Effectuer une veille écosystème (MCP, Agent SDK, skills, tooling) avant le démarrage de chaque nouvelle Story
+
+**Raison** :
+- D19 (pgvector) et D20 (skills) ont été découvertes par hasard → risque de rater d'autres simplifications
+- L'écosystème Claude/Anthropic évolue rapidement (MCP servers, Agent SDK, Claude Code features)
+- Coût d'une veille : ~30min par Story. Coût d'une découverte tardive : heures de refactoring
+
+**Checklist veille (3 questions)** :
+1. Y a-t-il un MCP server officiel/communautaire qui remplace du code custom prévu ?
+2. Y a-t-il une feature Claude Code (skills, hooks, settings) qui simplifie un workflow ?
+3. Le tooling a-t-il évolué depuis la dernière Story (nouvelles versions, nouvelles capacités) ?
+
+**Trigger** : Avant chaque `Story X.Y`, exécuter la checklist. Si découverte majeure → décision documentée ici avant implémentation.
+
+---
+
+## 2026-02-09 : D18 - Veille mensuelle automatisée des modèles IA
+
+**Décision** : Benchmark mensuel automatisé pour garantir que Friday utilise toujours le meilleur modèle disponible
+
+**Raison** :
+- L'écosystème LLM évolue rapidement, un modèle dominant aujourd'hui peut être dépassé demain
+- Un benchmark structuré évite les changements impulsifs tout en restant vigilant
+- Coût estimé : ~3€/mois (quelques appels API concurrents sur datasets de test)
+
+**Protocole** :
+- Fréquence : 1er de chaque mois (job n8n automatisé)
+- 5 métriques : accuracy email (25%), structured output (25%), instruction following (20%), latency p99 (15%), coût/1k tokens (15%)
+- Seuil d'alerte : concurrent >10% supérieur sur >=3 métriques simultanément
+- Rapport envoyé dans topic Telegram Metrics & Logs
+
+**Voir** : [docs/ai-models-policy.md](docs/ai-models-policy.md) pour le détail complet
+
+---
+
+## 2026-02-09 : D17 - Migration 100% Claude Sonnet 4.5
+
+**Décision** : Utiliser exclusivement Claude Sonnet 4.5 (Anthropic API) comme LLM, remplaçant Mistral/Gemini/Ollama
+
+**Raison** :
+- Un seul modèle = zéro routing, zéro complexité multi-provider
+- Claude Sonnet 4.5 surpasse Mistral sur tous les benchmarks pertinents
+- Budget ~45€/mois API (acceptable pour usage Antonio)
+- Suppression Ollama local (D12) libère ~4 Go RAM
+
+**Impact** : 20+ fichiers mis à jour (toutes références Mistral/Gemini/Ollama → Claude Sonnet 4.5)
+
+**Rollback plan** : Adapter `adapters/llm.py` pour nouveau provider si Claude dégrade ou prix augmente
+
+---
+
 ## 2026-02-08 : Self-Healing Infrastructure - Automatisation 4 Tiers
 
-**Décision** : Implémenter Story 1.7 avec architecture à 4 tiers (Tier 1-2 Day 1, Tier 3-4 progressifs)
+**Décision** : Implémenter Story 1.13 (Self-Healing) avec architecture à 4 tiers (Tier 1-2 Day 1, Tier 3-4 progressifs)
 
 **Problématique identifiée** :
 - Maintenance Friday 2.0 estimée à 2-4h/mois (monitoring, mises à jour, connecteurs cassés)
@@ -26,7 +134,7 @@
 
 **Total gain** : ~3h/mois (maintenance résiduelle : ~1h/mois validations Tier 4)
 
-**Composants Tier 1-2 (Day 1 - Story 1.7)** :
+**Composants Tier 1-2 (Day 1 - Story 1.13)** :
 - `unattended-upgrades` : Mises à jour sécurité Linux auto + reboot 4h
 - `cleanup-disk.sh` : Nettoyage logs/backups (cron 3h)
 - `watchtower` : Détection nouvelles versions Docker (mode MONITOR_ONLY)
@@ -67,7 +175,7 @@ CONTENU (Manuel obligatoire) :
 
 **Documents impactés** :
 - `docs/DECISION_LOG.md` (ce fichier)
-- `docs/implementation-roadmap.md` (ajout Story 1.7)
+- `docs/implementation-roadmap.md` (ajout Story 1.13)
 - `CLAUDE.md` (section First Implementation Priority)
 - `scripts/tier1-os/setup-unattended-upgrades.sh` (à créer)
 - `scripts/tier2-docker/monitor-restarts.sh` (à créer)
@@ -75,7 +183,7 @@ CONTENU (Manuel obligatoire) :
 - `docker-compose.services.yml` (ajout watchtower)
 - `config/crontab-friday.txt` (à créer - centralise tous crons)
 
-**Implémentation** : Story 1.7 (8-12h dev + tests) après Story 1.5, avant Story 2
+**Implémentation** : Story 1.13 (8-12h dev + tests) après Story 1.5, avant Story 2
 
 **Rollback plan** : Si auto-recovery RAM cause instabilités → Désactiver `auto-recover-ram.sh`, garder alerting uniquement
 
@@ -145,15 +253,14 @@ elif event.priority in ["critical", "warning"] → System & Alerts
 else → Metrics & Logs
 ```
 
-**Impact Stories** :
-- **Story 1.5** : Alerting service doit router multi-topics (+4h dev, +2h tests)
-- **Story 2.5** : Heartbeat s'affiche dans Chat & Proactive (compatible)
-- **Nouvelle Story 1.6** : Telegram Topics Implementation (17-18h total)
-  - 1.6.1 : Documentation (6h)
-  - 1.6.2 : Setup supergroup manuel Antonio (15min)
-  - 1.6.3 : Bot routing implementation (4h dev + 1h tests)
-  - 1.6.4 : Inline buttons + commands (3h dev + 1h tests)
-  - 1.6.5 : E2E testing + deployment (2h tests + 1h deploy)
+**Impact Stories** (numérotation BMAD) :
+- **Story 1.8** (Alerting/Metrics) : Service doit router multi-topics (+4h dev, +2h tests)
+- **Story 4.1** (Heartbeat Engine) : S'affiche dans Chat & Proactive (compatible)
+- **Story 1.9** (Bot Telegram Core & Topics) : Telegram Topics Implementation (17-18h total)
+  - Setup supergroup manuel Antonio (15min)
+  - Bot routing implementation (4h dev + 1h tests)
+  - Inline buttons + commands → Story 1.10
+  - E2E testing + deployment (2h tests + 1h deploy)
 
 **Bénéfices** :
 - ✅ Filtrage granulaire (mute selon contexte utilisateur)
@@ -166,8 +273,8 @@ else → Metrics & Logs
 - `_docs/architecture-addendum-20260205.md` (section 11 créée)
 - `CLAUDE.md` (section Observability & Trust Layer mise à jour)
 - `docs/DECISION_LOG.md` (ce fichier)
-- `docs/telegram-topics-setup.md` (à créer - Story 1.6.1)
-- `docs/telegram-user-guide.md` (à créer - Story 1.6.1)
+- `docs/telegram-topics-setup.md` (à créer - Story 1.9)
+- `docs/telegram-user-guide.md` (à créer - Story 1.9)
 
 **Rollback plan** : Si complexité topics trop élevée → Revenir à 2 canaux séparés (Control + Logs)
 
@@ -234,10 +341,10 @@ else → Metrics & Logs
 ## 2026-02-05 : Code Review Adversarial v2 - Corrections multiples
 
 **Décisions** :
-1. **VPS-4 coût réel** : 25,5€ TTC/mois (corrigé partout, était ~24-25€)
+1. **VPS-3 coût réel** : ~15€ TTC/mois (corrigé partout, était VPS-4 25,5€)
 2. **Volume emails réel** : 110 000 mails (pas 55k) → coût migration $20-24 USD, durée 18-24h
 3. **Apple Watch hors scope** : Complexité excessive, pas d'API serveur → réévaluation >12 mois
-4. **Zep → PostgreSQL + Qdrant** : Zep fermé (2024), Graphiti immature → Day 1 = PostgreSQL (knowledge.*) + Qdrant via `adapters/memorystore.py`
+4. **Zep → PostgreSQL + Qdrant** : Zep fermé (2024), Graphiti immature → Day 1 = PostgreSQL (knowledge.*) + Qdrant via `adapters/memorystore.py` [SUPERSEDE D19 : pgvector remplace Qdrant Day 1]
 5. **Redis Streams vs Pub/Sub clarifié** : Streams = critiques (delivery garanti), Pub/Sub = informatifs (fire-and-forget)
 6. **Migration SQL 012 créée** : Table `ingestion.emails_legacy` pour import bulk 110k emails
 
@@ -248,7 +355,7 @@ else → Metrics & Logs
 - `scripts/migrate_emails.py`
 - `database/migrations/012_ingestion_emails_legacy.sql` (créé)
 
-**Raison** : Revue adversariale a identifié 17 issues (6 critiques, 7 moyennes, 4 mineures). Corrections appliquées avant démarrage Story 1.
+**Raison** : Revue adversariale a identifié 17 issues (6 critiques, 7 moyennes, 4 mineures). Corrections appliquées avant démarrage Epic 1.
 
 ---
 
@@ -257,7 +364,7 @@ else → Metrics & Logs
 **Décisions** :
 1. n8n version = 1.69.2+ (pas 2.4.8)
 2. LangGraph version = 0.2.45+ (pas 1.2.0)
-3. Mistral model IDs = suffixe -latest
+3. ~~Mistral model IDs = suffixe -latest~~ [SUPERSEDE D17 : 100% Claude Sonnet 4.5]
 4. correction_rules : UUID PK + scope/priority/source_receipts/hit_count
 5. Redis = Streams pour critique, Pub/Sub pour informatif
 6. Socle RAM = ~7-9 Go (inclut Zep+EmailEngine+Presidio+Caddy+OS)
@@ -274,7 +381,7 @@ else → Metrics & Logs
 
 ## 2026-02-04 : Finalisation Trust Layer
 
-**Décision** : Story 1.5 Observability & Trust Layer AVANT tout module métier
+**Décision** : Stories 1.5-1.8 BMAD (Observability & Trust Layer) AVANT tout module métier
 
 **Composants** :
 - Décorateur `@friday_action` obligatoire
@@ -296,10 +403,9 @@ else → Metrics & Logs
 
 **Stack** :
 - Python 3.12 + LangGraph 0.2.45+ + n8n 1.69.2+
-- PostgreSQL 16 (3 schemas : core, ingestion, knowledge)
+- PostgreSQL 16 (3 schemas : core, ingestion, knowledge) + pgvector (embeddings, D19)
 - Redis 7 (Streams + Pub/Sub)
-- Qdrant (vectorstore)
-- Mistral (LLM cloud + Ollama local)
+- Claude Sonnet 4.5 (Anthropic API — D17, remplace Mistral/Ollama)
 - Telegram (interface principale)
 - Tailscale (VPN mesh)
 
@@ -348,5 +454,5 @@ else → Metrics & Logs
 
 ---
 
-**Dernière mise à jour** : 2026-02-05
-**Version** : 1.0.0
+**Dernière mise à jour** : 2026-02-09
+**Version** : 1.1.0

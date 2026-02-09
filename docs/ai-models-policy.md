@@ -1,149 +1,247 @@
-# Politique utilisation modèles IA - Friday 2.0
+# Politique utilisation modeles IA - Friday 2.0
 
-**Date** : 2026-02-05
-**Version** : 1.0.0
+**Date** : 2026-02-09
+**Version** : 2.0.0
 
 ---
 
 ## Vue d'ensemble
 
-Friday 2.0 utilise des modèles IA externes (Mistral, Gemini, Claude) et locaux (Ollama).
-Cette politique définit les règles de versionnage, upgrade, et monitoring des modèles.
+Friday 2.0 utilise **Claude Sonnet 4.5** (Anthropic) comme modele unique pour toutes les taches IA.
+
+**Decision D17** : 100% Claude Sonnet 4.5 -- meilleur structured output, instruction following et consistance. Un seul modele, zero routing, budget API ~45 EUR/mois.
+
+**Rationale** :
+- **Structured output** : Reponses JSON fiables, parsing Pydantic natif sans retry
+- **Instruction following** : Respect strict des prompts complexes (classification multi-label, regles injectees)
+- **Consistance** : Resultats reproductibles entre appels, moins de variance que les alternatives
+- **Simplicite operationnelle** : Un seul adaptateur, une seule API key, zero logique de routing
+- **Anonymisation RGPD** : Pipeline Presidio AVANT tout appel (meme politique qu'avant, seul le modele change)
+
+**Historique** : Le projet utilisait initialement une strategie multi-modeles (Mistral Large/Small, Gemini Flash, Ollama local). La decision D17 (2026-02-09) simplifie radicalement cette approche apres benchmarks internes montrant la superiorite de Claude Sonnet 4.5 sur tous les axes.
 
 ---
 
-## Règles de versionnage
+## Regles de versionnage
 
 ### Environnements
 
-| Environnement | Stratégie | Justification |
-|--------------|-----------|---------------|
-| **Dev/Test** | Suffixe `-latest` | Tester nouveaux modèles en continu |
-| **Staging** | Version explicite | Valider performance avant prod |
-| **Production** | Version explicite | Stabilité et reproductibilité |
+| Environnement | Strategie | Modele | Justification |
+|--------------|-----------|--------|---------------|
+| **Dev/Test** | Suffixe `-latest` | `claude-sonnet-4-5-20250929` | Tester en continu, suivre releases |
+| **Production** | Version explicite | `claude-sonnet-4-5-20250929` | Stabilite et reproductibilite |
 
-### Exemples
+### Configuration
 
-**Mistral** :
-- Dev : `mistral-large-latest` (suit automatiquement les releases)
-- Staging : `mistral-large-2411` (fixer version candidate)
-- Production : `mistral-large-2411` (après validation accuracy)
+```python
+# agents/src/config/settings.py
+class Settings(BaseSettings):
+    LLM_PROVIDER: str = "anthropic"
+    LLM_MODEL: str = "claude-sonnet-4-5-20250929"  # Version fixe prod
+    ANTHROPIC_API_KEY: str  # Via age/SOPS, JAMAIS en clair
 
-**Gemini** :
-- Dev : `gemini-2.0-flash-latest`
-- Staging : `gemini-2.0-flash-001`
-- Production : `gemini-2.0-flash-001`
+    # Seuils monitoring
+    LLM_BUDGET_ALERT_EUR: float = 35.0  # Alerte si >35 EUR
+    LLM_BUDGET_MAX_EUR: float = 45.0    # Budget max mensuel
+```
 
-**Claude** :
-- Dev : `claude-3-5-sonnet-latest`
-- Staging : `claude-3-5-sonnet-20241022`
-- Production : `claude-3-5-sonnet-20241022`
+### Adaptateur LLM
 
-**Ollama (local)** :
-- Dev : `nemotron:12b-instruct` (pas de suffixe -latest pour Ollama)
-- Staging : `nemotron:12b-instruct`
-- Production : `nemotron:12b-instruct`
+```python
+# agents/src/adapters/llm.py
+def get_llm_adapter() -> LLMAdapter:
+    provider = os.getenv("LLM_PROVIDER", "anthropic")
+    if provider == "anthropic":
+        return AnthropicAdapter(
+            api_key=os.getenv("ANTHROPIC_API_KEY"),
+            model=os.getenv("LLM_MODEL", "claude-sonnet-4-5-20250929"),
+        )
+    # Extensible : ajouter d'autres providers si veille D18 le recommande
+    raise ValueError(f"Unknown LLM provider: {provider}")
+```
+
+**Swappabilite** : Changer de modele = modifier 1 fichier (`adapters/llm.py`) + 1 env var (`LLM_MODEL`). Zero impact sur le reste du code grace au pattern adaptateur.
 
 ---
 
-## Procédure d'upgrade
+## Procedure d'upgrade
 
-### Phase 1 : Test en dev
+### Veille mensuelle automatisee (Decision D18)
 
-1. **Activer `-latest` en dev**
-   ```python
-   # agents/src/config/settings.py
-   LLM_MODEL = os.getenv("LLM_MODEL", "mistral-large-latest")  # Dev uniquement
-   ```
+La veille mensuelle garantit que Friday utilise toujours le meilleur modele disponible sans changement impulsif.
 
-2. **Tester pendant 1 semaine**
-   - Exécuter tests unitaires + intégration
-   - Valider accuracy sur datasets de référence (tests/fixtures/)
-   - Surveiller métriques :
-     ```python
-     {
-         "llm.accuracy.email_classification": 0.95,
-         "llm.latency.p99_ms": 1200,
-         "llm.cost.per_1k_tokens": 0.03
-     }
-     ```
+#### Benchmark mensuel
 
-3. **Identifier nouvelle version stable**
-   ```bash
-   # Exemple : -latest pointe maintenant vers mistral-large-2501
-   curl https://api.mistral.ai/v1/models | jq '.data[] | select(.id | contains("large"))'
-   # Output : "id": "mistral-large-2501"
-   ```
+**Frequence** : 1er de chaque mois (job n8n automatise)
 
-### Phase 2 : Validation staging
+**Protocole** :
+1. **Benchmark modele actuel** (Claude Sonnet 4.5) sur datasets de reference
+2. **Benchmark 2-3 concurrents** identifies (ex: Gemini, Mistral, GPT)
+3. **Comparaison sur metriques standardisees** :
 
-4. **Déployer version explicite en staging**
-   ```python
-   # agents/src/config/settings.py (staging)
-   LLM_MODEL = os.getenv("LLM_MODEL", "mistral-large-2501")  # Version candidate
-   ```
+| Metrique | Poids | Mesure |
+|----------|-------|--------|
+| Accuracy classification email | 25% | Dataset `tests/fixtures/email_classification.json` |
+| Structured output fiabilite | 25% | Taux de parsing JSON sans erreur |
+| Instruction following | 20% | Score sur prompts complexes avec regles |
+| Latency p99 | 15% | Temps reponse percentile 99 |
+| Cout par 1k tokens | 15% | Prix input + output pondere |
 
-5. **Tests approfondis (2 semaines)**
-   - Rejouer 100+ emails réels (archive tests/fixtures/email_classification.json)
-   - Comparer accuracy avec version actuelle production
-   - Critères validation :
-     - Accuracy >= version actuelle (pas de régression)
-     - Latency p99 <= +20% max
-     - Cost <= +30% max (sauf si accuracy +10%)
+**Seuil d'alerte** : Un concurrent est signale si >10% superieur sur >=3 metriques simultanement.
 
-6. **Décision Go/No-Go**
-   - Go : Accuracy maintenue OU améliorée
-   - No-Go : Régression >3% → Rester sur version actuelle
+#### Rapport mensuel
 
-### Phase 3 : Déploiement production
+```
+-- Topic Telegram : Metrics & Logs --
 
-7. **Mise à jour progressive**
+Veille modeles IA - Fevrier 2026
+
+Modele actuel : claude-sonnet-4-5-20250929
+  Accuracy email : 95.2%
+  Structured output : 99.1%
+  Instruction following : 94.8%
+  Latency p99 : 1100ms
+  Cout : 0.015 EUR/1k tokens
+
+Concurrents testes :
+  gemini-2.5-pro : Accuracy 93.1%, SO 96.2%, IF 91.0%
+  mistral-large-2502 : Accuracy 91.8%, SO 94.5%, IF 89.2%
+
+Conclusion : Aucun concurrent ne depasse le seuil d'alerte.
+Prochain benchmark : 1er mars 2026
+```
+
+#### Procedure de changement de modele
+
+**Prerequis** : Un concurrent depasse le seuil d'alerte (>10% sur >=3 metriques).
+
+1. **Phase validation (3 semaines)** :
+   - Deployer le concurrent en dev/test
+   - Rejouer 200+ cas reels depuis les archives
+   - Confirmer la superiorite sur 3 semaines consecutives (pas de pic ponctuel)
+
+2. **Phase migration (1 semaine)** :
    ```bash
    # 1. Backup config actuelle
    cp .env.prod .env.prod.bak
 
-   # 2. Update LLM_MODEL
-   sed -i 's/mistral-large-2411/mistral-large-2501/g' .env.prod
+   # 2. Modifier adaptateur si nouveau provider
+   # agents/src/adapters/llm.py (ajouter nouveau provider)
 
-   # 3. Redémarrer agents (rolling restart)
+   # 3. Update env var
+   # LLM_PROVIDER=nouveau_provider
+   # LLM_MODEL=nouveau_modele_version_fixe
+
+   # 4. Redemarrer agents
    docker compose up -d --no-deps agents
    ```
 
-8. **Monitoring renforcé (72h)**
-   - Alertes sur accuracy <90% (seuil normal : <85%)
+3. **Phase monitoring renforce (72h)** :
+   - Alertes sur accuracy <90%
    - Alertes sur latency p99 >2000ms
-   - Surveillance corrections manuelles Antonio (feedback loop)
+   - Surveillance corrections manuelles Antonio
 
-9. **Rollback si problème**
+4. **Rollback si probleme** :
    ```bash
-   # Restaurer version précédente
    cp .env.prod.bak .env.prod
    docker compose up -d --no-deps agents
-
    # Documenter dans Decision Log
-   echo "Rollback mistral-large-2501 → 2411 : accuracy drop 92% → 88%" >> docs/DECISION_LOG.md
    ```
+
+**Regle des 3 mois** : Pas de changement de modele si le modele actuel est en production depuis moins de 3 mois, sauf regression critique (accuracy <80%).
+
+---
+
+## Matrix de decision modele
+
+### Modele unique : Claude Sonnet 4.5
+
+Avec la decision D17, il n'y a plus de routing entre modeles. Claude Sonnet 4.5 est utilise pour **toutes** les taches IA.
+
+| Tache | Modele | Trust Level |
+|-------|--------|-------------|
+| Classification emails | Claude Sonnet 4.5 | propose (Day 1) |
+| Resume emails | Claude Sonnet 4.5 | auto |
+| Categorisation financiere | Claude Sonnet 4.5 | propose |
+| OCR post-processing | Claude Sonnet 4.5 | auto |
+| Renommage/classement documents | Claude Sonnet 4.5 | propose |
+| Generation brouillons reponse | Claude Sonnet 4.5 | propose |
+| Heartbeat (decisions proactives) | Claude Sonnet 4.5 | auto |
+| Extraction entites (knowledge graph) | Claude Sonnet 4.5 | auto |
+| Analyse these/recherche | Claude Sonnet 4.5 | blocked |
+| Analyse medicale | Claude Sonnet 4.5 | blocked |
+
+**Embeddings** : Utiliser le modele d'embeddings Anthropic ou un modele d'embeddings dedie (a definir en Story 3). Les embeddings ne passent PAS par le LLM de generation.
+
+**Donnees ultra-sensibles** : Pipeline Presidio anonymise AVANT l'appel a Claude Sonnet 4.5. Pas de modele local (Ollama retire -- decision D12). Si anonymisation impossible pour un cas specifique, le trust level `blocked` empeche tout envoi au LLM.
+
+---
+
+## Gestion des couts
+
+### Budget mensuel
+
+| Poste | Budget | Alerte |
+|-------|--------|--------|
+| Claude Sonnet 4.5 (toutes taches) | ~45 EUR/mois | Si >35 EUR |
+
+### Pricing Claude Sonnet 4.5
+
+| Composante | Prix |
+|-----------|------|
+| Input tokens | $3 / 1M tokens (~2.75 EUR) |
+| Output tokens | $15 / 1M tokens (~13.75 EUR) |
+| Context window | 200k tokens |
+| Output max | 8k tokens |
+
+### Optimisations
+
+**Strategies appliquees** :
+- **Cache prompt** : Utiliser le caching Anthropic pour prefixes de prompt repetes (system prompts, regles de correction)
+- **Batch processing** : Grouper emails similaires quand possible (ex: 5 emails meme expediteur)
+- **Prompt concis** : Minimiser les tokens input en injectant uniquement les regles pertinentes
+- **Early exit** : Ne pas appeler le LLM si une regle deterministe suffit (ex: regex pour spam connu)
+
+**Monitoring cout** :
+```python
+# services/metrics/nightly.py
+async def check_monthly_budget():
+    """Verifie le budget mensuel et alerte si necessaire"""
+    total_cost = await db.fetchval("""
+        SELECT COALESCE(SUM(cost_eur), 0)
+        FROM core.llm_metrics
+        WHERE window_start >= date_trunc('month', NOW())
+    """)
+
+    if total_cost > settings.LLM_BUDGET_ALERT_EUR:
+        await alert_telegram(
+            topic="system",
+            message=f"Budget LLM : {total_cost:.2f} EUR / {settings.LLM_BUDGET_MAX_EUR} EUR"
+        )
+```
 
 ---
 
 ## Surveillance continue
 
-### Métriques par modèle
+### Metriques par module
 
 **Stockage PostgreSQL** :
 ```sql
 -- Table : core.llm_metrics
 CREATE TABLE core.llm_metrics (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    model_id TEXT NOT NULL,                -- "mistral-large-2411"
+    model_id TEXT NOT NULL,                -- "claude-sonnet-4-5-20250929"
     module TEXT NOT NULL,                  -- "email", "archiviste", etc.
     action TEXT NOT NULL,                  -- "classify", "summarize", etc.
-    accuracy DECIMAL(5,4),                 -- 0.9523 (calculé depuis corrections)
+    accuracy DECIMAL(5,4),                 -- 0.9523 (calcule depuis corrections)
     latency_p50_ms INT,
     latency_p95_ms INT,
     latency_p99_ms INT,
-    cost_per_1k_tokens DECIMAL(8,6),
-    window_start TIMESTAMPTZ NOT NULL,    -- Fenêtre hebdomadaire
+    cost_eur DECIMAL(8,4),                -- Cout en EUR pour cette fenetre
+    tokens_input INT,                     -- Tokens input consommes
+    tokens_output INT,                    -- Tokens output consommes
+    window_start TIMESTAMPTZ NOT NULL,    -- Fenetre hebdomadaire
     window_end TIMESTAMPTZ NOT NULL,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -155,101 +253,47 @@ CREATE INDEX idx_llm_metrics_model ON core.llm_metrics(model_id, module, action,
 ```python
 # services/metrics/nightly.py
 async def compute_llm_metrics():
-    """Agrège métriques LLM par modèle/module/action sur fenêtre glissante 7j"""
-    for model_id in ["mistral-large-2411", "mistral-small-latest"]:
-        for module in ["email", "archiviste", "financial"]:
-            accuracy = await calculate_accuracy(model_id, module, days=7)
-            latency = await calculate_latency_percentiles(model_id, module, days=7)
-            cost = await calculate_cost(model_id, module, days=7)
+    """Agrege metriques LLM par module/action sur fenetre glissante 7j"""
+    model_id = settings.LLM_MODEL  # Un seul modele
 
-            await db.execute("""
-                INSERT INTO core.llm_metrics
-                (model_id, module, action, accuracy, latency_p99_ms, cost_per_1k_tokens, window_start, window_end)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-            """, model_id, module, "all", accuracy, latency["p99"], cost, start, end)
+    for module in ["email", "archiviste", "financial"]:
+        accuracy = await calculate_accuracy(model_id, module, days=7)
+        latency = await calculate_latency_percentiles(model_id, module, days=7)
+        cost = await calculate_cost(model_id, module, days=7)
+        tokens = await calculate_tokens(model_id, module, days=7)
+
+        await db.execute("""
+            INSERT INTO core.llm_metrics
+            (model_id, module, action, accuracy, latency_p50_ms, latency_p95_ms,
+             latency_p99_ms, cost_eur, tokens_input, tokens_output, window_start, window_end)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+        """, model_id, module, "all", accuracy,
+            latency["p50"], latency["p95"], latency["p99"],
+            cost, tokens["input"], tokens["output"], start, end)
+
+    # Verification budget mensuel
+    await check_monthly_budget()
 ```
 
 ### Dashboard Telegram `/confiance`
 
 ```
-📊 Confiance modèles IA (7 derniers jours)
+Confiance modeles IA (7 derniers jours)
 
-🤖 mistral-large-2411
-  • Email classification : 95.2% (✅ stable)
-  • Email summarize : 93.8% (⚠️ -1.2% vs semaine dernière)
-  • Latency p99 : 1150ms
-  • Cost : 0.028€/1k tokens
+Claude Sonnet 4.5 (claude-sonnet-4-5-20250929)
+  Email classification : 95.2% (stable)
+  Email summarize : 93.8% (-1.2% vs semaine derniere)
+  Archiviste categorize : 91.5% (stable)
+  Latency p99 : 1100ms
+  Cout semaine : 8.50 EUR (projection mois : 36.20 EUR)
 
-🤖 mistral-small-latest
-  • Archiviste categorize : 88.5% (❌ <90%, rétrogradé à propose)
-  • Latency p99 : 480ms
-  • Cost : 0.012€/1k tokens
+Tendances
+  Accuracy globale : 93.5% (-0.3% vs semaine derniere)
+  Total corrections Antonio : 8 cette semaine
+  Tokens consommes : 1.2M input / 180k output
 
-📈 Tendances
-  • Accuracy globale : 93.1% (-0.5% vs semaine dernière)
-  • Total corrections Antonio : 12 cette semaine
+Prochaine veille mensuelle : 1er mars 2026
 ```
-
----
-
-## Gestion des coûts
-
-### Budgets mensuels
-
-| Modèle | Usage | Budget max/mois | Alertes |
-|--------|-------|-----------------|---------|
-| Mistral Large | Classification emails, résumés | 20€ | Si >15€ |
-| Mistral Small | Embeddings, queries simples | 5€ | Si >4€ |
-| Gemini Flash | OCR post-processing | 10€ | Si >8€ |
-| Ollama local | Données ultra-sensibles (médical) | 0€ (électricité VPS) | - |
-
-### Optimisations
-
-**Règles automatiques** :
-- Si coût >budget → Basculer sur modèle moins cher (Large → Small)
-- Si accuracy baisse <85% après bascule → Revenir modèle cher + alerte Antonio
-
-**Stratégies manuelles** :
-- Batch processing (traiter 10 emails → 1 appel LLM)
-- Cache aggressive (résumés identiques)
-- Ollama local pour use cases tolérants latence (+500ms)
-
----
-
-## Matrix de décision modèle
-
-### Quand utiliser Mistral Large ?
-
-| Critère | Seuil |
-|---------|-------|
-| Complexité tâche | Classification multi-label (>10 classes) |
-| Accuracy requise | >95% |
-| Données sensibles | Non (sinon Ollama local) |
-| Budget disponible | >50% budget mensuel restant |
-
-**Exemples** : Email classification (urgent/important), Financial categorization
-
-### Quand utiliser Mistral Small ?
-
-| Critère | Seuil |
-|---------|-------|
-| Complexité tâche | Classification binaire/simple |
-| Accuracy acceptable | >90% |
-| Volume élevé | >100 requêtes/jour |
-| Budget serré | <30% budget mensuel restant |
-
-**Exemples** : Spam detection, Simple summaries, Embeddings
-
-### Quand utiliser Ollama local ?
-
-| Critère | Seuil |
-|---------|-------|
-| Données sensibles | RGPD strict (médical, financier, juridique) |
-| Latency tolérable | >2 secondes OK |
-| Accuracy acceptable | >85% |
-| Zéro coût API | Requis |
-
-**Exemples** : Analyse dossier médical, Extraction données bancaires, Contrats juridiques
 
 ---
 
@@ -258,55 +302,85 @@ async def compute_llm_metrics():
 ### 1. Hardcoder model IDs sans env var
 
 ```python
-# ❌ INCORRECT
-response = mistral.chat(model="mistral-large-2411", messages=...)
+# INCORRECT
+response = client.messages.create(model="claude-sonnet-4-5-20250929", ...)
 
-# ✅ CORRECT
-response = mistral.chat(model=settings.LLM_MODEL, messages=...)
+# CORRECT
+response = client.messages.create(model=settings.LLM_MODEL, ...)
 ```
 
-### 2. Utiliser `-latest` en production
+### 2. Appeler le LLM sans passer par l'adaptateur
 
 ```python
-# ❌ INCORRECT (prod)
-LLM_MODEL = "mistral-large-latest"  # Version non déterministe
+# INCORRECT
+from anthropic import Anthropic
+client = Anthropic()
+response = client.messages.create(...)
 
-# ✅ CORRECT (prod)
-LLM_MODEL = "mistral-large-2411"  # Version fixe
+# CORRECT
+from agents.src.adapters.llm import get_llm_adapter
+llm = get_llm_adapter()
+response = await llm.chat(prompt=prompt)
 ```
 
-### 3. Ignorer accuracy drops
+### 3. Envoyer des PII au LLM sans anonymisation
 
 ```python
-# ❌ INCORRECT
+# INCORRECT
+response = await llm.chat(prompt=text_with_pii)
+
+# CORRECT
+anonymized = await presidio_anonymize(text_with_pii)
+response = await llm.chat(prompt=anonymized)
+result = await presidio_deanonymize(response)
+```
+
+### 4. Ignorer accuracy drops
+
+```python
+# INCORRECT
 if accuracy < 0.80:
     logger.warning("Accuracy faible")  # Pas d'action
 
-# ✅ CORRECT
+# CORRECT
 if accuracy < 0.85:
     await downgrade_trust_level(module, action)
-    await alert_telegram(f"⚠️ Accuracy {module}.{action} : {accuracy:.1%}")
+    await alert_telegram(
+        topic="system",
+        message=f"Accuracy {module}.{action} : {accuracy:.1%} -- retrogradation trust"
+    )
+```
+
+### 5. Changer de modele impulsivement
+
+```
+INCORRECT : Voir un benchmark favorable et migrer immediatement
+CORRECT : Suivre la procedure de veille D18 (seuil >10% sur >=3 metriques + 3 semaines validation)
 ```
 
 ---
 
-## Références
+## References
 
 ### Documentation API
 
-- **Mistral AI** : https://docs.mistral.ai/api/
-- **Gemini** : https://ai.google.dev/gemini-api/docs
-- **Claude** : https://docs.anthropic.com/claude/reference
-- **Ollama** : https://ollama.com/library
+- **Anthropic (Claude)** : https://docs.anthropic.com/claude/reference
 
-### Model cards
+### Model card
 
-| Modèle | Context window | Output max | Prix (input/output) |
-|--------|---------------|------------|---------------------|
-| mistral-large-2411 | 128k tokens | 4k tokens | 0.002€ / 0.006€ per 1k tokens |
-| mistral-small-2412 | 32k tokens | 8k tokens | 0.0002€ / 0.0006€ per 1k tokens |
-| gemini-2.0-flash-001 | 1M tokens | 8k tokens | 0.00001€ / 0.00003€ per 1k tokens |
-| nemotron:12b-instruct | Illimité (local) | Illimité | 0€ (électricité VPS) |
+| Modele | Context window | Output max | Prix input | Prix output |
+|--------|---------------|------------|------------|-------------|
+| claude-sonnet-4-5-20250929 | 200k tokens | 8k tokens | $3 / 1M tokens | $15 / 1M tokens |
+
+### Fichiers lies
+
+| Fichier | Role |
+|---------|------|
+| `agents/src/adapters/llm.py` | Adaptateur LLM (swappable) |
+| `agents/src/config/settings.py` | Configuration modele + budget |
+| `services/metrics/nightly.py` | Aggregation metriques + verification budget |
+| `config/trust_levels.yaml` | Trust levels par module/action |
+| `tests/fixtures/email_classification.json` | Dataset benchmark email |
 
 ---
 
@@ -314,10 +388,12 @@ if accuracy < 0.85:
 
 | Date | Change | Raison |
 |------|--------|--------|
-| 2026-02-05 | Création document | Code review adversarial v2 finding #25 |
-| 2026-02-05 | Ajout matrix décision modèle | Clarifier règles usage Large vs Small vs Ollama |
+| 2026-02-05 | v1.0.0 - Creation document | Code review adversarial v2 finding #25 |
+| 2026-02-05 | Ajout matrix decision modele | Clarifier regles usage Large vs Small vs Ollama |
+| 2026-02-09 | v2.0.0 - Reecriture complete | Decision D17 : 100% Claude Sonnet 4.5, suppression multi-modeles |
+| 2026-02-09 | Ajout veille mensuelle | Decision D18 : benchmark mensuel automatise |
 
 ---
 
-**Version** : 1.0.0
-**Prochaine révision** : Après Story 2 (Email Agent) en production
+**Version** : 2.0.0
+**Prochaine revision** : 1er mars 2026 (premiere veille mensuelle D18)

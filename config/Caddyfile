@@ -1,0 +1,23 @@
+# Friday 2.0 - Caddy Reverse Proxy Configuration
+# Toutes routes internes uniquement (Tailscale expose)
+# Version: 1.0.0 (2026-02-08)
+
+# n8n reverse proxy
+n8n.friday.local {
+	reverse_proxy friday-n8n:5678
+}
+
+# Gateway API reverse proxy
+api.friday.local {
+	reverse_proxy friday-gateway:8000
+}
+
+# EmailEngine reverse proxy
+email.friday.local {
+	reverse_proxy friday-emailengine:3000
+}
+
+# Default fallback - health endpoint
+:80 {
+	respond /health "OK" 200
+}

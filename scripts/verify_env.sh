@@ -15,7 +15,7 @@ NC='\033[0m' # No Color
 REQUIRED_VARS=(
   "TELEGRAM_BOT_TOKEN"
   "TELEGRAM_CHAT_ID"
-  "MISTRAL_API_KEY"
+  "ANTHROPIC_API_KEY"
   "EMAILENGINE_TOKEN"
   "POSTGRES_PASSWORD"
   "REDIS_PASSWORD"
@@ -24,7 +24,7 @@ REQUIRED_VARS=(
 
 # Variables optionnelles (warning si manquant)
 OPTIONAL_VARS=(
-  "DEEPGRAM_API_KEY"
+  "BENCHMARK_BUDGET_USD"
   "TAILSCALE_PC_HOSTNAME"
   "VPS_TIER"
 )
@@ -105,7 +105,7 @@ main() {
         echo "💡 Comment les obtenir :"
         echo "   - TELEGRAM_BOT_TOKEN    : @BotFather sur Telegram"
         echo "   - TELEGRAM_CHAT_ID      : @userinfobot sur Telegram"
-        echo "   - MISTRAL_API_KEY       : https://console.mistral.ai/"
+        echo "   - ANTHROPIC_API_KEY     : https://console.anthropic.com/"
         echo "   - EMAILENGINE_TOKEN     : http://emailengine:3000/admin (après setup)"
         echo "   - POSTGRES_PASSWORD     : Générer : openssl rand -base64 32"
         echo "   - REDIS_PASSWORD        : Générer : openssl rand -base64 32"

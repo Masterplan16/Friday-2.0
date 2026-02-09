@@ -76,32 +76,29 @@ ttl = 3600  # 1h
 
 ## Correction 3 : Politique modèles IA
 
-**Problème** : Pas de documentation sur le versionnage et upgrade des modèles IA (Mistral, Gemini, etc.).
+**Problème** : Pas de documentation sur le versionnage et upgrade des modèles IA.
 
 **Solution** : Document de politique complet créé.
 
 **Fichier** : `docs/ai-models-policy.md`
 
+> **Note (D17 — 2026-02-08)** : La politique modèles a été simplifiée. 100% Claude Sonnet 4.5 (Anthropic), un seul modèle, zéro routing. Veille mensuelle D18 pour détecter si un concurrent devient significativement supérieur.
+
 **Règles clés** :
 
 | Environnement | Stratégie | Exemple |
 |--------------|-----------|---------|
-| Dev/Test | Suffixe `-latest` | `mistral-large-latest` |
-| Staging | Version explicite | `mistral-large-2411` |
-| Production | Version explicite | `mistral-large-2411` |
+| Dev/Test | Version latest | `claude-sonnet-4-5-20250929` |
+| Production | Version fixe | `claude-sonnet-4-5-20250929` |
 
 **Procédure d'upgrade** :
-1. Tester `-latest` en dev (1 semaine)
-2. Identifier nouvelle version stable
-3. Déployer version explicite en staging (2 semaines)
-4. Valider accuracy >= version actuelle (critères Go/No-Go)
-5. Déploiement production progressif (rolling restart)
-6. Monitoring renforcé 72h (rollback si accuracy <90%)
+1. Veille mensuelle D18 : benchmark automatisé sur modèle actuel + 2-3 concurrents
+2. Alerte si concurrent >10% supérieur sur >=3 métriques simultanées
+3. Anti-piège : 3 mois de supériorité consistante avant migration
+4. Migration : 1 fichier (adapters/llm.py) + 1 env var (LLM_PROVIDER)
 
-**Matrix de décision** :
-- **Mistral Large** : Tâches complexes, accuracy >95%, budget disponible
-- **Mistral Small** : Tâches simples, volume élevé, budget serré
-- **Ollama local** : Données ultra-sensibles (RGPD strict), zéro coût API
+**Modèle unique** :
+- **Claude Sonnet 4.5** : Toutes tâches (classification, génération, analyse, embeddings). ~$45/mois
 
 **Métriques surveillées** :
 ```python
@@ -166,7 +163,7 @@ ttl = 3600  # 1h
 
 3. **Alertes multi-métriques** :
    ```
-   📊 RAM : 42/48 Go (87%) 🚨
+   📊 RAM : 21/24 Go (87%) 🚨
    💻 CPU : 75% ✅
    💾 Disque : 68% ✅
    ```
@@ -175,7 +172,7 @@ ttl = 3600  # 1h
    ```markdown
    🚨 Friday 2.0 - Alerte Système
 
-   🚨 RAM : 87% (42/48 Go)
+   🚨 RAM : 87% (21/24 Go)
    🚨 CPU : 85%
 
    Vérifier les services lourds :

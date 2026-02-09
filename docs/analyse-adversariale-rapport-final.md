@@ -31,7 +31,7 @@
 
 **Fix** :
 - ✅ Analyse besoins mise à jour : "50€/mois maximum (VPS + APIs cloud)"
-- ✅ Estimation détaillée : "~36-42€/mois (VPS-4 25€ + Mistral 6-9€ + Deepgram 3-5€ + divers 2-3€)"
+- ✅ Estimation détaillée : "~63€/mois (VPS-3 ~15€ + Claude Sonnet 4.5 ~45€ + veille ~3€)" [MàJ D17 2026-02-09]
 - **Fichier modifié** : `_docs/friday-2.0-analyse-besoins.md` (Section 8)
 
 ### 2. Discord → Telegram - Changement documenté ✅
@@ -167,9 +167,9 @@
 
 **Fix** :
 - ✅ Architecture : Section "Clarifications techniques complémentaires" avec tableau complet :
-  - Générateur TCS (Template Jinja2 + RAG + Mistral Large 3)
-  - Générateur ECOS (Template Jinja2 + Méthodes Antonio + Mistral Large 3)
-  - Actualisateur cours (Extraction sections + PubMed/HAS + Mistral Large 3)
+  - Générateur TCS (Template Jinja2 + RAG + Claude Sonnet 4.5) [MàJ D17]
+  - Générateur ECOS (Template Jinja2 + Méthodes Antonio + Claude Sonnet 4.5) [MàJ D17]
+  - Actualisateur cours (Extraction sections + PubMed/HAS + Claude Sonnet 4.5) [MàJ D17]
   - Collection jeux vidéo (Form Telegram + PostgreSQL + Playwright scraping eBay)
   - CV académique (Template LaTeX + PostgreSQL + Compilation PDF)
   - Mode HS/Vacances (Flag PostgreSQL + n8n pause workflows + Auto-reply)
@@ -199,9 +199,9 @@
 - ✅ Architecture : Gap documenté "Vérifier si Plaud Note Pro a auto-upload GDrive, sinon export manuel périodique"
 - **Fichier modifié** : `_docs/architecture-friday-2.0.md` (Section Gaps & Limitations)
 
-### 17. Mistral cloud vs Ollama VPS - Justification détaillée ✅
+### 17. ~~Mistral cloud vs Ollama VPS~~ [SUPERSEDE D17 : 100% Claude Sonnet 4.5]
 
-**Problème** : Pourquoi deux fois Mistral Nemo (cloud + VPS) ?
+**Problème** : ~~Pourquoi deux fois Mistral Nemo (cloud + VPS) ?~~ Résolu par D17 : un seul modèle Claude pour tout.
 
 **Fix** :
 - ✅ Architecture : Section "Clarifications techniques complémentaires" avec tableau comparatif :
@@ -327,7 +327,7 @@
 2. **Spécifications complètes** : Workflows n8n et tests IA prêts à implémenter
 3. **Cohérence garantie** : Analyse besoins alignée avec architecture
 4. **Gaps documentés** : Antonio sait exactement quelles fonctionnalités ont des limitations
-5. **Décisions justifiées** : Chaque choix technique (Mistral cloud vs VPS, Caddy, etc.) a sa justification
+5. **Décisions justifiées** : Chaque choix technique (Claude Sonnet 4.5 D17, Caddy, etc.) a sa justification
 
 ---
 

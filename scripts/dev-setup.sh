@@ -87,12 +87,12 @@ echo "[7/7] Verification Docker..."
 if command -v docker &>/dev/null; then
     if docker compose version &>/dev/null; then
         echo "  Docker Compose disponible"
-        echo "  Pour demarrer les services: docker compose up -d postgres redis qdrant"
+        echo "  Pour demarrer les services: docker compose up -d postgres redis"
     else
         echo "  ATTENTION: docker compose non disponible"
     fi
 else
-    echo "  ATTENTION: Docker non installe (requis pour PostgreSQL, Redis, Qdrant)"
+    echo "  ATTENTION: Docker non installe (requis pour PostgreSQL, Redis, n8n)"
 fi
 
 echo ""
@@ -100,7 +100,7 @@ echo "=== Setup termine ==="
 echo ""
 echo "Prochaines etapes:"
 echo "  1. cp .env.example .env && editer .env"
-echo "  2. docker compose up -d postgres redis qdrant"
+echo "  2. docker compose up -d postgres redis"
 echo "  3. python scripts/apply_migrations.py"
 echo "  4. pytest tests/unit -v"
 echo ""

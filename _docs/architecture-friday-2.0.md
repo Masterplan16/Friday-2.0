@@ -6,8 +6,8 @@ workflowType: 'architecture'
 workflowStatus: 'complete'
 lastStep: 8
 completedAt: '2026-02-02'
-lastReview: '2026-02-05'
-version: '1.2.0'
+lastReview: '2026-02-09'
+version: '1.3.0'
 project_name: 'Friday 2.0 - Second Cerveau Personnel'
 user_name: 'Antonio'
 date: '2026-02-02'
@@ -15,10 +15,10 @@ date: '2026-02-02'
 
 # Architecture Decision Document
 
-**Version** : 1.2.0
+**Version** : 1.3.0
 **Date initiale** : 2 février 2026
-**Dernière mise à jour** : 5 février 2026
-**Statut** : Complet + corrections review adversariale v2 (Zep→PostgreSQL+Qdrant, Redis Streams/Pub/Sub, VPS 25,5€, budget 37-43€)
+**Dernière mise à jour** : 9 février 2026
+**Statut** : Complet + corrections review adversariale v2 (Zep→PostgreSQL+Qdrant, Redis Streams/Pub/Sub, VPS-3 ~15€, budget ~63€) + migration 100% Claude Sonnet 4.5 (D17) + pgvector remplace Qdrant Day 1 (D19)
 
 _Ce document se construit collaborativement par etapes. Chaque section est ajoutee au fur et a mesure des decisions architecturales prises ensemble._
 
@@ -80,16 +80,16 @@ Note : les domaines utilisateur (medecin, enseignant, financier, personnel) rest
 | ID | Exigence | Solution retenue |
 |----|----------|-----------------|
 | I1 | Orchestration multi-agents et workflows | n8n (workflows data) + LangGraph (logique agent IA) |
-| I2 | Memoire persistante avec graphe relationnel temporel | PostgreSQL (knowledge.*) + Qdrant via abstraction memorystore.py. **Note 2026-02-05** : Zep fermé (2024), Graphiti immature → Day 1 = PostgreSQL + Qdrant. Ré-évaluation Graphiti dans 6 mois (critères : >500★, doc API complète, tests 100k+ entités) sinon Neo4j Community. |
+| I2 | Memoire persistante avec graphe relationnel temporel | PostgreSQL (knowledge.*) via abstraction memorystore.py (D19). **Note 2026-02-05** : Zep fermé (2024), Graphiti immature → Day 1 = PostgreSQL + pgvector (D19). Ré-évaluation Graphiti dans 6 mois (critères : >500★, doc API complète, tests 100k+ entités) sinon Neo4j Community. |
 | I3 | Base de donnees relationnelle | PostgreSQL |
-| I4 | Stockage vectoriel / recherche semantique | Qdrant |
+| I4 | Stockage vectoriel / recherche semantique | pgvector (extension PostgreSQL) (D19). Ré-évaluation Qdrant si >300k vecteurs ou latence >100ms |
 
 #### Traitement IA (12)
 
 | ID | Exigence | Solution retenue |
 |----|----------|-----------------|
-| T1 | LLM cloud (raisonnement complexe) | Mistral (mistral-small-latest classification, mistral-large-latest generation + raisonnement) |
-| T2 | LLM local VPS (donnees sensibles) | Mistral Nemo 12B / mistral-small-latest via Ollama sur VPS (pas sur laptop) |
+| T1 | LLM cloud (raisonnement complexe) | Claude Sonnet 4.5 (`claude-sonnet-4-5-20250929`) — modele unique pour toutes taches (D17) |
+| T2 | ~~LLM local VPS (donnees sensibles)~~ | ~~Ollama sur VPS~~ → Retire (D12/D17). Donnees sensibles = Presidio anonymisation avant Claude cloud |
 | T3 | OCR | Surya + Marker |
 | T4 | Extraction d'entites nommees (NER) | spaCy fr + GLiNER (zero-shot flexible) |
 | T5 | Anonymisation reversible | Presidio + spaCy-fr |
@@ -106,7 +106,7 @@ Note : les domaines utilisateur (medecin, enseignant, financier, personnel) rest
 | ID | Exigence | Solution retenue |
 |----|----------|-----------------|
 | C1 | Canal principal texte + vocal + bot | Telegram (remplace Discord : mobile-first, vocal natif, meilleure confidentialite) |
-| C2 | STT (Speech-to-Text) francais | Faster-Whisper sur VPS + Deepgram Nova-3 fallback cloud |
+| C2 | STT (Speech-to-Text) francais | Faster-Whisper sur VPS |
 | C3 | TTS (Text-to-Speech) francais | Kokoro sur VPS + Piper fallback rapide |
 | C4 | Notifications push proactives | Telegram bot + ntfy (push mobile) |
 
@@ -124,7 +124,7 @@ Note : les domaines utilisateur (medecin, enseignant, financier, personnel) rest
 | S9 | Plaud Note | GDrive existant → Google Drive API watch |
 | S10 | Surveillance dossiers locaux | chokidar (Node) ou watchdog (Python) |
 | S11 | Scanner physique | Via dossier surveille (S10) |
-| S12 | Base documentaire (programme etudes medicales) | RAG : indexation Qdrant (I4) |
+| S12 | Base documentaire (programme etudes medicales) | RAG : indexation pgvector (I4) (D19) |
 
 #### Contraintes (6)
 
@@ -157,7 +157,7 @@ Note : les domaines utilisateur (medecin, enseignant, financier, personnel) rest
 | **Google Docs commentaires** | Tuteur These : Commentaires ancres dans Google Doc | API v1 : Pas de commentaires ancres, utiliser API Suggestions | UX differente : Suggestions modifiables vs Commentaires fixes | Utiliser Google Docs API Suggestions (etudiants voient suggestions a accepter/rejeter) + Note explicative dans le Doc |
 | **BeeStation Synology** | Photos stockees sur BeeStation | Pas d'API BSM, pas de support Tailscale/packages tiers | Flux indirect : Telephone → BeeStation → PC (copie manuelle/auto) → VPS (Syncthing) | Sync automatique BeeStation → PC (Synology Drive Client) + Syncthing PC → VPS |
 | **Plaud Note upload** | Transcriptions audio automatiques | Depend de l'integration GDrive de Plaud Note | Si Plaud Note n'upload pas auto sur GDrive, Antonio doit exporter manuellement | Verifier si Plaud Note Pro a auto-upload GDrive, sinon export manuel periodique |
-| **Budget initial** | 20-30 euros/mois (APIs cloud) | 50 euros/mois (VPS + APIs), estimation reelle 36-42 euros/mois | Budget 66% plus eleve que prevu initial | Acceptable si valeur ajoutee justifie. Plan B : VPS-3 24 Go (15 euros) + reduction perimetre |
+| **Budget initial** | 20-30 euros/mois (APIs cloud) | 50 euros/mois (VPS + APIs), estimation reelle ~63 euros/mois (D17 : 100% Claude Sonnet 4.5) | Budget plus eleve que prevu initial | Acceptable — qualite structured output et instruction following superieure justifie le cout API Claude ~45 euros/mois |
 | **Thunderbird** | 4 comptes mails via Thunderbird | EmailEngine (auto-heberge Docker) comme backend sync | Thunderbird reste interface utilisateur optionnelle, Friday accede via EmailEngine | Thunderbird = lecture emails classique, EmailEngine = backend API pour Friday |
 
 ### Decisions techniques prises
@@ -166,10 +166,10 @@ Note : les domaines utilisateur (medecin, enseignant, financier, personnel) rest
 |----------|-------|---------------|
 | Canal principal | **Telegram** | Mobile-first, vocal natif bidirectionnel, meilleure confidentialite, bot API superieure a Discord |
 | LLM laptop | **Aucun** | Ventilation excessive constatee lors du test Ollama qwen3:8b |
-| LLM classification | **Mistral Nemo cloud** | ~0.15 euros/mois pour 600 mails ($0.02/1M tokens input) |
-| LLM donnees sensibles | **Mistral Nemo 12B / mistral-small-latest via Ollama sur VPS** | CPU suffisant, donnees ne sortent pas, ecosysteme Mistral unifie |
+| LLM (toutes taches) | **Claude Sonnet 4.5** (`claude-sonnet-4-5-20250929`) | Modele unique, zero routing, meilleur structured output + instruction following (D17). ~45 euros/mois API |
+| ~~LLM donnees sensibles~~ | ~~Ollama sur VPS~~ | Retire (D12/D17). Presidio anonymise avant appel Claude cloud |
 | Hebergeur VPS | **OVH France** | Francais, sans engagement, deja connu (MiraIdesk) |
-| VPS cible | **OVH VPS-4 : 48 Go RAM / 12 vCores / 300 Go NVMe** | ~25 euros TTC/mois, tous services lourds residents en simultane |
+| VPS cible | **OVH VPS-3 : 24 Go RAM / 8 vCores / 160 Go NVMe** | ~15€ TTC/mois, services lourds residents (Ollama retire — D12/D17) |
 | Stockage fichiers | **PC = stockage, VPS = cerveau** | Documents chez l'utilisateur, VPS garde index + metadonnees |
 | Sync VPS-PC | **Syncthing via Tailscale** | Zone de transit sur VPS, sync au rallumage du PC |
 | Securite reseau | **Tailscale** | Rien expose sur Internet public, tous services internes |
@@ -198,7 +198,7 @@ n8n (admin, rare)
 [FUTUR] OpenClaw (reevaluation post-socle backend)
   - Candidat pour facade multi-canal si maturite suffisante
   - Point de controle : apres livraison modules I1-I4 + T1-T3
-  - Prerequis : correction CVE-2026-25253, sandboxing durci, streaming Mistral stable
+  - Prerequis : correction CVE-2026-25253, sandboxing durci, integration Claude stable
 ```
 
 ### Stockage et flux de fichiers
@@ -227,7 +227,7 @@ Recherche
 
 | Donnee | Volume | Cout one-shot | Duree |
 |--------|--------|---------------|-------|
-| 110 000 mails (4 comptes) | ~550 Mo texte | ~16$ (embedding Mistral Embed + classification Nemo) | ~18h batch de nuit |
+| 110 000 mails (4 comptes) | ~550 Mo texte | ~25$ (embedding + classification Claude Sonnet 4.5 @ $3/$15 per 1M tokens) | ~18h batch de nuit |
 
 ### Lacunes identifiees et contournements
 
@@ -243,8 +243,8 @@ Recherche
 | Risque | Mitigation |
 |--------|-----------|
 | Complexite d'integration (15+ services Docker) | Architecture modulaire, chaque composant remplacable via API standard |
-| Graphe de connaissances (2026) | **Decision 2026-02-05** : Zep fermé (2024), Graphiti immature → Day 1 = PostgreSQL (knowledge.*) + Qdrant (embeddings) via `adapters/memorystore.py`. Ré-évaluation Graphiti dans 6 mois (critères : >500★ GitHub, doc API complète, tests 100k+ entités) sinon → Neo4j Community Edition. Mode dégradé : recherche sémantique Qdrant seul. Alerte Trust Layer (`service.down`) + circuit breaker dans `adapters/memorystore.py`. |
-| Budget VPS insuffisant | VPS-4 48 Go laisse ~23-25 Go de marge apres tous services charges (~23-25 Go utilises). Plan B : VPS-3 24 Go a 15 euros/mois (reactive exclusions mutuelles) |
+| Graphe de connaissances (2026) | **Decision 2026-02-05** : Zep fermé (2024), Graphiti immature → Day 1 = PostgreSQL (knowledge.*) + pgvector (embeddings dans `knowledge.embeddings` avec colonne `vector(1024)` + index HNSW) via `adapters/memorystore.py` (D19). Ré-évaluation Graphiti dans 6 mois (critères : >500★ GitHub, doc API complète, tests 100k+ entités) sinon → Neo4j Community Edition. Mode dégradé : recherche sémantique pgvector seul (D19). Alerte Trust Layer (`service.down`) + circuit breaker dans `adapters/memorystore.py`. Ré-évaluation Qdrant si >300k vecteurs ou latence >100ms. |
+| Budget VPS insuffisant | VPS-3 24 Go laisse ~7.5-9.5 Go de marge apres services charges (~14.5-16.5 Go utilises, Ollama retire D12/D17). Plan B : VPS-4 48 Go a ~25 euros/mois si besoin de plus de RAM |
 | Evolution rapide du marche IA | Composants decouplés par API, remplacement sans impact sur le reste |
 | Erreurs/hallucinations des agents IA | Observability & Trust Layer : niveaux de confiance (auto/propose/bloque), receipts verifiables, retrogradation automatique |
 
@@ -252,13 +252,12 @@ Recherche
 
 | Poste | Cout mensuel |
 |-------|-------------|
-| VPS OVH VPS-4 48 Go (France, sans engagement) | 25,5€ TTC |
-| Mistral API (mistral-small-latest classif + mistral-large-latest gen/raisonnement + Embed) | ~6-9€ |
-| Deepgram STT fallback (consultation express) | ~3-5€ |
-| Divers (domaine, ntfy) | ~2-3€ |
-| **Total estimé** | **~37-43€ (marge ~7-13€ sur budget 50€)** |
+| VPS OVH VPS-3 24 Go (France, sans engagement) | ~15€ TTC |
+| API Claude Sonnet 4.5 (Anthropic) — modele unique toutes taches (D17) | ~45€ |
+| Divers (domaine, ntfy, veille) | ~3€ |
+| **Total estimé** | **~63€/mois** |
 
-**Plan B budget** : Descente VPS-3 (24 Go, ~15€ TTC) si besoin de réduire → total ~26-32€. Nécessite réactivation des profils d'exclusion mutuelle services lourds.
+> **Note D17** : Le budget depasse la contrainte initiale X1 (50€/mois). Accepte car la qualite superieure de Claude Sonnet 4.5 (structured output, instruction following, consistance) justifie l'investissement. Un seul modele = zero routing, zero complexite multi-provider. Pricing : $3/$15 per 1M tokens (input/output).
 
 ---
 
@@ -285,36 +284,36 @@ Recherche
 - Chaque composant est remplacable independamment
 - Architecture hybride : Python (agents IA) + Docker (services) + n8n (workflows)
 
-### Provider LLM unique : Mistral
+### Strategie LLM : 100% Claude Sonnet 4.5 (D17)
 
-**Decision** : Mistral pour l'ensemble du systeme (francais, GDPR, residency EU).
+**Decision D17** : 100% Claude Sonnet 4.5 — meilleur structured output, instruction following et consistance. Un seul modele, zero routing, budget API ~45 EUR/mois.
+
+> **[HISTORIQUE]** : Avant D17, le systeme utilisait Mistral (Nemo classification, Large generation, Embed embeddings) + Ollama VPS (donnees sensibles). La decision D17 simplifie radicalement l'architecture en unifiant sur un seul provider/modele.
 
 | Modele | Usage | Cout |
 |--------|-------|------|
-| Mistral Nemo | Classification, tri, routage ($0.02/1M input) | ~0.15 euros/mois |
-| mistral-large-latest | Generation, synthese, brouillons, raisonnement complexe, analyse contrats, theses | ~5-9 euros/mois |
-| Mistral Embed | Embeddings vectoriels ($0.01/1M) | ~0.50 euros/mois |
-| Mistral Nemo 12B (Ollama VPS) | Donnees sensibles, inference locale | 0 euros (CPU VPS) |
-| mistral-small-latest (Ollama VPS) | Classification locale rapide | 0 euros (CPU VPS) |
+| Claude Sonnet 4.5 (`claude-sonnet-4-5-20250929`) | Toutes taches : classification, generation, synthese, raisonnement, analyse | ~45 euros/mois |
 
-> **Note** : Les model IDs Mistral evoluent frequemment. Utiliser les suffixes `-latest` pour toujours pointer vers la version stable la plus recente. Verifier la compatibilite sur https://docs.mistral.ai avant deploiement.
+> **Pricing** : $3/$15 per 1M tokens (input/output). Verifier la compatibilite sur https://docs.anthropic.com avant deploiement.
+>
+> **Embeddings** : Les embeddings vectoriels pour pgvector (D19) utilisent un modele d'embedding dedie (ex: Voyage AI, ou modele open-source local). Claude Sonnet 4.5 n'est pas un modele d'embedding. Les vecteurs sont stockes dans `knowledge.embeddings` avec colonne `vector(1024)` + index HNSW.
 
-#### Selection modele LLM par action
+#### Selection modele LLM par action (simplifie D17)
+
+> **D17** : Un seul modele pour toutes les taches. La differentiation se fait uniquement par les parametres (temperature, max_tokens), pas par le modele.
 
 | Module | Action | Modele | Temperature | Max tokens | Justification |
 |--------|--------|--------|-------------|------------|---------------|
-| email | classify | mistral-small-latest | 0.1 | 200 | Classification rapide, peu de creativite |
-| email | draft_reply | mistral-large-latest | 0.7 | 2000 | Redaction necessite creativite |
-| archiviste | rename | mistral-small-latest | 0.1 | 100 | Renommage deterministe |
-| archiviste | summarize | mistral-large-latest | 0.3 | 1000 | Resume fidele au contenu |
-| finance | classify_transaction | mistral-small-latest | 0.1 | 150 | Classification deterministe |
-| tuteur_these | review | mistral-large-latest | 0.5 | 3000 | Analyse profonde requise |
-| briefing | generate | mistral-large-latest | 0.5 | 2000 | Synthese qualitative |
-| *donnees sensibles* | * | Ollama Nemo 12B (local) | variable | variable | RGPD - pas de sortie cloud |
+| email | classify | claude-sonnet-4-5-20250929 | 0.1 | 200 | Classification rapide, peu de creativite |
+| email | draft_reply | claude-sonnet-4-5-20250929 | 0.7 | 2000 | Redaction necessite creativite |
+| archiviste | rename | claude-sonnet-4-5-20250929 | 0.1 | 100 | Renommage deterministe |
+| archiviste | summarize | claude-sonnet-4-5-20250929 | 0.3 | 1000 | Resume fidele au contenu |
+| finance | classify_transaction | claude-sonnet-4-5-20250929 | 0.1 | 150 | Classification deterministe |
+| tuteur_these | review | claude-sonnet-4-5-20250929 | 0.5 | 3000 | Analyse profonde requise |
+| briefing | generate | claude-sonnet-4-5-20250929 | 0.5 | 2000 | Synthese qualitative |
+| *donnees sensibles* | * | claude-sonnet-4-5-20250929 | variable | variable | RGPD : Presidio anonymise AVANT appel cloud |
 
-> **Regle de routage** : Si `trust_level == 'blocked'` OU donnees contiennent PII medicales/financieres → Ollama local. Sinon → Mistral cloud (plus rapide).
-
-**Note** : GPT-4o-mini retire le 13 fevrier 2026. Migration deja anticipee vers Mistral.
+> **Regle RGPD** : Si donnees contiennent PII medicales/financieres → Presidio anonymise AVANT appel Claude cloud. Trust level `blocked` = analyse uniquement, jamais d'action.
 
 ### Analyse comparative machine locale GPU
 
@@ -334,7 +333,7 @@ Recherche
 ```bash
 # 1. Cloner la structure
 mkdir friday-2.0 && cd friday-2.0
-docker compose up -d  # n8n + PostgreSQL + Qdrant
+docker compose up -d  # n8n + PostgreSQL (avec pgvector) (D19)
 
 # 2. Initialiser les agents LangGraph
 cd agents && pip install -e ".[dev]"
@@ -354,11 +353,11 @@ tailscale up --hostname=friday-vps
 | Langage principal (agents) | Python 3.12+ | LangGraph requirement |
 | Framework agents IA | LangGraph 0.2.45+ | Decision architecturale |
 | Orchestration workflows data | n8n 1.69.2+ | Decision architecturale |
-| Provider LLM | Mistral (ecosysteme complet) | Decision utilisateur |
+| Provider LLM | Anthropic Claude Sonnet 4.5 (D17) | Decision utilisateur |
 | Base de donnees | PostgreSQL 16 | Exigence I3 |
-| Stockage vectoriel | Qdrant | Exigence I4 |
-| Memoire graphe | PostgreSQL (knowledge.*) + Qdrant via memorystore.py | Exigence I2 (Zep fermé 2024) |
-| Inference locale | Ollama (Mistral Nemo 12B / mistral-small-latest) | Exigences T1/T2 |
+| Stockage vectoriel | pgvector (extension PostgreSQL) (D19) | Exigence I4 — Ré-évaluation Qdrant si >300k vecteurs ou latence >100ms |
+| Memoire graphe | PostgreSQL (knowledge.*) via memorystore.py (D19) | Exigence I2 (Zep fermé 2024) |
+| ~~Inference locale~~ | ~~Ollama~~ → Retire (D12/D17) | ~~Exigences T2~~ — Presidio anonymise avant Claude cloud |
 | Reverse proxy | Caddy | Simplicite HTTPS auto |
 | Containerisation | Docker Compose v2 | Standard |
 | API gateway | FastAPI | Performance Python async |
@@ -376,11 +375,11 @@ tailscale up --hostname=friday-vps
 - Langage : Python 3.12+
 - Framework agents : LangGraph
 - Orchestration workflows : n8n
-- LLM : Mistral (ecosysteme complet)
+- LLM : Claude Sonnet 4.5 via Anthropic API (D17)
 - BDD : PostgreSQL 16
-- Vectoriel : Qdrant
-- Memoire graphe : PostgreSQL (knowledge.*) + Qdrant via abstraction memorystore.py (Zep fermé 2024, Graphiti immature)
-- Inference locale : Ollama (Mistral Nemo 12B / mistral-small-latest)
+- Vectoriel : pgvector (extension PostgreSQL) (D19) — Ré-évaluation Qdrant si >300k vecteurs ou latence >100ms
+- Memoire graphe : PostgreSQL (knowledge.*) via abstraction memorystore.py (Zep fermé 2024, Graphiti immature) (D19)
+- ~~Inference locale~~ : Ollama retire (D12/D17) — 100% Claude cloud avec Presidio
 - Bot : python-telegram-bot
 - API Gateway : FastAPI
 - Reverse proxy : Caddy
@@ -445,11 +444,11 @@ tailscale up --hostname=friday-vps
 **Decision** : Architecture event-driven avec pattern adaptateur
 
 ```
-PostgreSQL (source de verite)
+PostgreSQL (source de verite) (D19 : pgvector integre dans PostgreSQL)
   → INSERT/UPDATE declenche notification
   → Redis Streams (critiques) ou Pub/Sub (informatifs) propage l'evenement
-  → Adaptateur Qdrant : met a jour les embeddings vectoriels
-  → Adaptateur memorystore.py : met a jour le graphe de connaissances (PostgreSQL knowledge.* + Qdrant embeddings)
+  → pgvector : met a jour les embeddings vectoriels dans knowledge.embeddings (D19)
+  → Adaptateur memorystore.py : met a jour le graphe de connaissances (PostgreSQL knowledge.* + pgvector embeddings) (D19)
   → Adaptateur Syncthing : synchronise les fichiers vers le PC
 ```
 
@@ -457,12 +456,12 @@ PostgreSQL (source de verite)
 
 | Composant | Adaptateur | Remplacable par |
 |-----------|-----------|-----------------|
-| Qdrant | `adapters/vectorstore.py` | Milvus, Weaviate, pgvector |
+| pgvector (D19) | `adapters/memorystore.py` (D19) | Qdrant (si >300k vecteurs ou latence >100ms), Milvus, Weaviate |
 | Graphe connaissances | `adapters/memorystore.py` | Neo4j, Graphiti (si mature), MemGPT, custom |
 | Syncthing | `adapters/filesync.py` | rsync, rclone |
 | EmailEngine | `adapters/email.py` | IMAP direct, autre bridge |
 
-#### 1f. Schema du graphe de connaissances (PostgreSQL knowledge.* + Qdrant)
+#### 1f. Schema du graphe de connaissances (PostgreSQL knowledge.* + pgvector) (D19)
 
 **Objectif** : Memoire eternelle — Toute information indexee avec relations semantiques. Recherche par sens, pas par mots-cles.
 
@@ -543,12 +542,12 @@ RETURN nodes(path)
 ORDER BY older.date
 ```
 
-**Integration avec Qdrant (vectorstore)**
+**Integration avec pgvector (vectorstore) (D19)**
 
 - **Graphe (Zep+Graphiti)** : Relations explicites, requetes structurees
-- **Vecteurs (Qdrant)** : Recherche semantique fuzzy, similarite
+- **Vecteurs (pgvector)** : Recherche semantique fuzzy, similarite (~31ms latence pour 100k vecteurs, 1 utilisateur) (D19)
 - **Synergie** :
-  1. Recherche semantique Qdrant → Top 50 documents candidats
+  1. Recherche semantique pgvector (`knowledge.embeddings` avec index HNSW) → Top 50 documents candidats (D19)
   2. Filtre via graphe → Documents pertinents avec contexte relationnel
   3. Reranking LLM → Top 5 documents finaux avec explications
 
@@ -565,13 +564,14 @@ ORDER BY older.date
 
 **Fallback si Zep/Graphiti indisponible**
 
-Mode degrade : recherche semantique via Qdrant seul (perte des relations temporelles du graphe, pas de la recherche vectorielle). Alerte Trust Layer (`service.down`) + circuit breaker dans `adapters/memorystore.py`.
+Mode degrade : recherche semantique via pgvector seul (perte des relations temporelles du graphe, pas de la recherche vectorielle) (D19). Alerte Trust Layer (`service.down`) + circuit breaker dans `adapters/memorystore.py`.
 
 > **Avertissement (Feb 2026)** : Zep a cesse ses operations en 2024. Graphiti est en phase early-stage.
 > **Decision provisoire** : Demarrer avec `adapters/memorystore.py` abstraction. Implementer d'abord
-> une version simplifiee basee sur PostgreSQL (tables knowledge.*) + Qdrant (embeddings).
+> une version simplifiee basee sur PostgreSQL (tables knowledge.*) + pgvector (embeddings dans `knowledge.embeddings` avec colonne `vector(1024)` + index HNSW) (D19).
 > Si Graphiti atteint la maturite v1.0 stable → migration via adaptateur.
 > Sinon → Neo4j Community Edition comme alternative.
+> **Ré-évaluation Qdrant** : Si >300k vecteurs ou latence pgvector >100ms (D19).
 >
 > **Criteres de migration vers Graphiti** :
 > - Version stable >= 1.0 publiee
@@ -618,12 +618,12 @@ Mode degrade : recherche semantique via Qdrant seul (perte des relations tempore
 **Decision** : Pipeline Presidio en amont de tout LLM cloud
 
 ```
-Donnee brute → Presidio (anonymisation) → LLM cloud Mistral
+Donnee brute → Presidio (anonymisation) → Claude Sonnet 4.5 (Anthropic API)
                                         → Reponse
                                         → Presidio (des-anonymisation) → Utilisateur
 ```
 
-Les donnees envoyees a Mistral cloud sont **toujours anonymisees**. Les donnees sensibles restent sur le VPS (Ollama local) ou sont anonymisees avant sortie.
+Les donnees envoyees a Claude cloud sont **toujours anonymisees** via Presidio. Avec D17 (retrait Ollama), l'anonymisation Presidio est d'autant plus critique car il n'y a plus d'inference locale.
 
 **Mecanisme d'anonymisation reversible (mapping chiffre)**
 
@@ -709,8 +709,8 @@ async def search_with_anonymization(query: str) -> list[Document]:
     # Si la requete contient des PII, anonymiser la requete
     anonymized_query, tokens = await anonymize_text(query, "search_query")
 
-    # Recherche Qdrant avec requete anonymisee
-    results = await qdrant.search(anonymized_query)
+    # Recherche pgvector avec requete anonymisee (D19)
+    results = await memorystore.search(anonymized_query)
 
     # Des-anonymiser les resultats avant retour
     for doc in results:
@@ -784,7 +784,7 @@ Les mappings peuvent etre purges apres un delai (ex: 2 ans) si `last_used_at` de
 
 L'analyse besoins previent : "A trop anonymiser, on perd la capacite de recherche". Solution retenue :
 - **Anonymisation selective** : Seules les donnees envoyees aux LLM cloud sont anonymisees
-- **Ollama VPS** : Donnees ultra-sensibles restent sur le VPS (pas d'anonymisation necessaire)
+- **Presidio obligatoire** : Toutes donnees sensibles anonymisees avant envoi Claude cloud (Ollama retire D12/D17)
 - **Mapping persistant** : Permet la recherche apres anonymisation
 
 ---
@@ -1104,12 +1104,12 @@ n8n fournit son propre dashboard pour l'administration des workflows. Aucun deve
 |---------|--------|
 | BDD | `pg_dump` compresse quotidien (~50 Mo initial, ~50 Mo/mois croissance) |
 | Fichiers config | Versionnes dans git (secrets chiffres SOPS) |
-| Volumes Docker | Qdrant : snapshot quotidien (graphe dans PostgreSQL knowledge.*) |
+| Volumes Docker | pgvector sauvegarde avec pg_dump (inclus dans backup PostgreSQL, pas de snapshot separé) (D19) |
 | Transport | Syncthing via Tailscale vers le PC |
 | Retention | 7 jours rotatifs sur le PC |
 | Estimation taille | ~467 Mo initial compresse, ~50 Mo/mois supplementaires |
 
-#### 5d. Profils RAM (VPS-4 48 Go)
+#### 5d. Profils RAM (VPS-3 24 Go)
 
 **Decision** : Tous les services lourds residents en simultane. Plus d'exclusion mutuelle.
 
@@ -1120,8 +1120,8 @@ n8n fournit son propre dashboard pour l'administration des workflows. Aucun deve
 | n8n | ~500 Mo | Permanent |
 | FastAPI Gateway | ~200 Mo | Permanent |
 | Telegram Bot | ~100 Mo | Permanent |
-| Qdrant | ~1-2 Go | Permanent |
-| Graphe (knowledge.*) | ~500 Mo | Permanent (inclut dans PostgreSQL) |
+| ~~Qdrant~~ | ~~1-2 Go~~ | ~~Permanent~~ → Retiré (D19 : pgvector dans PostgreSQL, économie ~500 Mo-2.5 Go RAM + 1 container Docker) |
+| Graphe + embeddings (knowledge.*) | ~500 Mo | Permanent (inclut dans PostgreSQL avec pgvector) (D19) |
 | EmailEngine | ~500 Mo | Permanent |
 | Caddy | ~50 Mo | Permanent |
 | Presidio + spaCy-fr | ~1-1.5 Go | Permanent |
@@ -1130,40 +1130,40 @@ n8n fournit son propre dashboard pour l'administration des workflows. Aucun deve
 
 | Service lourd | RAM | Mode |
 |---------------|-----|------|
-| Ollama Nemo 12B | ~8 Go | Resident |
+| ~~Ollama Nemo 12B~~ | ~~~8 Go~~ | ~~Resident~~ → Retire definitivement (D12 + D17 : 100% Claude cloud) |
 | Faster-Whisper | ~4 Go | Resident |
 | Kokoro TTS | ~2 Go | Resident |
 | Surya/Marker OCR | ~2 Go | Resident |
-| **Sous-total services lourds** | **~16 Go** | |
+| **Sous-total services lourds** | **~8 Go** (Ollama retire D12/D17) | |
 
-**Bilan RAM VPS-4 :**
+**Bilan RAM VPS-3 :**
 
 | Composant | RAM estimee |
 |-----------|-------------|
-| Total VPS-4 | 48 Go |
-| Socle permanent (corrige) | ~7-9 Go |
-| Services lourds residents | ~16 Go |
-| **Total estime** | **~23-25 Go** |
-| **Marge disponible** | **~23-25 Go** |
+| Total VPS-3 | 24 Go |
+| Socle permanent (corrige) | ~6.5-8.5 Go |
+| Services lourds residents (Ollama retire D12/D17) | ~8 Go |
+| **Total estime** | **~14.5-16.5 Go** |
+| **Marge disponible** | **~7.5-9.5 Go** |
+| Seuil alerte 85% | 20.4 Go |
 
-**Avantage majeur** : Zero cold start. Ollama Nemo 12B met 30-60s a se charger en RAM. Avec 48 Go, tous les modeles sont pre-charges et repondent instantanement.
+**Note** : Ollama est definitivement retire de l'architecture (D12 + D17 : migration 100% Claude Sonnet 4.5). Les donnees sensibles sont protegees par Presidio (anonymisation obligatoire avant tout appel LLM cloud).
 
 **Orchestrator simplifie** : Le `config/profiles.py` passe de gestionnaire d'exclusions mutuelles a simple moniteur RAM. Il surveille la consommation et alerte si usage >85% mais ne bloque plus le demarrage des services.
 
 ```python
-# config/profiles.py - SIMPLIFIE (plus d'exclusion mutuelle)
+# config/profiles.py - SIMPLIFIE (plus d'exclusion mutuelle, Ollama retire D12/D17)
 SERVICE_RAM_PROFILES: dict[str, ServiceProfile] = {
-    "ollama-nemo": ServiceProfile(ram_gb=8),
     "faster-whisper": ServiceProfile(ram_gb=4),
     "kokoro-tts": ServiceProfile(ram_gb=2),
     "surya-ocr": ServiceProfile(ram_gb=2),
 }
 
 RAM_ALERT_THRESHOLD_PCT = 85  # Alerte Telegram si depasse
-# Plus de champ "incompatible_with" → tous compatibles sur VPS-4
+# Ollama retire (D12/D17) → services compatibles sur VPS-3, marge confortable
 ```
 
-**Plan B (VPS-3, 24 Go, 15 euros TTC)** : Si besoin de reduire le budget, reduction obligatoire du perimetre fonctionnel. Modules non critiques retires : Coach sportif, Menus & Courses, Collection jeux video, CV academique. Les modules critiques (Moteur Vie, Archiviste, Agenda, Finance, These, Droit) representent ~14 Go services lourds + 7 Go socle = 21 Go sur 24 Go. Marge 3 Go suffisante. La config `profiles.py` supporte les deux modes via variable d'environnement `VPS_TIER`.
+**Plan B (VPS-4, 48 Go, ~25€ TTC)** : Si besoin de plus de RAM (ajout services lourds supplementaires), upgrade VPS-4 48 Go. La config `profiles.py` supporte les deux modes via variable d'environnement `VPS_TIER`.
 
 ---
 
@@ -1189,23 +1189,24 @@ RAM_ALERT_THRESHOLD_PCT = 85  # Alerte Telegram si depasse
 
 **Principe** : n8n = plomberie (ingestion, transport, cron), LangGraph = cerveau (decisions IA).
 
-#### Mistral cloud vs Ollama VPS : Justification
+#### Strategie LLM : 100% Claude Sonnet 4.5 (D17)
 
-**Decision** : Hybride Mistral cloud + Ollama VPS
+> **[HISTORIQUE]** : Avant D17, l'architecture prevoyait un hybride Mistral cloud + Ollama VPS (donnees sensibles locales). La decision D17 simplifie cette approche.
 
-| Critere | Mistral cloud (Nemo) | Ollama VPS (Nemo 12B) | Choix |
-|---------|---------------------|----------------------|-------|
-| **Latence** | ~500-800ms (API) | ~2-5s (CPU) | Cloud plus rapide |
-| **Cout** | ~0.15 euros/mois (600 emails @ $0.02/1M tokens) | 0 euro (VPS deja paye) | Cloud negligeable |
-| **Confidentialite** | Donnees quittent le VPS | Donnees restent sur VPS | VPS meilleur |
-| **Fiabilite** | API externe (dependency) | Local (resilient) | VPS meilleur |
+**Decision D17** : 100% Claude Sonnet 4.5 via Anthropic API
+
+| Critere | Claude Sonnet 4.5 (cloud) | Justification |
+|---------|--------------------------|---------------|
+| **Qualite** | Meilleur structured output, instruction following, consistance | Raison principale de D17 |
+| **Simplicite** | Un seul modele, zero routing, un seul provider | Reduit complexite operationnelle |
+| **Cout** | ~45 euros/mois ($3/$15 per 1M tokens input/output) | Acceptable pour la qualite |
+| **Confidentialite** | Presidio anonymise AVANT appel cloud | RGPD respecte |
 
 **Strategie retenue** :
-- **Classification/tri rapide** (600+ items/mois) → **Mistral cloud** : Latence critique, cout negligeable (~0.15 euro/mois), pas de donnees sensibles (juste subject + preview 500 chars)
-- **Donnees sensibles** (medical, financier, juridique) → **Ollama VPS** : Donnees ne sortent jamais, latence acceptable pour analyses ponctuelles
-- **Raisonnement complexe** (briefing, generation, analyse) → **mistral-large-latest cloud** : Qualite superieure, usage ponctuel (1-2x/jour), cout maitrise (~5-8 euros/mois)
+- **Toutes taches** (classification, generation, raisonnement, analyse) → **Claude Sonnet 4.5** : Un seul modele, parametres (temperature, max_tokens) adaptes par action
+- **Donnees sensibles** (medical, financier, juridique) → **Presidio anonymise obligatoirement** avant appel Claude cloud (pas d'inference locale depuis D12/D17)
 
-**Fallback** : Si budget trop eleve → basculer classification vers Ollama VPS (augmente latence mais economise ~2 euros/mois).
+**Avantage D17** : Zero complexite de routage multi-modele. Le code `adapters/llm.py` ne gere qu'un seul provider, simplifiant drastiquement la maintenance.
 
 #### Feedback loop : Portee des regles (par module vs globales)
 
@@ -1287,9 +1288,9 @@ Email : {email.subject}
 
 | Module | Architecture technique | Tools/APIs |
 |--------|----------------------|------------|
-| **11. Generateur TCS** | Template Jinja2 + Base programme RAG (Qdrant) + LLM mistral-large-latest → Vignette JSON → Rendu Markdown | CrossRef API (verification references), Qdrant (recherche programme etudes) |
-| **12. Generateur ECOS** | Template Jinja2 + Methodes fournies Antonio (RAG) + LLM mistral-large-latest → Stations ECOS JSON → Grilles evaluation | Qdrant (recherche methodes), mistral-large-latest (generation scenarios) |
-| **13. Actualisateur cours** | Cours existant Markdown/Docx → Extraction sections → Recherche references recentes (PubMed/HAS) → LLM mistral-large-latest → Generation sections mises a jour → Merge document | PubMed API, Legifrance PISTE (recos HAS), mistral-large-latest |
+| **11. Generateur TCS** | Template Jinja2 + Base programme RAG (pgvector) + Claude Sonnet 4.5 → Vignette JSON → Rendu Markdown (D19) | CrossRef API (verification references), pgvector (recherche programme etudes) (D19) |
+| **12. Generateur ECOS** | Template Jinja2 + Methodes fournies Antonio (RAG) + Claude Sonnet 4.5 → Stations ECOS JSON → Grilles evaluation (D19) | pgvector (recherche methodes) (D19), Claude Sonnet 4.5 (generation scenarios) |
+| **13. Actualisateur cours** | Cours existant Markdown/Docx → Extraction sections → Recherche references recentes (PubMed/HAS) → Claude Sonnet 4.5 → Generation sections mises a jour → Merge document | PubMed API, Legifrance PISTE (recos HAS), Claude Sonnet 4.5 |
 | **21. Collection jeux video** | Form Telegram (titre, plateforme, edition, etat) → Insert PostgreSQL (`knowledge.collection_items`) → eBay/PriceCharting scraping (Playwright) → Alerte variations cote >10% | Playwright (scraping eBay), PriceCharting API (si disponible) |
 | **22. CV academique** | Template LaTeX + Extraction donnees PostgreSQL (`knowledge.publications`, `knowledge.theses_supervised`, `knowledge.teaching_activities`) → Compilation PDF → Sync PC | PostgreSQL queries, LaTeX/Pandoc |
 | **23. Mode HS/Vacances** | Flag `core.user_settings.vacation_mode` → n8n workflow pause pipelines non critiques → Auto-reply emails → Alertes thesards Telegram → Briefing retour genere | n8n (pause workflows), Telegram (notifications), PostgreSQL (flag) |
@@ -1313,7 +1314,7 @@ Telephone (photos) → BeeStation Synology (stockage)
                          ↓
            Agent Photos Friday (indexation + embeddings)
                          ↓
-           Qdrant (vecteurs) + PostgreSQL (metadonnees)
+           pgvector (vecteurs dans knowledge.embeddings) + PostgreSQL (metadonnees) (D19)
 ```
 
 **Configuration requise** :
@@ -1386,7 +1387,7 @@ CREATE TABLE core.writing_examples (
 **Rationale** :
 1. **URLs simplifiees** : `https://friday.local` au lieu de `http://172.25.0.5:8000`
 2. **HTTPS automatique** : Caddy genere certificats auto pour le mesh Tailscale (via Tailscale ACME)
-3. **Routage interne** : Un seul point d'entree pour tous services (gateway, n8n, Qdrant UI, etc.)
+3. **Routage interne** : Un seul point d'entree pour tous services (gateway, n8n, etc.) (D19 : Qdrant UI retiré)
 
 **Configuration Caddy** :
 
@@ -1395,7 +1396,7 @@ CREATE TABLE core.writing_examples (
 friday.local {
     reverse_proxy /api/* gateway:8000
     reverse_proxy /n8n/* n8n:5678
-    reverse_proxy /qdrant/* qdrant:6333
+    # reverse_proxy /qdrant/* retiré (D19 : pgvector dans PostgreSQL, pas de service Qdrant séparé)
 }
 ```
 
@@ -1435,38 +1436,17 @@ services:
 
 **Backup** : AOF file inclus dans backup quotidien (`/data/appendonly.aof` → Sync Tailscale PC).
 
-#### Qdrant : Strategie backup
+#### ~~Qdrant~~ pgvector : Strategie backup (D19)
 
-**Decision** : Snapshot quotidien + Sync Tailscale
+**Decision D19** : pgvector remplace Qdrant Day 1. Les embeddings sont dans PostgreSQL (`knowledge.embeddings`), donc **sauvegardés automatiquement avec `pg_dump`** (pas besoin de snapshot Qdrant séparé).
 
-**Probleme** : Regenerer embeddings = tres couteux (temps + API calls Mistral)
-- 10 000 documents × 512 tokens/doc × $0.02/1M tokens = ~$1
-- Temps : ~30 min (rate limits API)
+**Rationale** : 100k vecteurs, 1 utilisateur = pgvector suffit (~31ms latence). Économie : ~500 Mo-2.5 Go RAM, 1 service Docker en moins.
 
-**Solution** : Snapshot Qdrant quotidien
+**Backup** : Inclus dans le backup PostgreSQL quotidien (`pg_dump` compressé). Aucune procédure supplémentaire nécessaire.
 
-**Implementation n8n** : Deja specifie dans `n8n-workflows/backup-daily.json` (Node 4 : Backup Qdrant Snapshot)
+**Restore** : Via `pg_restore` standard (même procédure que le reste de PostgreSQL).
 
-```bash
-# API Qdrant snapshot
-curl -X POST http://qdrant:6333/collections/friday_docs/snapshots
-
-# Response : {"snapshot_name": "friday_docs-2026-02-05-02-00-00.snapshot"}
-
-# Download snapshot
-curl -X GET http://qdrant:6333/collections/friday_docs/snapshots/friday_docs-2026-02-05-02-00-00.snapshot \
-  --output /backups/qdrant_20260205.snapshot
-```
-
-**Restore** :
-
-```bash
-# Upload snapshot
-curl -X POST http://qdrant:6333/collections/friday_docs/snapshots/upload \
-  -F "snapshot=@qdrant_20260205.snapshot"
-```
-
-**Retention** : 7 jours rotatifs (comme PostgreSQL).
+**Ré-évaluation Qdrant** : Si >300k vecteurs ou latence pgvector >100ms → migrer vers Qdrant via `adapters/memorystore.py`.
 
 #### Migration SQL rollback : Gestion pipelines post-migration
 
@@ -1533,7 +1513,7 @@ httpx = "^0.27.0"
 asyncpg = "^0.29.0"
 redis = "^5.2.0"
 python-telegram-bot = "^21.7"
-mistralai = "^1.2.0"
+anthropic = "^0.40.0"
 presidio-analyzer = "^2.2.355"
 presidio-anonymizer = "^2.2.355"
 spacy = "^3.8.0"
@@ -1551,8 +1531,7 @@ services:
     image: postgres:16.6-alpine
   redis:
     image: redis:7.4-alpine
-  qdrant:
-    image: qdrant/qdrant:v1.12.5
+  # qdrant retiré (D19 : pgvector dans PostgreSQL)
   n8n:
     image: n8nio/n8n:1.69.2
   caddy:
@@ -1567,7 +1546,7 @@ services:
 
 **Decision** : Pas de scaling horizontal Day 1. VPS unique.
 
-Le scaling horizontal n'a aucun sens pour un utilisateur unique. Si 48 Go deviennent insuffisants (peu probable), upgrade VPS-5 (64 Go, ~38 euros TTC) possible sans migration.
+Le scaling horizontal n'a aucun sens pour un utilisateur unique. Si 24 Go deviennent insuffisants, upgrade VPS-4 (48 Go, ~25€ TTC) puis VPS-5 (64 Go, ~38€ TTC) possible sans migration.
 
 ---
 
@@ -1575,14 +1554,14 @@ Le scaling horizontal n'a aucun sens pour un utilisateur unique. Si 48 Go devien
 
 #### Contexte
 
-OpenClaw est un agent IA autonome open-source lance fin 2025 (~3 mois d'existence au moment de l'evaluation). 145k etoiles GitHub. Multi-canal (Telegram, WhatsApp, Discord, etc.), architecture Skills, support Ollama et Mistral.
+OpenClaw est un agent IA autonome open-source lance fin 2025 (~3 mois d'existence au moment de l'evaluation). 145k etoiles GitHub. Multi-canal (Telegram, WhatsApp, Discord, etc.), architecture Skills, support multi-LLM.
 
 #### Analyse de couverture vs 37 exigences
 
 | Couverture | Exigences | Detail |
 |------------|-----------|--------|
 | **Nativement couvert** (~5) | C1, C4, T9, S10, I1 (partiel) | Telegram bot, notifications, personnalite, surveillance dossiers, orchestration basique |
-| **Partiellement couvert** (~5) | C2, C3, T1, T2 | STT/TTS via Skills (qualite variable), LLM avec bug streaming Mistral (#5769) |
+| **Partiellement couvert** (~5) | C2, C3, T1, T2 | STT/TTS via Skills (qualite variable), LLM avec bugs connus |
 | **Non couvert** (~27) | Tout le reste | Pipelines medicaux, memoire contextuelle, finance, these, droit, archivage, OCR, NER, anonymisation... |
 
 #### Analyse de securite
@@ -1605,7 +1584,7 @@ OpenClaw est un agent IA autonome open-source lance fin 2025 (~3 mois d'existenc
 | Day 1 | Bot Telegram custom (`python-telegram-bot`) |
 | Architecture | Concue pour que le bot soit un adaptateur remplacable |
 | Point de controle | Reevaluation apres livraison des modules I1-I4 + T1-T3 |
-| Prerequis pour integration | CVE-2026-25253 corrige, sandboxing durci, streaming Mistral stable |
+| Prerequis pour integration | CVE-2026-25253 corrige, sandboxing durci, integration Claude stable |
 | Mode d'integration futur | OpenClaw comme **facade** (remplace le bot Telegram, le backend reste identique) |
 
 **Rationale de l'equipe** (Party Mode, unanime) : OpenClaw est seduisant mais trop jeune. Il couvre 5/37 exigences nativement. Le cout d'integration (securisation, adaptation, contournement des bugs) depasse le gain. L'architecture adaptateur permet l'integration ulterieure sans refactoring du backend.
@@ -1618,7 +1597,7 @@ OpenClaw est un agent IA autonome open-source lance fin 2025 (~3 mois d'existenc
 |----------------|-----------|--------|
 | Celery + Redis comme task queue | **Retire** → n8n + FastAPI BackgroundTasks + Redis Streams | Trois systemes de queuing = complexite inutile |
 | SQLAlchemy + Alembic | **Retire** → asyncpg brut + SQL numerotees | ORM inapproprie pour un systeme pipeline/agent |
-| RAM 16 Go non calcule | **Resolu** → upgrade VPS-4 48 Go, tous services residents en simultane | Plus d'exclusion mutuelle, marge ~23-25 Go |
+| RAM 16 Go non calcule | **Resolu** → VPS-3 24 Go, services residents (Ollama retire D12/D17) | Marge ~7.5-9.5 Go, upgrade VPS-4 48 Go si besoin |
 | Observabilite absente | **Ajoute** → Observability & Trust Layer (composant transversal) | Receipts, trust levels, alertes, feedback loop |
 | OpenClaw (10% interface) | **Retire Day 1** → reevaluation post-socle | Maturite insuffisante, 5/37 exigences couvertes |
 
@@ -1633,11 +1612,11 @@ OpenClaw est un agent IA autonome open-source lance fin 2025 (~3 mois d'existenc
 4. Bot Telegram basique (connexion au Gateway + commandes `/status`, `/journal`, `/receipt`)
 5. n8n + premiers workflows (ingestion email)
 6. LangGraph superviseur + premier agent (utilise `@friday_action`)
-7. Services lourds (Ollama, STT, TTS, OCR) — tous residents en simultane sur VPS-4
+7. Services lourds (STT, TTS, OCR) — residents en simultane sur VPS-3 (Ollama retire D12/D17)
 
 **Dependances croisees :**
 - Le superviseur LangGraph depend du Gateway FastAPI
-- Les adaptateurs (Qdrant, Zep) dependent du schema `knowledge` PostgreSQL
+- Les adaptateurs (pgvector via memorystore.py) dependent du schema `knowledge` PostgreSQL (D19)
 - L'Observability & Trust Layer depend de PostgreSQL (`core.action_receipts`) et Redis (alertes pub/sub)
 - **Chaque agent/module depend du middleware `@friday_action`** → le Trust Layer doit etre pret AVANT le premier module metier
 - Les pipelines d'anonymisation (Presidio) doivent etre operationnels AVANT tout appel LLM cloud
@@ -1652,7 +1631,7 @@ OpenClaw est un agent IA autonome open-source lance fin 2025 (~3 mois d'existenc
 
 **Validation evolvabilite** : Chaque ajout ameliore ou preserve la capacite a faire evoluer le systeme sans refactoring massif.
 
-**Contrainte materielle** : VPS-4 48 Go, tous services lourds residents en simultane (marge ~23-25 Go).
+**Contrainte materielle** : VPS-3 24 Go, services lourds residents (Ollama retire D12/D17) (marge ~7.5-9.5 Go).
 
 ---
 
@@ -1662,9 +1641,9 @@ friday-2.0/
 ├── README.md                          # Quick start + architecture overview
 ├── .gitignore
 ├── .env.example
-├── docker-compose.yml                 # Services principaux (PostgreSQL, Redis, Qdrant, n8n, Caddy)
+├── docker-compose.yml                 # Services principaux (PostgreSQL avec pgvector, Redis, n8n, Caddy) (D19 : Qdrant retiré)
 ├── docker-compose.dev.yml             # Override developpement local
-├── docker-compose.services.yml        # Services lourds residents (Ollama, STT, TTS, OCR) — VPS-4 48 Go
+├── docker-compose.services.yml        # Services lourds residents (STT, TTS, OCR) — VPS-3 24 Go (Ollama retire D12/D17)
 ├── Makefile                           # make up, make logs, make backup, make migrate
 │
 ├── scripts/
@@ -1675,7 +1654,7 @@ friday-2.0/
 │   ├── deploy.sh                      # Deploiement via git pull
 │   ├── dev-setup.sh                   # [AJOUT] Setup automatise dev (deps, services, migrations, seed)
 │   ├── monitor-ram.sh                 # [AJOUT] Monitoring RAM cron (alerte Telegram si >85%)
-│   ├── start-service.sh               # Demarrer service lourd (Ollama/STT/TTS/OCR)
+│   ├── start-service.sh               # Demarrer service lourd (STT/TTS/OCR)
 │   └── stop-service.sh                # Arreter service lourd
 │
 ├── config/
@@ -1723,7 +1702,7 @@ friday-2.0/
 │       ├── config/
 │       │   ├── __init__.py
 │       │   ├── settings.py            # Pydantic BaseSettings (env vars)
-│       │   ├── mistral.py             # Config Mistral (Nemo, Medium, Large, Embed)
+│       │   ├── anthropic.py            # Config Anthropic Claude Sonnet 4.5 (D17)
 │       │   ├── logging.py             # → symlink vers ../../config/logging.py
 │       │   └── prompts/               # Prompts system par agent
 │       │       ├── supervisor.txt
@@ -1740,7 +1719,7 @@ friday-2.0/
 │       │   ├── __init__.py
 │       │   ├── graph.py               # Definition StateGraph LangGraph
 │       │   ├── router.py              # Routage vers agents specialises
-│       │   ├── orchestrator.py        # Monitoring RAM services lourds (VPS-4 48 Go)
+│       │   ├── orchestrator.py        # Monitoring RAM services lourds (VPS-3 24 Go)
 │       │   └── state.py               # AgentState Pydantic
 │       │
 │       ├── agents/                    # Agents specialises (23 modules) - STRUCTURE PLATE KISS
@@ -1777,10 +1756,10 @@ friday-2.0/
 │       │
 │       ├── tools/                     # Outils partages entre agents
 │       │   ├── __init__.py
-│       │   ├── search.py              # Recherche semantique Qdrant
+│       │   ├── search.py              # Recherche semantique pgvector (D19)
 │       │   ├── anonymize.py           # Presidio + spaCy-fr
 │       │   ├── ocr.py                 # Client Surya + Marker
-│       │   ├── stt.py                 # Client Faster-Whisper (+ Deepgram fallback)
+│       │   ├── stt.py                 # Client Faster-Whisper
 │       │   ├── tts.py                 # Client Kokoro (+ Piper fallback)
 │       │   ├── ner.py                 # spaCy fr + GLiNER
 │       │   ├── file_detection.py      # Classification fichiers
@@ -1788,7 +1767,7 @@ friday-2.0/
 │       │   │
 │       │   └── apis/                  # Clients APIs externes
 │       │       ├── __init__.py
-│       │       ├── mistral.py         # Client Mistral API
+│       │       ├── anthropic.py        # Client Anthropic API (Claude Sonnet 4.5)
 │       │       ├── bdpm.py            # API BDPM (medicaments)
 │       │       ├── vidal.py           # Vidal API
 │       │       ├── legifrance.py      # Legifrance PISTE
@@ -1799,8 +1778,7 @@ friday-2.0/
 │       │
 │       ├── adapters/                  # Adaptateurs composants remplacables
 │       │   ├── __init__.py
-│       │   ├── vectorstore.py         # Adaptateur Qdrant (remplacable: Milvus, pgvector)
-│       │   ├── memorystore.py         # Adaptateur Zep+Graphiti (remplacable: Neo4j, MemGPT)
+│       │   ├── memorystore.py         # Adaptateur memorystore (pgvector + knowledge.*) (D19) — remplacable: Qdrant (si >300k vecteurs), Milvus, Neo4j, Graphiti (si mature)
 │       │   ├── filesync.py            # Adaptateur Syncthing (remplacable: rsync, rclone)
 │       │   ├── email.py               # Adaptateur EmailEngine (remplacable: IMAP direct)
 │       │   └── llm.py                 # [AJOUT] Adaptateur LLM minimal (complete + embed)
@@ -1937,7 +1915,7 @@ friday-2.0/
 │   │   │   ├── test_ocr.py
 │   │   │   └── ...
 │   │   └── adapters/
-│   │       ├── test_vectorstore.py
+│   │       ├── test_memorystore.py     # (D19 : test_vectorstore.py renommé, pgvector dans memorystore)
 │   │       ├── test_llm.py            # [AJOUT] Tests adaptateur LLM
 │   │       └── ...
 │   │
@@ -1982,7 +1960,7 @@ friday-2.0/
 | 5. Scripts automatisation | `scripts/dev-setup.sh` + `scripts/monitor-ram.sh` | ✅ Neutre (outillage, pas runtime) | 45 min |
 
 **Total effort** : 3h50
-**RAM impact** : 0 Mo supplementaire (VPS-4 48 Go, marge ~23-25 Go)
+**RAM impact** : 0 Mo supplementaire (VPS-3 24 Go, marge ~7.5-9.5 Go)
 
 ---
 
@@ -2015,47 +1993,49 @@ class LLMAdapter(ABC):
 
     @abstractmethod
     async def embed(self, texts: List[str]) -> List[List[float]]:
-        """Embeddings vectoriels pour Qdrant"""
+        """Embeddings vectoriels pour pgvector (D19)"""
         pass
 
-class MistralAdapter(LLMAdapter):
-    """Implementation Mistral API"""
+class AnthropicAdapter(LLMAdapter):
+    """Implementation Anthropic API — Claude Sonnet 4.5 (D17)"""
 
     MODEL_MAP = {
-        "auto": "mistral-large-latest",
-        "fast": "mistral-small-latest",
-        "strong": "mistral-large-latest"
+        "auto": "claude-sonnet-4-5-20250929",
+        "fast": "claude-sonnet-4-5-20250929",
+        "strong": "claude-sonnet-4-5-20250929"
     }
 
     def __init__(self, api_key: str):
-        self.client = MistralClient(api_key)
+        from anthropic import AsyncAnthropic
+        self.client = AsyncAnthropic(api_key=api_key)
 
     async def complete(self, messages: List[Dict], model: str = "auto", **kwargs) -> str:
         resolved_model = self.MODEL_MAP.get(model, model)
-        response = await self.client.chat(
-            messages=messages,
+        response = await self.client.messages.create(
             model=resolved_model,
-            **kwargs
+            messages=messages,
+            max_tokens=kwargs.get("max_tokens", 1024),
+            temperature=kwargs.get("temperature", 0.5),
         )
-        return response.choices[0].message.content
+        return response.content[0].text
 
     async def embed(self, texts: List[str]) -> List[List[float]]:
-        response = await self.client.embeddings(
-            model="mistral-embed",
-            input=texts
+        # Claude Sonnet 4.5 n'est pas un modele d'embedding.
+        # Utiliser un modele d'embedding dedie (Voyage AI, ou modele local).
+        raise NotImplementedError(
+            "Embeddings non supportes par Claude. Utiliser un modele d'embedding dedie."
         )
-        return [item.embedding for item in response.data]
 
 def get_llm_adapter() -> LLMAdapter:
     """Factory pattern - lit LLM_PROVIDER depuis env"""
-    provider = os.getenv("LLM_PROVIDER", "mistral")
-    if provider == "mistral":
-        return MistralAdapter(api_key=os.getenv("MISTRAL_API_KEY"))
-    # Extensible : ajouter Gemini, Claude, etc.
+    provider = os.getenv("LLM_PROVIDER", "anthropic")
+    if provider == "anthropic":
+        return AnthropicAdapter(api_key=os.getenv("ANTHROPIC_API_KEY"))
+    # Extensible : ajouter d'autres providers si necessaire
     raise ValueError(f"Unknown LLM provider: {provider}")
 ```
 
-**Benefice evolvabilite** : Switch Mistral → Gemini/Claude = implementer nouvelle classe + modifier factory (1 fichier). Les 23 agents ne changent pas.
+**Benefice evolvabilite** : Le pattern adaptateur reste valide. Switch Claude → autre provider = implementer nouvelle classe + modifier factory (1 fichier). Les 23 agents ne changent pas.
 
 ---
 
@@ -2073,20 +2053,19 @@ class ServiceProfile(BaseModel):
     ram_gb: int
 
 SERVICE_RAM_PROFILES: dict[str, ServiceProfile] = {
-    "ollama-nemo": ServiceProfile(ram_gb=8),
     "faster-whisper": ServiceProfile(ram_gb=4),
     "kokoro-tts": ServiceProfile(ram_gb=2),
     "surya-ocr": ServiceProfile(ram_gb=2),
 }
 
 RAM_ALERT_THRESHOLD_PCT = 85  # Alerte Telegram si depasse
-# Plus de champ "incompatible_with" → tous compatibles sur VPS-4 48 Go
+# Ollama retire (D12/D17) → services compatibles sur VPS-3 24 Go, marge confortable
 
 # agents/src/supervisor/orchestrator.py
 from config.profiles import SERVICE_RAM_PROFILES, RAM_ALERT_THRESHOLD_PCT
 
 class RAMMonitor:
-    def __init__(self, total_ram_gb: int = 48):
+    def __init__(self, total_ram_gb: int = 24):
         self.profiles = SERVICE_RAM_PROFILES
         # Moniteur RAM simplifie, plus d'exclusions mutuelles
 ```
@@ -2129,9 +2108,9 @@ async def check_redis() -> str:
 HEALTH_CHECKS: dict[str, HealthCheckFunc] = {
     "postgres": check_postgres,
     "redis": check_redis,
-    "qdrant": lambda: check_http("http://qdrant:6333/health"),
+    "pgvector": check_pgvector,  # (D19) Vérifie extension pgvector + table knowledge.embeddings
     "n8n": lambda: check_http("http://n8n:5678/healthz"),
-    "ollama": lambda: check_http("http://ollama:11434/api/tags"),
+    # "ollama" retire (D12/D17) — 100% Claude cloud
     "emailengine": lambda: check_http("http://emailengine:3000/health"),
 }
 
@@ -2157,7 +2136,7 @@ async def health():
 
 #### 4. Tests critiques
 
-**Objectif** : Tester composants critiques (monitoring RAM VPS-4, anonymisation Presidio, Trust Layer).
+**Objectif** : Tester composants critiques (monitoring RAM VPS-3, anonymisation Presidio, Trust Layer).
 
 **tests/unit/supervisor/test_orchestrator.py** :
 
@@ -2167,21 +2146,21 @@ from agents.supervisor.orchestrator import RAMMonitor
 
 @pytest.mark.asyncio
 async def test_ram_monitor_alerts_on_threshold():
-    """Test alerte RAM quand seuil 85% depasse sur VPS-4 48 Go"""
-    monitor = RAMMonitor(total_ram_gb=48, alert_threshold_pct=85)
-    monitor.simulate_usage(used_gb=42)  # >85%
+    """Test alerte RAM quand seuil 85% depasse sur VPS-3 24 Go"""
+    monitor = RAMMonitor(total_ram_gb=24, alert_threshold_pct=85)
+    monitor.simulate_usage(used_gb=21)  # >85%
     alerts = await monitor.check()
     assert alerts[0].level == "warning"
     assert "85%" in alerts[0].message
 
 @pytest.mark.asyncio
 async def test_all_heavy_services_fit_in_ram():
-    """Tous services lourds residents en simultane (plus d'exclusion mutuelle)"""
-    monitor = RAMMonitor(total_ram_gb=48, alert_threshold_pct=85)
-    services = ["ollama-nemo", "faster-whisper", "kokoro-tts", "surya-ocr"]
+    """Services lourds residents (Ollama retire D12/D17)"""
+    monitor = RAMMonitor(total_ram_gb=24, alert_threshold_pct=85)
+    services = ["faster-whisper", "kokoro-tts", "surya-ocr"]
     for svc in services:
         await monitor.register_service(svc)
-    assert monitor.total_allocated_gb <= 48 * 0.85  # Sous le seuil d'alerte
+    assert monitor.total_allocated_gb <= 24 * 0.85  # Sous le seuil d'alerte (20.4 Go)
 ```
 
 **tests/integration/test_anonymization_pipeline.py** :
@@ -2268,7 +2247,7 @@ fi
 
 # 5. Start core services
 echo "🐳 Starting Docker services..."
-docker compose up -d postgres redis qdrant
+docker compose up -d postgres redis  # (D19 : Qdrant retiré, pgvector dans PostgreSQL)
 
 # 6. Wait for readiness
 echo "⏳ Waiting for services..."
@@ -2293,7 +2272,7 @@ echo "✅ Setup complete! Run 'docker compose up' to start all services."
 
 ```bash
 #!/bin/bash
-# Monitoring RAM VPS-4 48 Go - Alerte Telegram si >85%
+# Monitoring RAM VPS-3 24 Go - Alerte Telegram si >85%
 # Cron: 0 * * * * sops exec-env /opt/friday-2.0/.env.enc '/opt/friday-2.0/scripts/monitor-ram.sh'
 
 USAGE=$(free -m | awk 'NR==2{printf "%.0f", $3*100/$2}')
@@ -2349,13 +2328,13 @@ agents/src/agents/email/
 ### Coherence Validation ✅
 
 **Decision Compatibility:**
-Toutes les technologies choisies sont compatibles sans conflit. Python 3.12 + LangGraph 0.2.45+ + n8n 1.69.2+ + Mistral (cloud + Ollama local) + PostgreSQL 16 + Redis 7 + Qdrant + Zep/Graphiti + Caddy + Tailscale forment un stack cohérent. Les versions sont spécifiées pour éviter les incompatibilités futures. Les corrections Party Mode (retrait Celery/SQLAlchemy/Prometheus) ont éliminé les redondances et contradictions.
+Toutes les technologies choisies sont compatibles sans conflit. Python 3.12 + LangGraph 0.2.45+ + n8n 1.69.2+ + Claude Sonnet 4.5 (Anthropic API, D17) + PostgreSQL 16 (avec pgvector, D19) + Redis 7 + Caddy + Tailscale forment un stack coherent. Les versions sont specifiees pour eviter les incompatibilites futures. Les corrections Party Mode (retrait Celery/SQLAlchemy/Prometheus) et D17 (migration 100% Claude) ont elimine les redondances et contradictions.
 
 **Pattern Consistency:**
 Les patterns d'implémentation supportent toutes les décisions architecturales. Event-driven (Redis Pub/Sub) + REST API (FastAPI) + adaptateurs (5 types) + migrations SQL numérotées forment un ensemble cohérent. Naming conventions uniformes (events dot notation `email.received`, schemas `core/ingestion/knowledge`, migrations `001_*.sql`). Structure flat agents/ (KISS Day 1) + adapters/ séparés (évolutibilité).
 
 **Structure Alignment:**
-La structure projet supporte toutes les décisions architecturales. 3 schemas PostgreSQL (core/ingestion/knowledge) alignés avec les couches métier. Structure agents/ plate avec 23 modules au même niveau (KISS, pas de sur-organisation prématurée). 5 adaptateurs (vectorstore, memorystore, filesync, email, llm) garantissent l'évolutibilité. Integration points clairement définis : FastAPI Gateway (API unifiée), Redis Pub/Sub (événements async), n8n (workflows data), HTTP interne (services Docker).
+La structure projet supporte toutes les décisions architecturales. 3 schemas PostgreSQL (core/ingestion/knowledge) alignés avec les couches métier. Structure agents/ plate avec 23 modules au même niveau (KISS, pas de sur-organisation prématurée). 4 adaptateurs (memorystore, filesync, email, llm) garantissent l'évolutibilité (D19 : vectorstore fusionne dans memorystore). Integration points clairement définis : FastAPI Gateway (API unifiée), Redis Pub/Sub (événements async), n8n (workflows data), HTTP interne (services Docker).
 
 ### Requirements Coverage Validation ✅
 
@@ -2364,34 +2343,34 @@ Les 23 modules sont architecturalement supportés via la structure `agents/src/a
 
 **Functional Requirements Coverage:**
 Les 37 exigences techniques sont couvertes à 100% :
-- Infrastructure (4/4) : n8n + LangGraph + PostgreSQL 16 + Qdrant
-- Traitement IA (12/12) : Mistral cloud/local, Surya, spaCy, GLiNER, Presidio, CrossRef/PubMed, Playwright
+- Infrastructure (4/4) : n8n + LangGraph + PostgreSQL 16 (avec pgvector, D19)
+- Traitement IA (12/12) : Claude Sonnet 4.5 (D17), Surya, spaCy, GLiNER, Presidio, CrossRef/PubMed, Playwright
 - Communication (4/4) : Telegram, Faster-Whisper, Kokoro, ntfy
 - Connecteurs (11/11) : EmailEngine, Google APIs, Syncthing, CSV, APIs médicales/juridiques
-- Contraintes (6/6) : Budget 35-41€/mois (<50€), chiffrement age/SOPS, architecture hybride VPS+PC+cloud
+- Contraintes (6/6) : Budget ~63€/mois (D17, depasse X1 50€ — justifie par qualite Claude), chiffrement age/SOPS, architecture hybride VPS+PC+cloud
 
 **Non-Functional Requirements Coverage:**
-- **Performance** : Services lourds tous residents en simultane (VPS-4 48 Go), zero cold start, latence ≤30s (X5)
+- **Performance** : Services lourds residents (VPS-3 24 Go, Ollama retire D12/D17), latence ≤30s (X5)
 - **Security** : Tailscale (zéro exposition Internet public), age/SOPS (secrets chiffrés), Presidio (anonymisation RGPD obligatoire avant LLM cloud), pgcrypto (colonnes sensibles BDD), CVE-2026-25253 (OpenClaw non intégré Day 1)
-- **Scalability** : VPS-4 48 Go avec upgrade vertical VPS-5 (64 Go ~38€ TTC) si necessaire, pas de scaling horizontal (utilisateur unique)
+- **Scalability** : VPS-3 24 Go avec upgrade vertical VPS-4 (48 Go ~25€ TTC) puis VPS-5 (64 Go ~38€ TTC) si necessaire, pas de scaling horizontal (utilisateur unique)
 - **Observability** : Observability & Trust Layer (receipts verifiables, trust levels auto/propose/bloque, retrogradation auto, alertes temps reel, feedback loop corrections)
-- **Compliance** : RGPD (Presidio + hébergement France OVH), données médicales chiffrées, Mistral EU-resident
+- **Compliance** : RGPD (Presidio anonymisation obligatoire + hebergement France OVH), donnees medicales chiffrees
 
 ### Implementation Readiness Validation ✅
 
 **Decision Completeness:**
-Toutes les décisions critiques sont documentées avec versions exactes (Python 3.12+, LangGraph 0.2.45+, n8n 1.69.2+, PostgreSQL 16, Redis 7). Les patterns d'implémentation sont complets : adaptateurs (5 fichiers avec interfaces abstraites), event-driven (Redis Pub/Sub), migrations SQL numérotées (script `apply_migrations.py`), error handling standardisé (`FridayError` hierarchy + `RETRYABLE_EXCEPTIONS`), **Observability & Trust Layer** (middleware `@friday_action`, receipts, trust levels, feedback loop). Consistency rules explicites : KISS (flat structure Day 1), évolutibilité (pattern adaptateur), RAM VPS-4 48 Go (services lourds tous residents). Exemples fournis pour tous les patterns majeurs : LLM adapter (45 lignes), RAM profiles (dict config), health checks (dict config), tests critiques (Presidio + orchestrator), trust middleware (`@friday_action` + `ActionResult`).
+Toutes les décisions critiques sont documentées avec versions exactes (Python 3.12+, LangGraph 0.2.45+, n8n 1.69.2+, PostgreSQL 16, Redis 7). Les patterns d'implémentation sont complets : adaptateurs (5 fichiers avec interfaces abstraites), event-driven (Redis Pub/Sub), migrations SQL numérotées (script `apply_migrations.py`), error handling standardisé (`FridayError` hierarchy + `RETRYABLE_EXCEPTIONS`), **Observability & Trust Layer** (middleware `@friday_action`, receipts, trust levels, feedback loop). Consistency rules explicites : KISS (flat structure Day 1), évolutibilité (pattern adaptateur), RAM VPS-3 24 Go (services lourds residents, Ollama retire D12/D17). Exemples fournis pour tous les patterns majeurs : LLM adapter (45 lignes), RAM profiles (dict config), health checks (dict config), tests critiques (Presidio + orchestrator), trust middleware (`@friday_action` + `ActionResult`).
 
 **Structure Completeness:**
 La structure projet est complète avec ~150 fichiers spécifiés dans l'arborescence Step 6. Tous les répertoires sont définis : `agents/` (23 modules), `services/` (gateway, stt, tts, ocr), `bot/` (Telegram), `n8n-workflows/` (7 workflows JSON), `database/` (migrations SQL), `tests/` (unit, integration, e2e), `docs/`, `scripts/` (setup, backup, deploy, monitor-ram). Integration points clairement spécifiés : FastAPI Gateway expose `/api/v1/*`, Redis Pub/Sub pour événements (`email.received`, `document.processed`), n8n pour workflows data (cron briefing, watch GDrive Plaud). Component boundaries : 3 schemas PostgreSQL (`core`, `ingestion`, `knowledge`), adapters/ séparés du code métier, Docker Compose multi-fichiers (principal + dev + services lourds).
 
 **Pattern Completeness:**
-Tous les conflict points sont adressés : VPS-4 48 Go permet tous services lourds residents en simultane (plus d'exclusion mutuelle), `orchestrator.py` simplifie en moniteur RAM, `config/profiles.py` alerte si >85%. Naming conventions complètes : migrations SQL numérotées (`001_*.sql`), events dot notation (`email.received`, `agent.completed`), Pydantic schemas (`models/*.py`), logs structlog JSON. Communication patterns fully specified : REST (sync, FastAPI), Redis Pub/Sub (async events), HTTP interne (Docker network). Process patterns documentés : retry via tenacity (`utils/retry.py`), error hierarchy (`FridayError` + `RETRYABLE_EXCEPTIONS`), logs JSON structurés (`config/logging.py`), backups quotidiens (`scripts/backup.sh` cron 3h00).
+Tous les conflict points sont adressés : VPS-3 24 Go permet services lourds residents (Ollama retire D12/D17), `orchestrator.py` simplifie en moniteur RAM, `config/profiles.py` alerte si >85%. Naming conventions complètes : migrations SQL numérotées (`001_*.sql`), events dot notation (`email.received`, `agent.completed`), Pydantic schemas (`models/*.py`), logs structlog JSON. Communication patterns fully specified : REST (sync, FastAPI), Redis Pub/Sub (async events), HTTP interne (Docker network). Process patterns documentés : retry via tenacity (`utils/retry.py`), error hierarchy (`FridayError` + `RETRYABLE_EXCEPTIONS`), logs JSON structurés (`config/logging.py`), backups quotidiens (`scripts/backup.sh` cron 3h00).
 
 ### Gap Analysis Results
 
 **Critical Gaps:** AUCUN
-Tous les éléments bloquants pour l'implémentation sont architecturalement couverts. Les 37 exigences techniques + 23 modules + contraintes matérielles (VPS-4 48 Go) + Observability & Trust Layer sont spécifiés.
+Tous les éléments bloquants pour l'implémentation sont architecturalement couverts. Les 37 exigences techniques + 23 modules + contraintes matérielles (VPS-3 24 Go) + Observability & Trust Layer sont spécifiés.
 
 **Important Gaps:** AUCUN
 Tous les éléments importants sont spécifiés. Patterns d'implémentation complets, structure projet détaillée (~150 fichiers), integration points clairs.
@@ -2417,23 +2396,23 @@ Les 5 ajouts pour l'évolutibilité ont été validés lors du Step 6 :
 - ✅ Tests critiques (orchestrator RAM + Presidio RGPD) : neutre évolutibilité (validation, pas runtime)
 - ✅ Scripts automation (`dev-setup.sh` + `monitor-ram.sh`) : neutre évolutibilité (outillage, pas runtime)
 
-Total effort : 3h50. RAM impact : 0 Mo supplementaire (VPS-4 48 Go, marge ~23-25 Go).
+Total effort : 3h50. RAM impact : 0 Mo supplementaire (VPS-3 24 Go, marge ~7.5-9.5 Go).
 
 ### Architecture Completeness Checklist
 
 **✅ Requirements Analysis**
 
-- [x] Projet contextualisé (23 modules, 4 couches techniques, 37 exigences, VPS-4 48 Go, budget 50€/mois max)
+- [x] Projet contextualisé (23 modules, 4 couches techniques, 37 exigences, VPS-3 24 Go, budget 50€/mois max)
 - [x] Scale et complexité évalués (utilisateur unique Antonio, extension famille envisageable X3)
 - [x] Contraintes techniques identifiées (X1-X6 : budget, chiffrement, latence, architecture hybride)
 - [x] Cross-cutting concerns mappés (sécurité Tailscale + age/SOPS + Presidio, évolutibilité via adaptateurs, RGPD)
 
 **✅ Architectural Decisions**
 
-- [x] Décisions critiques documentées avec versions (Python 3.12, LangGraph 0.2.45+, n8n 1.69.2+, PostgreSQL 16, Redis 7, Mistral cloud+local)
+- [x] Decisions critiques documentees avec versions (Python 3.12, LangGraph 0.2.45+, n8n 1.69.2+, PostgreSQL 16, Redis 7, Claude Sonnet 4.5 D17)
 - [x] Tech stack complet (infrastructure I1-I4, traitement IA T1-T12, communication C1-C4, connecteurs S1-S12)
 - [x] Integration patterns définis (REST FastAPI, Redis Pub/Sub, HTTP interne Docker, n8n workflows)
-- [x] Performance considerations (services lourds residents VPS-4 48 Go, zero cold start, latence ≤30s)
+- [x] Performance considerations (services lourds residents VPS-3 24 Go, Ollama retire D12/D17, latence ≤30s)
 - [x] Observability & Trust Layer (receipts, trust levels auto/propose/bloque, feedback loop, alertes temps reel)
 
 **✅ Implementation Patterns**
@@ -2446,9 +2425,9 @@ Total effort : 3h50. RAM impact : 0 Mo supplementaire (VPS-4 48 Go, marge ~23-25
 **✅ Project Structure**
 
 - [x] Structure complète (~150 fichiers définis dans arborescence Step 6)
-- [x] Component boundaries établis (3 schemas PostgreSQL, 5 adapters/ séparés, 23 agents/ modules flat)
+- [x] Component boundaries établis (3 schemas PostgreSQL, 4 adapters/ séparés (D19 : vectorstore fusionne dans memorystore), 23 agents/ modules flat)
 - [x] Integration points mappés (FastAPI Gateway `/api/v1/*`, Redis Pub/Sub events, n8n workflows, HTTP interne Docker)
-- [x] Requirements to structure mapping complet (37 exigences → fichiers spécifiques : T5 → `tools/anonymize.py`, I4 → `adapters/vectorstore.py`, etc.)
+- [x] Requirements to structure mapping complet (37 exigences → fichiers spécifiques : T5 → `tools/anonymize.py`, I4 → `adapters/memorystore.py` (D19), etc.)
 
 ### Architecture Readiness Assessment
 
@@ -2461,21 +2440,21 @@ Justification :
 - 0 critical gaps, 0 important gaps
 - Architecture validée en Party Mode (5 agents BMAD) puis Code Review adversarial
 - Corrections appliquées (retrait Celery/SQLAlchemy/Prometheus pour KISS)
-- Évolutibilité garantie (5 adaptateurs, pattern factory LLM)
-- Contraintes matérielles gérées (VPS-4 48 Go, services lourds residents)
+- Évolutibilité garantie (4 adaptateurs — D19 : vectorstore fusionne dans memorystore, pattern factory LLM)
+- Contraintes materielles gerees (VPS-3 24 Go, services lourds residents, Ollama retire D12/D17)
 - Observability & Trust Layer integre (receipts, trust levels, feedback loop)
 
 **Key Strengths:**
 
-1. **Évolutibilité by design** : 5 adaptateurs (vectorstore, memorystore, filesync, email, llm) permettent remplacement d'un composant externe sans refactoring massif. Switch Mistral → Gemini/Claude = modifier `adapters/llm.py` uniquement, les 23 agents ne changent pas.
+1. **Evolutibilite by design** : 4 adaptateurs (memorystore, filesync, email, llm) permettent remplacement d'un composant externe sans refactoring massif (D19 : vectorstore.py fusionne dans memorystore.py). Le pattern adaptateur reste valide : switch Claude → autre provider = modifier `adapters/llm.py` uniquement, les 23 agents ne changent pas. Switch pgvector → Qdrant = modifier `adapters/memorystore.py` uniquement.
 
-2. **Contraintes materielles resolues** : VPS-4 48 Go permet tous services lourds residents en simultane (Ollama Nemo 12B + Whisper + Kokoro + Surya = ~16 Go, socle permanent ~7-9 Go, marge ~23-25 Go). Plus d'exclusion mutuelle. Orchestrator simplifie en moniteur RAM via `config/profiles.py`.
+2. **Contraintes materielles resolues** : VPS-3 24 Go permet services lourds residents (Ollama retire D12/D17) (Whisper + Kokoro + Surya = ~8 Go, socle permanent ~6.5-8.5 Go, marge ~7.5-9.5 Go). Orchestrator simplifie en moniteur RAM via `config/profiles.py`. Upgrade VPS-4 48 Go si besoin.
 
 3. **Sécurité RGPD robuste** : Pipeline Presidio obligatoire avant tout appel LLM cloud (anonymisation réversible). Données médicales chiffrées (pgcrypto). Tailscale = zéro exposition Internet public. age/SOPS pour secrets. Hébergement France (OVH).
 
 4. **KISS principle appliqué rigoureusement** : Structure flat agents/ Day 1 (pas de sur-organisation prématurée). Pas d'ORM (asyncpg brut), pas de Celery (n8n + FastAPI BackgroundTasks), pas de Prometheus (monitoring via Trust Layer), pas de GraphQL (REST suffit). Refactoring si douleur réelle, pas par anticipation.
 
-5. **Budget confortable** : ~36-42€/mois estimé (VPS-4 25€ TTC + Mistral API 6-9€ + Deepgram 3-5€) < 50€/mois contrainte X1. Marge ~8-14€. Plan B VPS-3 (24 Go, 15€ TTC) si besoin de reduire.
+5. **Budget maitrise** : ~63€/mois estime (VPS-3 ~15€ TTC + API Claude Sonnet 4.5 ~45€ + divers ~3€). Depasse la contrainte initiale X1 (50€/mois) mais justifie par la qualite superieure (structured output, instruction following, consistance) et la simplification (un seul modele, zero routing). Plan B upgrade VPS-4 (48 Go, ~25€ TTC) si besoin de plus de RAM.
 
 6. **Observability & Trust Layer** : Composant transversal garantissant la confiance utilisateur. Chaque action tracee (receipts), niveaux de confiance configurables (auto/propose/bloque), retrogradation automatique si accuracy baisse, feedback loop par regles explicites. Antonio controle Friday, pas l'inverse.
 
@@ -2483,7 +2462,7 @@ Justification :
 
 - **Scaling horizontal** : Si extension famille (contrainte X3) validée, architecture event-driven (Redis Pub/Sub) + adapters/ + FastAPI stateless facilitent l'ajout de workers. Non prioritaire (utilisateur unique).
 
-- **OpenClaw comme facade** : Si maturité suffisante (CVE-2026-25253 corrigée, sandboxing durci, streaming Mistral stable), peut remplacer le bot Telegram comme interface multi-canal (Telegram + WhatsApp + Discord). Backend reste identique grâce au pattern adaptateur.
+- **OpenClaw comme facade** : Si maturite suffisante (CVE-2026-25253 corrigee, sandboxing durci, integration Claude stable), peut remplacer le bot Telegram comme interface multi-canal (Telegram + WhatsApp + Discord). Backend reste identique grace au pattern adaptateur.
 
 - **Partitioning table emails** : Si >500k mails (actuel : 110k migration one-shot). PostgreSQL 16 supporte partitioning natif (par mois/année).
 
@@ -2494,14 +2473,14 @@ Justification :
 1. **Source de vérité absolue** : Ce document `architecture-friday-2.0.md` = référence pour toutes décisions architecturales. En cas de doute, se référer aux Steps 1-7.
 
 2. **Patterns obligatoires** :
-   - Utiliser les adaptateurs (LLM, vectorstore, memorystore, filesync, email) pour tout composant externe
+   - Utiliser les adaptateurs (LLM, memorystore, filesync, email) pour tout composant externe (D19 : vectorstore fusionne dans memorystore)
    - Respecter structure flat `agents/src/agents/` (23 modules au même niveau)
    - 3 schemas PostgreSQL (`core`, `ingestion`, `knowledge`) pour toute nouvelle table
    - Pydantic v2 pour validation (schemas API, pipeline, config)
 
 3. **Tests obligatoires** :
    - Presidio anonymization (RGPD critique) : `tests/integration/test_anonymization_pipeline.py` avec dataset `tests/fixtures/pii_samples.json`
-   - Monitoring RAM (VPS-4 48 Go) : `tests/unit/supervisor/test_orchestrator.py` avec mock Docker stats
+   - Monitoring RAM (VPS-3 24 Go) : `tests/unit/supervisor/test_orchestrator.py` avec mock Docker stats
    - Trust Layer : `tests/unit/middleware/test_trust.py` (auto/propose/blocked), `tests/integration/test_trust_flow.py` (flow complet)
    - Tous agents avec mocks (pas d'appels LLM réels en tests unitaires)
 
@@ -2525,9 +2504,9 @@ Story 1 : Infrastructure de base
 mkdir friday-2.0 && cd friday-2.0
 git init
 
-# 2. Docker Compose (PostgreSQL 16, Redis 7, Qdrant, n8n 1.69.2+, Caddy)
+# 2. Docker Compose (PostgreSQL 16 avec pgvector, Redis 7, n8n 1.69.2+, Caddy) (D19 : Qdrant retiré)
 # docker-compose.yml + docker-compose.dev.yml + docker-compose.services.yml
-docker compose up -d postgres redis qdrant
+docker compose up -d postgres redis
 
 # 3. Migrations SQL (001-010 : schemas core/ingestion/knowledge + tables)
 python scripts/apply_migrations.py
@@ -2537,7 +2516,7 @@ cd services/gateway && uvicorn main:app --reload
 
 # 5. Healthcheck endpoint (GET /api/v1/health) avec config/health_checks.py
 # Test : curl http://localhost:8000/api/v1/health
-# Attendu : {"status": "ok", "checks": {"postgres": "ok", "redis": "ok", "qdrant": "ok"}}
+# Attendu : {"status": "ok", "checks": {"postgres": "ok", "redis": "ok", "pgvector": "ok"}} (D19)
 
 # 6. Premier test end-to-end : sanity check tous services
 pytest tests/e2e/test_healthcheck.py -v
@@ -2565,7 +2544,7 @@ Dépendances critiques avant story suivante :
 
 **📋 Complete Architecture Document**
 
-- Toutes décisions architecturales documentées avec versions spécifiques (Python 3.12, LangGraph 0.2.45+, n8n 1.69.2+, PostgreSQL 16, Redis 7, Mistral cloud+local)
+- Toutes decisions architecturales documentees avec versions specifiques (Python 3.12, LangGraph 0.2.45+, n8n 1.69.2+, PostgreSQL 16, Redis 7, Claude Sonnet 4.5 D17)
 - Patterns d'implémentation garantissant la cohérence AI agents (adaptateurs, event-driven, REST, migrations SQL numérotées)
 - Structure projet complète avec tous fichiers et répertoires (~150 fichiers définis)
 - Mapping requirements → architecture (37 exigences techniques + 23 modules → fichiers spécifiques)
@@ -2575,13 +2554,13 @@ Dépendances critiques avant story suivante :
 
 - **45 décisions architecturales** documentées (infrastructure, IA, communication, connecteurs, sécurité, déploiement)
 - **10 patterns d'implémentation** définis (event-driven, REST, adaptateurs, migrations SQL, error handling, retry, logging, backups)
-- **46 composants architecturaux** spécifiés (3 schemas PostgreSQL, 23 agents modules, 5 adaptateurs, 7 workflows n8n, 8 services Docker)
+- **45 composants architecturaux** spécifiés (3 schemas PostgreSQL, 23 agents modules, 4 adaptateurs (D19), 7 workflows n8n, 7 services Docker (D19 : Qdrant retiré))
 - **60 requirements** totalement supportés (37 exigences techniques + 23 modules fonctionnels)
 
 **📚 AI Agent Implementation Guide**
 
 - Tech stack avec versions vérifiées (compatibilité validée, corrections Party Mode appliquées)
-- Consistency rules prévenant les conflits d'implémentation (KISS Day 1, évolutibilité via adaptateurs, VPS-4 48 Go, Observability & Trust Layer)
+- Consistency rules prévenant les conflits d'implémentation (KISS Day 1, évolutibilité via adaptateurs, VPS-3 24 Go, Observability & Trust Layer)
 - Structure projet avec frontières claires (3 schemas PostgreSQL, flat agents/, adapters/ séparés)
 - Integration patterns et standards de communication (REST sync + Redis Pub/Sub async + HTTP interne Docker)
 
@@ -2594,7 +2573,7 @@ Dépendances critiques avant story suivante :
 **✅ Architecture Coherence**
 
 - [x] Toutes décisions fonctionnent ensemble sans conflits (validé Step 7)
-- [x] Choix technologiques compatibles (Python 3.12 + LangGraph + n8n + Mistral + PostgreSQL 16 + Redis 7)
+- [x] Choix technologiques compatibles (Python 3.12 + LangGraph + n8n + Claude Sonnet 4.5 + PostgreSQL 16 + Redis 7)
 - [x] Patterns supportent les décisions architecturales (event-driven + REST + adaptateurs)
 - [x] Structure alignée avec tous les choix (3 schemas, flat agents/, adapters/ séparés)
 
@@ -2624,16 +2603,16 @@ Patterns d'implémentation et règles assurent que multiples AI agents produiron
 Tous requirements projet architecturalement supportés (100% - 37 exigences techniques + 23 modules), avec mapping clair besoins business → implémentation technique.
 
 **🏗️ Solid Foundation**
-Starter template choisi (n8n + LangGraph + FastAPI + PostgreSQL + Redis + Qdrant) et patterns architecturaux fournissent fondation production-ready suivant best practices actuelles (Docker Compose, Tailscale, event-driven, migrations SQL).
+Starter template choisi (n8n + LangGraph + FastAPI + PostgreSQL avec pgvector + Redis) et patterns architecturaux fournissent fondation production-ready suivant best practices actuelles (Docker Compose, Tailscale, event-driven, migrations SQL) (D19 : Qdrant retiré au profit de pgvector).
 
 **🔐 Security by Design**
 Sécurité RGPD robuste intégrée dès l'architecture (Presidio anonymisation obligatoire avant LLM cloud, Tailscale zéro exposition Internet, age/SOPS secrets, pgcrypto colonnes sensibles, hébergement France OVH).
 
 **♻️ Evolvability by Design**
-5 adaptateurs (vectorstore, memorystore, filesync, email, llm) permettent remplacement composants externes sans refactoring massif. Switch Mistral → Gemini/Claude = modifier 1 fichier uniquement.
+4 adaptateurs (memorystore, filesync, email, llm) permettent remplacement composants externes sans refactoring massif (D19 : vectorstore.py fusionne dans memorystore.py). Switch Claude → autre provider = modifier 1 fichier uniquement (`adapters/llm.py`). Switch pgvector → Qdrant = modifier `adapters/memorystore.py` uniquement.
 
 **💰 Budget Optimized**
-Architecture respecte contrainte budget 50€/mois (estimation ~36-42€ : VPS-4 25€ TTC + Mistral 6-9€ + Deepgram 3-5€ + divers 2-3€). Tous services lourds residents en simultane (VPS-4 48 Go). Mistral unifie cloud + local evite multiplication providers.
+Budget estime ~63€/mois (VPS-3 ~15€ TTC + API Claude Sonnet 4.5 ~45€ + divers ~3€). Depasse contrainte initiale X1 (50€) mais justifie par qualite superieure et simplification (un seul modele, zero routing, zero complexite multi-provider). Services lourds residents sur VPS-3 24 Go (Ollama retire D12/D17).
 
 ---
 

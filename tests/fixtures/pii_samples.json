@@ -92,6 +92,110 @@
       "sensitive_values": ["Jean"],
       "expected_anonymized_contains": ["[PERSON_"],
       "reasoning": "Prénom seul doit être anonymisé. Numéro partiel '06' trop court pour être détecté (OK, pas une vraie PII)."
+    },
+    {
+      "id": "pii_sample_009_medical",
+      "input": "Dr. Bernard (RPPS 10003456789) prescrit Doliprane 1000mg à Mme Sophie Lemaire (NIR 2 85 05 75 987 654 32) pour douleurs cervicales. RDV suivi : 15/03/2026 à 10h.",
+      "entities": ["PERSON", "MEDICAL_LICENSE", "FR_NIR", "DATE_TIME"],
+      "sensitive_values": ["Dr. Bernard", "10003456789", "Sophie Lemaire", "2 85 05 75 987 654 32", "15/03/2026", "10h"],
+      "expected_anonymized_contains": ["[PERSON_", "[MEDICAL_LICENSE_", "[FR_NIR_", "[DATE_TIME_"],
+      "reasoning": "Contexte médical : RPPS + NIR + dates doivent être anonymisés"
+    },
+    {
+      "id": "pii_sample_010_financial",
+      "input": "Virement de 15000€ effectué le 01/02/2026 depuis IBAN FR14 2004 1010 0505 0001 3M02 606 vers le compte de Marc Dubois. Ref: FACT-2026-001.",
+      "entities": ["DATE_TIME", "IBAN_CODE", "PERSON"],
+      "sensitive_values": ["01/02/2026", "FR14 2004 1010 0505 0001 3M02 606", "Marc Dubois"],
+      "expected_anonymized_contains": ["[DATE_TIME_", "[IBAN_CODE_", "[PERSON_"],
+      "reasoning": "Transaction financière : IBAN + montant + personne doivent être anonymisés"
+    },
+    {
+      "id": "pii_sample_011_multiple_persons",
+      "input": "Réunion entre Antoine Lopez (directeur), Marie Martin (comptable) et Jean Dupont (avocat) le jeudi 10/02/2026 à 14h30 au 45 Avenue des Champs-Élysées, 75008 Paris.",
+      "entities": ["PERSON", "DATE_TIME", "LOCATION"],
+      "sensitive_values": ["Antoine Lopez", "Marie Martin", "Jean Dupont", "10/02/2026", "14h30", "45 Avenue des Champs-Élysées", "75008 Paris"],
+      "expected_anonymized_contains": ["[PERSON_", "[DATE_TIME_", "[LOCATION_"],
+      "reasoning": "Multiples personnes + lieu + date précise doivent être anonymisés"
+    },
+    {
+      "id": "pii_sample_012_phone_variations",
+      "input": "Contacts : 01 23 45 67 89 (fixe), 06.12.34.56.78 (mobile), +33 6 98 76 54 32 (international).",
+      "entities": ["PHONE_NUMBER"],
+      "sensitive_values": ["01 23 45 67 89", "06.12.34.56.78", "+33 6 98 76 54 32"],
+      "expected_anonymized_contains": ["[PHONE_NUMBER_"],
+      "reasoning": "Différents formats de téléphones français doivent être détectés"
+    },
+    {
+      "id": "pii_sample_013_email_variations",
+      "input": "Envoyez vos documents à contact@entreprise.fr, copie à direction@entreprise.com et jean.martin@domaine.fr.",
+      "entities": ["EMAIL_ADDRESS"],
+      "sensitive_values": ["contact@entreprise.fr", "direction@entreprise.com", "jean.martin@domaine.fr"],
+      "expected_anonymized_contains": ["[EMAIL_ADDRESS_"],
+      "reasoning": "Multiples emails doivent tous être anonymisés"
+    },
+    {
+      "id": "pii_sample_014_mixed_pii",
+      "input": "Patient : Claire Rousseau, NIR 1 90 12 75 456 123 89, tél 06 45 78 91 23, email claire.rousseau@gmail.com. Adresse : 78 rue Victor Hugo 69003 Lyon.",
+      "entities": ["PERSON", "FR_NIR", "PHONE_NUMBER", "EMAIL_ADDRESS", "LOCATION"],
+      "sensitive_values": ["Claire Rousseau", "1 90 12 75 456 123 89", "06 45 78 91 23", "claire.rousseau@gmail.com", "78 rue Victor Hugo", "69003 Lyon"],
+      "expected_anonymized_contains": ["[PERSON_", "[FR_NIR_", "[PHONE_NUMBER_", "[EMAIL_ADDRESS_", "[LOCATION_"],
+      "reasoning": "Combinaison dense de PII variées"
+    },
+    {
+      "id": "pii_sample_015_iban_variations",
+      "input": "Comptes : FR76 3000 6000 0112 3456 7890 189 (Société A), FR14 2004 1010 0505 0001 3M02 606 (Société B).",
+      "entities": ["IBAN_CODE"],
+      "sensitive_values": ["FR76 3000 6000 0112 3456 7890 189", "FR14 2004 1010 0505 0001 3M02 606"],
+      "expected_anonymized_contains": ["[IBAN_CODE_"],
+      "reasoning": "Multiples IBAN français doivent être anonymisés"
+    },
+    {
+      "id": "pii_sample_016_dates_formats",
+      "input": "Dates importantes : 01/02/2026, 15-03-2026, 2026-04-10, le 5 mai 2026 à 14h30.",
+      "entities": ["DATE_TIME"],
+      "sensitive_values": ["01/02/2026", "15-03-2026", "2026-04-10", "5 mai 2026", "14h30"],
+      "expected_anonymized_contains": ["[DATE_TIME_"],
+      "reasoning": "Différents formats de dates françaises"
+    },
+    {
+      "id": "pii_sample_017_credit_card_multi",
+      "input": "Cartes enregistrées : 4532 1234 5678 9012 (Visa), 5425 2334 3010 9903 (Mastercard), 3782 822463 10005 (Amex).",
+      "entities": ["CREDIT_CARD"],
+      "sensitive_values": ["4532 1234 5678 9012", "5425 2334 3010 9903", "3782 822463 10005"],
+      "expected_anonymized_contains": ["[CREDIT_CARD_"],
+      "reasoning": "Multiples cartes bancaires (Visa/MC/Amex) doivent être anonymisées"
+    },
+    {
+      "id": "pii_sample_018_real_world_email",
+      "input": "Bonjour Jean, merci pour votre email. Je confirme le RDV le 12/02/2026 à 15h avec Dr. Martin au cabinet du 23 rue de la République, 75011 Paris. Contact : 01 42 56 78 90 ou jean.patient@email.fr. NIR : 1 75 03 75 123 456 78.",
+      "entities": ["PERSON", "DATE_TIME", "LOCATION", "PHONE_NUMBER", "EMAIL_ADDRESS", "FR_NIR"],
+      "sensitive_values": ["Jean", "Dr. Martin", "12/02/2026", "15h", "23 rue de la République", "75011 Paris", "01 42 56 78 90", "jean.patient@email.fr", "1 75 03 75 123 456 78"],
+      "expected_anonymized_contains": ["[PERSON_", "[DATE_TIME_", "[LOCATION_", "[PHONE_NUMBER_", "[EMAIL_ADDRESS_", "[FR_NIR_"],
+      "reasoning": "Email réaliste avec multiples PII imbriquées"
+    },
+    {
+      "id": "pii_sample_019_edge_partial_pii",
+      "input": "Dossier patient 12345 : anomalie détectée, contacter service rapidement.",
+      "entities": [],
+      "sensitive_values": [],
+      "expected_anonymized_contains": [],
+      "reasoning": "Numéro de dossier seul (pas PII identifiante) → pas d'anonymisation attendue"
+    },
+    {
+      "id": "pii_sample_020_complex_medical",
+      "input": "Ordonnance Dr. Sophie Bernard (RPPS 10009876543) pour patient Antoine Lemaire (NIR 1 80 03 75 987 654 21), né le 15/03/1980 à Marseille. Prescription : Amoxicilline 1g x3/jour pendant 7j. Prochaine consultation : 20/02/2026 à 10h30. Tél urgence : 06 78 90 12 34.",
+      "entities": ["PERSON", "MEDICAL_LICENSE", "FR_NIR", "DATE_TIME", "LOCATION", "PHONE_NUMBER"],
+      "sensitive_values": ["Dr. Sophie Bernard", "10009876543", "Antoine Lemaire", "1 80 03 75 987 654 21", "15/03/1980", "Marseille", "20/02/2026", "10h30", "06 78 90 12 34"],
+      "expected_anonymized_contains": ["[PERSON_", "[MEDICAL_LICENSE_", "[FR_NIR_", "[DATE_TIME_", "[LOCATION_", "[PHONE_NUMBER_"],
+      "reasoning": "Ordonnance médicale complète avec toutes PII critiques"
+    },
+    {
+      "id": "pii_sample_021_complex_forwarded_email",
+      "input": "---------- Message transféré ----------\nDe : Jean Martin <jean.martin@societe-a.fr>\nDate : lun. 5 févr. 2026 à 14:23\nObjet : RE: Contrat client Dupont SAS\nÀ : Marie Dubois <marie.dubois@societe-b.fr>\n\nBonjour Marie,\n\nSuite à notre échange téléphonique (06 12 34 56 78), je confirme que M. Pierre Dupont (NIR 1 75 03 75 123 456 78) a signé le contrat le 01/02/2026. Virement de 25000€ effectué depuis IBAN FR76 3000 6000 0112 3456 7890 189.\n\nCordialement,\nJean Martin\nDirecteur Commercial\nSociété A SAS\n123 Avenue des Champs-Élysées, 75008 Paris\nTél : +33 1 42 56 78 90 | Mobile : 06 12 34 56 78\n\n--- Message original ---\nDe : Pierre Dupont <p.dupont@dupont-sas.fr>\nDate : ven. 2 févr. 2026 à 16:45\n\nOK pour signature. Carte bancaire 4532 1234 5678 9012 pour le premier paiement.",
+      "entities": ["PERSON", "EMAIL_ADDRESS", "PHONE_NUMBER", "FR_NIR", "DATE_TIME", "IBAN_CODE", "LOCATION", "CREDIT_CARD"],
+      "sensitive_values": ["Jean Martin", "jean.martin@societe-a.fr", "Marie Dubois", "marie.dubois@societe-b.fr", "Pierre Dupont", "p.dupont@dupont-sas.fr", "1 75 03 75 123 456 78", "06 12 34 56 78", "+33 1 42 56 78 90", "01/02/2026", "5 févr. 2026", "2 févr. 2026", "FR76 3000 6000 0112 3456 7890 189", "123 Avenue des Champs-Élysées", "75008 Paris", "4532 1234 5678 9012"],
+      "expected_anonymized_contains": ["[PERSON_", "[EMAIL_ADDRESS_", "[PHONE_NUMBER_", "[FR_NIR_", "[DATE_TIME_", "[IBAN_CODE_", "[LOCATION_", "[CREDIT_CARD_"],
+      "reasoning": "Email forwarded complexe avec multiples signatures, historique conversation, PII imbriquées sur plusieurs niveaux. Cas réaliste d'usage pro."
     }
   ],
   "usage": "pytest tests/integration/test_anonymization_pipeline.py",

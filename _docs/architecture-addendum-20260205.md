@@ -24,7 +24,7 @@ Pipeline Presidio est **obligatoire** avant tout LLM cloud (RGPD), mais impact l
 
 **Sources** :
 - Presidio benchmark officiel : ~400-600ms pour 1000 chars (CPU i7, 8 threads)
-- VPS-4 OVH (12 vCores) : performance similaire attendue
+- VPS-3 OVH (8 vCores) : performance similaire attendue
 
 ### 1.3 Stratégies d'optimisation
 
@@ -88,7 +88,7 @@ L'architecture dit "Friday détecte les patterns récurrents automatiquement" ma
 
        for (module, action), corr_list in grouped.items():
            # Calculer similarité entre corrections (embeddings)
-           embeddings = await mistral_embed([c['correction'] for c in corr_list])
+           embeddings = await embed_texts([c['correction'] for c in corr_list])  # Via adapters/embeddings.py (Voyage AI)
            similarity_matrix = cosine_similarity(embeddings)
 
            # Détecter clusters (seuil 0.85)
@@ -169,35 +169,35 @@ def extract_common_pattern(corrections: list[dict]) -> dict:
 
 ### 3.1 Problématique
 
-Estimations RAM (Ollama 8 Go, Whisper 4 Go) sans source citée → risque sous-estimation.
+Estimations RAM (Whisper 4 Go, etc.) sans source citée → risque sous-estimation. Note : Ollama retiré (D12), LLM via API cloud Claude Sonnet 4.5 (D17).
 
 ### 3.2 Sources par service
 
 | Service | RAM estimée | Source | Notes |
 |---------|-------------|--------|-------|
-| **Ollama Nemo 12B** | ~8 Go | [Ollama Model Library](https://ollama.com/library/mistral-nemo) (quantized Q4) | ✅ Officiel |
+| ~~Ollama Nemo 12B~~ | ~~8 Go~~ | ~~Retiré (Décision D12 + D17 : LLM cloud Claude Sonnet 4.5 via API Anthropic)~~ | ❌ Supprimé |
 | **Faster-Whisper** | ~4 Go | [Faster-Whisper GitHub](https://github.com/SYSTRAN/faster-whisper) (large-v3 model) | ✅ Officiel |
 | **Kokoro TTS** | ~2 Go | Estimation basée sur modèles TTS similaires (Piper ~1.5 Go) | ⚠️ À valider Story 1 |
 | **Surya OCR** | ~2 Go | [Surya GitHub](https://github.com/VikParuchuri/surya) (detection + recognition models) | ✅ Officiel |
 | **Presidio + spaCy-fr** | ~1.5 Go | spaCy fr_core_news_lg (~500 Mo) + Presidio overhead (~1 Go) | ✅ Benchmark interne |
 | **PostgreSQL 16** | ~1-1.5 Go | Config `shared_buffers=512MB` + working memory | ✅ Configuration |
 | **Redis 7** | ~200 Mo | Base install + AOF overhead | ✅ Benchmark |
-| **Qdrant** | ~1-2 Go | Dépend du nb vecteurs (10k docs = ~500 Mo, 100k = ~2 Go) | ⚠️ Variable |
+| ~~**Qdrant**~~ | ~~1-2 Go~~ | ~~Retiré (Décision D19 : pgvector dans PostgreSQL)~~ | ❌ Supprimé |
 | **n8n** | ~500 Mo | [n8n Docker docs](https://docs.n8n.io/hosting/installation/docker/) | ✅ Officiel |
 | **FastAPI Gateway** | ~200 Mo | Python asyncio + uvicorn workers | ✅ Estimation standard |
 | **Telegram Bot** | ~100 Mo | python-telegram-bot lib | ✅ Estimation standard |
 | **Caddy** | ~50 Mo | Caddy 2 reverse proxy | ✅ Officiel |
-| **Zep** | ~500 Mo | Estimation basée sur services Go similaires | ⚠️ À valider |
+| ~~**Zep**~~ | ~~500 Mo~~ | ~~Retiré (Zep cessé 2024)~~ | ❌ Supprimé |
 
 ### 3.3 Marge d'erreur
 
 **Estimations ✅ validées** (sources officielles) : ±10%
 **Estimations ⚠️ à valider** (extrapolations) : ±30%
 
-**Total RAM optimiste** : ~21 Go
-**Total RAM pessimiste** : ~27 Go
-**VPS-4 disponible** : 48 Go
-**Marge sécurité** : ~21-27 Go (44-56% de réserve)
+**Total RAM optimiste** : ~11 Go (Ollama retiré D12, LLM cloud D17, Qdrant retiré D19)
+**Total RAM pessimiste** : ~16 Go (Ollama retiré D12, LLM cloud D17, Qdrant retiré D19)
+**VPS-3 disponible** : 24 Go
+**Marge sécurité** : ~8-13 Go (Ollama retiré D12, LLM cloud Claude Sonnet 4.5 D17, Qdrant retiré D19 → pgvector dans PostgreSQL, services lourds ~8 Go)
 
 ### 3.4 Validation lors Story 1
 
@@ -380,13 +380,15 @@ Workflows n8n mentionnent `${TELEGRAM_CHAT_ID}` mais aucun doc n'explique commen
 4. Settings → API → "Generate new token"
 5. Copier token → `.env` : `EMAILENGINE_TOKEN=ee_...`
 
-#### **MISTRAL_API_KEY**
+#### **ANTHROPIC_API_KEY**
 
 **Étapes** :
-1. Créer compte sur [console.mistral.ai](https://console.mistral.ai/)
-2. Billing → Ajouter carte (5€ minimum)
-3. API Keys → "Create new key"
-4. Copier → `.env` : `MISTRAL_API_KEY=...`
+1. Créer compte sur [console.anthropic.com](https://console.anthropic.com/)
+2. Billing → Ajouter carte (crédits API)
+3. API Keys → "Create Key"
+4. Copier → `.env` : `ANTHROPIC_API_KEY=sk-ant-...`
+
+> **Note (D17)** : Remplacement de Mistral par Claude Sonnet 4.5 (Anthropic). Modèle utilisé : `claude-sonnet-4-5-20250514` via API Anthropic.
 
 #### **DEEPGRAM_API_KEY** (fallback STT)
 
@@ -404,7 +406,7 @@ Workflows n8n mentionnent `${TELEGRAM_CHAT_ID}` mais aucun doc n'explique commen
 required_vars=(
   "TELEGRAM_BOT_TOKEN"
   "TELEGRAM_CHAT_ID"
-  "MISTRAL_API_KEY"
+  "ANTHROPIC_API_KEY"
   "EMAILENGINE_TOKEN"
   "POSTGRES_PASSWORD"
   "REDIS_PASSWORD"
@@ -503,7 +505,7 @@ async def populate_graph_from_email(self, email: dict, classification: dict):
 
 1. **PostgreSQL d'abord** (rapide, 9h)
 2. **Graphe ensuite** (plus lent, ~15-20h supplémentaires)
-3. **Vectoriel en dernier** (Qdrant embeddings, parallélisable)
+3. **Vectoriel en dernier** (pgvector embeddings dans `knowledge.embeddings`, parallélisable) (D19)
 
 **Rationale** : Si la migration graphe échoue, PostgreSQL est déjà peuplé. On peut retry la population graphe sans tout recommencer.
 
@@ -511,9 +513,9 @@ async def populate_graph_from_email(self, email: dict, classification: dict):
 
 | Phase | Durée | Parallélisable ? |
 |-------|-------|------------------|
-| Classification + Insert PostgreSQL | ~9h | Non (rate limit Mistral) |
+| Classification + Insert PostgreSQL | ~9h | Non (rate limit API Claude) |
 | Population graphe (nœuds + relations) | ~15-20h | Oui (batch 100 emails) |
-| Embeddings Qdrant | ~6-8h | Oui (batch 1000 docs) |
+| Embeddings pgvector (D19) | ~6-8h | Oui (batch 1000 docs) |
 | **TOTAL** | **~30-37h** | Nuit + week-end |
 
 **Stratégie exécution** :
@@ -528,7 +530,7 @@ async def populate_graph_from_email(self, email: dict, classification: dict):
 checkpoint_data = {
     'postgres_processed': 110000,
     'graph_processed': 84000,  # NOUVEAU
-    'qdrant_processed': 60000,  # NOUVEAU
+    'pgvector_processed': 60000,  # NOUVEAU (D19 : pgvector remplace Qdrant)
     'last_email_id': 'abc123'
 }
 ```
@@ -626,12 +628,7 @@ HEALTH_CHECKS: dict[str, HealthCheckConfig] = {
         critical=True,
         dependencies=[],
     ),
-    "qdrant": HealthCheckConfig(
-        func=lambda: check_http("http://qdrant:6333/health"),
-        timeout_ms=3000,
-        critical=True,
-        dependencies=[],
-    ),
+    # Qdrant retiré (D19) - embeddings via pgvector dans PostgreSQL
     # Services importants (overall health = DEGRADED si down)
     "n8n": HealthCheckConfig(
         func=lambda: check_http("http://n8n:5678/healthz"),
@@ -652,12 +649,7 @@ HEALTH_CHECKS: dict[str, HealthCheckConfig] = {
         dependencies=[],
     ),
     # Services lourds residents
-    "ollama": HealthCheckConfig(
-        func=lambda: check_http("http://ollama:11434/api/tags"),
-        timeout_ms=5000,
-        critical=False,
-        dependencies=[],
-    ),
+    # Ollama retiré (D12) - LLM via API cloud Claude Sonnet 4.5 (D17)
     "faster-whisper": HealthCheckConfig(
         func=lambda: check_http("http://whisper:8080/health"),
         timeout_ms=3000,
@@ -823,9 +815,10 @@ user default off
 > **Avertissement (Feb 2026)** : Zep a cesse ses operations en 2024. Graphiti est en phase early-stage.
 >
 > **Decision provisoire** : Demarrer avec `adapters/memorystore.py` abstraction. Implementer d'abord
-> une version simplifiee basee sur PostgreSQL (tables knowledge.*) + Qdrant (embeddings).
+> une version simplifiee basee sur PostgreSQL (tables knowledge.* + pgvector pour embeddings via `knowledge.embeddings` colonne `vector(1024)` + index HNSW) (D19).
 > Si Graphiti atteint la maturite v1.0 stable, migration via adaptateur.
 > Sinon, Neo4j Community Edition comme alternative.
+> Reevaluation Qdrant si >300k vecteurs ou latence pgvector >100ms (D19).
 >
 > **Criteres de migration vers Graphiti** :
 > - Version stable >= 1.0 publiee
@@ -934,8 +927,8 @@ graph TB
 **Rôle** : Santé système et alertes critiques
 
 **Contenu** :
-- Alertes RAM >85% (moniteur VPS-4 48 Go)
-- Services down/up (PostgreSQL, Redis, Qdrant, n8n, etc.)
+- Alertes RAM >85% (moniteur VPS-3 24 Go, seuil 20.4 Go)
+- Services down/up (PostgreSQL, Redis, n8n, etc.) (D19 : Qdrant retiré, pgvector dans PostgreSQL)
 - Pipeline errors critiques
 - Backup status (success/failure)
 - Security events (tentatives accès Tailscale, anomalies)
@@ -1214,5 +1207,5 @@ Les fonctionnalités suivantes sont **hors scope v1.0** :
 ---
 
 **Cree le** : 2026-02-05
-**Mis a jour** : 2026-02-05 (review adversariale - ajout sections 7-11)
-**Version** : 1.2
+**Mis a jour** : 2026-02-09 (D19 : pgvector remplace Qdrant Day 1, D17 : remplacement Mistral par Claude Sonnet 4.5, nettoyage references Ollama LLM)
+**Version** : 1.4

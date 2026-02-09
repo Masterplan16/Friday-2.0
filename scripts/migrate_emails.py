@@ -19,7 +19,7 @@ Features:
 - Retry exponentiel sur erreur API (3 tentatives)
 - Resume depuis dernier checkpoint en cas de crash
 - Progress bar + estimation temps restant
-- Rate limiting API Mistral respecté (60 req/min max)
+- Rate limiting API Anthropic respecté (configurable req/min)
 - Logs détaillés dans logs/migration.log
 """
 
@@ -39,12 +39,12 @@ from dataclasses import dataclass
 # Configuration (chargée depuis variables d'environnement - jamais hardcodé)
 # Pas de valeurs par défaut pour les secrets (age/SOPS pour secrets, voir architecture)
 POSTGRES_DSN = os.getenv("POSTGRES_DSN")
-MISTRAL_API_KEY = os.getenv("MISTRAL_API_KEY")
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 
 # Validation
-if not POSTGRES_DSN or not MISTRAL_API_KEY:
+if not POSTGRES_DSN or not ANTHROPIC_API_KEY:
     raise EnvironmentError(
-        "POSTGRES_DSN et MISTRAL_API_KEY doivent etre definis via variable d'environnement ou .env "
+        "POSTGRES_DSN et ANTHROPIC_API_KEY doivent etre definis via variable d'environnement ou .env "
         "(utiliser age/SOPS pour les secrets, jamais de credentials en clair)"
     )
 
@@ -60,7 +60,7 @@ CHECKPOINT_FILE = "data/migration_checkpoint.json"
 LOG_FILE = "logs/migration.log"
 BATCH_SIZE = 100  # Emails par batch
 MAX_RETRIES = 3
-RATE_LIMIT_RPM = 20  # Mistral rate limit (requests per minute) - défaut tier gratuit
+RATE_LIMIT_RPM = 50  # Anthropic rate limit (requests per minute) - tier 1
 RATE_LIMIT_DELAY = 60 / RATE_LIMIT_RPM  # Délai entre requêtes
 
 
@@ -85,7 +85,7 @@ class EmailMigrator:
         self.rate_limit_rpm = rate_limit_rpm
         self.rate_limit_delay = 60 / rate_limit_rpm
         self.db = None
-        self.mistral_client = None
+        self.llm_client = None
         self.state: Optional[MigrationState] = None
         self.logger = self._setup_logging()
 
@@ -103,13 +103,13 @@ class EmailMigrator:
         return logging.getLogger(__name__)
 
     async def connect(self):
-        """Connexion PostgreSQL + Mistral"""
+        """Connexion PostgreSQL + Anthropic"""
         self.logger.info("Connexion à PostgreSQL...")
         self.db = await asyncpg.connect(POSTGRES_DSN)
 
-        self.logger.info("Connexion à Mistral API...")
-        # TODO: Initialiser MistralClient
-        # self.mistral_client = MistralClient(api_key=MISTRAL_API_KEY)
+        self.logger.info("Connexion à Anthropic API (Claude Sonnet 4.5)...")
+        # TODO: Initialiser AnthropicAdapter
+        # self.llm_client = AnthropicAdapter(api_key=ANTHROPIC_API_KEY)
 
     async def load_checkpoint(self) -> Optional[MigrationState]:
         """Charge le checkpoint si existe"""
@@ -211,7 +211,7 @@ class EmailMigrator:
 
     async def classify_email(self, email: dict, retry_count: int = 0) -> dict:
         """
-        Classifie un email via Mistral API
+        Classifie un email via Claude Sonnet 4.5 (Anthropic API)
         RGPD: Le texte est anonymisé via Presidio AVANT l'appel cloud.
         Retry exponentiel en cas d'erreur.
         """
@@ -222,13 +222,13 @@ class EmailMigrator:
             # RGPD: Anonymiser AVANT l'appel LLM cloud
             anonymized_content = await self.anonymize_for_classification(email)
 
-            # Appel Mistral (TODO: implémenter avec contenu anonymisé)
-            # response = await self.mistral_client.chat(
-            #     model="mistral-nemo-latest",  # IMPORTANT: toujours suffixe -latest
+            # Appel Claude Sonnet 4.5 (TODO: implémenter avec contenu anonymisé)
+            # response = await self.llm_client.complete(
             #     messages=[{
             #         "role": "user",
             #         "content": f"Classe cet email:\n{anonymized_content}"
-            #     }]
+            #     }],
+            #     model="claude-sonnet-4-5-20250929"
             # )
 
             if self.dry_run:
@@ -288,9 +288,9 @@ class EmailMigrator:
 
             # 4. Update cost estimation
             # ~600 tokens/email avg (500 input + 100 output) selon roadmap
-            # Mistral Nemo: $0.15/1M input + $0.15/1M output = $0.30/1M total
-            # 600 tokens × $0.30/1M = $0.00018/email
-            self.state.estimated_cost += 0.00018
+            # Claude Sonnet 4.5: $3/1M input + $15/1M output
+            # 500 tokens input × $3/1M + 100 tokens output × $15/1M = $0.003/email
+            self.state.estimated_cost += 0.003
 
             self.state.processed += 1
             self.state.last_email_id = email['message_id']
@@ -392,7 +392,7 @@ async def main():
     parser.add_argument('--resume', action='store_true', help="Reprendre depuis dernier checkpoint")
     parser.add_argument('--dry-run', action='store_true', help="Simulation sans modification réelle")
     parser.add_argument('--batch-size', type=int, default=BATCH_SIZE, help=f"Taille batch (défaut: {BATCH_SIZE})")
-    parser.add_argument('--rate-limit', type=int, default=RATE_LIMIT_RPM, help=f"Rate limit Mistral API en req/min (défaut: {RATE_LIMIT_RPM} = tier gratuit). Tiers: gratuit=20, pay-as-you-go=60, enterprise=custom")
+    parser.add_argument('--rate-limit', type=int, default=RATE_LIMIT_RPM, help=f"Rate limit Anthropic API en req/min (défaut: {RATE_LIMIT_RPM}). Ajuster selon tier Anthropic")
     args = parser.parse_args()
 
     migrator = EmailMigrator(

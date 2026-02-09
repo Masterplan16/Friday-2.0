@@ -1,3 +1,5 @@
+> **Mis a jour 2026-02-09** : D17 (Claude remplace Mistral), D19 (pgvector remplace Qdrant Day 1)
+
 # Friday 2.0 - Epics Vision 3+ mois (Epics 14-20)
 
 **36 FRs | Detail leger**
@@ -79,7 +81,7 @@ Creation materiel pedagogique pour enseignement medical.
 
 | Story | FRs | Description |
 |-------|-----|-------------|
-| 17.1 Indexation programme etudes | FR116 | RAG Qdrant base documentaire programme medical (S12) |
+| 17.1 Indexation programme etudes | FR116 | RAG pgvector (PostgreSQL) base documentaire programme medical (S12) [D19] |
 | 17.2 Generateur TCS | FR86, FR146 | Vignettes cliniques + simulation panel experts correction |
 | 17.3 Generateur ECOS | FR88 | Examens Cliniques Objectifs Structures |
 | 17.4 Actualisateur cours | FR89 | MAJ cours existants avec dernieres recommandations HAS |
@@ -155,7 +157,7 @@ Point de decision, pas d'implementation immediate.
 - Graphiti v1.0 stable : > 500 stars GitHub, doc API complete, tests 100k+ entites
 - Si criteres atteints → migration vers Graphiti
 - Si non → Neo4j Community Edition
-- Si PostgreSQL knowledge.* + Qdrant suffisent → pas de migration (KISS)
+- Si PostgreSQL knowledge.* + pgvector suffisent → pas de migration (KISS) [D19]
 
 **Action** : Evaluation technique en aout 2026. Pas de story tant que le verdict n'est pas rendu.
 

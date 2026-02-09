@@ -8,7 +8,7 @@
 # Prerequis:
 #   - Docker Compose running
 #   - Tailscale connecte
-#   - Services PostgreSQL, Qdrant, Zep operationnels
+#   - Services PostgreSQL (+ pgvector D19) operationnels
 #
 # Portabilite:
 #   - Linux/macOS : Natif
@@ -117,41 +117,12 @@ if [ "$BACKUP_SIZE_KB" -lt 10 ]; then
 fi
 
 #############################################
-# ÉTAPE 3: Backup Qdrant (si disponible)
+# ÉTAPE 3: [D19] pgvector sauvegardé avec PostgreSQL
+# Qdrant retiré (D19) - embeddings dans knowledge.embeddings via pgvector
+# Sauvegardé automatiquement par pg_dump à l'étape 2
 #############################################
 echo ""
-echo -e "${YELLOW}[3/6] Backup Qdrant...${NC}"
-
-if docker ps | grep -q "qdrant"; then
-    # Creer snapshot Qdrant (avec validation HTTP + curl exit code)
-    QDRANT_RESPONSE_FILE="$TEST_BACKUP_DIR/qdrant_response.json"
-    if ! QDRANT_HTTP_CODE=$(curl -s -o "$QDRANT_RESPONSE_FILE" -w "%{http_code}" \
-        --connect-timeout 10 --max-time 30 \
-        -X POST http://localhost:6333/collections/friday_docs/snapshots); then
-        echo -e "${YELLOW}⚠️  Qdrant curl failed (network error) - skipped${NC}"
-    elif [ "$QDRANT_HTTP_CODE" != "200" ]; then
-        echo -e "${YELLOW}⚠️  Qdrant snapshot HTTP $QDRANT_HTTP_CODE - skipped${NC}"
-    else
-        QDRANT_SNAPSHOT=$(jq -r '.result.name' "$QDRANT_RESPONSE_FILE" 2>/dev/null)
-
-        if [ -n "$QDRANT_SNAPSHOT" ] && [ "$QDRANT_SNAPSHOT" != "null" ]; then
-            if ! DL_HTTP_CODE=$(curl -s -o "$TEST_BACKUP_DIR/qdrant_test.snapshot" -w "%{http_code}" \
-                --connect-timeout 10 --max-time 120 \
-                "http://localhost:6333/collections/friday_docs/snapshots/$QDRANT_SNAPSHOT"); then
-                echo -e "${YELLOW}⚠️  Qdrant snapshot download curl failed - skipped${NC}"
-            elif [ "$DL_HTTP_CODE" = "200" ]; then
-                echo -e "${GREEN}Qdrant snapshot cree: $QDRANT_SNAPSHOT${NC}"
-            else
-                echo -e "${YELLOW}⚠️  Qdrant snapshot download HTTP $DL_HTTP_CODE - skipped${NC}"
-            fi
-        else
-            echo -e "${YELLOW}Qdrant collection vide - snapshot skipped${NC}"
-        fi
-    fi
-    rm -f "$QDRANT_RESPONSE_FILE"
-else
-    echo -e "${YELLOW}Qdrant non disponible - skipped${NC}"
-fi
+echo -e "${GREEN}[3/6] pgvector (D19) - inclus dans backup PostgreSQL${NC}"
 
 #############################################
 # ÉTAPE 4: Wipe données (simulation disaster)

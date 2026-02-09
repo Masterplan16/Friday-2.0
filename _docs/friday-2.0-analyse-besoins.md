@@ -5,7 +5,7 @@
 > **Dernière mise à jour** : 5 février 2026
 > **Version** : 1.1.0
 > **Utilisateur** : Antonio
-> **Statut** : Analyse terminée + corrections review adversariale v2 (VPS 25,5€, 110k mails, Apple Watch retiré)
+> **Statut** : Analyse terminée + corrections review adversariale v2 (VPS ~15€, 110k mails, Apple Watch retiré)
 
 ---
 
@@ -314,13 +314,13 @@ Briefing ←─────(agrège tout)────→ Tous les modules
 
 | Contrainte | Valeur |
 |------------|--------|
-| **Budget** | 50€/mois maximum (VPS + APIs cloud). Estimation réelle : ~37-43€/mois (VPS-4 25,5€ + Mistral 6-9€ + Deepgram 3-5€ + divers 2-3€) |
-| **Serveur** | OVH VPS-4 : 48 Go RAM / 12 vCores / 300 Go NVMe (25,5€ TTC/mois) - Tous services lourds résidents simultanément |
+| **Budget** | 75€/mois maximum (VPS + APIs cloud). Estimation réelle : ~63€/mois (VPS-3 ~15€ + Claude Sonnet 4.5 API ~45€ + veille benchmark ~3€) (D17) |
+| **Serveur** | OVH VPS-3 : 24 Go RAM / 8 vCores / 160 Go NVMe (~15€ TTC/mois) - Tous services lourds résidents simultanément |
 | **Laptop utilisateur** | Dell Pro Max 16 (Core Ultra 7 255H, 32 Go RAM, pas de GPU). **AUCUN modèle IA ne tourne sur le laptop** - rôle = stockage documents uniquement |
 | **Stockage** | Synology BeeStation (photos) + PC (documents locaux) + VPS (index + métadonnées uniquement) |
 | **Confidentialité** | Anonymisation réversible via Presidio + spaCy-fr AVANT tout traitement LLM cloud (obligatoire RGPD) |
-| **Architecture IA** | Hybride VPS/cloud : Ollama VPS (données sensibles) + Mistral cloud (raisonnement complexe) |
-| **LLM local VPS** | Mistral Nemo 12B + Ministral 3B via Ollama sur VPS (CPU suffisant, données ne sortent pas) |
+| **Architecture IA** | 100% Claude Sonnet 4.5 (Anthropic API) — un seul modèle, zéro routing (D17). Ollama retiré (D12) |
+| **LLM** | Claude Sonnet 4.5 via Anthropic API ($3/$15 per 1M tokens). Anonymisation Presidio obligatoire avant tout appel |
 | **Interface principale** | Telegram bot (mobile-first, vocal natif bidirectionnel, meilleure confidentialité que Discord) - 100% Day 1 |
 | **Mails** | 4 comptes via EmailEngine (auto-hébergé Docker). Thunderbird reste interface utilisateur optionnelle |
 | **Thèses** | Google Docs partagés avec étudiants (API v1 - limitation : Suggestions au lieu de commentaires ancrés) |

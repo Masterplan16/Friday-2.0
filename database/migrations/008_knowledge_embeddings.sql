@@ -1,28 +1,38 @@
--- Migration 008: Knowledge embeddings metadata
--- Date: 2026-02-05
--- Description: Métadonnées pour embeddings Qdrant (mapping IDs)
+-- Migration 008: Knowledge embeddings avec pgvector
+-- Date: 2026-02-09
+-- Description: Stockage embeddings directement dans PostgreSQL via pgvector (D19)
+-- Remplace: Qdrant externe (Decision D19 - pgvector Day 1, Qdrant si >300k vecteurs)
 
 BEGIN;
 
-CREATE TABLE knowledge.embeddings_metadata (
+-- Extension pgvector pour recherche sémantique
+CREATE EXTENSION IF NOT EXISTS vector;
+
+-- Table embeddings : stocke vecteurs directement dans PostgreSQL
+CREATE TABLE IF NOT EXISTS knowledge.embeddings (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    qdrant_collection VARCHAR(100) NOT NULL,
-    qdrant_point_id UUID NOT NULL,
     source_type VARCHAR(50) NOT NULL,
     source_id UUID NOT NULL,
     content_hash VARCHAR(64),
-    chunk_index INTEGER,
-    total_chunks INTEGER,
+    chunk_index INTEGER DEFAULT 0,
+    total_chunks INTEGER DEFAULT 1,
+    embedding vector(1024),
     metadata JSONB DEFAULT '{}',
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    CONSTRAINT embeddings_qdrant_unique UNIQUE (qdrant_collection, qdrant_point_id)
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_embeddings_source ON knowledge.embeddings_metadata(source_type, source_id);
-CREATE INDEX idx_embeddings_collection ON knowledge.embeddings_metadata(qdrant_collection);
-CREATE INDEX idx_embeddings_hash ON knowledge.embeddings_metadata(content_hash);
+-- Index HNSW pour recherche sémantique (cosine distance)
+-- Note: build peut prendre du temps sur gros volumes, prévoir maintenance window
+CREATE INDEX IF NOT EXISTS idx_embeddings_vector ON knowledge.embeddings
+    USING hnsw (embedding vector_cosine_ops)
+    WITH (m = 16, ef_construction = 64);
 
-COMMENT ON TABLE knowledge.embeddings_metadata IS 'Métadonnées embeddings Qdrant (mapping PostgreSQL ↔ Qdrant)';
-COMMENT ON COLUMN knowledge.embeddings_metadata.source_type IS 'Types: email, document, audio_note, thesis_section, etc.';
+-- Index métadonnées pour filtrage
+CREATE INDEX IF NOT EXISTS idx_embeddings_source ON knowledge.embeddings(source_type, source_id);
+CREATE INDEX IF NOT EXISTS idx_embeddings_hash ON knowledge.embeddings(content_hash);
+
+COMMENT ON TABLE knowledge.embeddings IS 'Embeddings vectoriels pgvector (D19 - remplace Qdrant)';
+COMMENT ON COLUMN knowledge.embeddings.embedding IS 'Vecteur 1024 dims (configurable selon modèle embeddings)';
+COMMENT ON COLUMN knowledge.embeddings.source_type IS 'Types: email, document, audio_note, thesis_section, etc.';
 
 COMMIT;

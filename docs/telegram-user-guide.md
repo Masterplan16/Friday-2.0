@@ -167,7 +167,7 @@ Santé du système et alertes critiques.
 **Alertes RAM :**
 ```
 ⚠️ Alerte RAM
-Utilisation : 87% (42 Go / 48 Go)
+Utilisation : 87% (21 Go / 24 Go)
 Services actifs : Ollama, Whisper, Kokoro, Surya
 Recommandation : Vérifier si processus bloqué
 ```
@@ -188,7 +188,7 @@ Statut : Tous modules opérationnels
 ```
 ❌ Erreur critique
 Pipeline : email.classify
-Erreur : Mistral API rate limit exceeded
+Erreur : Anthropic API rate limit exceeded
 Impact : 15 emails en attente
 Action : Retry dans 60s
 ```

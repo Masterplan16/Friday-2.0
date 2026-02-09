@@ -8,7 +8,7 @@
 
 ## 1. Problématique : Tester des systèmes IA non-déterministes
 
-Les agents IA de Friday 2.0 utilisent des LLM (Mistral) qui sont **non-déterministes** :
+Les agents IA de Friday 2.0 utilisent Claude Sonnet 4.5 (Anthropic) qui est **non-déterministe** :
 - Même prompt + même input ≠ même output (sauf temperature=0, et encore...)
 - Les hallucinations sont possibles
 - La qualité varie selon le contexte
@@ -48,16 +48,16 @@ Les agents IA de Friday 2.0 utilisent des LLM (Mistral) qui sont **non-détermin
 ```python
 # ❌ JAMAIS FAIRE ÇA EN TEST UNITAIRE
 async def test_email_classifier():
-    result = await mistral_client.chat("Classe cet email...")  # Appel LLM réel = ❌
+    result = await llm_adapter.chat("Classe cet email...")  # Appel LLM réel = ❌
 ```
 
 **CORRECT** :
 ```python
 # ✅ TOUJOURS MOCKER
-@patch("agents.tools.apis.mistral.MistralClient")
-async def test_email_classifier(mock_mistral):
+@patch("agents.src.adapters.llm.AnthropicAdapter")
+async def test_email_classifier(mock_llm):
     # Simuler la réponse du LLM
-    mock_mistral.return_value.chat.return_value = MistralResponse(
+    mock_llm.return_value.chat.return_value = LLMResponse(
         choices=[Choice(message=Message(content='{"category": "medical", "confidence": 0.95}'))]
     )
 
@@ -67,8 +67,8 @@ async def test_email_classifier(mock_mistral):
     assert result.category == "medical"
     assert result.confidence == 0.95
     # Vérifier que le prompt était correct
-    mock_mistral.return_value.chat.assert_called_once()
-    call_args = mock_mistral.return_value.chat.call_args
+    mock_llm.return_value.chat.assert_called_once()
+    call_args = mock_llm.return_value.chat.call_args
     assert "Classe cet email" in call_args[0][0]
 ```
 
@@ -103,11 +103,11 @@ def mock_email():
     )
 
 @pytest.mark.asyncio
-@patch("agents.src.agents.email.agent.mistral_client")
-async def test_classify_email_medical(mock_mistral, mock_email):
+@patch("agents.src.agents.email.agent.llm_adapter")
+async def test_classify_email_medical(mock_llm, mock_email):
     """Test classification email médical"""
     # Mock réponse LLM
-    mock_mistral.chat.return_value = AsyncMock(return_value={
+    mock_llm.chat.return_value = AsyncMock(return_value={
         "category": "medical",
         "priority": "medium",
         "confidence": 0.92,
@@ -124,17 +124,17 @@ async def test_classify_email_medical(mock_mistral, mock_email):
     assert "ECG" in result.keywords
 
     # Vérifier prompt
-    call_args = mock_mistral.chat.call_args
+    call_args = mock_llm.chat.call_args
     prompt = call_args[0][0]
     assert "Classe cet email" in prompt
     assert mock_email.subject in prompt
 
 @pytest.mark.asyncio
-@patch("agents.src.agents.email.agent.mistral_client")
-async def test_classify_email_low_confidence_fallback(mock_mistral, mock_email):
+@patch("agents.src.agents.email.agent.llm_adapter")
+async def test_classify_email_low_confidence_fallback(mock_llm, mock_email):
     """Test fallback si confiance <70%"""
     # Mock réponse LLM avec faible confiance
-    mock_mistral.chat.return_value = AsyncMock(return_value={
+    mock_llm.chat.return_value = AsyncMock(return_value={
         "category": "unknown",
         "priority": "low",
         "confidence": 0.45,
@@ -153,14 +153,14 @@ async def test_classify_email_low_confidence_fallback(mock_mistral, mock_email):
 ```python
 # tests/unit/agents/test_archiviste_agent.py
 @pytest.mark.asyncio
-@patch("agents.src.agents.archiviste.agent.mistral_client")
-async def test_rename_document_invoice(mock_mistral):
+@patch("agents.src.agents.archiviste.agent.llm_adapter")
+async def test_rename_document_invoice(mock_llm):
     """Test renommage facture"""
     # Mock OCR extract
     ocr_text = "FACTURE\nPlomberie Dupont\nDate: 2026-02-01\nMontant: 250€"
 
     # Mock réponse LLM
-    mock_mistral.chat.return_value = AsyncMock(return_value={
+    mock_llm.chat.return_value = AsyncMock(return_value={
         "doc_type": "facture",
         "vendor": "Plomberie Dupont",
         "date": "2026-02-01",
@@ -424,7 +424,7 @@ async def test_presidio_anonymizes_all_pii(pii_samples):
 }
 ```
 
-### Test Monitoring RAM (VPS-4 48 Go)
+### Test Monitoring RAM (VPS-3 24 Go)
 
 **Fichier** : `tests/unit/supervisor/test_orchestrator.py`
 
@@ -432,10 +432,10 @@ async def test_presidio_anonymizes_all_pii(pii_samples):
 @pytest.mark.asyncio
 async def test_ram_monitor_alerts_on_threshold():
     """Test alerte RAM si >85%"""
-    monitor = RAMMonitor(total_ram_gb=48, alert_threshold_pct=85)
+    monitor = RAMMonitor(total_ram_gb=24, alert_threshold_pct=85)
 
-    # Simuler charge élevée (42 Go utilisés)
-    monitor.simulate_usage(used_gb=42)
+    # Simuler charge élevée (21 Go utilisés)
+    monitor.simulate_usage(used_gb=21)
 
     alerts = await monitor.check()
     assert len(alerts) > 0
@@ -445,15 +445,15 @@ async def test_ram_monitor_alerts_on_threshold():
 @pytest.mark.asyncio
 async def test_all_heavy_services_fit_in_ram():
     """Test tous services lourds résidents en simultané"""
-    monitor = RAMMonitor(total_ram_gb=48, alert_threshold_pct=85)
+    monitor = RAMMonitor(total_ram_gb=24, alert_threshold_pct=85)
 
     # Charger tous services lourds
-    services = ["ollama-nemo", "faster-whisper", "kokoro-tts", "surya-ocr"]
+    services = ["faster-whisper", "kokoro-tts", "surya-ocr"]
     for svc in services:
         await monitor.register_service(svc, SERVICE_RAM_PROFILES[svc].ram_gb)
 
-    # Vérifier sous le seuil d'alerte (85% de 48 Go = 40.8 Go)
-    assert monitor.total_allocated_gb <= 40.8
+    # Vérifier sous le seuil d'alerte (85% de 24 Go = 20.4 Go)
+    assert monitor.total_allocated_gb <= 20.4
 ```
 
 ### Test Trust Layer
@@ -582,10 +582,10 @@ jobs:
   integration-tests:
     runs-on: ubuntu-latest
     env:
-      MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
     steps:
       - uses: actions/checkout@v3
-      - run: docker-compose up -d postgres redis qdrant
+      - run: docker-compose up -d postgres redis
       - run: pytest tests/integration -v
 ```
 
@@ -599,7 +599,7 @@ jobs:
 # Activer logs LLM en tests intégration
 import logging
 logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger("agents.tools.apis.mistral")
+logger = logging.getLogger("agents.src.adapters.llm")
 logger.setLevel(logging.DEBUG)
 
 # Afficher prompts envoyés
@@ -662,8 +662,7 @@ La review adversariale du 2026-02-05 a identifie les tests suivants comme manqua
 | Test | Categorie | Story | Priorite |
 |------|-----------|-------|----------|
 | Presidio partial anonymization failure | Integration | 1.5 | CRITIQUE |
-| Mistral API rate limit handling | Integration | 2 | HAUTE |
-| Ollama fallback si indisponible | Integration | 2 | HAUTE |
+| Anthropic API rate limit handling | Integration | 2 | HAUTE |
 | Redis Streams delivery guarantee | Integration | 1 | HAUTE |
 | Trust retrogradation edge cases (sample size <10) | Unit | 1.5 | MOYENNE |
 | Checkpoint JSON corruption recovery | Unit | 2 | MOYENNE |
@@ -672,8 +671,7 @@ La review adversariale du 2026-02-05 a identifie les tests suivants comme manqua
 **Details** :
 
 - **Presidio partial anonymization failure** : Tester le comportement quand Presidio n'anonymise que partiellement un texte (ex: detecte le nom mais pas le numero de telephone). Le pipeline doit rejeter le texte si des PII connues subsistent.
-- **Mistral API rate limit handling** : Verifier que le retry exponentiel fonctionne correctement quand Mistral renvoie un 429 (rate limit). Inclure le test du backoff et du nombre maximal de retries.
-- **Ollama fallback si indisponible** : Quand Ollama (LLM local) est down, verifier que le systeme bascule correctement sur Mistral cloud (avec anonymisation Presidio prealable).
+- **Anthropic API rate limit handling** : Verifier que le retry exponentiel fonctionne correctement quand l'API Anthropic renvoie un 429 (rate limit). Inclure le test du backoff et du nombre maximal de retries.
 - **Redis Streams delivery guarantee** : Verifier qu'un message publie dans un Stream est bien consomme meme si le consumer redemarre entre-temps (consumer groups + ACK).
 - **Trust retrogradation edge cases** : Que se passe-t-il si un module n'a que 3 actions sur la semaine ? Le seuil de 90% sur 3 actions (= 1 erreur = retrogradation) est-il trop sensible ? Definir un sample size minimum.
 - **Checkpoint JSON corruption recovery** : Tester la recuperation quand le fichier JSON de checkpoint de migration est corrompu (ecriture interrompue). Le script doit detecter la corruption et reprendre depuis le dernier checkpoint valide.

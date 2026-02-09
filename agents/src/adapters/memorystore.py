@@ -1,17 +1,19 @@
 """
 Adaptateur memorystore pour Friday 2.0 - Abstraction graphe de connaissances.
 
-Day 1 : PostgreSQL (tables knowledge.*) + Qdrant (embeddings)
+Day 1 : PostgreSQL (tables knowledge.*) + pgvector (embeddings)
+  Decision D19 : pgvector remplace Qdrant Day 1 (100k vecteurs, 1 utilisateur)
+  Réévaluation Qdrant si >300k vecteurs ou latence >100ms
 Futur possible (6+ mois) : Migration vers Graphiti (si mature) ou Neo4j
 
 Ce module fournit une interface unifiée pour :
 - Créer/récupérer des nœuds (entités : personnes, docs, topics)
 - Créer des relations (edges) entre nœuds
-- Recherche sémantique via embeddings Qdrant
+- Recherche sémantique via pgvector (embeddings dans PostgreSQL)
 - Requêtes sur le graphe PostgreSQL
 
-Philosophie : Start simple (PostgreSQL relationnel + Qdrant vecteurs),
-migrer uniquement si douleur réelle (requêtes graphe complexes, performances).
+Philosophie : Start simple (PostgreSQL relationnel + pgvector),
+migrer uniquement si douleur réelle (>300k vecteurs, latence, filtres complexes).
 """
 
 import logging
@@ -20,8 +22,6 @@ from datetime import datetime
 from typing import Any, Optional
 
 import asyncpg
-from qdrant_client import AsyncQdrantClient
-from qdrant_client.models import Distance, PointStruct, VectorParams
 
 logger = logging.getLogger(__name__)
 
@@ -30,52 +30,40 @@ class MemorystoreAdapter:
     """
     Adaptateur pour le graphe de connaissances Friday 2.0.
 
-    Backend Day 1 : PostgreSQL (knowledge.* tables) + Qdrant (embeddings)
+    Backend Day 1 : PostgreSQL (knowledge.* tables) + pgvector (embeddings)
     """
 
-    def __init__(
-        self,
-        db_pool: asyncpg.Pool,
-        qdrant_client: AsyncQdrantClient,
-        collection_name: str = "friday_knowledge",
-    ):
+    def __init__(self, db_pool: asyncpg.Pool):
         """
         Initialise l'adaptateur memorystore.
 
         Args:
-            db_pool: Pool de connexions PostgreSQL
-            qdrant_client: Client Qdrant (async)
-            collection_name: Nom de la collection Qdrant (défaut: friday_knowledge)
+            db_pool: Pool de connexions PostgreSQL (avec extension pgvector)
         """
         self.db_pool = db_pool
-        self.qdrant = qdrant_client
-        self.collection_name = collection_name
-        self._collection_initialized = False
+        self._pgvector_initialized = False
 
-    async def init_qdrant_collection(self, vector_size: int = 1024) -> None:
+    async def init_pgvector(self) -> None:
         """
-        Initialise la collection Qdrant si elle n'existe pas.
-
-        Args:
-            vector_size: Dimension des vecteurs (1024 pour Mistral Embed)
+        Vérifie que l'extension pgvector est installée.
+        L'extension est créée par la migration 008, cette méthode vérifie seulement.
         """
         try:
-            collections = await self.qdrant.get_collections()
-            collection_names = [c.name for c in collections.collections]
-
-            if self.collection_name not in collection_names:
-                await self.qdrant.create_collection(
-                    collection_name=self.collection_name,
-                    vectors_config=VectorParams(size=vector_size, distance=Distance.COSINE),
+            async with self.db_pool.acquire() as conn:
+                result = await conn.fetchval(
+                    "SELECT 1 FROM pg_extension WHERE extname = 'vector'"
                 )
-                logger.info("Created Qdrant collection: %s", self.collection_name)
-            else:
-                logger.info("Qdrant collection already exists: %s", self.collection_name)
+                if not result:
+                    logger.warning(
+                        "pgvector extension not found - run migration 008 first"
+                    )
+                    return
 
-            self._collection_initialized = True
+            self._pgvector_initialized = True
+            logger.info("pgvector extension verified")
 
         except Exception as e:
-            logger.error("Failed to initialize Qdrant collection: %s", e)
+            logger.error("Failed to verify pgvector extension: %s", e)
             raise
 
     async def create_node(
@@ -92,7 +80,7 @@ class MemorystoreAdapter:
             node_type: Type de nœud (person, document, topic, event, etc.)
             name: Nom du nœud (ex: "Antonio Lopez", "Email RE: Projet X")
             metadata: Métadonnées JSON (ex: {email, company, date, etc.})
-            embedding: Vecteur d'embedding optionnel (1024 dims pour Mistral Embed)
+            embedding: Vecteur d'embedding optionnel (1024 dims par défaut)
 
         Returns:
             UUID du nœud créé (string)
@@ -100,23 +88,24 @@ class MemorystoreAdapter:
         node_id = str(uuid.uuid4())
         now = datetime.utcnow()
 
-        # 1. Créer nœud dans PostgreSQL knowledge.nodes
-        query = """
-            INSERT INTO knowledge.nodes (id, type, name, metadata, created_at, updated_at)
-            VALUES ($1, $2, $3, $4, $5, $6)
-            RETURNING id
-        """
-
         async with self.db_pool.acquire() as conn:
+            # 1. Créer nœud dans PostgreSQL knowledge.nodes
             created_id = await conn.fetchval(
-                query, node_id, node_type, name, metadata, now, now
+                """
+                INSERT INTO knowledge.nodes (id, type, name, metadata, created_at, updated_at)
+                VALUES ($1, $2, $3, $4, $5, $6)
+                RETURNING id
+                """,
+                node_id, node_type, name, metadata, now, now,
             )
 
-        logger.info("Created node: %s (%s)", name, node_type)
+            logger.info("Created node: %s (%s)", name, node_type)
 
-        # 2. Si embedding fourni, stocker dans Qdrant
-        if embedding:
-            await self._store_embedding(node_id, embedding, metadata)
+            # 2. Si embedding fourni, stocker dans pgvector
+            if embedding:
+                await self._store_embedding(
+                    conn, node_id, node_type, embedding, metadata
+                )
 
         return str(created_id)
 
@@ -144,30 +133,27 @@ class MemorystoreAdapter:
         Returns:
             UUID du nœud (existant ou créé)
         """
-        # 1. Tenter de trouver nœud existant
-        query = """
-            SELECT id FROM knowledge.nodes
-            WHERE type = $1 AND (
-                (type = 'person' AND metadata->>'email' = $2) OR
-                (type = 'document' AND metadata->>'source_id' = $3) OR
-                (type = 'topic' AND LOWER(name) = LOWER($4))
-            )
-            LIMIT 1
-        """
-
         email = metadata.get("email", "")
         source_id = metadata.get("source_id", "")
 
         async with self.db_pool.acquire() as conn:
             existing_id = await conn.fetchval(
-                query, node_type, email, source_id, name
+                """
+                SELECT id FROM knowledge.nodes
+                WHERE type = $1 AND (
+                    (type = 'person' AND metadata->>'email' = $2) OR
+                    (type = 'document' AND metadata->>'source_id' = $3) OR
+                    (type = 'topic' AND LOWER(name) = LOWER($4))
+                )
+                LIMIT 1
+                """,
+                node_type, email, source_id, name,
             )
 
         if existing_id:
             logger.debug("Node already exists: %s (%s)", name, existing_id)
             return str(existing_id)
 
-        # 2. Nœud n'existe pas → créer
         return await self.create_node(node_type, name, metadata, embedding)
 
     async def create_edge(
@@ -193,15 +179,14 @@ class MemorystoreAdapter:
         now = datetime.utcnow()
         metadata = metadata or {}
 
-        query = """
-            INSERT INTO knowledge.edges (id, from_node_id, to_node_id, relation_type, metadata, created_at)
-            VALUES ($1, $2, $3, $4, $5, $6)
-            RETURNING id
-        """
-
         async with self.db_pool.acquire() as conn:
             created_id = await conn.fetchval(
-                query, edge_id, from_node_id, to_node_id, relation_type, metadata, now
+                """
+                INSERT INTO knowledge.edges (id, from_node_id, to_node_id, relation_type, metadata, created_at)
+                VALUES ($1, $2, $3, $4, $5, $6)
+                RETURNING id
+                """,
+                edge_id, from_node_id, to_node_id, relation_type, metadata, now,
             )
 
         logger.info(
@@ -214,122 +199,124 @@ class MemorystoreAdapter:
         return str(created_id)
 
     async def _store_embedding(
-        self, node_id: str, embedding: list[float], metadata: dict[str, Any]
+        self,
+        conn: asyncpg.Connection,
+        source_id: str,
+        source_type: str,
+        embedding: list[float],
+        metadata: dict[str, Any],
     ) -> None:
         """
-        Stocke un embedding dans Qdrant.
+        Stocke un embedding dans pgvector (knowledge.embeddings).
 
         Args:
-            node_id: UUID du nœud (utilisé comme point ID dans Qdrant)
-            embedding: Vecteur d'embedding (1024 dims)
-            metadata: Métadonnées à stocker avec le point (pour filtrage)
+            conn: Connexion PostgreSQL active
+            source_id: UUID du nœud source
+            source_type: Type de source (person, document, etc.)
+            embedding: Vecteur d'embedding
+            metadata: Métadonnées à stocker
         """
-        if not self._collection_initialized:
-            await self.init_qdrant_collection()
+        # pgvector attend un string format '[0.1, 0.2, ...]'
+        vector_str = "[" + ",".join(str(v) for v in embedding) + "]"
 
-        point = PointStruct(
-            id=node_id, vector=embedding, payload=metadata
+        await conn.execute(
+            """
+            INSERT INTO knowledge.embeddings
+            (source_type, source_id, embedding, metadata)
+            VALUES ($1, $2, $3::vector, $4)
+            """,
+            source_type, source_id, vector_str, metadata,
         )
 
-        await self.qdrant.upsert(
-            collection_name=self.collection_name, points=[point]
-        )
-
-        logger.debug("Stored embedding for node: %s", node_id)
+        logger.debug("Stored embedding for node: %s", source_id)
 
     async def semantic_search(
         self,
         query_embedding: list[float],
         limit: int = 10,
         score_threshold: float = 0.7,
+        source_type: Optional[str] = None,
     ) -> list[dict[str, Any]]:
         """
-        Recherche sémantique via embeddings Qdrant.
+        Recherche sémantique via pgvector (cosine distance).
 
         Args:
-            query_embedding: Vecteur de la requête (1024 dims)
+            query_embedding: Vecteur de la requête
             limit: Nombre maximal de résultats
             score_threshold: Seuil de similarité cosine (0.0-1.0)
+            source_type: Filtrer par type de source (optionnel)
 
         Returns:
             Liste de résultats [{node_id, score, metadata}, ...]
         """
-        if not self._collection_initialized:
-            await self.init_qdrant_collection()
+        vector_str = "[" + ",".join(str(v) for v in query_embedding) + "]"
 
-        results = await self.qdrant.search(
-            collection_name=self.collection_name,
-            query_vector=query_embedding,
-            limit=limit,
-            score_threshold=score_threshold,
-        )
+        # cosine distance: 1 - cosine_similarity
+        # pgvector <=> = cosine distance, on veut similarity = 1 - distance
+        if source_type:
+            rows = await self.db_pool.fetch(
+                """
+                SELECT source_id, 1 - (embedding <=> $1::vector) AS score, metadata
+                FROM knowledge.embeddings
+                WHERE source_type = $2
+                  AND 1 - (embedding <=> $1::vector) >= $3
+                ORDER BY embedding <=> $1::vector
+                LIMIT $4
+                """,
+                vector_str, source_type, score_threshold, limit,
+            )
+        else:
+            rows = await self.db_pool.fetch(
+                """
+                SELECT source_id, 1 - (embedding <=> $1::vector) AS score, metadata
+                FROM knowledge.embeddings
+                WHERE 1 - (embedding <=> $1::vector) >= $2
+                ORDER BY embedding <=> $1::vector
+                LIMIT $3
+                """,
+                vector_str, score_threshold, limit,
+            )
 
         return [
             {
-                "node_id": str(hit.id),
-                "score": hit.score,
-                "metadata": hit.payload,
+                "node_id": str(row["source_id"]),
+                "score": float(row["score"]),
+                "metadata": row["metadata"],
             }
-            for hit in results
+            for row in rows
         ]
 
     async def count_nodes(self, node_type: Optional[str] = None) -> int:
-        """
-        Compte le nombre de nœuds dans le graphe.
-
-        Args:
-            node_type: Type de nœud à compter (None = tous types)
-
-        Returns:
-            Nombre de nœuds
-        """
+        """Compte le nombre de nœuds dans le graphe."""
         if node_type:
-            query = "SELECT COUNT(*) FROM knowledge.nodes WHERE type = $1"
-            async with self.db_pool.acquire() as conn:
-                return await conn.fetchval(query, node_type)
-        else:
-            query = "SELECT COUNT(*) FROM knowledge.nodes"
-            async with self.db_pool.acquire() as conn:
-                return await conn.fetchval(query)
+            return await self.db_pool.fetchval(
+                "SELECT COUNT(*) FROM knowledge.nodes WHERE type = $1", node_type
+            )
+        return await self.db_pool.fetchval("SELECT COUNT(*) FROM knowledge.nodes")
 
     async def count_edges(self, relation_type: Optional[str] = None) -> int:
-        """
-        Compte le nombre de relations dans le graphe.
-
-        Args:
-            relation_type: Type de relation à compter (None = tous types)
-
-        Returns:
-            Nombre d'edges
-        """
+        """Compte le nombre de relations dans le graphe."""
         if relation_type:
-            query = "SELECT COUNT(*) FROM knowledge.edges WHERE relation_type = $1"
-            async with self.db_pool.acquire() as conn:
-                return await conn.fetchval(query, relation_type)
-        else:
-            query = "SELECT COUNT(*) FROM knowledge.edges"
-            async with self.db_pool.acquire() as conn:
-                return await conn.fetchval(query)
+            return await self.db_pool.fetchval(
+                "SELECT COUNT(*) FROM knowledge.edges WHERE relation_type = $1",
+                relation_type,
+            )
+        return await self.db_pool.fetchval("SELECT COUNT(*) FROM knowledge.edges")
 
 
 # Factory function pour initialiser l'adaptateur
 async def get_memorystore_adapter(
     db_pool: asyncpg.Pool,
-    qdrant_url: str = "http://localhost:6333",
-    collection_name: str = "friday_knowledge",
 ) -> MemorystoreAdapter:
     """
     Factory pour créer et initialiser un MemorystoreAdapter.
 
     Args:
-        db_pool: Pool PostgreSQL
-        qdrant_url: URL du serveur Qdrant
-        collection_name: Nom de la collection Qdrant
+        db_pool: Pool PostgreSQL (avec extension pgvector installée)
 
     Returns:
         Instance MemorystoreAdapter initialisée
     """
-    qdrant_client = AsyncQdrantClient(url=qdrant_url)
-    adapter = MemorystoreAdapter(db_pool, qdrant_client, collection_name)
-    await adapter.init_qdrant_collection()
+    adapter = MemorystoreAdapter(db_pool)
+    await adapter.init_pgvector()
     return adapter

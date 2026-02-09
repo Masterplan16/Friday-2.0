@@ -1,0 +1,229 @@
+# Mis a jour 2026-02-09 : D17, D19, Story 1.2 review (12/12 migrations validees sur PG reel)
+# generated: 2026-02-08
+# project: Friday 2.0
+# project_key: NOKEY
+# tracking_system: file-system
+# story_location: _bmad-output/implementation-artifacts
+
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+#
+# Epic Status Transitions:
+#   - backlog → in-progress: Automatically when first story is created (via create-story)
+#   - in-progress → done: Manually when all stories reach 'done' status
+#
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created in stories folder
+#   - in-progress: Developer actively working on implementation
+#   - review: Ready for code review (via Dev's code-review workflow)
+#   - done: Story completed
+#
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+#
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when first story is created
+# - Stories can be worked in parallel if team capacity allows
+# - SM typically creates next story after previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+
+generated: 2026-02-08
+project: Friday 2.0
+project_key: NOKEY
+tracking_system: file-system
+story_location: _bmad-output/implementation-artifacts
+
+development_status:
+  # ────────────────────────────────────────────────────────────
+  # SPRINT 1 — MVP Day 1 (Epics 1-7 | 45 stories | 82 FRs)
+  # ────────────────────────────────────────────────────────────
+
+  # Epic 1: Socle Operationnel & Controle (15 stories | 28 FRs)
+  epic-1: in-progress
+  1-1-infrastructure-docker-compose: done
+  1-2-schemas-postgresql-migrations: done  # 2026-02-09: Code review #2 (Opus 4.6) — 11 issues corriges, 111/111 tests, zero regression.
+  1-3-fastapi-gateway-healthcheck: backlog
+  1-4-tailscale-vpn-securite-reseau: backlog  # config/redis.acl existe mais pas de story file
+  1-5-presidio-anonymisation-fail-explicit: backlog  # code existe mais pas de story file ni audit bugs
+  1-6-trust-layer-middleware: backlog  # code existe mais pas de story file ni audit bugs
+  1-7-feedback-loop-correction-rules: backlog
+  1-8-trust-metrics-retrogradation: backlog  # code existe mais pas de story file ni audit bugs
+  1-9-bot-telegram-core-topics: backlog
+  1-10-bot-telegram-inline-buttons-validation: backlog
+  1-11-commandes-telegram-trust-budget: backlog
+  1-12-backup-chiffre-sync-pc: backlog  # code existe mais pas de story file ni audit bugs
+  1-13-self-healing-tier-1-2: backlog  # code existe mais pas de story file ni audit bugs
+  1-14-monitoring-docker-images: backlog
+  1-15-cleanup-purge-rgpd: backlog
+  epic-1-retrospective: optional
+
+  # Epic 2: Pipeline Email Intelligent (7 stories | 10 FRs)
+  epic-2: backlog
+  2-1-integration-emailengine-reception: backlog
+  2-2-classification-email-llm: backlog
+  2-3-detection-vip-urgence: backlog
+  2-4-extraction-pieces-jointes: backlog
+  2-5-brouillon-reponse-email: backlog
+  2-6-envoi-emails-approuves: backlog
+  2-7-extraction-taches-depuis-emails: backlog
+  epic-2-retrospective: optional
+
+  # Epic 3: Archiviste & Recherche Documentaire (7 stories | 11 FRs)
+  epic-3: backlog
+  3-1-ocr-renommage-intelligent: backlog
+  3-2-classement-arborescence: backlog
+  3-3-recherche-semantique-documents: backlog
+  3-4-suivi-garanties: backlog
+  3-5-detection-nouveaux-fichiers: backlog
+  3-6-fichiers-via-telegram: backlog
+  3-7-traitement-batch-dossier: backlog
+  epic-3-retrospective: optional
+
+  # Epic 4: Intelligence Proactive & Briefings (5 stories | 7 FRs)
+  epic-4: backlog
+  4-1-heartbeat-engine-core: backlog
+  4-2-briefing-matinal-8h: backlog
+  4-3-digest-soir-18h: backlog
+  4-4-rapport-hebdomadaire: backlog
+  4-5-alertes-immediates-push: backlog
+  epic-4-retrospective: optional
+
+  # Epic 5: Interaction Vocale & Personnalite (4 stories | 4 FRs)
+  epic-5: backlog
+  5-1-stt-faster-whisper: backlog
+  5-2-tts-kokoro: backlog
+  5-3-recherche-vocale-documents: backlog
+  5-4-personnalite-configurable: backlog
+  epic-5-retrospective: optional
+
+  # Epic 6: Memoire Eternelle & Migration (4 stories | 4 FRs)
+  epic-6: backlog
+  6-1-graphe-connaissances-postgresql: backlog
+  6-2-embeddings-pgvector: backlog  # [D19] Qdrant remplace par pgvector Day 1
+  6-3-adaptateur-memorystore: backlog
+  6-4-migration-emails-historiques: backlog
+  epic-6-retrospective: optional
+
+  # Epic 7: Agenda & Calendrier Multi-casquettes (3 stories | 4 FRs)
+  epic-7: backlog
+  7-1-detection-evenements: backlog
+  7-2-sync-google-calendar: backlog
+  7-3-multi-casquettes-conflits: backlog
+  epic-7-retrospective: optional
+
+  # ────────────────────────────────────────────────────────────
+  # SPRINT 2 — Growth Month 1-3 (Epics 8-13 | 22 stories | 33 FRs)
+  # Prerequis: Sprint 1 stable >= 1 semaine
+  # ────────────────────────────────────────────────────────────
+
+  # Epic 8: Suivi Financier & Detection Anomalies (5 stories | 10 FRs)
+  epic-8: backlog
+  8-1-import-classification-bancaire: backlog
+  8-2-suivi-depenses-tresorerie: backlog
+  8-3-detection-anomalies-financieres: backlog
+  8-4-audit-abonnements: backlog
+  8-5-export-comptable-factures: backlog
+  epic-8-retrospective: optional
+
+  # Epic 9: Tuteur & Superviseur de Theses (4 stories | 9 FRs)
+  epic-9: backlog
+  9-1-integration-google-docs-api: backlog
+  9-2-analyse-methodologique-these: backlog
+  9-3-anti-hallucination-references: backlog
+  9-4-completion-bibliographique: backlog
+  epic-9-retrospective: optional
+
+  # Epic 10: Veilleur Droit (3 stories | 6 FRs)
+  epic-10: backlog
+  10-1-analyse-contrat-demande: backlog
+  10-2-detection-clauses-abusives: backlog
+  10-3-rappels-renouvellement: backlog
+  epic-10-retrospective: optional
+
+  # Epic 11: Plaud Note & Transcriptions (4 stories | 7 FRs)
+  epic-11: backlog
+  11-1-integration-plaud-transcription: backlog
+  11-2-compte-rendu-structure: backlog
+  11-3-extraction-routage-cascade: backlog
+  11-4-lien-plaud-bibliographie: backlog
+  epic-11-retrospective: optional
+
+  # Epic 12: Self-Healing Avance Tier 3-4 (3 stories | 4 FRs)
+  epic-12: backlog
+  12-1-detection-connecteurs-externes: backlog
+  12-2-detection-drift-accuracy: backlog
+  12-3-patterns-degradation-alertes: backlog
+  epic-12-retrospective: optional
+
+  # Epic 13: Gouvernance & Veille Modele IA (3 stories | 5 FRs)
+  epic-13: backlog
+  13-1-benchmark-mensuel-automatise: backlog
+  13-2-metriques-llm-modele: backlog
+  13-3-cost-aware-routing-migration: backlog
+  epic-13-retrospective: optional
+
+  # ────────────────────────────────────────────────────────────
+  # SPRINT 3 — Vision 3+ mois (Epics 14-20 | 26 stories | 36 FRs)
+  # Prerequis: Sprint 1 + Sprint 2 stables
+  # ────────────────────────────────────────────────────────────
+
+  # Epic 14: Aide en Consultation Medicale (6 stories | 10 FRs) — trust=blocked
+  epic-14: backlog
+  14-1-interpretation-ecg: backlog
+  14-2-interactions-medicamenteuses: backlog
+  14-3-recommandations-has-posologies: backlog
+  14-4-rappels-suivi-patients: backlog
+  14-5-automatisation-doctolib: backlog
+  14-6-coach-medical-trust-blocked: backlog
+  epic-14-retrospective: optional
+
+  # Epic 15: Menus, Courses & Coach (4 stories | 7 FRs)
+  epic-15: backlog
+  15-1-planification-menus: backlog
+  15-2-liste-courses: backlog
+  15-3-recettes-jour: backlog
+  15-4-programme-sportif: backlog
+  epic-15-retrospective: optional
+
+  # Epic 16: Entretien Cyclique & Rappels (2 stories | 3 FRs)
+  epic-16: backlog
+  16-1-suivi-cycles-entretien: backlog
+  16-2-rappels-proactifs: backlog
+  epic-16-retrospective: optional
+
+  # Epic 17: Enseignement Medical TCS/ECOS/Cours (4 stories | 6 FRs)
+  epic-17: backlog
+  17-1-indexation-programme-etudes: backlog
+  17-2-generateur-tcs: backlog
+  17-3-generateur-ecos: backlog
+  17-4-actualisateur-cours: backlog
+  epic-17-retrospective: optional
+
+  # Epic 18: Gestion Personnelle Photos/JV/CV/HS (7 stories | 13 FRs)
+  epic-18: backlog
+  18-1-indexation-photos: backlog
+  18-2-recherche-photos: backlog
+  18-3-inventaire-jv: backlog
+  18-4-veille-prix-valeur: backlog
+  18-5-document-assurance: backlog
+  18-6-cv-academique-auto: backlog
+  18-7-mode-hs-vacances: backlog
+  epic-18-retrospective: optional
+
+  # Epic 19: Optimisation Fiscale & Investissement (2 stories | 3 FRs)
+  epic-19: backlog
+  19-1-aide-decision-achat: backlog
+  19-2-optimisation-fiscale: backlog
+  epic-19-retrospective: optional
+
+  # Epic 20: Evolution Graphe de Connaissances (1 story | decision)
+  epic-20: backlog
+  20-1-evaluation-technique-graphiti-neo4j: backlog
+  epic-20-retrospective: optional

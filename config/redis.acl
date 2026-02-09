@@ -1,0 +1,30 @@
+# Friday 2.0 - Redis ACL Configuration
+# Principe: Moindre privilège par service
+# Ref: docs/redis-acl-setup.md
+#
+# IMPORTANT: En production, remplacer les passwords via SOPS/age
+# Les passwords ci-dessous sont pour le développement LOCAL uniquement.
+
+# Default user désactivé (force authentification)
+user default off nopass ~* &* -@all
+
+# Admin (usage dev/debug uniquement)
+user admin on >friday_admin_dev ~* &* +@all
+
+# Gateway API - Read/write + Pub/Sub + Streams
+user friday_gateway on >friday_gw_dev ~* &* +get +set +setex +del +expire +ttl +publish +subscribe +xadd +xreadgroup +xack +xlen +ping +info +client
+
+# Agents IA - Streams + mapping Presidio (TTL éphémère)
+user friday_agents on >friday_ag_dev ~stream:* ~presidio:mapping:* &* +xadd +xreadgroup +xack +xpending +xlen +get +setex +del +publish +subscribe +ping +info +client
+
+# Alerting service - Consommer streams + publier alertes
+user friday_alerting on >friday_al_dev ~stream:* &* +xreadgroup +xack +xadd +xpending +xlen +subscribe +ping +info +client
+
+# Metrics service - Lecture/écriture métriques
+user friday_metrics on >friday_mt_dev ~metrics:* &* +get +set +incrby +expire +ping +info +client
+
+# n8n workflows - Cache lecture + Pub/Sub
+user friday_n8n on >friday_n8_dev ~cache:* ~bull:* ~n8n:* &* +get +set +setex +del +expire +lpush +rpush +lrange +llen +publish +subscribe +sadd +smembers +ping +info +client +select
+
+# EmailEngine - Accès dédié à sa DB Redis (DB 2)
+user friday_emailengine on >friday_ee_dev ~* &* +@read +@write +@pubsub +@connection +select +ping +info +client

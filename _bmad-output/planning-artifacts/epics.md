@@ -68,6 +68,8 @@ epicsCoverage:
   orphanedFRs: 0
 ---
 
+> **Mis a jour 2026-02-09** : D17 (Claude remplace Mistral), D19 (pgvector remplace Qdrant Day 1)
+
 # Friday 2.0 - Epic Breakdown
 
 ## Overview
@@ -283,7 +285,7 @@ Ce document fournit le decoupage complet en epics et stories pour Friday 2.0, de
 - FR113 : Friday peut nettoyer automatiquement la zone de transit VPS + rotation des logs >7j + backups >30j
 - FR114 : Friday peut envoyer un message d'onboarding Telegram (guide topics + commandes)
 - FR115 : Friday peut auto-recovery RAM par priorite (kill TTS avant STT, notifie Antonio)
-- FR116 : Friday peut indexer la base documentaire du programme d'etudes medicales (RAG Qdrant)
+- FR116 : Friday peut indexer la base documentaire du programme d'etudes medicales (RAG pgvector) [D19]
 - FR117 : Friday peut generer le briefing matinal en version audio vocale (TTS Kokoro)
 - FR118 : Friday peut surveiller les conflits de calendrier (Heartbeat Phase 3)
 - FR119 : Friday peut envoyer des rappels de suivi patients (Heartbeat Phase 3)

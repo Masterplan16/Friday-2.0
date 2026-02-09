@@ -5,6 +5,8 @@
 -- Prérequis: Migration 004 (ingestion.emails) doit être appliquée
 -- Usage: Cette table est utilisée par scripts/migrate_emails.py pour la migration one-shot
 
+BEGIN;
+
 -- Table temporaire pour stocker les emails bruts avant classification
 CREATE TABLE IF NOT EXISTS ingestion.emails_legacy (
     message_id TEXT PRIMARY KEY,
@@ -14,10 +16,10 @@ CREATE TABLE IF NOT EXISTS ingestion.emails_legacy (
     subject TEXT,
     body_text TEXT,  -- Contenu texte brut
     body_html TEXT,  -- Contenu HTML (optionnel)
-    received_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    received_at TIMESTAMPTZ NOT NULL,
     has_attachments BOOLEAN DEFAULT false,
     attachment_count INTEGER DEFAULT 0,
-    imported_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    imported_at TIMESTAMPTZ DEFAULT NOW(),
 
     -- Métadonnées bulk import
     import_batch_id UUID,  -- ID du batch d'import (pour tracking)
@@ -25,10 +27,10 @@ CREATE TABLE IF NOT EXISTS ingestion.emails_legacy (
 );
 
 -- Index pour recherche et tri
-CREATE INDEX idx_emails_legacy_received ON ingestion.emails_legacy(received_at DESC);
-CREATE INDEX idx_emails_legacy_account ON ingestion.emails_legacy(account);
-CREATE INDEX idx_emails_legacy_import_batch ON ingestion.emails_legacy(import_batch_id);
-CREATE INDEX idx_emails_legacy_has_attachments ON ingestion.emails_legacy(has_attachments) WHERE has_attachments = true;
+CREATE INDEX IF NOT EXISTS idx_emails_legacy_received ON ingestion.emails_legacy(received_at DESC);
+CREATE INDEX IF NOT EXISTS idx_emails_legacy_account ON ingestion.emails_legacy(account);
+CREATE INDEX IF NOT EXISTS idx_emails_legacy_import_batch ON ingestion.emails_legacy(import_batch_id);
+CREATE INDEX IF NOT EXISTS idx_emails_legacy_has_attachments ON ingestion.emails_legacy(has_attachments) WHERE has_attachments = true;
 
 -- Commentaires
 COMMENT ON TABLE ingestion.emails_legacy IS 'Table temporaire pour stocker les 110k emails existants avant migration vers ingestion.emails. Cette table est peuplée via EmailEngine bulk export puis migrée par scripts/migrate_emails.py.';
@@ -38,3 +40,5 @@ COMMENT ON COLUMN ingestion.emails_legacy.import_batch_id IS 'UUID du batch d''i
 
 -- Statistiques initiales
 -- Après import bulk, exécuter: ANALYZE ingestion.emails_legacy;
+
+COMMIT;

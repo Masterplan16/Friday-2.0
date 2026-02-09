@@ -1,3 +1,5 @@
+> **Mis a jour 2026-02-09** : D17 (Claude remplace Mistral), D19 (pgvector remplace Qdrant Day 1)
+
 # Friday 2.0 - Epics MVP Day 1 (Epics 1-7)
 
 **82 FRs | 45 stories | Detail maximal**
@@ -18,13 +20,13 @@ Le socle qui rend tout le reste possible. Infrastructure, Trust Layer, securite 
 
 ### Story 1.1 : Infrastructure Docker Compose
 
-**Description** : Deployer le socle Docker Compose avec tous les services residents (PostgreSQL 16, Redis 7, Qdrant, n8n 1.69.2+, Caddy).
+**Description** : Deployer le socle Docker Compose avec tous les services residents (PostgreSQL 16 avec pgvector, Redis 7, n8n 1.69.2+, Caddy). [D19]
 
 **Acceptance Criteria** :
 - `docker compose up -d` demarre tous les services sans erreur
 - PostgreSQL accessible avec 3 schemas (core, ingestion, knowledge)
 - Redis accessible avec ACL configurees par service (NFR11)
-- Qdrant accessible pour stockage vectoriel
+- pgvector (PostgreSQL) operationnel pour stockage vectoriel [D19]
 - n8n accessible via reverse proxy Caddy
 - Healthcheck endpoint `/api/v1/health` repond 200
 - Tous services redemarrent automatiquement (restart: unless-stopped)
@@ -489,12 +491,12 @@ OCR, renommage intelligent, classement arborescence, recherche semantique, suivi
 
 **FRs** : FR11
 
-**Description** : Recherche semantique via Qdrant embeddings (Desktop Search D5).
+**Description** : Recherche semantique via pgvector (PostgreSQL) embeddings (Desktop Search D5). [D19]
 
 **Acceptance Criteria** :
 - Requete texte → top-5 resultats pertinents < 3s (NFR3)
 - Embeddings generes via Claude (ou modele embeddings dedie)
-- Index Qdrant mis a jour a chaque nouveau document
+- Index pgvector mis a jour a chaque nouveau document [D19]
 - Resultats avec score de pertinence et extrait
 
 **Estimation** : M
@@ -715,7 +717,7 @@ STT/TTS via Telegram, personnalite configurable.
 **Description** : Rechercher des documents par requete vocale.
 
 **Acceptance Criteria** :
-- Message vocal → STT → recherche semantique Qdrant → resultats (FR13)
+- Message vocal → STT → recherche semantique pgvector (PostgreSQL) → resultats (FR13) [D19]
 - Top-5 resultats retournes avec extraits
 - Reponse vocale optionnelle (TTS)
 
@@ -743,11 +745,11 @@ STT/TTS via Telegram, personnalite configurable.
 
 **4 FRs | 4 stories | HIGH**
 
-Graphe de connaissances PostgreSQL + Qdrant, memoire persistante, migration 110k emails.
+Graphe de connaissances PostgreSQL + pgvector, memoire persistante, migration 110k emails. [D19]
 
 **FRs** : FR38, FR39, FR40, FR46
 
-**Dependances** : Epic 1 (socle PostgreSQL + Qdrant)
+**Dependances** : Epic 1 (socle PostgreSQL + pgvector) [D19]
 
 ### Story 6.1 : Graphe de Connaissances PostgreSQL
 
@@ -766,7 +768,7 @@ Graphe de connaissances PostgreSQL + Qdrant, memoire persistante, migration 110k
 
 ---
 
-### Story 6.2 : Embeddings Qdrant
+### Story 6.2 : Embeddings pgvector (PostgreSQL)
 
 **FRs** : FR39
 
@@ -774,7 +776,7 @@ Graphe de connaissances PostgreSQL + Qdrant, memoire persistante, migration 110k
 
 **Acceptance Criteria** :
 - Embeddings generes pour chaque contenu traite (FR39)
-- Stockage dans Qdrant via adaptateur vectorstore.py
+- Stockage dans pgvector (PostgreSQL) via adaptateur vectorstore.py [D19]
 - Index mis a jour incrementalement
 - Recherche semantique fonctionnelle (utilisee par Epic 3 Desktop Search)
 
@@ -784,12 +786,12 @@ Graphe de connaissances PostgreSQL + Qdrant, memoire persistante, migration 110k
 
 ### Story 6.3 : Adaptateur Memorystore
 
-**Description** : Implementer l'adaptateur memorystore.py (PostgreSQL + Qdrant Day 1).
+**Description** : Implementer l'adaptateur memorystore.py (PostgreSQL + pgvector Day 1). [D19]
 
 **Acceptance Criteria** :
 - Interface abstraite MemoryStore
-- Implementation PostgreSQL (knowledge.*) + Qdrant (embeddings) (D3)
-- Factory pattern pour futur swap vers Graphiti/Neo4j (reevaluation aout 2026 — ADD13)
+- Implementation PostgreSQL (knowledge.*) + pgvector (embeddings) (D3, D19)
+- Factory pattern pour futur swap vers Graphiti/Neo4j ou Qdrant si >300k vecteurs (reevaluation aout 2026 — ADD13)
 - Tests unitaires avec mocks
 
 **Fichiers existants** : agents/src/adapters/memorystore.py
@@ -807,7 +809,7 @@ Graphe de connaissances PostgreSQL + Qdrant, memoire persistante, migration 110k
 **Acceptance Criteria** :
 - Batch nuit, ~18-24h, ~$45 Claude API (NFR26) (FR46)
 - Checkpointing : reprise possible apres interruption
-- Sequence : PG d'abord (9h) → graphe (15-20h) → Qdrant embeddings (6-8h) (ADD12)
+- Sequence : PG d'abord (9h) → graphe (15-20h) → pgvector embeddings (6-8h) (ADD12, D19)
 - Checkpointing independant par phase
 - Progress tracking visible
 - Presidio anonymisation avant tout appel Claude
@@ -890,7 +892,7 @@ Detection evenements, multi-casquettes, sync Google Calendar.
 
 **Sequence d'implementation suggeree** :
 1. Epic 1 (Socle) — prerequis a tout
-2. Epic 6 (Memoire) — PostgreSQL knowledge.* + Qdrant necessaires pour Epic 3
+2. Epic 6 (Memoire) — PostgreSQL knowledge.* + pgvector necessaires pour Epic 3 [D19]
 3. Epic 2 (Email) — besoin #1 Antonio
 4. Epic 3 (Archiviste) — inseparable du pipeline email (PJ)
 5. Epic 5 (Vocal) — STT/TTS transversal

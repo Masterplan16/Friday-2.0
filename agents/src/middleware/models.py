@@ -49,7 +49,7 @@ class ActionResult(BaseModel):
 
     # Contexte de l'action
     module: str = Field(..., description="Module source (ex: 'email', 'archiviste')")
-    action: str = Field(..., description="Nom de l'action (ex: 'classify', 'draft')")
+    action_type: str = Field(..., description="Nom de l'action (ex: 'classify', 'draft')")
 
     # Résumés obligatoires
     input_summary: str = Field(
@@ -139,7 +139,7 @@ class ActionResult(BaseModel):
         return {
             "id": str(self.action_id),
             "module": self.module,
-            "action": self.action,
+            "action_type": self.action_type,
             "input_summary": self.input_summary,
             "output_summary": self.output_summary,
             "confidence": self.confidence,
@@ -163,7 +163,7 @@ class CorrectionRule(BaseModel):
 
     id: UUID = Field(default_factory=uuid4, description="ID unique de la règle")
     module: str = Field(..., description="Module concerné (ex: 'email')")
-    action: Optional[str] = Field(
+    action_type: Optional[str] = Field(
         None, description="Action spécifique (None = toutes actions du module)"
     )
     scope: str = Field(
@@ -214,7 +214,7 @@ class TrustMetric(BaseModel):
     """
 
     module: str = Field(..., description="Module concerné")
-    action: str = Field(..., description="Action concernée")
+    action_type: str = Field(..., description="Action concernée")
     week_start: datetime = Field(..., description="Début de la semaine (lundi 00:00)")
     total_actions: int = Field(
         ..., ge=0, description="Nombre total d'actions cette semaine"

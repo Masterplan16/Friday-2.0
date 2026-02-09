@@ -23,10 +23,13 @@ Version: 1.0.0 (Story 1.5.1)
 """
 
 import os
-import logging
-from typing import Dict, List, Tuple, Optional
+import re
+from typing import Dict, List, Optional
 import httpx
-from dataclasses import dataclass
+import structlog
+from pydantic import BaseModel, Field
+
+from config.exceptions import PipelineError
 
 # Configuration Presidio (via env vars)
 PRESIDIO_ANALYZER_URL = os.getenv("PRESIDIO_ANALYZER_URL", "http://presidio-analyzer:5001")
@@ -44,22 +47,58 @@ FRENCH_ENTITIES = [
     "DATE_TIME",        # Dates
     "MEDICAL_LICENSE",  # Numéros RPPS médecins
     "FR_NIR",           # NIR Sécurité Sociale
+    "CREDIT_CARD",      # Numéros de carte bancaire (requis par pii_samples.json sample 004)
 ]
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
+
+# Module-level HTTP client (réutilisable, fix Bug B6)
+# Créé au premier appel, réutilisé ensuite (performance optimisation)
+_http_client: Optional[httpx.AsyncClient] = None
 
 
-@dataclass
-class AnonymizationResult:
-    """Résultat anonymisation"""
-    anonymized_text: str
-    entities_found: List[Dict]
-    mapping: Dict[str, str]  # Mapping temporaire pour deanonymization
-    confidence_min: float
+def _get_http_client() -> httpx.AsyncClient:
+    """
+    Retourne un httpx.AsyncClient réutilisable (lazy-initialized).
+
+    Fix Bug B6 : évite de recréer un client à chaque appel anonymize_text().
+    """
+    global _http_client
+    if _http_client is None or _http_client.is_closed:
+        _http_client = httpx.AsyncClient(timeout=PRESIDIO_TIMEOUT)
+    return _http_client
 
 
-class AnonymizationError(Exception):
-    """Erreur pipeline anonymisation"""
+async def close_http_client():
+    """
+    Ferme le client HTTP module-level (à appeler au shutdown).
+
+    Usage:
+        await close_http_client()
+    """
+    global _http_client
+    if _http_client is not None and not _http_client.is_closed:
+        await _http_client.aclose()
+        _http_client = None
+
+
+class AnonymizationResult(BaseModel):
+    """
+    Résultat anonymisation (Pydantic v2 BaseModel pour alignement pattern projet).
+
+    Migration dataclass → Pydantic (Subtask 1.7, Bug B7).
+    """
+    anonymized_text: str = Field(..., description="Texte anonymisé avec placeholders")
+    entities_found: List[Dict] = Field(default_factory=list, description="Entités PII détectées")
+    mapping: Dict[str, str] = Field(
+        default_factory=dict,
+        description="Mapping éphémère placeholder → valeur originale (JAMAIS persisté)"
+    )
+    confidence_min: float = Field(..., ge=0.0, le=1.0, description="Confidence minimale (0.0-1.0)")
+
+
+class AnonymizationError(PipelineError):
+    """Erreur pipeline anonymisation (hérite de PipelineError selon hiérarchie Story 1.2)"""
     pass
 
 
@@ -83,6 +122,7 @@ async def anonymize_text(
 
     Raises:
         AnonymizationError: Si Presidio unavailable ou timeout
+        NotImplementedError: Si anonymisation pas configurée/disponible (AC2)
 
     IMPORTANT:
         Le mapping retourné est éphémère (mémoire uniquement).
@@ -95,6 +135,14 @@ async def anonymize_text(
         >>> result.mapping
         {"[PERSON_1]": "Dupont", "[PERSON_2]": "Marie"}
     """
+    # AC2 — Fail-explicit: Vérifier que Presidio est configuré
+    if not PRESIDIO_ANALYZER_URL or not PRESIDIO_ANONYMIZER_URL:
+        raise NotImplementedError(
+            "Presidio anonymization not configured. "
+            "PRESIDIO_ANALYZER_URL and PRESIDIO_ANONYMIZER_URL must be set. "
+            "Cannot proceed with LLM call without anonymization (RGPD compliance)."
+        )
+
     if not text or not text.strip():
         return AnonymizationResult(
             anonymized_text=text,
@@ -106,76 +154,96 @@ async def anonymize_text(
     entities_to_detect = entities or FRENCH_ENTITIES
 
     try:
-        async with httpx.AsyncClient(timeout=PRESIDIO_TIMEOUT) as client:
-            # 1. Analyse: détection entités sensibles
-            analyze_response = await client.post(
-                f"{PRESIDIO_ANALYZER_URL}/analyze",
-                json={
-                    "text": text,
-                    "language": language,
-                    "entities": entities_to_detect,
-                }
+        # Bug B6 fix: Réutiliser client HTTP module-level
+        client = _get_http_client()
+
+        # 1. Analyse: détection entités sensibles
+        analyze_response = await client.post(
+            f"{PRESIDIO_ANALYZER_URL}/analyze",
+            json={
+                "text": text,
+                "language": language,
+                "entities": entities_to_detect,
+            }
+        )
+        analyze_response.raise_for_status()
+        entities_found = analyze_response.json()
+
+        if not entities_found:
+            # Aucune PII détectée
+            logger.debug("no_pii_detected", context=context)
+            return AnonymizationResult(
+                anonymized_text=text,
+                entities_found=[],
+                mapping={},
+                confidence_min=1.0
             )
-            analyze_response.raise_for_status()
-            entities_found = analyze_response.json()
 
-            if not entities_found:
-                # Aucune PII détectée
-                logger.debug("Aucune PII detectee dans le texte (context: %s)", context)
-                return AnonymizationResult(
-                    anonymized_text=text,
-                    entities_found=[],
-                    mapping={},
-                    confidence_min=1.0
-                )
-
-            # 2. Anonymisation: remplacer entités par placeholders
-            anonymize_response = await client.post(
-                f"{PRESIDIO_ANONYMIZER_URL}/anonymize",
-                json={
-                    "text": text,
-                    "analyzer_results": entities_found,
-                    "anonymizers": {
-                        "DEFAULT": {"type": "replace"},
-                        "PERSON": {"type": "replace", "new_value": "[PERSON_{{{{ID}}}}]"},
-                        "EMAIL_ADDRESS": {"type": "replace", "new_value": "[EMAIL_{{{{ID}}}}]"},
-                        "PHONE_NUMBER": {"type": "replace", "new_value": "[PHONE_{{{{ID}}}}]"},
-                        "IBAN_CODE": {"type": "replace", "new_value": "[IBAN_{{{{ID}}}}]"},
-                        "LOCATION": {"type": "replace", "new_value": "[LOCATION_{{{{ID}}}}]"},
-                    }
+        # 2. Anonymisation: remplacer entités par placeholders
+        anonymize_response = await client.post(
+            f"{PRESIDIO_ANONYMIZER_URL}/anonymize",
+            json={
+                "text": text,
+                "analyzer_results": entities_found,
+                "anonymizers": {
+                    "DEFAULT": {"type": "replace"},
+                    "PERSON": {"type": "replace", "new_value": "[PERSON_{{{{ID}}}}]"},
+                    "EMAIL_ADDRESS": {"type": "replace", "new_value": "[EMAIL_{{{{ID}}}}]"},
+                    "PHONE_NUMBER": {"type": "replace", "new_value": "[PHONE_{{{{ID}}}}]"},
+                    "IBAN_CODE": {"type": "replace", "new_value": "[IBAN_{{{{ID}}}}]"},
+                    "LOCATION": {"type": "replace", "new_value": "[LOCATION_{{{{ID}}}}]"},
                 }
+            }
+        )
+        anonymize_response.raise_for_status()
+        anonymization_result = anonymize_response.json()
+
+        # Validation JSON : vérifier que la clé "text" est présente (Bug B2)
+        if "text" not in anonymization_result:
+            raise AnonymizationError(
+                f"Invalid Presidio anonymizer response: missing 'text' key. "
+                f"Response: {anonymization_result}"
             )
-            anonymize_response.raise_for_status()
-            anonymization_result = anonymize_response.json()
 
-            anonymized_text = anonymization_result["text"]
+        anonymized_text = anonymization_result["text"]
 
-            # 3. Construire mapping pour deanonymization (éphémère, JAMAIS stocké)
-            mapping = _build_mapping(text, entities_found, anonymized_text)
+        # 3. Construire mapping pour deanonymization (éphémère, JAMAIS stocké)
+        mapping = _build_mapping(text, entities_found, anonymized_text)
 
-            # 4. Calculer confidence minimale
+        # 4. Calculer confidence minimale (M2 fix: validation robuste)
+        try:
             confidence_min = min(
                 (entity.get("score", 1.0) for entity in entities_found),
                 default=1.0
             )
-
-            logger.info(
-                "Anonymisation reussie: %d entites detectees (confidence_min=%.2f, context=%s)",
-                len(entities_found), confidence_min, context
+        except (TypeError, ValueError) as e:
+            # Fallback si entities_found malformé
+            logger.warning(
+                "confidence_calculation_failed",
+                error=str(e),
+                message="Using default confidence 1.0",
             )
+            confidence_min = 1.0
 
-            return AnonymizationResult(
-                anonymized_text=anonymized_text,
-                entities_found=entities_found,
-                mapping=mapping,
-                confidence_min=confidence_min
-            )
+        logger.info(
+            "anonymization_success",
+            entities_count=len(entities_found),
+            confidence_min=confidence_min,
+            context=context
+        )
+
+        return AnonymizationResult(
+            anonymized_text=anonymized_text,
+            entities_found=entities_found,
+            mapping=mapping,
+            confidence_min=confidence_min
+        )
 
     except httpx.HTTPError as e:
-        logger.error("Erreur HTTP Presidio: %s", e)
+        logger.error("presidio_http_error", error=str(e), error_type=type(e).__name__)
         raise AnonymizationError(f"Presidio unavailable: {e}") from e
     except Exception as e:
-        logger.error("Erreur anonymisation: %s", e)
+        logger.error("anonymization_failed", error=str(e), error_type=type(e).__name__)
         raise AnonymizationError(f"Anonymization failed: {e}") from e
 
 
@@ -209,7 +277,7 @@ async def deanonymize_text(anonymized_text: str, mapping: Dict[str, str]) -> str
     for placeholder, original_value in mapping.items():
         deanonymized = deanonymized.replace(placeholder, original_value)
 
-    logger.debug("Deanonymisation reussie: %d placeholders restaures", len(mapping))
+    logger.debug("deanonymization_success", placeholders_count=len(mapping))
     return deanonymized
 
 
@@ -219,30 +287,63 @@ def _build_mapping(original_text: str, entities: List[Dict], anonymized_text: st
 
     IMPORTANT: Ce mapping est éphémère (mémoire uniquement).
     JAMAIS stocker en base (voir addendum section 9.1).
+
+    Note (Bug B3): Parse le texte anonymisé pour extraire les placeholders réels
+    générés par Presidio au lieu de deviner leur format.
     """
+    import re
     mapping = {}
 
     # Extraire valeurs originales depuis positions dans entities
-    for idx, entity in enumerate(entities, start=1):
-        entity_type = entity["entity_type"]
+    entity_values = []
+    for entity in entities:
         start = entity["start"]
         end = entity["end"]
         original_value = original_text[start:end]
+        entity_type = entity["entity_type"]
+        entity_values.append((entity_type, original_value))
 
-        # Construire placeholder (doit matcher format anonymization)
-        placeholder = f"[{entity_type}_{idx}]"
-        mapping[placeholder] = original_value
+    # Extraire les placeholders réels du texte anonymisé (format: [TYPE_ID])
+    # Regex pour capturer les placeholders générés par Presidio
+    placeholder_pattern = r"\[([A-Z_]+)_(\d+)\]"
+    placeholders_found = re.findall(placeholder_pattern, anonymized_text)
+
+    # Construire le mapping en associant les placeholders trouvés aux valeurs originales
+    # On assume que l'ordre des placeholders correspond à l'ordre des entités
+    for idx, (entity_type, original_value) in enumerate(entity_values):
+        # Trouver le placeholder correspondant dans le texte anonymisé
+        # Format attendu: [ENTITY_TYPE_ID]
+        if idx < len(placeholders_found):
+            placeholder_type, placeholder_id = placeholders_found[idx]
+            placeholder = f"[{placeholder_type}_{placeholder_id}]"
+            mapping[placeholder] = original_value
+        else:
+            # Fallback: utiliser format générique si parsing échoue
+            # ⚠️ WARNING: Ce fallback peut causer deanonymization incorrecte
+            # si le format réel de Presidio diffère
+            placeholder = f"[{entity_type}_{idx + 1}]"
+            mapping[placeholder] = original_value
+
+            logger.warning(
+                "mapping_fallback_used",
+                entity_type=entity_type,
+                entity_index=idx,
+                placeholder=placeholder,
+                message="⚠️ Fallback mapping format - deanonymization peut échouer si format Presidio diffère",
+            )
 
     return mapping
 
 
-# TODO (Story 2+): Implémenter healthcheck Presidio
 async def healthcheck_presidio() -> bool:
     """
     Vérifie que Presidio Analyzer + Anonymizer sont disponibles.
 
     Returns:
         True si Presidio OK, False sinon
+
+    Note:
+        Utilisé par services/gateway/healthcheck.py pour monitoring système.
     """
     try:
         async with httpx.AsyncClient(timeout=5) as client:
@@ -250,5 +351,5 @@ async def healthcheck_presidio() -> bool:
             anonymizer_health = await client.get(f"{PRESIDIO_ANONYMIZER_URL}/health")
             return analyzer_health.status_code == 200 and anonymizer_health.status_code == 200
     except Exception as e:
-        logger.error("Healthcheck Presidio failed: %s", e)
+        logger.error("presidio_healthcheck_failed", error=str(e))
         return False

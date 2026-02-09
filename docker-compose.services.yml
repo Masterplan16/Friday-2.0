@@ -150,7 +150,10 @@ services:
   # RAM: ~1 Go
   # ============================================
   presidio-analyzer:
-    image: mcr.microsoft.com/presidio-analyzer:latest
+    build:
+      context: ./docker/presidio-analyzer
+      dockerfile: Dockerfile
+    image: friday-presidio-analyzer:2.2.354-fr
     container_name: friday-presidio-analyzer
     restart: unless-stopped
     environment:
@@ -175,7 +178,7 @@ services:
       start_period: 60s
 
   presidio-anonymizer:
-    image: mcr.microsoft.com/presidio-anonymizer:latest
+    image: mcr.microsoft.com/presidio-anonymizer:2.2.354
     container_name: friday-presidio-anonymizer
     restart: unless-stopped
     environment:

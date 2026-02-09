@@ -191,6 +191,7 @@ services:
     environment:
       - POSTGRES_DSN=postgresql://${POSTGRES_USER:-friday}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-friday}
       - REDIS_URL=redis://friday_gateway:${REDIS_GATEWAY_PASSWORD:-friday_gw_dev}@redis:6379/0
+      - API_TOKEN=${API_TOKEN}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
       - ENVIRONMENT=${ENVIRONMENT:-production}

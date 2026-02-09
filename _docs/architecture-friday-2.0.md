@@ -18,7 +18,7 @@ date: '2026-02-02'
 **Version** : 1.3.0
 **Date initiale** : 2 février 2026
 **Dernière mise à jour** : 9 février 2026
-**Statut** : Complet + corrections review adversariale v2 (Zep→PostgreSQL+Qdrant, Redis Streams/Pub/Sub, VPS-3 ~15€, budget ~63€) + migration 100% Claude Sonnet 4.5 (D17) + pgvector remplace Qdrant Day 1 (D19)
+**Statut** : Complet + corrections review adversariale v2 (Zep→PostgreSQL+Qdrant, Redis Streams/Pub/Sub, VPS-4 ~25€, budget ~73€) + migration 100% Claude Sonnet 4.5 (D17) + pgvector remplace Qdrant Day 1 (D19)
 
 _Ce document se construit collaborativement par etapes. Chaque section est ajoutee au fur et a mesure des decisions architecturales prises ensemble._
 
@@ -169,7 +169,7 @@ Note : les domaines utilisateur (medecin, enseignant, financier, personnel) rest
 | LLM (toutes taches) | **Claude Sonnet 4.5** (`claude-sonnet-4-5-20250929`) | Modele unique, zero routing, meilleur structured output + instruction following (D17). ~45 euros/mois API |
 | ~~LLM donnees sensibles~~ | ~~Ollama sur VPS~~ | Retire (D12/D17). Presidio anonymise avant appel Claude cloud |
 | Hebergeur VPS | **OVH France** | Francais, sans engagement, deja connu (MiraIdesk) |
-| VPS cible | **OVH VPS-3 : 24 Go RAM / 8 vCores / 160 Go NVMe** | ~15€ TTC/mois, services lourds residents (Ollama retire — D12/D17) |
+| VPS cible | **OVH VPS-4 : 48 Go RAM / 12 vCores / 300 Go SSD** | ~25€ TTC/mois, services lourds residents (Ollama retire — D12/D17) |
 | Stockage fichiers | **PC = stockage, VPS = cerveau** | Documents chez l'utilisateur, VPS garde index + metadonnees |
 | Sync VPS-PC | **Syncthing via Tailscale** | Zone de transit sur VPS, sync au rallumage du PC |
 | Securite reseau | **Tailscale** | Rien expose sur Internet public, tous services internes |
@@ -244,7 +244,7 @@ Recherche
 |--------|-----------|
 | Complexite d'integration (15+ services Docker) | Architecture modulaire, chaque composant remplacable via API standard |
 | Graphe de connaissances (2026) | **Decision 2026-02-05** : Zep fermé (2024), Graphiti immature → Day 1 = PostgreSQL (knowledge.*) + pgvector (embeddings dans `knowledge.embeddings` avec colonne `vector(1024)` + index HNSW) via `adapters/memorystore.py` (D19). Ré-évaluation Graphiti dans 6 mois (critères : >500★ GitHub, doc API complète, tests 100k+ entités) sinon → Neo4j Community Edition. Mode dégradé : recherche sémantique pgvector seul (D19). Alerte Trust Layer (`service.down`) + circuit breaker dans `adapters/memorystore.py`. Ré-évaluation Qdrant si >300k vecteurs ou latence >100ms. |
-| Budget VPS insuffisant | VPS-3 24 Go laisse ~7.5-9.5 Go de marge apres services charges (~14.5-16.5 Go utilises, Ollama retire D12/D17). Plan B : VPS-4 48 Go a ~25 euros/mois si besoin de plus de RAM |
+| Budget VPS insuffisant | VPS-4 48 Go laisse ~32-37 Go de marge apres services charges (~14.5-16.5 Go utilises, Ollama retire D12/D17). Plan B : VPS-5 64 Go a ~38 euros/mois si besoin de plus de RAM |
 | Evolution rapide du marche IA | Composants decouplés par API, remplacement sans impact sur le reste |
 | Erreurs/hallucinations des agents IA | Observability & Trust Layer : niveaux de confiance (auto/propose/bloque), receipts verifiables, retrogradation automatique |
 
@@ -252,10 +252,10 @@ Recherche
 
 | Poste | Cout mensuel |
 |-------|-------------|
-| VPS OVH VPS-3 24 Go (France, sans engagement) | ~15€ TTC |
+| VPS OVH VPS-4 48 Go (France, sans engagement) | ~25€ TTC |
 | API Claude Sonnet 4.5 (Anthropic) — modele unique toutes taches (D17) | ~45€ |
 | Divers (domaine, ntfy, veille) | ~3€ |
-| **Total estimé** | **~63€/mois** |
+| **Total estimé** | **~73€/mois** |
 
 > **Note D17** : Le budget depasse la contrainte initiale X1 (50€/mois). Accepte car la qualite superieure de Claude Sonnet 4.5 (structured output, instruction following, consistance) justifie l'investissement. Un seul modele = zero routing, zero complexite multi-provider. Pricing : $3/$15 per 1M tokens (input/output).
 
@@ -1109,7 +1109,7 @@ n8n fournit son propre dashboard pour l'administration des workflows. Aucun deve
 | Retention | 7 jours rotatifs sur le PC |
 | Estimation taille | ~467 Mo initial compresse, ~50 Mo/mois supplementaires |
 
-#### 5d. Profils RAM (VPS-3 24 Go)
+#### 5d. Profils RAM (VPS-4 48 Go)
 
 **Decision** : Tous les services lourds residents en simultane. Plus d'exclusion mutuelle.
 
@@ -1136,16 +1136,16 @@ n8n fournit son propre dashboard pour l'administration des workflows. Aucun deve
 | Surya/Marker OCR | ~2 Go | Resident |
 | **Sous-total services lourds** | **~8 Go** (Ollama retire D12/D17) | |
 
-**Bilan RAM VPS-3 :**
+**Bilan RAM VPS-4 :**
 
 | Composant | RAM estimee |
 |-----------|-------------|
-| Total VPS-3 | 24 Go |
+| Total VPS-4 | 48 Go |
 | Socle permanent (corrige) | ~6.5-8.5 Go |
 | Services lourds residents (Ollama retire D12/D17) | ~8 Go |
 | **Total estime** | **~14.5-16.5 Go** |
-| **Marge disponible** | **~7.5-9.5 Go** |
-| Seuil alerte 85% | 20.4 Go |
+| **Marge disponible** | **~32-37 Go** |
+| Seuil alerte 85% | 40.8 Go |
 
 **Note** : Ollama est definitivement retire de l'architecture (D12 + D17 : migration 100% Claude Sonnet 4.5). Les donnees sensibles sont protegees par Presidio (anonymisation obligatoire avant tout appel LLM cloud).
 
@@ -1160,7 +1160,7 @@ SERVICE_RAM_PROFILES: dict[str, ServiceProfile] = {
 }
 
 RAM_ALERT_THRESHOLD_PCT = 85  # Alerte Telegram si depasse
-# Ollama retire (D12/D17) → services compatibles sur VPS-3, marge confortable
+# Ollama retire (D12/D17) → services compatibles sur VPS-4, marge confortable
 ```
 
 **Plan B (VPS-4, 48 Go, ~25€ TTC)** : Si besoin de plus de RAM (ajout services lourds supplementaires), upgrade VPS-4 48 Go. La config `profiles.py` supporte les deux modes via variable d'environnement `VPS_TIER`.
@@ -1546,7 +1546,7 @@ services:
 
 **Decision** : Pas de scaling horizontal Day 1. VPS unique.
 
-Le scaling horizontal n'a aucun sens pour un utilisateur unique. Si 24 Go deviennent insuffisants, upgrade VPS-4 (48 Go, ~25€ TTC) puis VPS-5 (64 Go, ~38€ TTC) possible sans migration.
+Le scaling horizontal n'a aucun sens pour un utilisateur unique. Si 48 Go deviennent insuffisants, upgrade VPS-5 (64 Go, ~38€ TTC) puis VPS-6 (96 Go, ~55€ TTC) possible sans migration.
 
 ---
 
@@ -1597,7 +1597,7 @@ OpenClaw est un agent IA autonome open-source lance fin 2025 (~3 mois d'existenc
 |----------------|-----------|--------|
 | Celery + Redis comme task queue | **Retire** → n8n + FastAPI BackgroundTasks + Redis Streams | Trois systemes de queuing = complexite inutile |
 | SQLAlchemy + Alembic | **Retire** → asyncpg brut + SQL numerotees | ORM inapproprie pour un systeme pipeline/agent |
-| RAM 16 Go non calcule | **Resolu** → VPS-3 24 Go, services residents (Ollama retire D12/D17) | Marge ~7.5-9.5 Go, upgrade VPS-4 48 Go si besoin |
+| RAM 16 Go non calcule | **Resolu** → VPS-4 48 Go, services residents (Ollama retire D12/D17) | Marge ~32-37 Go, upgrade VPS-5 64 Go si besoin |
 | Observabilite absente | **Ajoute** → Observability & Trust Layer (composant transversal) | Receipts, trust levels, alertes, feedback loop |
 | OpenClaw (10% interface) | **Retire Day 1** → reevaluation post-socle | Maturite insuffisante, 5/37 exigences couvertes |
 
@@ -1612,7 +1612,7 @@ OpenClaw est un agent IA autonome open-source lance fin 2025 (~3 mois d'existenc
 4. Bot Telegram basique (connexion au Gateway + commandes `/status`, `/journal`, `/receipt`)
 5. n8n + premiers workflows (ingestion email)
 6. LangGraph superviseur + premier agent (utilise `@friday_action`)
-7. Services lourds (STT, TTS, OCR) — residents en simultane sur VPS-3 (Ollama retire D12/D17)
+7. Services lourds (STT, TTS, OCR) — residents en simultane sur VPS-4 (Ollama retire D12/D17)
 
 **Dependances croisees :**
 - Le superviseur LangGraph depend du Gateway FastAPI
@@ -1631,7 +1631,7 @@ OpenClaw est un agent IA autonome open-source lance fin 2025 (~3 mois d'existenc
 
 **Validation evolvabilite** : Chaque ajout ameliore ou preserve la capacite a faire evoluer le systeme sans refactoring massif.
 
-**Contrainte materielle** : VPS-3 24 Go, services lourds residents (Ollama retire D12/D17) (marge ~7.5-9.5 Go).
+**Contrainte materielle** : VPS-4 48 Go, services lourds residents (Ollama retire D12/D17) (marge ~32-37 Go).
 
 ---
 
@@ -1643,7 +1643,7 @@ friday-2.0/
 ├── .env.example
 ├── docker-compose.yml                 # Services principaux (PostgreSQL avec pgvector, Redis, n8n, Caddy) (D19 : Qdrant retiré)
 ├── docker-compose.dev.yml             # Override developpement local
-├── docker-compose.services.yml        # Services lourds residents (STT, TTS, OCR) — VPS-3 24 Go (Ollama retire D12/D17)
+├── docker-compose.services.yml        # Services lourds residents (STT, TTS, OCR) — VPS-4 48 Go (Ollama retire D12/D17)
 ├── Makefile                           # make up, make logs, make backup, make migrate
 │
 ├── scripts/
@@ -1719,7 +1719,7 @@ friday-2.0/
 │       │   ├── __init__.py
 │       │   ├── graph.py               # Definition StateGraph LangGraph
 │       │   ├── router.py              # Routage vers agents specialises
-│       │   ├── orchestrator.py        # Monitoring RAM services lourds (VPS-3 24 Go)
+│       │   ├── orchestrator.py        # Monitoring RAM services lourds (VPS-4 48 Go)
 │       │   └── state.py               # AgentState Pydantic
 │       │
 │       ├── agents/                    # Agents specialises (23 modules) - STRUCTURE PLATE KISS
@@ -1960,7 +1960,7 @@ friday-2.0/
 | 5. Scripts automatisation | `scripts/dev-setup.sh` + `scripts/monitor-ram.sh` | ✅ Neutre (outillage, pas runtime) | 45 min |
 
 **Total effort** : 3h50
-**RAM impact** : 0 Mo supplementaire (VPS-3 24 Go, marge ~7.5-9.5 Go)
+**RAM impact** : 0 Mo supplementaire (VPS-4 48 Go, marge ~32-37 Go)
 
 ---
 
@@ -2059,7 +2059,7 @@ SERVICE_RAM_PROFILES: dict[str, ServiceProfile] = {
 }
 
 RAM_ALERT_THRESHOLD_PCT = 85  # Alerte Telegram si depasse
-# Ollama retire (D12/D17) → services compatibles sur VPS-3 24 Go, marge confortable
+# Ollama retire (D12/D17) → services compatibles sur VPS-4 48 Go, marge confortable
 
 # agents/src/supervisor/orchestrator.py
 from config.profiles import SERVICE_RAM_PROFILES, RAM_ALERT_THRESHOLD_PCT
@@ -2136,7 +2136,7 @@ async def health():
 
 #### 4. Tests critiques
 
-**Objectif** : Tester composants critiques (monitoring RAM VPS-3, anonymisation Presidio, Trust Layer).
+**Objectif** : Tester composants critiques (monitoring RAM VPS-4, anonymisation Presidio, Trust Layer).
 
 **tests/unit/supervisor/test_orchestrator.py** :
 
@@ -2146,8 +2146,8 @@ from agents.supervisor.orchestrator import RAMMonitor
 
 @pytest.mark.asyncio
 async def test_ram_monitor_alerts_on_threshold():
-    """Test alerte RAM quand seuil 85% depasse sur VPS-3 24 Go"""
-    monitor = RAMMonitor(total_ram_gb=24, alert_threshold_pct=85)
+    """Test alerte RAM quand seuil 85% depasse sur VPS-4 48 Go"""
+    monitor = RAMMonitor(total_ram_gb=48, alert_threshold_pct=85)
     monitor.simulate_usage(used_gb=21)  # >85%
     alerts = await monitor.check()
     assert alerts[0].level == "warning"
@@ -2160,7 +2160,7 @@ async def test_all_heavy_services_fit_in_ram():
     services = ["faster-whisper", "kokoro-tts", "surya-ocr"]
     for svc in services:
         await monitor.register_service(svc)
-    assert monitor.total_allocated_gb <= 24 * 0.85  # Sous le seuil d'alerte (20.4 Go)
+    assert monitor.total_allocated_gb <= 48 * 0.85  # Sous le seuil d'alerte (40.8 Go)
 ```
 
 **tests/integration/test_anonymization_pipeline.py** :
@@ -2272,7 +2272,7 @@ echo "✅ Setup complete! Run 'docker compose up' to start all services."
 
 ```bash
 #!/bin/bash
-# Monitoring RAM VPS-3 24 Go - Alerte Telegram si >85%
+# Monitoring RAM VPS-4 48 Go - Alerte Telegram si >85%
 # Cron: 0 * * * * sops exec-env /opt/friday-2.0/.env.enc '/opt/friday-2.0/scripts/monitor-ram.sh'
 
 USAGE=$(free -m | awk 'NR==2{printf "%.0f", $3*100/$2}')
@@ -2347,30 +2347,30 @@ Les 37 exigences techniques sont couvertes à 100% :
 - Traitement IA (12/12) : Claude Sonnet 4.5 (D17), Surya, spaCy, GLiNER, Presidio, CrossRef/PubMed, Playwright
 - Communication (4/4) : Telegram, Faster-Whisper, Kokoro, ntfy
 - Connecteurs (11/11) : EmailEngine, Google APIs, Syncthing, CSV, APIs médicales/juridiques
-- Contraintes (6/6) : Budget ~63€/mois (D17, depasse X1 50€ — justifie par qualite Claude), chiffrement age/SOPS, architecture hybride VPS+PC+cloud
+- Contraintes (6/6) : Budget ~73€/mois (D17, depasse X1 50€ — justifie par qualite Claude), chiffrement age/SOPS, architecture hybride VPS+PC+cloud
 
 **Non-Functional Requirements Coverage:**
-- **Performance** : Services lourds residents (VPS-3 24 Go, Ollama retire D12/D17), latence ≤30s (X5)
+- **Performance** : Services lourds residents (VPS-4 48 Go, Ollama retire D12/D17), latence ≤30s (X5)
 - **Security** : Tailscale (zéro exposition Internet public), age/SOPS (secrets chiffrés), Presidio (anonymisation RGPD obligatoire avant LLM cloud), pgcrypto (colonnes sensibles BDD), CVE-2026-25253 (OpenClaw non intégré Day 1)
-- **Scalability** : VPS-3 24 Go avec upgrade vertical VPS-4 (48 Go ~25€ TTC) puis VPS-5 (64 Go ~38€ TTC) si necessaire, pas de scaling horizontal (utilisateur unique)
+- **Scalability** : VPS-4 48 Go avec upgrade vertical VPS-5 (64 Go ~38€ TTC) puis VPS-6 (96 Go ~55€ TTC) si necessaire, pas de scaling horizontal (utilisateur unique)
 - **Observability** : Observability & Trust Layer (receipts verifiables, trust levels auto/propose/bloque, retrogradation auto, alertes temps reel, feedback loop corrections)
 - **Compliance** : RGPD (Presidio anonymisation obligatoire + hebergement France OVH), donnees medicales chiffrees
 
 ### Implementation Readiness Validation ✅
 
 **Decision Completeness:**
-Toutes les décisions critiques sont documentées avec versions exactes (Python 3.12+, LangGraph 0.2.45+, n8n 1.69.2+, PostgreSQL 16, Redis 7). Les patterns d'implémentation sont complets : adaptateurs (5 fichiers avec interfaces abstraites), event-driven (Redis Pub/Sub), migrations SQL numérotées (script `apply_migrations.py`), error handling standardisé (`FridayError` hierarchy + `RETRYABLE_EXCEPTIONS`), **Observability & Trust Layer** (middleware `@friday_action`, receipts, trust levels, feedback loop). Consistency rules explicites : KISS (flat structure Day 1), évolutibilité (pattern adaptateur), RAM VPS-3 24 Go (services lourds residents, Ollama retire D12/D17). Exemples fournis pour tous les patterns majeurs : LLM adapter (45 lignes), RAM profiles (dict config), health checks (dict config), tests critiques (Presidio + orchestrator), trust middleware (`@friday_action` + `ActionResult`).
+Toutes les décisions critiques sont documentées avec versions exactes (Python 3.12+, LangGraph 0.2.45+, n8n 1.69.2+, PostgreSQL 16, Redis 7). Les patterns d'implémentation sont complets : adaptateurs (5 fichiers avec interfaces abstraites), event-driven (Redis Pub/Sub), migrations SQL numérotées (script `apply_migrations.py`), error handling standardisé (`FridayError` hierarchy + `RETRYABLE_EXCEPTIONS`), **Observability & Trust Layer** (middleware `@friday_action`, receipts, trust levels, feedback loop). Consistency rules explicites : KISS (flat structure Day 1), évolutibilité (pattern adaptateur), RAM VPS-4 48 Go (services lourds residents, Ollama retire D12/D17). Exemples fournis pour tous les patterns majeurs : LLM adapter (45 lignes), RAM profiles (dict config), health checks (dict config), tests critiques (Presidio + orchestrator), trust middleware (`@friday_action` + `ActionResult`).
 
 **Structure Completeness:**
 La structure projet est complète avec ~150 fichiers spécifiés dans l'arborescence Step 6. Tous les répertoires sont définis : `agents/` (23 modules), `services/` (gateway, stt, tts, ocr), `bot/` (Telegram), `n8n-workflows/` (7 workflows JSON), `database/` (migrations SQL), `tests/` (unit, integration, e2e), `docs/`, `scripts/` (setup, backup, deploy, monitor-ram). Integration points clairement spécifiés : FastAPI Gateway expose `/api/v1/*`, Redis Pub/Sub pour événements (`email.received`, `document.processed`), n8n pour workflows data (cron briefing, watch GDrive Plaud). Component boundaries : 3 schemas PostgreSQL (`core`, `ingestion`, `knowledge`), adapters/ séparés du code métier, Docker Compose multi-fichiers (principal + dev + services lourds).
 
 **Pattern Completeness:**
-Tous les conflict points sont adressés : VPS-3 24 Go permet services lourds residents (Ollama retire D12/D17), `orchestrator.py` simplifie en moniteur RAM, `config/profiles.py` alerte si >85%. Naming conventions complètes : migrations SQL numérotées (`001_*.sql`), events dot notation (`email.received`, `agent.completed`), Pydantic schemas (`models/*.py`), logs structlog JSON. Communication patterns fully specified : REST (sync, FastAPI), Redis Pub/Sub (async events), HTTP interne (Docker network). Process patterns documentés : retry via tenacity (`utils/retry.py`), error hierarchy (`FridayError` + `RETRYABLE_EXCEPTIONS`), logs JSON structurés (`config/logging.py`), backups quotidiens (`scripts/backup.sh` cron 3h00).
+Tous les conflict points sont adressés : VPS-4 48 Go permet services lourds residents (Ollama retire D12/D17), `orchestrator.py` simplifie en moniteur RAM, `config/profiles.py` alerte si >85%. Naming conventions complètes : migrations SQL numérotées (`001_*.sql`), events dot notation (`email.received`, `agent.completed`), Pydantic schemas (`models/*.py`), logs structlog JSON. Communication patterns fully specified : REST (sync, FastAPI), Redis Pub/Sub (async events), HTTP interne (Docker network). Process patterns documentés : retry via tenacity (`utils/retry.py`), error hierarchy (`FridayError` + `RETRYABLE_EXCEPTIONS`), logs JSON structurés (`config/logging.py`), backups quotidiens (`scripts/backup.sh` cron 3h00).
 
 ### Gap Analysis Results
 
 **Critical Gaps:** AUCUN
-Tous les éléments bloquants pour l'implémentation sont architecturalement couverts. Les 37 exigences techniques + 23 modules + contraintes matérielles (VPS-3 24 Go) + Observability & Trust Layer sont spécifiés.
+Tous les éléments bloquants pour l'implémentation sont architecturalement couverts. Les 37 exigences techniques + 23 modules + contraintes matérielles (VPS-4 48 Go) + Observability & Trust Layer sont spécifiés.
 
 **Important Gaps:** AUCUN
 Tous les éléments importants sont spécifiés. Patterns d'implémentation complets, structure projet détaillée (~150 fichiers), integration points clairs.
@@ -2396,13 +2396,13 @@ Les 5 ajouts pour l'évolutibilité ont été validés lors du Step 6 :
 - ✅ Tests critiques (orchestrator RAM + Presidio RGPD) : neutre évolutibilité (validation, pas runtime)
 - ✅ Scripts automation (`dev-setup.sh` + `monitor-ram.sh`) : neutre évolutibilité (outillage, pas runtime)
 
-Total effort : 3h50. RAM impact : 0 Mo supplementaire (VPS-3 24 Go, marge ~7.5-9.5 Go).
+Total effort : 3h50. RAM impact : 0 Mo supplementaire (VPS-4 48 Go, marge ~32-37 Go).
 
 ### Architecture Completeness Checklist
 
 **✅ Requirements Analysis**
 
-- [x] Projet contextualisé (23 modules, 4 couches techniques, 37 exigences, VPS-3 24 Go, budget 50€/mois max)
+- [x] Projet contextualisé (23 modules, 4 couches techniques, 37 exigences, VPS-4 48 Go, budget 75€/mois max)
 - [x] Scale et complexité évalués (utilisateur unique Antonio, extension famille envisageable X3)
 - [x] Contraintes techniques identifiées (X1-X6 : budget, chiffrement, latence, architecture hybride)
 - [x] Cross-cutting concerns mappés (sécurité Tailscale + age/SOPS + Presidio, évolutibilité via adaptateurs, RGPD)
@@ -2412,7 +2412,7 @@ Total effort : 3h50. RAM impact : 0 Mo supplementaire (VPS-3 24 Go, marge ~7.5-9
 - [x] Decisions critiques documentees avec versions (Python 3.12, LangGraph 0.2.45+, n8n 1.69.2+, PostgreSQL 16, Redis 7, Claude Sonnet 4.5 D17)
 - [x] Tech stack complet (infrastructure I1-I4, traitement IA T1-T12, communication C1-C4, connecteurs S1-S12)
 - [x] Integration patterns définis (REST FastAPI, Redis Pub/Sub, HTTP interne Docker, n8n workflows)
-- [x] Performance considerations (services lourds residents VPS-3 24 Go, Ollama retire D12/D17, latence ≤30s)
+- [x] Performance considerations (services lourds residents VPS-4 48 Go, Ollama retire D12/D17, latence ≤30s)
 - [x] Observability & Trust Layer (receipts, trust levels auto/propose/bloque, feedback loop, alertes temps reel)
 
 **✅ Implementation Patterns**
@@ -2441,20 +2441,20 @@ Justification :
 - Architecture validée en Party Mode (5 agents BMAD) puis Code Review adversarial
 - Corrections appliquées (retrait Celery/SQLAlchemy/Prometheus pour KISS)
 - Évolutibilité garantie (4 adaptateurs — D19 : vectorstore fusionne dans memorystore, pattern factory LLM)
-- Contraintes materielles gerees (VPS-3 24 Go, services lourds residents, Ollama retire D12/D17)
+- Contraintes materielles gerees (VPS-4 48 Go, services lourds residents, Ollama retire D12/D17)
 - Observability & Trust Layer integre (receipts, trust levels, feedback loop)
 
 **Key Strengths:**
 
 1. **Evolutibilite by design** : 4 adaptateurs (memorystore, filesync, email, llm) permettent remplacement d'un composant externe sans refactoring massif (D19 : vectorstore.py fusionne dans memorystore.py). Le pattern adaptateur reste valide : switch Claude → autre provider = modifier `adapters/llm.py` uniquement, les 23 agents ne changent pas. Switch pgvector → Qdrant = modifier `adapters/memorystore.py` uniquement.
 
-2. **Contraintes materielles resolues** : VPS-3 24 Go permet services lourds residents (Ollama retire D12/D17) (Whisper + Kokoro + Surya = ~8 Go, socle permanent ~6.5-8.5 Go, marge ~7.5-9.5 Go). Orchestrator simplifie en moniteur RAM via `config/profiles.py`. Upgrade VPS-4 48 Go si besoin.
+2. **Contraintes materielles resolues** : VPS-4 48 Go permet services lourds residents (Ollama retire D12/D17) (Whisper + Kokoro + Surya = ~8 Go, socle permanent ~6.5-8.5 Go, marge ~32-37 Go). Orchestrator simplifie en moniteur RAM via `config/profiles.py`. Upgrade VPS-5 64 Go si besoin.
 
 3. **Sécurité RGPD robuste** : Pipeline Presidio obligatoire avant tout appel LLM cloud (anonymisation réversible). Données médicales chiffrées (pgcrypto). Tailscale = zéro exposition Internet public. age/SOPS pour secrets. Hébergement France (OVH).
 
 4. **KISS principle appliqué rigoureusement** : Structure flat agents/ Day 1 (pas de sur-organisation prématurée). Pas d'ORM (asyncpg brut), pas de Celery (n8n + FastAPI BackgroundTasks), pas de Prometheus (monitoring via Trust Layer), pas de GraphQL (REST suffit). Refactoring si douleur réelle, pas par anticipation.
 
-5. **Budget maitrise** : ~63€/mois estime (VPS-3 ~15€ TTC + API Claude Sonnet 4.5 ~45€ + divers ~3€). Depasse la contrainte initiale X1 (50€/mois) mais justifie par la qualite superieure (structured output, instruction following, consistance) et la simplification (un seul modele, zero routing). Plan B upgrade VPS-4 (48 Go, ~25€ TTC) si besoin de plus de RAM.
+5. **Budget maitrise** : ~73€/mois estime (VPS-4 ~25€ TTC + API Claude Sonnet 4.5 ~45€ + divers ~3€). Depasse la contrainte initiale X1 (50€/mois) mais justifie par la qualite superieure (structured output, instruction following, consistance) et la simplification (un seul modele, zero routing). Plan B upgrade VPS-5 (64 Go, ~38€ TTC) si besoin de plus de RAM.
 
 6. **Observability & Trust Layer** : Composant transversal garantissant la confiance utilisateur. Chaque action tracee (receipts), niveaux de confiance configurables (auto/propose/bloque), retrogradation automatique si accuracy baisse, feedback loop par regles explicites. Antonio controle Friday, pas l'inverse.
 
@@ -2480,7 +2480,7 @@ Justification :
 
 3. **Tests obligatoires** :
    - Presidio anonymization (RGPD critique) : `tests/integration/test_anonymization_pipeline.py` avec dataset `tests/fixtures/pii_samples.json`
-   - Monitoring RAM (VPS-3 24 Go) : `tests/unit/supervisor/test_orchestrator.py` avec mock Docker stats
+   - Monitoring RAM (VPS-4 48 Go) : `tests/unit/supervisor/test_orchestrator.py` avec mock Docker stats
    - Trust Layer : `tests/unit/middleware/test_trust.py` (auto/propose/blocked), `tests/integration/test_trust_flow.py` (flow complet)
    - Tous agents avec mocks (pas d'appels LLM réels en tests unitaires)
 
@@ -2560,7 +2560,7 @@ Dépendances critiques avant story suivante :
 **📚 AI Agent Implementation Guide**
 
 - Tech stack avec versions vérifiées (compatibilité validée, corrections Party Mode appliquées)
-- Consistency rules prévenant les conflits d'implémentation (KISS Day 1, évolutibilité via adaptateurs, VPS-3 24 Go, Observability & Trust Layer)
+- Consistency rules prévenant les conflits d'implémentation (KISS Day 1, évolutibilité via adaptateurs, VPS-4 48 Go, Observability & Trust Layer)
 - Structure projet avec frontières claires (3 schemas PostgreSQL, flat agents/, adapters/ séparés)
 - Integration patterns et standards de communication (REST sync + Redis Pub/Sub async + HTTP interne Docker)
 
@@ -2612,7 +2612,7 @@ Sécurité RGPD robuste intégrée dès l'architecture (Presidio anonymisation o
 4 adaptateurs (memorystore, filesync, email, llm) permettent remplacement composants externes sans refactoring massif (D19 : vectorstore.py fusionne dans memorystore.py). Switch Claude → autre provider = modifier 1 fichier uniquement (`adapters/llm.py`). Switch pgvector → Qdrant = modifier `adapters/memorystore.py` uniquement.
 
 **💰 Budget Optimized**
-Budget estime ~63€/mois (VPS-3 ~15€ TTC + API Claude Sonnet 4.5 ~45€ + divers ~3€). Depasse contrainte initiale X1 (50€) mais justifie par qualite superieure et simplification (un seul modele, zero routing, zero complexite multi-provider). Services lourds residents sur VPS-3 24 Go (Ollama retire D12/D17).
+Budget estime ~73€/mois (VPS-4 ~25€ TTC + API Claude Sonnet 4.5 ~45€ + divers ~3€). Depasse contrainte initiale X1 (50€) mais justifie par qualite superieure et simplification (un seul modele, zero routing, zero complexite multi-provider). Services lourds residents sur VPS-4 48 Go (Ollama retire D12/D17).
 
 ---
 

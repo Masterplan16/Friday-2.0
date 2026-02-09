@@ -30,7 +30,7 @@ Le socle qui rend tout le reste possible. Infrastructure, Trust Layer, securite 
 - n8n accessible via reverse proxy Caddy
 - Healthcheck endpoint `/api/v1/health` repond 200
 - Tous services redemarrent automatiquement (restart: unless-stopped)
-- Usage RAM total < 20.4 Go (85% de 24 Go VPS-3) (NFR14)
+- Usage RAM total < 40.8 Go (85% de 48 Go VPS-4) (NFR14)
 
 **Fichiers existants** : docker-compose.yml, docker-compose.services.yml
 

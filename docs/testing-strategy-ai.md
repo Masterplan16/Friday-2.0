@@ -424,7 +424,7 @@ async def test_presidio_anonymizes_all_pii(pii_samples):
 }
 ```
 
-### Test Monitoring RAM (VPS-3 24 Go)
+### Test Monitoring RAM (VPS-4 48 Go)
 
 **Fichier** : `tests/unit/supervisor/test_orchestrator.py`
 
@@ -452,8 +452,8 @@ async def test_all_heavy_services_fit_in_ram():
     for svc in services:
         await monitor.register_service(svc, SERVICE_RAM_PROFILES[svc].ram_gb)
 
-    # Vérifier sous le seuil d'alerte (85% de 24 Go = 20.4 Go)
-    assert monitor.total_allocated_gb <= 20.4
+    # Vérifier sous le seuil d'alerte (85% de 48 Go = 40.8 Go)
+    assert monitor.total_allocated_gb <= 40.8
 ```
 
 ### Test Trust Layer

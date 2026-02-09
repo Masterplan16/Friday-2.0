@@ -52,10 +52,10 @@
 │ /downloads/      │   │ • Kokoro TTS     │          │
 │                  │   │ • Surya OCR      │          │
 └──────────────────┘   │                  │          │
-         ▲             │ VPS-3 24 Go RAM  │          │
-         │             │ 8 vCores         │          │
-         │             │ 160 Go NVMe      │          │
-         │             │ ~15 € TTC/mois   │          │
+         ▲             │ VPS-4 48 Go RAM  │          │
+         │             │ 12 vCores        │          │
+         │             │ 300 Go SSD       │          │
+         │             │ ~25 € TTC/mois   │          │
          │             └──────────────────┘          │
          │                                            │
          └────────────────────────────────────────────┘
@@ -288,7 +288,7 @@ Téléchargement CSV banque → PC (~/Documents/Finance/Import/)
 - Nettoyage automatique : Cron quotidien (3h00) supprime tout fichier >1h dans /data/transit/
 
 **Justification** :
-- VPS = 160 Go NVMe (limité)
+- VPS = 300 Go SSD (limité)
 - Éviter saturation disque
 - Sécurité (données sensibles ne restent pas)
 

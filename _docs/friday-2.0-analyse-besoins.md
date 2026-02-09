@@ -5,7 +5,7 @@
 > **Dernière mise à jour** : 5 février 2026
 > **Version** : 1.1.0
 > **Utilisateur** : Antonio
-> **Statut** : Analyse terminée + corrections review adversariale v2 (VPS ~15€, 110k mails, Apple Watch retiré)
+> **Statut** : Analyse terminée + corrections review adversariale v2 (VPS ~25€, 110k mails, Apple Watch retiré)
 
 ---
 
@@ -314,8 +314,8 @@ Briefing ←─────(agrège tout)────→ Tous les modules
 
 | Contrainte | Valeur |
 |------------|--------|
-| **Budget** | 75€/mois maximum (VPS + APIs cloud). Estimation réelle : ~63€/mois (VPS-3 ~15€ + Claude Sonnet 4.5 API ~45€ + veille benchmark ~3€) (D17) |
-| **Serveur** | OVH VPS-3 : 24 Go RAM / 8 vCores / 160 Go NVMe (~15€ TTC/mois) - Tous services lourds résidents simultanément |
+| **Budget** | 75€/mois maximum (VPS + APIs cloud). Estimation réelle : ~73€/mois (VPS-4 ~25€ + Claude Sonnet 4.5 API ~45€ + veille benchmark ~3€) (D17) |
+| **Serveur** | OVH VPS-4 : 48 Go RAM / 12 vCores / 300 Go SSD (~25€ TTC/mois) - Tous services lourds résidents simultanément |
 | **Laptop utilisateur** | Dell Pro Max 16 (Core Ultra 7 255H, 32 Go RAM, pas de GPU). **AUCUN modèle IA ne tourne sur le laptop** - rôle = stockage documents uniquement |
 | **Stockage** | Synology BeeStation (photos) + PC (documents locaux) + VPS (index + métadonnées uniquement) |
 | **Confidentialité** | Anonymisation réversible via Presidio + spaCy-fr AVANT tout traitement LLM cloud (obligatoire RGPD) |

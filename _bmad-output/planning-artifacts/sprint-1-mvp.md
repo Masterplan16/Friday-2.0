@@ -16,18 +16,18 @@ Le socle qui rend tout le reste possible. Infrastructure, Trust Layer, securite 
 
 As a administrateur systeme,
 I want deployer tous les services residents via Docker Compose,
-So that l'infrastructure Friday 2.0 soit operationnelle sur le VPS-3.
+So that l'infrastructure Friday 2.0 soit operationnelle sur le VPS-4.
 
 **Acceptance Criteria:**
 
-**Given** un VPS-3 OVH (24 Go RAM, 8 vCores, 160 Go NVMe) vierge avec Docker installe
+**Given** un VPS-4 OVH (48 Go RAM, 12 vCores, 300 Go SSD) vierge avec Docker installe
 **When** j'execute `docker compose up -d`
 **Then** PostgreSQL 16 (avec pgvector), Redis 7, n8n 1.69.2+, et Caddy demarrent sans erreur [D19]
 **And** chaque service repond a son healthcheck interne
 
 **Given** tous les services sont demarres
 **When** je mesure l'usage RAM total
-**Then** l'usage est inferieur a 20.4 Go (85% de 24 Go — NFR14)
+**Then** l'usage est inferieur a 40.8 Go (85% de 48 Go — NFR14)
 **And** chaque service a une restart policy `unless-stopped`
 
 **Given** un service crashe (ex: Redis OOM)

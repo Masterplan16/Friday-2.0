@@ -2,13 +2,13 @@
 
 Valide les Acceptance Criteria:
 - AC#1: docker compose up -d demarre tous les services sans erreur
-- AC#2: PostgreSQL 16 accessible avec parametres tuning VPS-3
+- AC#2: PostgreSQL 16 accessible avec parametres tuning VPS-4
 - AC#3: Redis 7 avec ACL configurees par service
 - AC#4: pgvector dans PostgreSQL pour stockage vectoriel (D19 - remplace Qdrant)
 - AC#5: n8n accessible via reverse proxy Caddy
 - AC#6: Healthcheck sur tous les services
 - AC#7: restart: unless-stopped sur tous les services
-- AC#8: Usage RAM total < 20.4 Go (85% de 24 Go VPS-3)
+- AC#8: Usage RAM total < 40.8 Go (85% de 48 Go VPS-4)
 """
 
 from pathlib import Path
@@ -90,10 +90,10 @@ class TestDockerImageVersions:
 
 
 # ============================================
-# AC#2: PostgreSQL configuration VPS-3
+# AC#2: PostgreSQL configuration VPS-4
 # ============================================
 class TestPostgresConfig:
-    """Verifie la configuration PostgreSQL pour VPS-3 24 Go."""
+    """Verifie la configuration PostgreSQL pour VPS-4 48 Go."""
 
     def test_postgres_tuning_shared_buffers(self, main_config):
         command = main_config["services"]["postgres"]["command"]
@@ -225,14 +225,14 @@ class TestRestartPolicy:
 
 
 # ============================================
-# AC#8: Usage RAM < 20.4 Go (85% de 24 Go VPS-3)
+# AC#8: Usage RAM < 40.8 Go (85% de 48 Go VPS-4)
 # ============================================
 class TestRAMConstraints:
-    """Verifie que l'usage RAM total reste sous le seuil VPS-3."""
+    """Verifie que l'usage RAM total reste sous le seuil VPS-4."""
 
-    VPS3_RAM_GB = 24
+    VPS4_RAM_GB = 48
     ALERT_THRESHOLD_PCT = 85
-    MAX_RAM_GB = VPS3_RAM_GB * ALERT_THRESHOLD_PCT / 100  # 20.4 Go
+    MAX_RAM_GB = VPS4_RAM_GB * ALERT_THRESHOLD_PCT / 100  # 40.8 Go
 
     def _parse_memory_gb(self, mem_str: str) -> float:
         """Convertit '10G' ou '512M' en Go."""

@@ -101,7 +101,7 @@ decisions:
   - id: D14
     description: "[SUPERSEDE par D17] Gemini Flash retire"
   - id: D15
-    description: "VPS-3 (24 Go, 15 EUR) comme baseline — Ollama retire libere assez de marge, VPS-4 inutile"
+    description: "VPS-4 (48 Go, 25 EUR) comme baseline — cohabitation Friday 2.0 + Jarvis Friday"
   - id: D16
     description: "Cold start emails non lus = batch par lots 10-20, trust=propose, calibrage initial Friday"
   - id: D17
@@ -125,7 +125,7 @@ decisions:
 
 **Type** : Self-hosted AI Personal Assistant Platform
 **Domaine** : Personal Productivity with Sensitive Data (Finance/Legal)
-**Complexite** : HIGH (convergence IA multi-domaine + RGPD + contraintes hardware VPS 24 Go)
+**Complexite** : HIGH (convergence IA multi-domaine + RGPD + contraintes hardware VPS 48 Go)
 **Contexte** : Brownfield (architecture definie, code partiellement implemente)
 
 ## Success Criteria
@@ -147,7 +147,7 @@ decisions:
 | ID | Critere | Mesure | Seuil |
 |----|---------|--------|-------|
 | TS1 | Stabilite systeme | Tous services operationnels sans crash ni intervention manuelle | **"Tout fonctionne sans planter"** (critere #1 Antonio) |
-| TS2 | RAM stable | Usage memoire VPS-3 24 Go en permanence | <=85% (<=20.4 Go) |
+| TS2 | RAM stable | Usage memoire VPS-4 48 Go en permanence | <=85% (<=40.8 Go) |
 | TS3 | RGPD respecte | PII anonymisees avant tout LLM cloud (Presidio + spaCy-fr) | 100% PII sur dataset test, 0 fuite |
 | TS4 | Trust Layer fiable | Accuracy par module/action avec retrogradation automatique | >=90% accuracy, echantillon >=10 |
 | TS5 | Self-healing operationnel | Services redemarrent auto, RAM auto-recovered, alertes fonctionnelles | <=1h/mois maintenance residuelle |
@@ -348,8 +348,8 @@ Classement par LLM (trust=propose les premieres semaines, puis auto apres stabil
 
 | Contrainte | Detail |
 |------------|--------|
-| **VPS-3 OVH** | 24 Go RAM, 8 vCores, 160 Go NVMe, ~15 EUR/mois (D15) |
-| **Tous services residents** | Pas d'exclusion mutuelle (~8 Go services lourds + ~8 Go socle, ~4-6 Go marge) |
+| **VPS-4 OVH** | 48 Go RAM, 12 vCores, 300 Go SSD, ~25 EUR/mois (D15) |
+| **Tous services residents** | Pas d'exclusion mutuelle (~8 Go services lourds + ~8 Go socle, ~32-37 Go marge) |
 | **Tailscale** | Rien expose sur Internet public, 2FA obligatoire |
 | **Redis ACL** | Moindre privilege par service |
 | **age/SOPS** | Secrets chiffres, jamais de .env en clair dans git |
@@ -390,7 +390,7 @@ Voir section consolidee **Project Scoping > Risques et mitigations** pour la tab
 
 **Supprime** : Ollama local (pas de GPU, Presidio suffit), Mistral (remplace par Claude), Gemini Flash (remplace par Claude).
 
-**Impact RAM** : Ollama retire → VPS-3 (24 Go, ~15 EUR/mois) suffit. Marge ~4-6 Go.
+**Impact RAM** : Ollama retire → VPS-4 (48 Go, ~25 EUR/mois) suffit. Marge ~32-37 Go.
 
 **Tarification** : $3/$15 per 1M tokens (input/output). Estimation ~45 EUR/mois pour le volume Friday.
 
@@ -456,7 +456,7 @@ Architecture event-driven single-user sur VPS personnel (Docker Compose). Interf
 ### Deploiement & Operations
 
 - Docker Compose unique (pas Kubernetes, pas Swarm)
-- VPS-3 OVH (24 Go RAM, 8 vCores, 160 Go NVMe, ~15 EUR/mois)
+- VPS-4 OVH (48 Go RAM, 12 vCores, 300 Go SSD, ~25 EUR/mois)
 - Migrations SQL numerotees (asyncpg brut, pas d'ORM)
 - Backup quotidien chiffre age → sync PC via Tailscale
 - Self-Healing tiers 1-4 (Docker restart → auto-recover-ram → drift detection)
@@ -488,7 +488,7 @@ Architecture event-driven single-user sur VPS personnel (Docker Compose). Interf
 
 **Philosophie** : Problem-solving MVP — le minimum pour que Friday remplace le traitement manuel des emails, documents, et informations quotidiennes d'Antonio.
 
-**Budget mensuel** : ~15 EUR VPS + ~45 EUR API Claude Sonnet 4.5 + ~3 EUR benchmark veille = **~63 EUR/mois**
+**Budget mensuel** : ~25 EUR VPS + ~45 EUR API Claude Sonnet 4.5 + ~3 EUR benchmark veille = **~73 EUR/mois**
 
 ### MVP Day 1 — Composants (tous simultanes)
 
@@ -535,7 +535,7 @@ Aide consultation, Menus & Courses, Coach, Entretien cyclique, Generateur TCS/EC
 | # | Risque | Impact | Mitigation |
 |---|--------|--------|------------|
 | R1 | Fuite PII vers LLM cloud | RGPD violation | Presidio obligatoire, fail-explicit, tests dataset |
-| R2 | RAM VPS-3 saturee | Services down | monitor-ram.sh (seuil 85%), auto-recover-ram, Self-Healing |
+| R2 | RAM VPS-4 saturee | Services down | monitor-ram.sh (seuil 85%), auto-recover-ram, Self-Healing |
 | R3 | Accuracy trust degrades | Actions incorrectes | Retrogradation auto (<90%), echantillon >=10, anti-oscillation 2 semaines |
 | R4 | Pipeline email fragile (5+ maillons) | Emails non traites | Trust=propose Day 1, fail-explicit, Self-Healing, alerte System |
 | R5 | Confusion perimetres financiers | Erreurs comptables | Classification stricte 5 perimetres, trust=propose Day 1 |
@@ -663,7 +663,7 @@ Aide consultation, Menus & Courses, Coach, Entretien cyclique, Generateur TCS/EC
 |----|----------|--------|-------|
 | NFR12 | Disponibilite services | Uptime des services critiques (PostgreSQL, Redis, FastAPI, Telegram bot) | >=99% uptime mensuel (~7h downtime max) |
 | NFR13 | Self-Healing automatique | Temps de recovery apres crash service | <30s (Docker restart), <2min (auto-recover-ram) |
-| NFR14 | RAM stable | Usage memoire VPS-3 24 Go | <=85% (<=20.4 Go) en continu |
+| NFR14 | RAM stable | Usage memoire VPS-4 48 Go | <=85% (<=40.8 Go) en continu |
 | NFR15 | Zero email perdu | Emails recus vs emails traites | 0 email perdu (Redis Streams, delivery garanti) |
 | NFR16 | Backup quotidien fiable | Succes backup + sync PC | 100% jours avec backup reussi |
 

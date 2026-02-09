@@ -4,6 +4,37 @@
 
 ---
 
+## 2026-02-09 : D22 - VPS-4 (48 Go) comme baseline — cohabitation Friday 2.0 + Jarvis Friday
+
+**Décision** : Utiliser VPS-4 (48 Go RAM, ~25€ TTC/mois) au lieu de VPS-3 (24 Go) pour accueillir cohabitation Friday 2.0 + Jarvis Friday
+
+**Raison** :
+- Socle permanent Friday 2.0 : ~6-8 Go (PG+pgvector, Redis, n8n, Presidio, EmailEngine, Caddy, OS)
+- Services lourds Friday 2.0 résidents : ~8 Go (Faster-Whisper 4 Go, Kokoro TTS 2 Go, Surya OCR 2 Go)
+- Total Friday 2.0 : ~14-16 Go
+- Marge pour Jarvis Friday + buffer : ~32 Go disponibles
+- VPS-3 (24 Go) = trop serré si cohabitation, risque crash cascade
+
+**Impact** :
+- Budget VPS : 15€ (VPS-3) → 25€ (VPS-4)
+- Budget total ~ 73€/mois (VPS-4 ~25€ + Claude Sonnet 4.5 ~45€ + veille ~3€)
+- Seuil alerte RAM : rester 85% = 40.8 Go pour VPS-4
+
+**Fichiers modifiés** :
+- `testing-strategy-ai.md` : RAM seuil 85% de 48 Go = 40.8 Go
+- `code-review-final-corrections.md` : Alertes RAM 42/48 Go
+- `telegram-user-guide.md` : Alertes RAM 42/48 Go
+- `DECISION_LOG.md` : Ajout D22 + marquage D15 SUPERSEDE
+
+**Alternatives considérées** :
+1. **VPS-3 (24 Go) avec Friday 2.0 seul** : Rejetée car vision d'Antonio inclut cohabitation Jarvis
+2. **VPS-4 (48 Go, retenue)** : Marge confortable, budget acceptable, scalabilité future
+3. **VPS-5 (96 Go)** : Over-engineering, coût 2x
+
+**Rollback plan** : Si cohabitation Jarvis n'advient pas → réévaluer retour VPS-3 (économie 10€/mois)
+
+---
+
 ## 2026-02-09 : D19 - pgvector remplace Qdrant Day 1
 
 **Décision** : Utiliser pgvector (extension PostgreSQL) au lieu de Qdrant pour le stockage vectoriel Day 1
@@ -341,7 +372,7 @@ else → Metrics & Logs
 ## 2026-02-05 : Code Review Adversarial v2 - Corrections multiples
 
 **Décisions** :
-1. **VPS-3 coût réel** : ~15€ TTC/mois (corrigé partout, était VPS-4 25,5€)
+1. **VPS coût réel** : [SUPERSEDE D22 : VPS-4 ~25€ TTC/mois] ~~VPS-3 ~15€ TTC/mois~~
 2. **Volume emails réel** : 110 000 mails (pas 55k) → coût migration $20-24 USD, durée 18-24h
 3. **Apple Watch hors scope** : Complexité excessive, pas d'API serveur → réévaluation >12 mois
 4. **Zep → PostgreSQL + Qdrant** : Zep fermé (2024), Graphiti immature → Day 1 = PostgreSQL (knowledge.*) + Qdrant via `adapters/memorystore.py` [SUPERSEDE D19 : pgvector remplace Qdrant Day 1]
@@ -367,7 +398,7 @@ else → Metrics & Logs
 3. ~~Mistral model IDs = suffixe -latest~~ [SUPERSEDE D17 : 100% Claude Sonnet 4.5]
 4. correction_rules : UUID PK + scope/priority/source_receipts/hit_count
 5. Redis = Streams pour critique, Pub/Sub pour informatif
-6. Socle RAM = ~7-9 Go (inclut Zep+EmailEngine+Presidio+Caddy+OS)
+6. Socle RAM = ~7-9 Go (inclut Zep+EmailEngine+Presidio+Caddy+OS) [SUPERSEDE D22 : VPS-4 48 Go recommandé pour cohabitation Jarvis]
 7. monitor-ram.sh seuil = 85%
 8. Dossier agent = archiviste/ (pas archiver/)
 9. Migrations SQL Story 1 = 001-010 (inclut core.tasks + core.events)
@@ -408,6 +439,7 @@ else → Metrics & Logs
 - Claude Sonnet 4.5 (Anthropic API — D17, remplace Mistral/Ollama)
 - Telegram (interface principale)
 - Tailscale (VPN mesh)
+- **VPS-4 (48 Go RAM, ~25€ TTC/mois)** — D22 : cohabitation Friday 2.0 + Jarvis Friday
 
 **Documents impactés** :
 - `_docs/architecture-friday-2.0.md` (~2500 lignes)

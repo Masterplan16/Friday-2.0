@@ -30,8 +30,8 @@
 **Problème** : Analyse besoins disait "20-30€/mois (APIs cloud)" mais architecture disait "50€/mois (VPS + APIs)".
 
 **Fix** :
-- ✅ Analyse besoins mise à jour : "50€/mois maximum (VPS + APIs cloud)"
-- ✅ Estimation détaillée : "~63€/mois (VPS-3 ~15€ + Claude Sonnet 4.5 ~45€ + veille ~3€)" [MàJ D17 2026-02-09]
+- ✅ Analyse besoins mise à jour : "75€/mois maximum (VPS + APIs cloud)"
+- ✅ Estimation détaillée : "~73€/mois (VPS-4 ~25€ + Claude Sonnet 4.5 ~45€ + veille ~3€)" [MàJ D17 2026-02-09, VPS-4 D22]
 - **Fichier modifié** : `_docs/friday-2.0-analyse-besoins.md` (Section 8)
 
 ### 2. Discord → Telegram - Changement documenté ✅
@@ -67,12 +67,12 @@
 - ✅ Architecture : Section "Gaps & Limitations explicites" avec workaround proposé
 - **Fichier modifié** : `_docs/architecture-friday-2.0.md` (Section Gaps & Limitations)
 
-### 6. VPS-3 Plan B - Périmètre fonctionnel réduit ✅
+### 6. VPS Plan B - Périmètre fonctionnel réduit ✅
 
-**Problème** : Plan B VPS-3 réintroduisait les exclusions mutuelles sans réduire le périmètre fonctionnel.
+**Problème** : Plan B VPS réintroduisait les exclusions mutuelles sans réduire le périmètre fonctionnel.
 
 **Fix** :
-- ✅ Architecture clarifiée : "Plan B VPS-3 → réduction obligatoire du périmètre fonctionnel. Modules non critiques retirés : Coach sportif, Menus & Courses, Collection jeux vidéo, CV académique"
+- ✅ Architecture clarifiée : "Plan B VPS réduit → réduction obligatoire du périmètre fonctionnel. Modules non critiques retirés : Coach sportif, Menus & Courses, Collection jeux vidéo, CV académique"
 - **Fichier modifié** : `_docs/architecture-friday-2.0.md` (Section 5d)
 
 ---

@@ -346,7 +346,7 @@ Ce document fournit le decoupage complet en epics et stories pour Friday 2.0, de
 
 - NFR12 : Disponibilite >= 99% uptime mensuel (~7h downtime max)
 - NFR13 : Self-Healing < 30s (Docker restart), < 2min (auto-recover-ram)
-- NFR14 : RAM stable <= 85% (VPS-3 24 Go) en continu
+- NFR14 : RAM stable <= 85% (VPS-4 48 Go) en continu
 - NFR15 : Zero email perdu — Redis Streams, delivery garanti
 - NFR16 : Backup quotidien fiable — 100% jours avec backup reussi
 

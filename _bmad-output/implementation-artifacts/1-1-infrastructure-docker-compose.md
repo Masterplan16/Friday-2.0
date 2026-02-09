@@ -17,7 +17,7 @@ Afin que **l'infrastructure de base soit opérationnelle et prête pour les modu
 5. ✅ n8n accessible via reverse proxy Caddy
 6. ✅ Healthcheck endpoint `/api/v1/health` répond 200
 7. ✅ Tous services redémarrent automatiquement (restart: unless-stopped)
-8. ✅ Usage RAM total < 20.4 Go (85% de 24 Go VPS-3) (NFR14)
+8. ✅ Usage RAM total < 40.8 Go (85% de 48 Go VPS-4) (NFR14)
 
 ## Tasks / Subtasks
 
@@ -28,7 +28,7 @@ Afin que **l'infrastructure de base soit opérationnelle et prête pour les modu
   - [x] n8n : 1.69.2 → **2.2.4** (⚠️ breaking changes v2, migration requise)
   - [x] Caddy : 2.8 → **2.10.2** (dernière stable)
 
-- [x] Valider configuration PostgreSQL pour VPS-3 (AC: #2)
+- [x] Valider configuration PostgreSQL pour VPS-4 (AC: #2)
   - [x] Vérifier paramètres tuning : shared_buffers=256MB, effective_cache_size=1GB
   - [x] Confirmer création automatique des 3 schemas (via migrations Story 1.2)
   - [x] Tester connexion depuis gateway : `postgresql://friday:password@postgres:5432/friday`
@@ -65,11 +65,11 @@ Afin que **l'infrastructure de base soit opérationnelle et prête pour les modu
   - [x] Migration tool disponible : Settings → Migration Report (n8n UI)
 
 - [x] Valider consommation RAM totale (AC: #8)
-  - [x] Objectif : **< 20.4 Go (85% de 24 Go VPS-3)**
+  - [x] Objectif : **< 40.8 Go (85% de 48 Go VPS-4)**
   - [x] Socle permanent attendu : ~6-8 Go (PG+pgvector, Redis, n8n, Presidio, EmailEngine, Caddy, OS) — **Qdrant retiré (D19)**
   - [x] Services lourds résidents : STT (~4 Go), TTS (~2 Go), OCR (~2 Go)
   - [x] **Ollama retiré** (Décision D12 - pas de GPU VPS, Presidio suffit, zéro données ultra-sensibles)
-  - [x] **Total théorique** : ~14-16 Go → **Marge 8-10 Go restante** ✓
+  - [x] **Total théorique** : ~14-16 Go → **Marge 32-37 Go restante** ✓
   - [x] Script monitoring : [scripts/monitor-ram.sh](../../scripts/monitor-ram.sh) (alerte si >85%)
 
 - [x] Tester le workflow complet (AC: #1, #6)
@@ -110,11 +110,11 @@ docker compose -f docker-compose.yml -f docker-compose.services.yml up -d
 
 | Contrainte | Valeur | Impact |
 |------------|--------|--------|
-| VPS | **OVH VPS-3** : 24 Go RAM / 8 vCores / 160 Go NVMe | ~15 EUR TTC/mois |
+| VPS | **OVH VPS-4** : 48 Go RAM / 12 vCores / 300 Go SSD | ~25 EUR TTC/mois |
 | Socle permanent | ~6-8 Go | PostgreSQL+pgvector, Redis, n8n, Presidio, EmailEngine, Caddy, OS — **Qdrant retiré (D19)** |
 | Services lourds | ~8 Go résidents | STT (4 Go), TTS (2 Go), OCR (2 Go) — **Ollama retiré (D12)** |
-| **Total attendu** | **~14-16 Go** | Marge disponible : **8-10 Go** |
-| Seuil alerte | 85% (20.4 Go) | Monitoring : [scripts/monitor-ram.sh](../../scripts/monitor-ram.sh) |
+| **Total attendu** | **~14-16 Go** | Marge disponible : **32-37 Go** |
+| Seuil alerte | 85% (40.8 Go) | Monitoring : [scripts/monitor-ram.sh](../../scripts/monitor-ram.sh) |
 | Pattern | **Pas d'exclusion mutuelle** | Tous services lourds résidents simultanément |
 
 ### Versions Docker Images (Février 2026)
@@ -354,7 +354,7 @@ friday-2.0/
 Tous les détails techniques avec source paths et sections :
 
 - **Architecture complète** : [_docs/architecture-friday-2.0.md](../../_docs/architecture-friday-2.0.md)
-  - Section "Step 2 : Décisions Architecturales - Infrastructure" → VPS-3, Docker Compose
+  - Section "Step 2 : Décisions Architecturales - Infrastructure" → VPS-4, Docker Compose
   - Section "Step 3 : Stack Technique Détaillée" → Versions logicielles
 
 - **Addendum technique** : [_docs/architecture-addendum-20260205.md](../../_docs/architecture-addendum-20260205.md)
@@ -382,7 +382,7 @@ Tous les détails techniques avec source paths et sections :
   - Configuration VPN, 2FA, device authorization
 
 - **CLAUDE.md** : [CLAUDE.md](../../CLAUDE.md)
-  - Section "Contraintes matérielles - VPS-3 OVH 24 Go RAM"
+  - Section "Contraintes matérielles - VPS-4 OVH 48 Go RAM"
   - Section "Standards techniques - Event-driven - Redis Streams + Pub/Sub"
   - Section "Anti-patterns" → Pas de Prometheus Day 1
 
@@ -412,7 +412,7 @@ Claude Sonnet 4.5 (claude-sonnet-4-5-20250929) via BMAD create-story workflow
 **Phase create-story** :
 - ✅ Story détectée automatiquement : 1.1 (première en backlog dans sprint-status.yaml)
 - ✅ Epic 1 status mis à jour : backlog → in-progress (première story de l'epic)
-- ✅ Analyse complète architecture (VPS-3 24 Go, socle ~6.5-8.5 Go, services lourds ~8 Go sans Ollama)
+- ✅ Analyse complète architecture (VPS-4 48 Go, socle ~6.5-8.5 Go, services lourds ~8 Go sans Ollama)
 - ✅ Recherche web versions stables (PostgreSQL, Redis, Qdrant, n8n, Caddy)
 - ✅ Identification breaking changes n8n 1.x → 2.x (migration guide inclus)
 
@@ -426,7 +426,7 @@ Claude Sonnet 4.5 (claude-sonnet-4-5-20250929) via BMAD create-story workflow
 - ✅ Toutes REDIS_URL mises à jour avec credentials ACL par service (gateway, agents, alerting, metrics, emailengine)
 - ✅ Redis healthcheck utilise credentials admin pour AUTH
 - ✅ Caddyfile créé (config/Caddyfile) avec reverse proxy n8n, gateway, emailengine
-- ✅ .env.example mis à jour : VPS-3 24 Go (corrigé depuis VPS-4 48 Go), Redis ACL passwords ajoutés
+- ✅ .env.example mis à jour : VPS-4 48 Go, Redis ACL passwords ajoutés
 - ✅ 33 tests pytest couvrant : versions images, PG config, Redis ACL, healthchecks, restart policy, RAM, réseau, n8n v2, Caddyfile
 - ✅ 43 tests total (33 nouveaux + 10 existants) : 0 régression
 
@@ -434,8 +434,8 @@ Claude Sonnet 4.5 (claude-sonnet-4-5-20250929) via BMAD create-story workflow
 
 **Fichiers modifiés** :
 - docker-compose.yml (versions images, Redis ACL, n8n v2 config, REDIS_URL par service)
-- docker-compose.services.yml (Ollama commenté, header VPS-3, version supprimée, EmailEngine REDIS_URL)
-- .env.example (VPS-3 24 Go, Redis ACL passwords)
+- docker-compose.services.yml (Ollama commenté, header VPS-4, version supprimée, EmailEngine REDIS_URL)
+- .env.example (VPS-4 48 Go, Redis ACL passwords)
 
 **Fichiers créés** :
 - config/redis.acl (ACL Redis par service : 7 utilisateurs)
@@ -461,7 +461,7 @@ Claude Sonnet 4.5 (claude-sonnet-4-5-20250929) via BMAD create-story workflow
 | H4 | HIGH | Caddy healthcheck `/` → 404 (seul `/health` renvoie 200) | Healthcheck corrigé vers `/health` |
 | H5 | HIGH | Aucun test pour AC#4 (pgvector) | Test `test_postgres_uses_pgvector_image` ajouté |
 | M1 | MEDIUM | 3 services sans healthcheck (bot, alerting, metrics) | TODO healthcheck ajoutés (services non implémentés) |
-| M2 | MEDIUM | Budget .env.example "~25 EUR VPS-4" au lieu de VPS-3 | Corrigé : ~15 EUR VPS-3, total ~63 EUR/mois |
+| M2 | MEDIUM | Budget .env.example "~15 EUR VPS-3" au lieu de VPS-4 | Corrigé : ~25 EUR VPS-4, total ~73 EUR/mois |
 | M3 | MEDIUM | Redis ACL gateway `~cache:*` trop restreint vs spec `~*` | Élargi à `~*` + ajout commandes Streams |
 | L1 | LOW | AC#5 tests insuffisants (Caddyfile contenu non vérifié) | 3 tests ajoutés : n8n proxy, gateway proxy, /health |
 | L2 | LOW | .env.example N8N_HOST format URL au lieu de hostname | Corrigé : `n8n.friday.local` |
@@ -482,7 +482,7 @@ Claude Sonnet 4.5 (claude-sonnet-4-5-20250929) via BMAD create-story workflow
 | #5 n8n via Caddy | OK (tests contenu Caddyfile ajoutés) |
 | #6 Healthchecks | OK (Caddy /health fixé, 3 services TODO) |
 | #7 restart: unless-stopped | OK |
-| #8 RAM < 20.4 Go | OK |
+| #8 RAM < 40.8 Go | OK |
 
 ## Change Log
 

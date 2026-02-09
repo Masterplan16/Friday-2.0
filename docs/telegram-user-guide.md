@@ -167,7 +167,7 @@ Santé du système et alertes critiques.
 **Alertes RAM :**
 ```
 ⚠️ Alerte RAM
-Utilisation : 87% (21 Go / 24 Go)
+Utilisation : 87% (42 Go / 48 Go)
 Services actifs : Ollama, Whisper, Kokoro, Surya
 Recommandation : Vérifier si processus bloqué
 ```

@@ -24,7 +24,7 @@ Pipeline Presidio est **obligatoire** avant tout LLM cloud (RGPD), mais impact l
 
 **Sources** :
 - Presidio benchmark officiel : ~400-600ms pour 1000 chars (CPU i7, 8 threads)
-- VPS-3 OVH (8 vCores) : performance similaire attendue
+- VPS-4 OVH (12 vCores) : performance similaire attendue
 
 ### 1.3 Stratégies d'optimisation
 
@@ -196,8 +196,8 @@ Estimations RAM (Whisper 4 Go, etc.) sans source citée → risque sous-estimati
 
 **Total RAM optimiste** : ~11 Go (Ollama retiré D12, LLM cloud D17, Qdrant retiré D19)
 **Total RAM pessimiste** : ~16 Go (Ollama retiré D12, LLM cloud D17, Qdrant retiré D19)
-**VPS-3 disponible** : 24 Go
-**Marge sécurité** : ~8-13 Go (Ollama retiré D12, LLM cloud Claude Sonnet 4.5 D17, Qdrant retiré D19 → pgvector dans PostgreSQL, services lourds ~8 Go)
+**VPS-4 disponible** : 48 Go
+**Marge sécurité** : ~32-37 Go (Ollama retiré D12, LLM cloud Claude Sonnet 4.5 D17, Qdrant retiré D19 → pgvector dans PostgreSQL, services lourds ~8 Go)
 
 ### 3.4 Validation lors Story 1
 
@@ -927,7 +927,7 @@ graph TB
 **Rôle** : Santé système et alertes critiques
 
 **Contenu** :
-- Alertes RAM >85% (moniteur VPS-3 24 Go, seuil 20.4 Go)
+- Alertes RAM >85% (moniteur VPS-4 48 Go, seuil 40.8 Go)
 - Services down/up (PostgreSQL, Redis, n8n, etc.) (D19 : Qdrant retiré, pgvector dans PostgreSQL)
 - Pipeline errors critiques
 - Backup status (success/failure)

@@ -163,7 +163,7 @@ ttl = 3600  # 1h
 
 3. **Alertes multi-métriques** :
    ```
-   📊 RAM : 21/24 Go (87%) 🚨
+   📊 RAM : 42/48 Go (87%) 🚨
    💻 CPU : 75% ✅
    💾 Disque : 68% ✅
    ```
@@ -172,7 +172,7 @@ ttl = 3600  # 1h
    ```markdown
    🚨 Friday 2.0 - Alerte Système
 
-   🚨 RAM : 87% (21/24 Go)
+   🚨 RAM : 87% (42/48 Go)
    🚨 CPU : 85%
 
    Vérifier les services lourds :

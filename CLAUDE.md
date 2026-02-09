@@ -69,7 +69,7 @@ def get_llm_adapter() -> LLMAdapter:
 
 ---
 
-### 3. Contraintes matérielles - VPS-3 OVH 24 Go RAM
+### 3. Contraintes matérielles - VPS-4 OVH 48 Go RAM
 
 **Tous services lourds résidents en simultané. Plus d'exclusion mutuelle.**
 
@@ -80,7 +80,7 @@ def get_llm_adapter() -> LLMAdapter:
 | Surya OCR | ~2 Go | Résident |
 | **Total services lourds** | **~8 Go** | Ollama retiré (D12), LLM = Claude Sonnet 4.5 API (D17) |
 | **Socle permanent (corrigé)** | **~6-8 Go** | Inclut PG (+pgvector D19), Redis, n8n, Presidio, EmailEngine, Caddy, OS (SANS Zep - fermé 2024, SANS Qdrant - D19) |
-| **Marge disponible** | **~7.5-9.5 Go** | |
+| **Marge disponible** | **~32-34 Go** | Cohabitation Jarvis Friday possible (~5 Go) |
 
 **Orchestrator simplifié (moniteur RAM, pas gestionnaire d'exclusions) :**
 ```python
@@ -90,10 +90,10 @@ SERVICE_RAM_PROFILES: dict[str, ServiceProfile] = {
     "kokoro-tts": ServiceProfile(ram_gb=2),
     "surya-ocr": ServiceProfile(ram_gb=2),
 }
-RAM_ALERT_THRESHOLD_PCT = 85  # Alerte si dépasse (20.4 Go sur 24 Go)
+RAM_ALERT_THRESHOLD_PCT = 85  # Alerte si dépasse (40.8 Go sur 48 Go)
 ```
 
-**Upgrade possible (VPS-4, 48 Go, ~25€ TTC) :** Si besoin de plus de marge RAM → upgrade via `VPS_TIER` env var.
+**Cohabitation Jarvis Friday** : Le VPS-4 48 Go permet d'héberger Friday 2.0 (~15 Go) + Jarvis Friday (~5 Go) avec large marge (~28 Go restants).
 
 ---
 
@@ -367,27 +367,27 @@ async def test_presidio_anonymizes_all_pii(pii_samples):
             assert sensitive_value not in anonymized
 ```
 
-### Tests orchestrator RAM (VPS-3 24 Go)
+### Tests orchestrator RAM (VPS-4 48 Go)
 
 ```python
 # tests/unit/supervisor/test_orchestrator.py
 @pytest.mark.asyncio
 async def test_ram_monitor_alerts_on_threshold():
-    monitor = RAMMonitor(total_ram_gb=24, alert_threshold_pct=85)
-    # Simuler charge élevée (>85% de 24 Go = 20.4 Go)
-    monitor.simulate_usage(used_gb=21)
+    monitor = RAMMonitor(total_ram_gb=48, alert_threshold_pct=85)
+    # Simuler charge élevée (>85% de 48 Go = 40.8 Go)
+    monitor.simulate_usage(used_gb=42)
     alerts = await monitor.check()
     assert alerts[0].level == "warning"
     assert "85%" in alerts[0].message
 
 @pytest.mark.asyncio
 async def test_all_heavy_services_fit_in_ram():
-    monitor = RAMMonitor(total_ram_gb=24, alert_threshold_pct=85)
+    monitor = RAMMonitor(total_ram_gb=48, alert_threshold_pct=85)
     # Tous services lourds résidents simultanément (Ollama retiré D12)
     services = ["faster-whisper", "kokoro-tts", "surya-ocr"]
     for svc in services:
         await monitor.register_service(svc)
-    assert monitor.total_allocated_gb <= 24 * 0.85  # Sous le seuil d'alerte (20.4 Go)
+    assert monitor.total_allocated_gb <= 48 * 0.85  # Sous le seuil d'alerte (40.8 Go)
 ```
 
 ### Tests Trust Layer
@@ -444,7 +444,7 @@ async def test_email_classifier():
 |--------------|--------|-------------|
 | **ORM (SQLAlchemy/Tortoise)** | Système pipeline, pas CRUD | asyncpg brut + SQL optimisé |
 | **Celery** | Redondant avec n8n + FastAPI | n8n (workflows longs) + BackgroundTasks (courts) |
-| **Prometheus Day 1** | 400 Mo RAM, overkill sur VPS-3 24 Go | `scripts/monitor-ram.sh` (cron + Telegram) |
+| **Prometheus Day 1** | 400 Mo RAM, overkill pour Friday seul | `scripts/monitor-ram.sh` (cron + Telegram) |
 | **GraphQL** | Over-engineering utilisateur unique | REST + Pydantic suffit |
 | **Structure 3 niveaux Day 1** | Sur-organisation prématurée | Flat structure, refactor si douleur |
 | **localStorage direct pour auth** | Token expiré, pas de refresh | `api()` helper ou `getAuthHeaders()` |

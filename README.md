@@ -17,9 +17,9 @@ Friday 2.0 est un système d'IA personnel qui agit comme un **second cerveau** p
 | **Utilisateur** | Antonio (extension famille envisageable) |
 | **Modules** | 23 agents spécialisés (médecin, enseignant, financier, personnel) |
 | **Tech Stack** | Python 3.12 + LangGraph + n8n + Claude Sonnet 4.5 + PostgreSQL 16 + Redis 7 |
-| **Budget** | ~63€/mois (VPS OVH VPS-3 ~15€ + Claude API ~45€ + veille ~3€) |
+| **Budget** | ~73€/mois (VPS OVH VPS-4 ~25€ + Claude API ~45€ + veille ~3€) |
 | **Philosophie** | KISS Day 1, évolutibilité by design (5 adaptateurs) |
-| **Hébergement** | VPS-3 OVH France — 24 Go RAM / 8 vCores / 160 Go NVMe |
+| **Hébergement** | VPS-4 OVH France — 48 Go RAM / 12 vCores / 300 Go SSD |
 | **Stockage** | Hybride : VPS (cerveau, index, métadonnées) + PC (fichiers) |
 | **Sécurité** | Tailscale (zéro exposition Internet) + Presidio (RGPD) + age/SOPS |
 | **Interface** | Telegram (canal unique, 100% Day 1) |
@@ -108,7 +108,7 @@ friday-2.0/
 │
 ├── docker-compose.yml           # Services principaux
 ├── docker-compose.dev.yml       # Override dev
-├── docker-compose.services.yml  # Services lourds (tous résidents VPS-3)
+├── docker-compose.services.yml  # Services lourds (tous résidents VPS-4)
 ├── .env.example
 ├── Makefile
 │
@@ -182,9 +182,9 @@ friday-2.0/
 
 ### Contraintes matérielles
 
-- VPS-3 OVH : 24 Go RAM / 8 vCores / 160 Go NVMe (~15€ TTC/mois)
+- VPS-4 OVH : 48 Go RAM / 12 vCores / 300 Go SSD (~25€ TTC/mois)
 - Tous services lourds résidents en simultané (Whisper + Kokoro + Surya = ~8 Go)
-- Marge disponible : ~4-6 Go
+- Marge disponible : ~32-34 Go (cohabitation Jarvis Friday possible)
 - Orchestrator simplifié : moniteur RAM, plus d'exclusion mutuelle
 
 ---
@@ -245,11 +245,11 @@ pip freeze > agents/requirements-lock.txt
 
 | Poste | Coût mensuel |
 |-------|-------------|
-| VPS OVH VPS-3 24 Go (France, sans engagement) | ~15€ TTC |
+| VPS OVH VPS-4 48 Go (France, sans engagement) | ~25€ TTC |
 | Claude Sonnet 4.5 API (Anthropic) | ~45€ |
 | Divers (domaine, ntfy) | ~2-3€ |
 | Benchmark veille mensuel | ~3€ |
-| **Total estimé** | **~65-66€/mois** |
+| **Total estimé** | **~75-76€/mois** |
 
 **Note budget:** Budget max ~75€/mois. Premiers mois potentiellement plus chers (migration 110k emails ~$45 one-shot).
 

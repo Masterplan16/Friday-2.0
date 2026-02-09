@@ -20,6 +20,9 @@ import redis.asyncio as aioredis
 import schedule
 import structlog
 
+from services.feedback.pattern_detector import PatternDetector
+from services.feedback.rule_proposer import RuleProposer
+
 # Configuration structlog
 structlog.configure(
     processors=[
@@ -81,18 +84,18 @@ class MetricsAggregator:
             WITH weekly_actions AS (
                 SELECT
                     module,
-                    action,
+                    action_type,
                     COUNT(*) as total_actions,
-                    COUNT(*) FILTER (WHERE corrected = true) as corrected_actions,
+                    COUNT(*) FILTER (WHERE status = 'corrected') as corrected_actions,
                     AVG(confidence) as avg_confidence
                 FROM core.action_receipts
-                WHERE timestamp >= $1
+                WHERE created_at >= $1
                   AND status != 'blocked'
-                GROUP BY module, action
+                GROUP BY module, action_type
             )
             SELECT
                 module,
-                action,
+                action_type,
                 total_actions,
                 corrected_actions,
                 CASE
@@ -110,7 +113,7 @@ class MetricsAggregator:
         metrics = [
             {
                 "module": row["module"],
-                "action": row["action"],
+                "action_type": row["action_type"],
                 "week_start": week_start_dt,
                 "total_actions": row["total_actions"],
                 "corrected_actions": row["corrected_actions"],
@@ -158,10 +161,10 @@ class MetricsAggregator:
 
         query = """
             INSERT INTO core.trust_metrics (
-                module, action, week_start, total_actions, corrected_actions,
+                module, action_type, week_start, total_actions, corrected_actions,
                 accuracy, avg_confidence, current_trust_level, recommended_trust_level
             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-            ON CONFLICT (module, action, week_start)
+            ON CONFLICT (module, action_type, week_start)
             DO UPDATE SET
                 total_actions = EXCLUDED.total_actions,
                 corrected_actions = EXCLUDED.corrected_actions,
@@ -174,12 +177,12 @@ class MetricsAggregator:
         async with self.db_pool.acquire() as conn:
             for metric in metrics:
                 module = metric["module"]
-                action = metric["action"]
+                action_type = metric["action_type"]
                 accuracy = metric["accuracy"]
                 total = metric["total_actions"]
 
                 # Déterminer trust level actuel
-                current_trust = trust_levels.get(module, {}).get(action, "propose")
+                current_trust = trust_levels.get(module, {}).get(action_type, "propose")
 
                 # Calculer recommendation (rétrogradation si accuracy <90% et sample >=10)
                 if total >= 10 and accuracy < 0.90 and current_trust == "auto":
@@ -190,7 +193,7 @@ class MetricsAggregator:
                 await conn.execute(
                     query,
                     module,
-                    action,
+                    action_type,
                     metric["week_start"],
                     total,
                     metric["corrected_actions"],
@@ -217,18 +220,18 @@ class MetricsAggregator:
 
         for metric in metrics:
             module = metric["module"]
-            action = metric["action"]
+            action_type = metric["action_type"]
             accuracy = metric["accuracy"]
             total = metric["total_actions"]
 
-            current_trust = trust_levels.get(module, {}).get(action, "propose")
+            current_trust = trust_levels.get(module, {}).get(action_type, "propose")
 
             # Règle de rétrogradation : accuracy <90% sur 1 semaine + sample >=10
             if total >= 10 and accuracy < 0.90 and current_trust == "auto":
                 retrogradations.append(
                     {
                         "module": module,
-                        "action": action,
+                        "action": action_type,
                         "accuracy": accuracy,
                         "total_actions": total,
                         "old_level": current_trust,
@@ -269,6 +272,60 @@ class MetricsAggregator:
 
         logger.info("Retrogradation alerts sent", count=len(retrogradations))
 
+    async def run_pattern_detection(self) -> None:
+        """
+        Exécute la détection de patterns et proposition de règles (Story 1.7, AC3, AC4).
+
+        Workflow:
+        1. PatternDetector détecte clusters de corrections similaires
+        2. RuleProposer envoie propositions Telegram avec inline buttons
+
+        Exécuté après metrics aggregation (03h15).
+        """
+        logger.info("Starting pattern detection")
+
+        try:
+            # 1. Détecter patterns
+            detector = PatternDetector(db_pool=self.db_pool)
+            patterns = await detector.detect_patterns(days=7)
+
+            if not patterns:
+                logger.info("No patterns detected, skipping rule proposals")
+                return
+
+            # 2. Proposer rules via Telegram
+            proposer = RuleProposer(db_pool=self.db_pool)
+            message_ids = await proposer.propose_rules_from_patterns(patterns)
+
+            logger.info(
+                "Pattern detection completed",
+                patterns_detected=len(patterns),
+                proposals_sent=len(message_ids),
+            )
+
+        except Exception as e:
+            # MED-4 fix: Logging CRITICAL + alerte Redis pour Antonio
+            logger.critical(
+                "Pattern detection FAILED - feedback loop interrompu",
+                error=str(e),
+                error_type=type(e).__name__,
+                exc_info=True,
+            )
+
+            # Envoyer alerte Redis Streams pour notification Antonio
+            try:
+                await self.redis_client.xadd(
+                    "friday:events:nightly.pattern_detection.failed",
+                    {
+                        "error": str(e),
+                        "error_type": type(e).__name__,
+                        "timestamp": datetime.utcnow().isoformat(),
+                        "severity": "critical",
+                    },
+                )
+            except Exception as redis_err:
+                logger.error("Échec envoi alerte Redis", error=str(redis_err))
+
     async def run_nightly_aggregation(self) -> None:
         """Exécute l'agrégation nightly complète."""
         logger.info("Starting nightly metrics aggregation")
@@ -282,6 +339,9 @@ class MetricsAggregator:
 
             # 3. Détecter rétrogradations
             retrogradations = await self.detect_retrogradations(metrics)
+
+            # 4. Détecter patterns et proposer règles (Story 1.7, AC3, AC4)
+            await self.run_pattern_detection()
 
             logger.info(
                 "Nightly aggregation completed",

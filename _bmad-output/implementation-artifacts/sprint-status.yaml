@@ -53,15 +53,17 @@ development_status:
   1-4-tailscale-vpn-securite-reseau: done  # 2026-02-09: Code review — 12 issues (1H, 6M, 5L) corrigees. 181/181 tests, zero regression.
   1-5-presidio-anonymisation-fail-explicit: done  # 2026-02-09: Code review — 20 issues (3C, 4H, 9M, 4L), 16 fixed. AC1 enforced, tests smoke CI, 21 PII samples.
   1-6-trust-layer-middleware: done  # 2026-02-09: Code review complete - 15/15 issues fixed (3C+6H+6M), 20/20 tests pass, docs 650+ lines
-  1-7-feedback-loop-correction-rules: backlog
+  1-7-feedback-loop-correction-rules: done  # 2026-02-09: Code review Opus 4.6 completée - 15 issues fixées (6 CRITICAL, 5 HIGH, 4 MEDIUM). Tests complétés (17+ tests vs 2 triviaux), PII anonymisation ajoutée, documentation troubleshooting étendue. 9 fichiers modifiés.
   1-8-trust-metrics-retrogradation: backlog  # code existe mais pas de story file ni audit bugs
-  1-9-bot-telegram-core-topics: backlog
+  1-9-bot-telegram-core-topics: done  # 2026-02-09: COMPLETE - 22 bugs fixed, bot tested successfully, 7/7 ACs ✅, validation permissions corrected, Redis ACL TODO avant VPS prod
   1-10-bot-telegram-inline-buttons-validation: backlog
   1-11-commandes-telegram-trust-budget: backlog
   1-12-backup-chiffre-sync-pc: backlog  # code existe mais pas de story file ni audit bugs
   1-13-self-healing-tier-1-2: backlog  # code existe mais pas de story file ni audit bugs
   1-14-monitoring-docker-images: backlog
   1-15-cleanup-purge-rgpd: backlog
+  1-16-ci-cd-pipeline-github-actions: backlog
+  1-17-preparation-repository-public: backlog
   epic-1-retrospective: optional
 
   # Epic 2: Pipeline Email Intelligent (7 stories | 10 FRs)

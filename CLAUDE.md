@@ -452,6 +452,72 @@ async def test_email_classifier():
 
 ---
 
+## 🤖 Bot Telegram
+
+**Story 1.9** - Interface utilisateur Friday via Telegram avec 5 topics spécialisés.
+
+### Structure
+```
+bot/
+├── main.py              # Point d'entrée, heartbeat, graceful shutdown
+├── config.py            # Configuration telegram.yaml + envvars
+├── routing.py           # Routage événements → topics
+├── models.py            # Pydantic models (TelegramEvent, BotConfig)
+├── handlers/
+│   ├── commands.py      # /help, /start, stubs Story 1.11
+│   ├── messages.py      # Messages texte + onboarding
+│   └── callbacks.py     # Inline buttons (Story 1.10)
+└── requirements.txt
+```
+
+### 5 Topics spécialisés
+1. **💬 Chat & Proactive** (DEFAULT) - Conversation bidirectionnelle
+2. **📬 Email & Communications** - Notifications email
+3. **🤖 Actions & Validations** - Actions nécessitant validation
+4. **🚨 System & Alerts** - Santé système
+5. **📊 Metrics & Logs** - Métriques non-critiques
+
+### Commandes disponibles
+- `/help` - Liste complète des commandes
+- `/start` - Alias de /help
+- Commandes Story 1.11 (stubs) : `/status`, `/journal`, `/receipt`, `/confiance`, `/stats`, `/budget`
+
+### Variables d'environnement requises
+```bash
+# Token + Supergroup
+TELEGRAM_BOT_TOKEN=<token>
+TELEGRAM_SUPERGROUP_ID=<chat_id>
+
+# Thread IDs des 5 topics (extraits via scripts/extract_telegram_thread_ids.py)
+TOPIC_CHAT_PROACTIVE_ID=<thread_id>
+TOPIC_EMAIL_ID=<thread_id>
+TOPIC_ACTIONS_ID=<thread_id>
+TOPIC_SYSTEM_ID=<thread_id>
+TOPIC_METRICS_ID=<thread_id>
+
+# User Antonio
+ANTONIO_USER_ID=<user_id>
+
+# Database & Redis
+DATABASE_URL=postgresql://user:pass@host:5432/db
+REDIS_URL=redis://user:pass@host:6379/0
+```
+
+### Déploiement
+```bash
+# Docker Compose (recommandé)
+docker compose up -d friday-bot
+
+# Standalone
+docker build -f Dockerfile.bot -t friday-bot .
+docker run -d --name friday-bot --env-file .env friday-bot
+```
+
+### Documentation complète
+Voir [bot/README.md](bot/README.md) pour architecture détaillée, troubleshooting, tests.
+
+---
+
 ## 🔧 Commandes utiles
 
 ### Development

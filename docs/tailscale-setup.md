@@ -228,9 +228,10 @@ Tableau de bord : https://login.tailscale.com/admin/machines
 2. Cliquer device concerné
 3. **Disable key** → Device immédiatement déconnecté
 
-### Renouvellement clés (automatique)
+### Renouvellement clés
 
-Tailscale renouvelle les clés automatiquement tous les 180 jours (rien à faire)
+Key expiry configuré à **90 jours** (Machines > friday-vps > Key expiry dans le dashboard Tailscale).
+Tailscale affichera un avertissement avant expiration. Renouveler via le dashboard : Machines > friday-vps > Renew key
 
 ### Rotation codes 2FA
 
@@ -282,6 +283,7 @@ sudo systemctl start tailscaled
 - [ ] Compte Tailscale créé
 - [ ] 2FA activé (Google Authenticator / Authy)
 - [ ] Device authorization activée
+- [ ] Key expiry configuré à 90 jours (Machines > friday-vps > Key expiry)
 - [ ] Codes récupération 2FA sauvegardés (gestionnaire + papier)
 - [ ] VPS connecté à Tailscale (hostname: friday-vps)
 - [ ] PC Windows connecté à Tailscale

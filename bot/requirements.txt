@@ -1,0 +1,26 @@
+# Bot Telegram Friday 2.0 - Dependencies
+
+# Telegram (CRIT-2 fix: Story 1.7 requires 21.0+)
+python-telegram-bot==21.0  # Telegram Bot API wrapper
+python-telegram-bot[job-queue]==21.0  # Job queue for scheduled tasks
+
+# Core
+pydantic==2.6.0  # Data validation
+structlog==24.1.0  # Structured logging
+python-dotenv==1.0.0  # Environment variables
+
+# Database
+asyncpg==0.29.0  # PostgreSQL async driver
+
+# Redis
+redis==5.0.1  # Redis client
+aioredis==2.0.1  # Async Redis
+
+# Utils
+PyYAML==6.0.1  # YAML config parsing
+
+# Testing (dev)
+pytest==8.0.0
+pytest-asyncio==0.23.3
+pytest-cov==4.1.0
+pytest-mock==3.12.0

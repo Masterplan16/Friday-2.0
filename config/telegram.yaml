@@ -1,0 +1,62 @@
+# Configuration Bot Telegram Friday 2.0
+# Structure définie dans addendum §11.6
+
+# Heartbeat
+heartbeat_interval_sec: 60  # Vérifier connexion bot toutes les 60s
+
+# Rate limiting (BUG-1.9.8 fix)
+rate_limit_msg_per_sec: 25  # Marge sécurité vs limite Telegram (30 msg/sec)
+rate_limit_msg_per_min: 18  # Marge sécurité vs limite groupes (20 msg/min)
+
+# Message handling
+max_message_length: 4096  # Longueur max Telegram (BUG-1.9.9 fix)
+
+# Topics configuration
+# Note: Les thread_ids sont chargés depuis les variables d'environnement
+# Ce fichier contient uniquement les métadonnées des topics
+
+topics:
+  - name: "Chat & Proactive"
+    key: "chat_proactive"
+    icon: "💬"
+    description: "Conversation bidirectionnelle avec Antonio, heartbeat, reminders"
+    behavior: "bidirectional"  # Antonio peut envoyer des messages
+
+  - name: "Email & Communications"
+    key: "email"
+    icon: "📬"
+    description: "Notifications email: classifications, PJ, emails urgents"
+    behavior: "unidirectional"  # Friday → Antonio uniquement
+
+  - name: "Actions & Validations"
+    key: "actions"
+    icon: "🤖"
+    description: "Actions nécessitant validation (trust=propose), inline buttons"
+    behavior: "unidirectional"
+
+  - name: "System & Alerts"
+    key: "system"
+    icon: "🚨"
+    description: "Santé système: RAM >85%, services down, erreurs critiques"
+    behavior: "unidirectional"
+
+  - name: "Metrics & Logs"
+    key: "metrics"
+    icon: "📊"
+    description: "Métriques non-critiques: actions auto, stats, logs"
+    behavior: "unidirectional"
+
+# User modes (documentation uniquement, pas de code)
+# Antonio configure le muting nativement dans Telegram
+user_modes:
+  normal:
+    description: "Tous topics actifs (5/5)"
+    muted_topics: []
+
+  focus:
+    description: "Chat + Actions + System actifs (3/5)"
+    muted_topics: ["email", "metrics"]
+
+  deep_work:
+    description: "System uniquement (1/5)"
+    muted_topics: ["chat_proactive", "email", "actions", "metrics"]

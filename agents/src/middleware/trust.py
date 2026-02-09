@@ -11,11 +11,13 @@ Ce module implémente le décorateur @friday_action qui :
 
 import functools
 import logging
+import os
 import time
 from typing import Any, Callable, Optional
 
 import asyncpg
 import yaml
+from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup
 
 from agents.src.middleware.models import ActionResult, CorrectionRule
 
@@ -33,16 +35,43 @@ class TrustManager:
     - Gérer les validations Telegram pour trust=propose
     """
 
-    def __init__(self, db_pool: asyncpg.Pool):
+    def __init__(
+        self,
+        db_pool: asyncpg.Pool,
+        telegram_bot: Optional[Bot] = None,
+        telegram_topic_id: Optional[int] = None,
+    ):
         """
         Initialise le TrustManager.
 
         Args:
             db_pool: Pool de connexions PostgreSQL (asyncpg)
+            telegram_bot: Instance Bot Telegram (optionnel, chargé depuis env si None)
+            telegram_topic_id: ID du topic Telegram "Actions & Validations" (optionnel)
         """
         self.db_pool = db_pool
         self.trust_levels: dict[str, dict[str, str]] = {}
         self._loaded = False
+
+        # Telegram configuration (Story 1.7 - inline buttons validation)
+        self.telegram_bot = telegram_bot or self._init_telegram_bot()
+        self.telegram_topic_id = telegram_topic_id or int(
+            os.getenv("TOPIC_ACTIONS_ID", "0")
+        )
+        self.telegram_supergroup_id = int(os.getenv("TELEGRAM_SUPERGROUP_ID", "0"))
+
+    def _init_telegram_bot(self) -> Optional[Bot]:
+        """
+        Initialise le Bot Telegram depuis variables d'environnement.
+
+        Returns:
+            Instance Bot ou None si TOKEN manquant
+        """
+        token = os.getenv("TELEGRAM_BOT_TOKEN")
+        if not token:
+            logger.warning("TELEGRAM_BOT_TOKEN not set, Telegram validation disabled")
+            return None
+        return Bot(token=token)
 
     async def load_trust_levels(self, config_path: str = "config/trust_levels.yaml") -> None:
         """
@@ -198,30 +227,95 @@ class TrustManager:
 
     async def send_telegram_validation(self, result: ActionResult) -> str:
         """
-        Envoie une demande de validation Telegram avec inline buttons.
+        Envoie une demande de validation Telegram avec inline buttons (AC1, Task 2.2).
+
+        Envoie un message au topic "Actions & Validations" avec 3 inline buttons :
+        - [✅ Approve] : Approuver l'action
+        - [❌ Reject] : Rejeter l'action
+        - [📝 Correct] : Corriger l'action (saisie texte)
 
         Args:
             result: ActionResult en attente de validation (trust=propose)
 
         Returns:
-            Message ID Telegram pour tracking
+            Message ID Telegram pour tracking (ou "PENDING_TELEGRAM" si bot indisponible)
         """
-        # TODO: Implémenter l'envoi Telegram avec inline buttons
-        # Pour l'instant, on log simplement
-        logger.warning(
-            "Telegram validation required for %s.%s (receipt %s) - NOT IMPLEMENTED YET",
-            result.module,
-            result.action_type,
-            result.action_id,
+        if not self.telegram_bot:
+            logger.warning(
+                "Telegram bot not configured, cannot send validation for %s.%s",
+                result.module,
+                result.action_type,
+            )
+            return "PENDING_TELEGRAM"
+
+        if not self.telegram_supergroup_id or not self.telegram_topic_id:
+            logger.error(
+                "Telegram supergroup_id or topic_id not configured, cannot send validation"
+            )
+            return "PENDING_TELEGRAM"
+
+        # Préparer le message de validation
+        message_text = (
+            f"🤖 **Action en attente de validation**\n\n"
+            f"**Module** : `{result.module}`\n"
+            f"**Action** : `{result.action_type}`\n"
+            f"**Confidence** : {result.confidence:.2f}\n\n"
+            f"**Input** : {result.input_summary}\n"
+            f"**Output** : {result.output_summary}\n\n"
+            f"**Reasoning** : {result.reasoning[:200]}...\n\n"
+            f"Que veux-tu faire ?"
         )
-        return "PENDING_TELEGRAM"
+
+        # Créer inline buttons [Approve] [Reject] [Correct]
+        receipt_id = result.payload.get("receipt_id", result.action_id)
+        keyboard = [
+            [
+                InlineKeyboardButton("✅ Approve", callback_data=f"approve_{receipt_id}"),
+                InlineKeyboardButton("❌ Reject", callback_data=f"reject_{receipt_id}"),
+                InlineKeyboardButton("📝 Correct", callback_data=f"correct_{receipt_id}"),
+            ]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+
+        try:
+            # Envoyer le message au topic "Actions & Validations"
+            message = await self.telegram_bot.send_message(
+                chat_id=self.telegram_supergroup_id,
+                message_thread_id=self.telegram_topic_id,
+                text=message_text,
+                parse_mode="Markdown",
+                reply_markup=reply_markup,
+            )
+
+            logger.info(
+                "Telegram validation sent for %s.%s (receipt=%s, message_id=%d)",
+                result.module,
+                result.action_type,
+                receipt_id,
+                message.message_id,
+            )
+            return str(message.message_id)
+
+        except Exception as e:
+            logger.error(
+                "Failed to send Telegram validation for %s.%s: %s",
+                result.module,
+                result.action_type,
+                e,
+                exc_info=True,
+            )
+            return "PENDING_TELEGRAM"
 
 
 # Instance globale (initialisée au démarrage de l'app)
 _trust_manager: Optional[TrustManager] = None
 
 
-def init_trust_manager(db_pool: asyncpg.Pool) -> TrustManager:
+def init_trust_manager(
+    db_pool: asyncpg.Pool,
+    telegram_bot: Optional[Bot] = None,
+    telegram_topic_id: Optional[int] = None,
+) -> TrustManager:
     """
     Initialise le TrustManager global.
 
@@ -229,12 +323,14 @@ def init_trust_manager(db_pool: asyncpg.Pool) -> TrustManager:
 
     Args:
         db_pool: Pool de connexions PostgreSQL
+        telegram_bot: Instance Bot Telegram (optionnel)
+        telegram_topic_id: ID du topic "Actions & Validations" (optionnel)
 
     Returns:
         Instance TrustManager initialisée
     """
     global _trust_manager
-    _trust_manager = TrustManager(db_pool)
+    _trust_manager = TrustManager(db_pool, telegram_bot, telegram_topic_id)
     return _trust_manager
 
 

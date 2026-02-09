@@ -33,7 +33,7 @@ services:
       - postgres-data:/var/lib/postgresql/data
       - ./database/migrations:/migrations:ro
     ports:
-      - "127.0.0.1:5432:5432"
+      - "127.0.0.1:5433:5432"  # Port 5433 externe (5432 déjà utilisé)
     networks:
       friday-network:
         ipv4_address: 172.20.0.10
@@ -69,7 +69,7 @@ services:
   # Redis 7 - Cache + Pub/Sub + Streams
   # ============================================
   redis:
-    image: redis:7.8-alpine
+    image: redis:7.4-alpine
     container_name: friday-redis
     restart: unless-stopped
     command: >
@@ -81,17 +81,18 @@ services:
       --save 900 1
       --save 300 10
       --save 60 10000
-      --aclfile /etc/redis/users.acl
     volumes:
       - redis-data:/data
-      - ./config/redis.acl:/etc/redis/users.acl:ro
+    # NOTE: ACL désactivé pour dev local (problème encodage Windows CRLF)
+    # TODO: Corriger encodage avant déploiement VPS production
+    # - ./config/redis.acl:/etc/redis/users.acl:ro
     ports:
       - "127.0.0.1:6379:6379"
     networks:
       friday-network:
         ipv4_address: 172.20.0.11
     healthcheck:
-      test: ["CMD", "redis-cli", "-u", "redis://admin:${REDIS_ADMIN_PASSWORD:-REDACTED_ADMIN_PASSWORD}@localhost:6379", "ping"]
+      test: ["CMD", "redis-cli", "-a", "REDACTED_ADMIN_PASSWORD", "ping"]
       interval: 10s
       timeout: 3s
       retries: 5
@@ -216,24 +217,35 @@ services:
       start_period: 30s
 
   # ============================================
-  # Bot Telegram - Canal unique de contrôle
+  # Bot Telegram - Supergroup avec 5 Topics (Story 1.9)
   # ============================================
   telegram-bot:
     build:
-      context: ./bot
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: Dockerfile.bot
     container_name: friday-telegram-bot
     restart: unless-stopped
     environment:
+      # Telegram credentials
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
-      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
-      - POSTGRES_DSN=postgresql://${POSTGRES_USER:-friday}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-friday}
-      - REDIS_URL=redis://friday_agents:${REDIS_AGENTS_PASSWORD:-REDACTED_AGENTS_PASSWORD}@redis:6379/0
+      - TELEGRAM_SUPERGROUP_ID=${TELEGRAM_SUPERGROUP_ID}
+      # Topics thread IDs (5 requis - Story 1.9)
+      - TOPIC_CHAT_PROACTIVE_ID=${TOPIC_CHAT_PROACTIVE_ID}
+      - TOPIC_EMAIL_ID=${TOPIC_EMAIL_ID}
+      - TOPIC_ACTIONS_ID=${TOPIC_ACTIONS_ID}
+      - TOPIC_SYSTEM_ID=${TOPIC_SYSTEM_ID}
+      - TOPIC_METRICS_ID=${TOPIC_METRICS_ID}
+      # Antonio user ID (pour onboarding - AC6)
+      - ANTONIO_USER_ID=${ANTONIO_USER_ID}
+      # Database & Redis
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-friday}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-friday}
+      - REDIS_URL=redis://friday_bot:${REDIS_BOT_PASSWORD:-REDACTED_BOT_PASSWORD}@redis:6379/0
+      # Autres services
       - GATEWAY_URL=http://gateway:8000
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
     volumes:
       - ./bot:/app:ro
-      - ./bot/media/transit:/app/media/transit
+      - ./config:/app/config:ro
     networks:
       friday-network:
         ipv4_address: 172.20.0.21
@@ -244,12 +256,13 @@ services:
         condition: service_healthy
       gateway:
         condition: service_healthy
-    # TODO Story 1.9: Ajouter healthcheck quand le bot est implémenté
-    # healthcheck:
-    #   test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/health"]
-    #   interval: 30s
-    #   timeout: 5s
-    #   retries: 3
+    # Healthcheck: Vérifie que le process Python tourne (Story 1.9)
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "python.*bot.main"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
 
   # ============================================
   # Alerting Service - Écoute Redis → Telegram
@@ -310,3 +323,53 @@ services:
     #   interval: 30s
     #   timeout: 5s
     #   retries: 3
+
+  # ============================================
+  # Bot Telegram - Interface utilisateur Friday
+  # ============================================
+  # Story 1.9 - CRIT-7 fix: Service manquant
+  friday-bot:
+    build:
+      context: .
+      dockerfile: Dockerfile.bot
+    container_name: friday-bot
+    restart: unless-stopped
+    environment:
+      # Token Telegram
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_SUPERGROUP_ID=${TELEGRAM_SUPERGROUP_ID}
+
+      # Thread IDs des 5 topics
+      - TOPIC_CHAT_PROACTIVE_ID=${TOPIC_CHAT_PROACTIVE_ID}
+      - TOPIC_EMAIL_ID=${TOPIC_EMAIL_ID}
+      - TOPIC_ACTIONS_ID=${TOPIC_ACTIONS_ID}
+      - TOPIC_SYSTEM_ID=${TOPIC_SYSTEM_ID}
+      - TOPIC_METRICS_ID=${TOPIC_METRICS_ID}
+
+      # User ID Antonio (HIGH-1 fix: obligatoire)
+      - ANTONIO_USER_ID=${ANTONIO_USER_ID}
+
+      # Database & Redis
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-friday}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-friday}
+      - REDIS_URL=redis://friday_bot:${REDIS_BOT_PASSWORD:-REDACTED_BOT_PASSWORD}@redis:6379/0
+
+      # Config optionnelle
+      - TELEGRAM_CONFIG_PATH=${TELEGRAM_CONFIG_PATH:-config/telegram.yaml}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    volumes:
+      - ./bot:/app/bot:ro
+      - ./config:/app/config:ro
+    networks:
+      friday-network:
+        ipv4_address: 172.20.0.24
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "python.*bot/main.py"]
+      interval: 60s
+      timeout: 10s
+      start_period: 30s
+      retries: 3

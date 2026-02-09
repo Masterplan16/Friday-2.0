@@ -308,6 +308,66 @@ Le socle qui rend tout le reste possible. Infrastructure, Trust Layer, securite 
 
 ---
 
+### Story 1.16 : CI/CD Pipeline GitHub Actions
+
+**FRs** : NFR22 (logs structures), NFR23 (reproductibilite)
+
+**Description** : Mettre en place un pipeline CI/CD avec GitHub Actions pour tests automatiques et deploiement manuel securise.
+
+**Acceptance Criteria** :
+- Workflow `.github/workflows/ci.yml` avec jobs lint + test-unit + test-integration + build-validation
+- Trigger sur PR + push vers master
+- Cache pip dependencies + Docker layers (optimisation temps build)
+- Script `scripts/deploy.sh` pour deploiement manuel VPS via Tailscale
+- Backup PostgreSQL pre-deploiement automatique
+- Healthcheck `/api/v1/health` avec retry 3x + rollback si echec
+- Notification Telegram succes/echec deploiement
+- Documentation `docs/deployment-runbook.md` (troubleshooting)
+- Badge GitHub Actions status dans README.md
+
+**NFRs** : NFR22 (logs CI/CD structures JSON), NFR23 (builds reproductibles)
+
+**Dependances** : Stories 1.1-1.3 (Docker + Gateway + Healthcheck)
+
+**Fichiers a creer** : .github/workflows/ci.yml, scripts/deploy.sh, docs/deployment-runbook.md
+
+**Estimation** : M (1 jour)
+
+---
+
+### Story 1.17 : Preparation Repository Public
+
+**FRs** : NFR8 (zero exposition), NFR9 (secrets chiffres), NFR10 (security hardening)
+
+**Description** : Securiser le repository avant passage en public : chiffrement secrets SOPS/age, nettoyage tokens hardcodes, scan historique Git, documentation securite.
+
+**Acceptance Criteria** :
+- SOPS/age configure avec vraie cle publique (`.sops.yaml` mis a jour)
+- `.env` chiffre via SOPS → `.env.enc` commite (NFR9)
+- Tokens Telegram hardcodes supprimes de `scripts/setup_telegram_auto.py` (lecture depuis .env)
+- Token Telegram actuel revoque via BotFather + nouveau token genere
+- Historique Git scanne avec git-secrets ou truffleHog (zero secret expose)
+- `.gitignore` verifie (couvre .env, *.key, credentials.json)
+- `SECURITY.md` cree (politique divulgation vulnerabilites)
+- `LICENSE` ajoute (MIT/Apache)
+- GitHub branch protection activee sur master (force PR)
+- GitHub Dependabot active (alerts securite)
+- CI/CD fonctionnel (tests passent sur PR) (Story 1.16)
+
+**NFRs** : NFR8 (zero exposition secrets), NFR9 (chiffrement age), NFR10 (security hardening)
+
+**Dependances** : Story 1.16 (CI/CD doit fonctionner avant repo public)
+
+**Fichiers a modifier** : scripts/setup_telegram_auto.py, .sops.yaml
+
+**Fichiers a creer** : SECURITY.md, LICENSE, .env.enc
+
+**Estimation** : M (1 jour)
+
+**CRITIQUE** : Blocker avant passage repo public. Risque securite maximal si token Telegram fuite.
+
+---
+
 ## Epic 2 : Pipeline Email Intelligent
 
 **10 FRs | 7 stories | CRITIQUE**

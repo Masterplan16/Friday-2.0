@@ -1,0 +1,46 @@
+# Dockerfile.bot - Bot Telegram Friday 2.0
+# Story 1.9 - Container isolé pour bot Telegram avec polling
+
+FROM python:3.11-slim
+
+# Métadonnées
+LABEL maintainer="Friday 2.0"
+LABEL description="Bot Telegram Friday 2.0 avec support topics"
+LABEL version="1.0.0"
+
+# Variables d'environnement Python
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+
+# Workdir
+WORKDIR /app
+
+# Dépendances système (minimal)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copier requirements et installer dépendances Python
+COPY bot/requirements.txt ./bot/
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r bot/requirements.txt
+
+# Copier code bot
+COPY bot/ ./bot/
+
+# Copier config
+COPY config/telegram.yaml ./config/
+
+# Créer utilisateur non-root pour sécurité
+RUN useradd -m -u 1000 friday && \
+    chown -R friday:friday /app
+
+# Passer à utilisateur non-root
+USER friday
+
+# Healthcheck (vérifie que le process Python tourne)
+HEALTHCHECK --interval=60s --timeout=10s --start-period=30s --retries=3 \
+  CMD pgrep -f "python.*bot/main.py" || exit 1
+
+# Point d'entrée - CRIT-5 fix: compatible avec if __name__ == "__main__"
+CMD ["python", "bot/main.py"]

@@ -27,4 +27,4 @@ user friday_metrics on >friday_mt_dev ~metrics:* &* +get +set +incrby +expire +p
 user friday_n8n on >friday_n8_dev ~cache:* ~bull:* ~n8n:* &* +get +set +setex +del +expire +lpush +rpush +lrange +llen +publish +subscribe +sadd +smembers +ping +info +client +select
 
 # EmailEngine - Accès dédié à sa DB Redis (DB 2)
-user friday_emailengine on >friday_ee_dev ~* &* +@read +@write +@pubsub +@connection +select +ping +info +client
+user friday_emailengine on >friday_ee_dev ~* &* +@read +@write -flushall -flushdb -flushdbnosync +@pubsub +@connection +select +ping +info +client

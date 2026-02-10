@@ -15,8 +15,16 @@ creation_rules:
   - path_regex: \.env$
     age: age17zcpkgjxdyk6g34anhymukncq49dtf6k4f3vgp5fchsv04a8quzq7rjn8t  # Clé publique Antonio
 
+  # Fichiers .env.test (pour tests E2E)
+  - path_regex: \.env\.(test|dec)$
+    age: age17zcpkgjxdyk6g34anhymukncq49dtf6k4f3vgp5fchsv04a8quzq7rjn8t  # Clé publique Antonio
+
   # Fichiers .env chiffrés (pour édition in-place)
   - path_regex: \.env\.enc$
+    age: age17zcpkgjxdyk6g34anhymukncq49dtf6k4f3vgp5fchsv04a8quzq7rjn8t  # Clé publique Antonio
+
+  # Fichiers .env.test.enc (tests E2E chiffrés)
+  - path_regex: \.env\.test\.enc$
     age: age17zcpkgjxdyk6g34anhymukncq49dtf6k4f3vgp5fchsv04a8quzq7rjn8t  # Clé publique Antonio
 
   # Fichiers secrets YAML/JSON

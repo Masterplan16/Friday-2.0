@@ -126,6 +126,41 @@ Friday 2.0 intègre un système de **self-healing automatique** en 4 tiers pour 
 
 ---
 
+## 🐳 Docker Image Monitoring ✅
+
+Friday 2.0 surveille automatiquement les mises à jour d'images Docker via **Watchtower en mode monitor-only**. **Aucun auto-update** - le Mainteneur décide manuellement quand mettre à jour.
+
+| Aspect | Configuration |
+|--------|--------------|
+| **Mode** | MONITOR_ONLY (notifications seulement, JAMAIS d'auto-update) |
+| **Schedule** | Quotidien 03h00 (après backup, avant OS updates) |
+| **Notifications** | Telegram topic System via Shoutrrr |
+| **Security** | Docker socket read-only (:ro) |
+| **Resource usage** | ~100 MB RAM, <5% CPU spike |
+
+**Workflow manuel update** :
+1. Réception notification Telegram (service name, current tag, new tag)
+2. Évaluation release notes + breaking changes
+3. Update : `docker compose pull <service> && docker compose up -d <service>`
+4. Validation healthcheck : `curl http://localhost:8000/api/v1/health`
+5. Rollback si nécessaire
+
+**Commandes utiles** :
+```bash
+# Vérifier Watchtower logs
+docker logs watchtower --tail 50
+
+# Trigger manuel check (debug uniquement)
+docker exec watchtower /watchtower --run-once
+
+# Vérifier resource usage
+docker stats watchtower
+```
+
+**Documentation complète** : [docs/watchtower-monitoring.md](docs/watchtower-monitoring.md)
+
+---
+
 ## 🗂️ Structure du projet
 
 ```

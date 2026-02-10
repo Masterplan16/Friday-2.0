@@ -23,7 +23,6 @@ Version: 1.0.0 (Story 1.5.1)
 """
 
 import os
-import re
 from typing import Dict, List, Optional
 
 import httpx
@@ -327,7 +326,10 @@ def _build_mapping(
                 entity_type=entity_type,
                 entity_index=idx,
                 placeholder=placeholder,
-                message="⚠️ Fallback mapping format - deanonymization peut échouer si format Presidio diffère",
+                message=(
+                    "⚠️ Fallback mapping format - "
+                    "deanonymization peut échouer si format Presidio diffère"
+                ),
             )
 
     return mapping

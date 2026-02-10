@@ -82,7 +82,7 @@ CREATE TABLE IF NOT EXISTS core.correction_rules (
     hit_count INTEGER NOT NULL DEFAULT 0,  -- Nombre de fois où la règle a matché
 
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    created_by VARCHAR(100),               -- "antonio" ou "auto-detected"
+    created_by VARCHAR(100),               -- "mainteneur" ou "auto-detected"
 
     -- Index
     CONSTRAINT valid_scope CHECK (scope IN ('global', 'module', 'specific'))

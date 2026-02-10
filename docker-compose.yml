@@ -235,8 +235,8 @@ services:
       - TOPIC_ACTIONS_ID=${TOPIC_ACTIONS_ID}
       - TOPIC_SYSTEM_ID=${TOPIC_SYSTEM_ID}
       - TOPIC_METRICS_ID=${TOPIC_METRICS_ID}
-      # Antonio user ID (pour onboarding - AC6)
-      - ANTONIO_USER_ID=${ANTONIO_USER_ID}
+      # Owner user ID (pour onboarding - AC6)
+      - OWNER_USER_ID=${OWNER_USER_ID}
       # Database & Redis
       - DATABASE_URL=postgresql://${POSTGRES_USER:-friday}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-friday}
       - REDIS_URL=redis://friday_bot:${REDIS_BOT_PASSWORD:-REDACTED_BOT_PASSWORD}@redis:6379/0
@@ -346,8 +346,8 @@ services:
       - TOPIC_SYSTEM_ID=${TOPIC_SYSTEM_ID}
       - TOPIC_METRICS_ID=${TOPIC_METRICS_ID}
 
-      # User ID Antonio (HIGH-1 fix: obligatoire)
-      - ANTONIO_USER_ID=${ANTONIO_USER_ID}
+      # User ID owner (HIGH-1 fix: obligatoire)
+      - OWNER_USER_ID=${OWNER_USER_ID}
 
       # Database & Redis
       - DATABASE_URL=postgresql://${POSTGRES_USER:-friday}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-friday}

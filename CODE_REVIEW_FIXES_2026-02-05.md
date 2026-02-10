@@ -62,13 +62,13 @@
 
 ### **CRITIQUE #4 ✅ CORRIGÉ** : Presidio mapping éphémère → Trust Layer aveugle
 
-**Problème** : Mappings Presidio éphémères → Antonio ne peut pas corriger actions via Trust Layer (pas de contexte).
+**Problème** : Mappings Presidio éphémères → Mainteneur ne peut pas corriger actions via Trust Layer (pas de contexte).
 
 **Corrections appliquées** :
 1. ✅ **MIS À JOUR** : `_docs/architecture-addendum-20260205.md` section 9.1
    - **Solution complète ajoutée** : Stockage chiffré pgcrypto
    - Nouvelle colonne : `core.action_receipts.encrypted_mapping BYTEA`
-   - Commande Telegram : `/receipt <id> --decrypt` (accès Antonio uniquement)
+   - Commande Telegram : `/receipt <id> --decrypt` (accès Mainteneur uniquement)
    - Audit trail : Chaque déchiffrement tracé dans `core.audit_logs`
    - Garanties RGPD : Chiffré au repos (AES-256), clé dans .env chiffré (age/SOPS), purge 30j
 

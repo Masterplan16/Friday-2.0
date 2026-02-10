@@ -496,7 +496,7 @@ TOPIC_SYSTEM_ID=<thread_id>
 TOPIC_METRICS_ID=<thread_id>
 
 # User Mainteneur
-ANTONIO_USER_ID=<user_id>
+OWNER_USER_ID=<user_id>
 
 # Database & Redis
 DATABASE_URL=postgresql://user:pass@host:5432/db

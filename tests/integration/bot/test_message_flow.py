@@ -19,7 +19,7 @@ def mock_update():
 
     update.effective_user = MagicMock(spec=User)
     update.effective_user.id = 123456
-    update.effective_user.username = "antonio"
+    update.effective_user.username = "mainteneur"
 
     update.message = MagicMock(spec=Message)
     update.message.chat_id = -1001234567890

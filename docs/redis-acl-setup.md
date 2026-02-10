@@ -212,10 +212,10 @@ OK
 redis-cli -u redis://friday_agents:PASSWORD@localhost:6379
 > XADD stream:email.received * message_id "123"
 "1707139200000-0"
-> SETEX presidio:mapping:[EMAIL_abc123] 3600 "antonio@example.com"
+> SETEX presidio:mapping:[EMAIL_abc123] 3600 "mainteneur@example.com"
 OK
 > GET presidio:mapping:[EMAIL_abc123]
-"antonio@example.com"
+"mainteneur@example.com"
 > SET cache:test "fail"
 (error) NOPERM this user has no permissions to access one of the keys used as arguments
 ```

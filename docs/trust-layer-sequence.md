@@ -68,7 +68,7 @@ sequenceDiagram
     participant PG as PostgreSQL
     participant L as LLM
     participant T as Telegram
-    participant A as Antonio
+    participant A as Mainteneur
 
     M->>D: draft_email_reply(email)
     activate D
@@ -100,15 +100,15 @@ sequenceDiagram
     D-->>M: ActionResult (pending validation)
     deactivate D
 
-    Note over T,A: Antonio reçoit notification<br/>avec boutons [Approve] [Reject]
+    Note over T,A: Mainteneur reçoit notification<br/>avec boutons [Approve] [Reject]
 
-    alt Antonio approuve
+    alt Mainteneur approuve
         A->>T: click [Approve]
         T->>PG: UPDATE action_receipts SET status='approved'
         T->>M: execute_approved_action(receipt_id)
         M-->>T: action executed
         T->>A: ✅ Action exécutée
-    else Antonio rejette
+    else Mainteneur rejette
         A->>T: click [Reject]
         T->>PG: UPDATE action_receipts SET status='rejected'
         T->>A: ❌ Action annulée
@@ -166,14 +166,14 @@ sequenceDiagram
 
 ```mermaid
 sequenceDiagram
-    participant A as Antonio
+    participant A as Mainteneur
     participant T as Telegram
     participant PG as PostgreSQL
     participant S as System (nightly)
     participant D as @friday_action
     participant M as Module
 
-    Note over A,T: 1. Antonio détecte erreur
+    Note over A,T: 1. Mainteneur détecte erreur
 
     A->>T: /journal
     T->>PG: SELECT * FROM core.action_receipts ORDER BY created_at DESC LIMIT 20
@@ -185,7 +185,7 @@ sequenceDiagram
     PG-->>T: receipt details
     T-->>A: 📄 Détails action<br/>Input: Email de urgent@example.com<br/>Output: → Category: general<br/>❌ ERREUR détectée
 
-    Note over A,T: 2. Antonio corrige manuellement
+    Note over A,T: 2. Mainteneur corrige manuellement
 
     A->>T: /correct abc123 category=urgent
     T->>PG: UPDATE action_receipts SET status='corrected'
@@ -201,10 +201,10 @@ sequenceDiagram
     S->>PG: INSERT INTO correction_rules (conditions, output)
     PG-->>S: rule_id
 
-    S->>T: propose rule to Antonio
+    S->>T: propose rule to Mainteneur
     T-->>A: 💡 Nouvelle règle proposée<br/>[Règle prio 5] SI sender_contains @urgent.com<br/>ALORS category=urgent<br/>[Approve] [Reject]
 
-    Note over A,T: 4. Antonio valide règle
+    Note over A,T: 4. Mainteneur valide règle
 
     A->>T: click [Approve]
     T->>PG: UPDATE correction_rules SET active=true
@@ -232,7 +232,7 @@ sequenceDiagram
     participant PG as PostgreSQL
     participant Y as trust_levels.yaml
     participant T as Telegram
-    participant A as Antonio
+    participant A as Mainteneur
 
     Note over S: Exécution nightly (cron 02:00)
 
@@ -262,7 +262,7 @@ sequenceDiagram
             S->>T: suggest promotion (manual approval required)
             T->>A: ⬆️ Promotion possible<br/>Module: email.classify<br/>Accuracy: 97% (3/100 corrigées)<br/>Validation requise [Approve] [Reject]
 
-            Note over A: Décision manuelle Antonio
+            Note over A: Décision manuelle Mainteneur
         end
     end
 ```
@@ -281,7 +281,7 @@ sequenceDiagram
 | **PG** (PostgreSQL) | Base de données (receipts, rules, metrics) |
 | **L** (LLM) | Claude Sonnet 4.5 API |
 | **T** (Telegram) | Bot Telegram (5 topics) |
-| **A** (Antonio) | Utilisateur final |
+| **A** (Mainteneur) | Utilisateur final |
 | **S** (System) | Scripts nightly/monitoring |
 | **Y** (YAML) | Fichier config/trust_levels.yaml |
 
@@ -291,9 +291,9 @@ sequenceDiagram
 |--------|---------------|
 | **auto** | Action exécutée automatiquement |
 | **pending** | En attente de validation Telegram |
-| **approved** | Validée par Antonio via inline button |
-| **rejected** | Refusée par Antonio ou erreur |
-| **corrected** | Corrigée manuellement par Antonio |
+| **approved** | Validée par Mainteneur via inline button |
+| **rejected** | Refusée par Mainteneur ou erreur |
+| **corrected** | Corrigée manuellement par Mainteneur |
 
 ### Trust levels
 

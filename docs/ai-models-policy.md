@@ -139,7 +139,7 @@ Prochain benchmark : 1er mars 2026
 3. **Phase monitoring renforce (72h)** :
    - Alertes sur accuracy <90%
    - Alertes sur latency p99 >2000ms
-   - Surveillance corrections manuelles Antonio
+   - Surveillance corrections manuelles Mainteneur
 
 4. **Rollback si probleme** :
    ```bash
@@ -289,7 +289,7 @@ Claude Sonnet 4.5 (claude-sonnet-4-5-20250929)
 
 Tendances
   Accuracy globale : 93.5% (-0.3% vs semaine derniere)
-  Total corrections Antonio : 8 cette semaine
+  Total corrections Mainteneur : 8 cette semaine
   Tokens consommes : 1.2M input / 180k output
 
 Prochaine veille mensuelle : 1er mars 2026

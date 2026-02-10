@@ -37,7 +37,7 @@ TOPIC_METRICS_ID=<thread_id>
 
 ### User ID Mainteneur (obligatoire)
 ```bash
-ANTONIO_USER_ID=<user_id>                 # Pour onboarding uniquement Antonio
+OWNER_USER_ID=<user_id>                 # Pour onboarding uniquement
 ```
 
 ### Database & Redis (obligatoire)
@@ -108,7 +108,7 @@ Algorithme séquentiel (ordre prioritaire):
 - Stubs Story 1.11: `/status`, `/journal`, `/receipt`, `/confiance`, `/stats`, `/budget`
 
 ### AC6: Onboarding
-- Message d'accueil envoyé à Antonio la première fois
+- Message d'accueil envoyé au propriétaire la première fois
 - Idempotent (flag `core.user_settings.onboarding_sent`)
 - Présente les 5 topics + commandes de base
 
@@ -170,9 +170,9 @@ pytest tests/integration/bot/ -v
 - Vérifier logs bot pour erreurs PostgreSQL
 
 ### Onboarding pas envoyé
-- Vérifier `ANTONIO_USER_ID` est défini
+- Vérifier `OWNER_USER_ID` est défini
 - Vérifier handler `handle_new_member` enregistré (check logs "Handlers enregistrés")
-- Vérifier user_id correspond bien à Antonio
+- Vérifier user_id correspond bien au propriétaire
 
 ### Heartbeat échoue
 - Vérifier connexion Internet VPS
@@ -192,6 +192,6 @@ Voir story 1.9 pour liste complète des 15 bugs identifiés et corrigés.
 ## Références
 
 - [Architecture addendum §11](_docs/architecture-addendum-20260205.md) - Stratégie Topics
-- [Telegram User Guide](../docs/telegram-user-guide.md) - Guide utilisateur Antonio
+- [Telegram User Guide](../docs/telegram-user-guide.md) - Guide utilisateur
 - [Telegram Topics Setup](../docs/telegram-topics-setup.md) - Setup manuel
 - [Story 1.9](../_bmad-output/implementation-artifacts/1-9-bot-telegram-core-topics.md) - Requirements complets

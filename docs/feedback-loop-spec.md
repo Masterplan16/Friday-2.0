@@ -4,12 +4,12 @@
 
 ## Vue d'ensemble
 
-Le **Feedback Loop** permet à Antonio de corriger Friday et à Friday d'apprendre automatiquement des patterns de correction via clustering sémantique.
+Le **Feedback Loop** permet à Mainteneur de corriger Friday et à Friday d'apprendre automatiquement des patterns de correction via clustering sémantique.
 
 ### Cycle complet
 
 ```
-Antonio corrige action
+Mainteneur corrige action
        ↓
 UPDATE core.action_receipts (correction, status='corrected')
        ↓
@@ -19,7 +19,7 @@ Clustering Levenshtein (≥0.85 similarité, ≥2 corrections)
        ↓
 Proposition règle via Telegram (inline buttons)
        ↓
-Antonio valide [Créer règle]
+Mainteneur valide [Créer règle]
        ↓
 INSERT core.correction_rules
        ↓
@@ -81,7 +81,7 @@ Désactive règle (active=false).
 ## Tables SQL
 
 ### core.action_receipts
-- `correction` TEXT : Texte correction Antonio
+- `correction` TEXT : Texte correction Mainteneur
 - `status` : 'auto' | 'pending' | 'approved' | 'rejected' | **'corrected'**
 
 ### core.correction_rules
@@ -99,12 +99,12 @@ Désactive règle (active=false).
 ## Exemples
 
 ### Correction simple
-Antonio : "URSSAF → finance"
+Mainteneur : "URSSAF → finance"
 → Pattern détecté après 2-3 corrections similaires
 → Règle créée : SI keywords=[urssaf] ALORS category=finance
 
 ### Correction complexe
-Antonio : "Email médical urgent → medical + priority=high"
+Mainteneur : "Email médical urgent → medical + priority=high"
 → Pattern multi-attributs détecté
 → Règle avec output multiple
 

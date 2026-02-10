@@ -32,7 +32,7 @@ INSERT INTO core.correction_rules (
     10,
     true,
     NOW(),
-    'Antonio'
+    'Mainteneur'
 ),
 -- Règle 2 : Email finance détecté
 (
@@ -47,7 +47,7 @@ INSERT INTO core.correction_rules (
     5,
     true,
     NOW(),
-    'Antonio'
+    'Mainteneur'
 ),
 -- Règle 3 : Email médical (trust=blocked)
 (
@@ -62,7 +62,7 @@ INSERT INTO core.correction_rules (
     0,
     true,
     NOW(),
-    'Antonio'
+    'Mainteneur'
 ),
 -- Règle 4 : Archiviste OCR règle générique
 (
@@ -77,5 +77,5 @@ INSERT INTO core.correction_rules (
     20,
     true,
     NOW(),
-    'Antonio'
+    'Mainteneur'
 );

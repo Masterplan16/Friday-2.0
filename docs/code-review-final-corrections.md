@@ -59,10 +59,10 @@ ttl = 3600  # 1h
 
 2. **Tests mis à jour** :
    ```bash
-   > SETEX presidio:mapping:[EMAIL_abc123] 3600 "antonio@example.com"
+   > SETEX presidio:mapping:[EMAIL_abc123] 3600 "mainteneur@example.com"
    OK
    > GET presidio:mapping:[EMAIL_abc123]
-   "antonio@example.com"
+   "mainteneur@example.com"
    ```
 
 3. **Tableau récapitulatif complété** :
@@ -124,7 +124,7 @@ ttl = 3600  # 1h
   - `propose` : Risque moyen (classification, brouillon, suggestions)
   - `blocked` : Risque élevé (conseil médical, juridique, fiscal, envoi email)
 - Notes promotion/rétrogradation documentées :
-  - Promotion : `propose → auto` si accuracy ≥95% sur 3 semaines + validation Antonio
+  - Promotion : `propose → auto` si accuracy ≥95% sur 3 semaines + validation Mainteneur
   - Rétrogradation : `auto → propose` si accuracy <90% sur 1 semaine (échantillon ≥10)
   - Anti-oscillation : 2 semaines min avant promotion après rétrogradation
 
@@ -229,7 +229,7 @@ ttl = 3600  # 1h
 ### Maintenabilité
 - ✅ Politique AI models documentée → Procédure upgrade claire
 - ✅ Trust levels complets (23 modules) → Pas de config manquante
-- ✅ Limitations Coach Day 1 documentées → Attentes réalistes Antonio
+- ✅ Limitations Coach Day 1 documentées → Attentes réalistes Mainteneur
 
 ### Coûts
 - ✅ Matrix décision modèle (Large vs Small vs Ollama) → Optimisation budget
@@ -261,9 +261,9 @@ ttl = 3600  # 1h
 @pytest.mark.asyncio
 async def test_presidio_mapping_roundtrip():
     """Anonymisation → Désanonymisation dans TTL"""
-    text = "Appeler Antonio Lopez à antonio@example.com"
+    text = "Appeler Mainteneur Lopez à mainteneur@example.com"
     anonymized, _ = await anonymize_text(text)
-    assert "Antonio Lopez" not in anonymized
+    assert "Mainteneur Lopez" not in anonymized
     original = await deanonymize_text(anonymized)
     assert original == text
 

@@ -18,15 +18,15 @@ REPLACEMENTS = {
 
     # SECURITY.md
     ("SECURITY.md", r"owner Lopez"): "Friday 2.0 Maintainer",
-    ("SECURITY.md", r"antonio@exemple\.com"): "security@friday-project.example.com",
-    ("SECURITY.md", r"\[antonio@exemple\.com\]\(mailto:antonio@exemple\.com\)"): "[security contact](mailto:security@friday-project.example.com)",
+    ("SECURITY.md", r"mainteneur@exemple\.com"): "security@friday-project.example.com",
+    ("SECURITY.md", r"\[mainteneur@exemple\.com\]\(mailto:mainteneur@exemple\.com\)"): "[security contact](mailto:security@friday-project.example.com)",
     ("SECURITY.md", r"owner"): "Mainteneur",
 
     # .sops.yaml
     (".sops.yaml", r"# Clé publique owner"): "# Clé publique mainteneur",
 
     # .env.example
-    (".env.example", r"ANTONIO_USER_ID"): "OWNER_USER_ID",
+    (".env.example", r"OWNER_USER_ID"): "OWNER_USER_ID",
     (".env.example", r"# ID utilisateur owner"): "# ID utilisateur principal",
 
     # CLAUDE.md

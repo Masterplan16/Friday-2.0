@@ -99,11 +99,11 @@ Créer `.sops.yaml` à la racine du projet :
 creation_rules:
   # Fichiers .env (sources non chiffrées)
   - path_regex: \.env$
-    age: age17zcpkgjxdyk6g34anhymukncq49dtf6k4f3vgp5fchsv04a8quzq7rjn8t  # Clé publique Antonio
+    age: age17zcpkgjxdyk6g34anhymukncq49dtf6k4f3vgp5fchsv04a8quzq7rjn8t  # Clé publique Mainteneur
 
   # Fichiers .env chiffrés (pour édition in-place)
   - path_regex: \.env\.enc$
-    age: age17zcpkgjxdyk6g34anhymukncq49dtf6k4f3vgp5fchsv04a8quzq7rjn8t  # Clé publique Antonio
+    age: age17zcpkgjxdyk6g34anhymukncq49dtf6k4f3vgp5fchsv04a8quzq7rjn8t  # Clé publique Mainteneur
 
   # Fichiers secrets YAML/JSON
   - path_regex: secrets.*\.(yaml|json)$
@@ -228,7 +228,7 @@ rm .env  # Nettoyer après
    creation_rules:
      - path_regex: \.env\.enc$
        age: >-
-         age1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq,  # Antonio
+         age1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq,  # Mainteneur
          age1yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy   # Nouveau dev
    ```
 

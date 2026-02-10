@@ -146,7 +146,7 @@ La code review adversariale v2 de Friday 2.0 est **TERMINÉE** avec succès.
 - [ ] Implémenter middleware `@friday_action` + modèle `ActionResult`
 - [ ] Créer bot Telegram commandes (`/status`, `/journal`, `/receipt`, `/confiance`, `/stats`)
 - [ ] Ajouter métriques LLM par modèle (table `core.llm_metrics`)
-- [ ] Tester feedback loop (correction Antonio → règle → validation)
+- [ ] Tester feedback loop (correction Mainteneur → règle → validation)
 
 ### Story 2+ : Modules métier
 - [ ] Appliquer politique AI models (dev `-latest`, prod version explicite)

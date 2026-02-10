@@ -19,17 +19,17 @@ logger = structlog.get_logger(__name__)
 # User ID owner (pour vérification onboarding) - LAZY LOAD pour tests (CRIT-1 fix)
 def get_antonio_user_id() -> int:
     """
-    Récupère ANTONIO_USER_ID depuis envvar (lazy load pour tests).
+    Récupère OWNER_USER_ID depuis envvar (lazy load pour tests).
 
     Returns:
         User ID owner
 
     Raises:
-        ValueError: Si ANTONIO_USER_ID envvar manquante
+        ValueError: Si OWNER_USER_ID envvar manquante
     """
-    user_id = os.getenv("ANTONIO_USER_ID")
+    user_id = os.getenv("OWNER_USER_ID")
     if not user_id:
-        raise ValueError("ANTONIO_USER_ID envvar manquante - requis pour onboarding")
+        raise ValueError("OWNER_USER_ID envvar manquante - requis pour onboarding")
     return int(user_id)
 
 

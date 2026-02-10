@@ -92,7 +92,7 @@
 **Problème** : Commande automatique rejetée (Browser-Use non fiable) mais pas signalée comme écart.
 
 **Fix** :
-- ✅ Architecture : Section "Gaps & Limitations" avec workaround "Liste générée → Antonio valide → Friday ouvre Carrefour Drive pré-rempli (semi-auto)"
+- ✅ Architecture : Section "Gaps & Limitations" avec workaround "Liste générée → Mainteneur valide → Friday ouvre Carrefour Drive pré-rempli (semi-auto)"
 - **Fichier modifié** : `_docs/architecture-friday-2.0.md` (Section Gaps & Limitations)
 
 ### 9. Graphe de connaissances - Schéma complet ajouté ✅
@@ -168,7 +168,7 @@
 **Fix** :
 - ✅ Architecture : Section "Clarifications techniques complémentaires" avec tableau complet :
   - Générateur TCS (Template Jinja2 + RAG + Claude Sonnet 4.5) [MàJ D17]
-  - Générateur ECOS (Template Jinja2 + Méthodes Antonio + Claude Sonnet 4.5) [MàJ D17]
+  - Générateur ECOS (Template Jinja2 + Méthodes Mainteneur + Claude Sonnet 4.5) [MàJ D17]
   - Actualisateur cours (Extraction sections + PubMed/HAS + Claude Sonnet 4.5) [MàJ D17]
   - Collection jeux vidéo (Form Telegram + PostgreSQL + Playwright scraping eBay)
   - CV académique (Template LaTeX + PostgreSQL + Compilation PDF)
@@ -246,7 +246,7 @@
 
 ### 21. Apprentissage style - Processus documenté ✅
 
-**Problème** : Comment Friday apprend le style rédactionnel d'Antonio ?
+**Problème** : Comment Friday apprend le style rédactionnel d'Mainteneur ?
 
 **Fix** :
 - ✅ Architecture : Section "Clarifications techniques complémentaires" avec :
@@ -326,7 +326,7 @@
 1. **Clarté maximale** : Chaque ambiguïté a une réponse claire dans les docs
 2. **Spécifications complètes** : Workflows n8n et tests IA prêts à implémenter
 3. **Cohérence garantie** : Analyse besoins alignée avec architecture
-4. **Gaps documentés** : Antonio sait exactement quelles fonctionnalités ont des limitations
+4. **Gaps documentés** : Mainteneur sait exactement quelles fonctionnalités ont des limitations
 5. **Décisions justifiées** : Chaque choix technique (Claude Sonnet 4.5 D17, Caddy, etc.) a sa justification
 
 ---

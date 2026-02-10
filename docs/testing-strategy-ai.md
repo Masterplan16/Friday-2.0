@@ -640,7 +640,7 @@ async def test_email_classification_with_output_dump(email_dataset, tmp_path):
 ### Enrichir les datasets
 
 Quand Friday fait une erreur en production :
-1. Antonio corrige via Trust Layer
+1. Mainteneur corrige via Trust Layer
 2. Ajouter le cas dans le dataset de tests intégration
 3. Re-run tests → vérifier que le problème est résolu
 4. Commit dataset enrichi

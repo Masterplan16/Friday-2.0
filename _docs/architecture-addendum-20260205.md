@@ -67,7 +67,7 @@ L'architecture dit "Friday détecte les patterns récurrents automatiquement" ma
 **Étapes** :
 
 1. **Collecte corrections** (via Trust Layer)
-   - Antonio corrige une action → `core.action_receipts.correction` rempli
+   - Mainteneur corrige une action → `core.action_receipts.correction` rempli
    - Exemple: Correction email #1 : "URSSAF → finance (était: professional)"
    - Exemple: Correction email #2 : "Cotisations URSSAF → finance (était: professional)"
 
@@ -99,8 +99,8 @@ L'architecture dit "Friday détecte les patterns récurrents automatiquement" ma
                    # Extraire pattern commun
                    pattern = extract_common_pattern(cluster)
 
-                   # Proposer règle à Antonio via Telegram
-                   await propose_rule_to_antonio(module, action, pattern, cluster)
+                   # Proposer règle à Mainteneur via Telegram
+                   await propose_rule_to_mainteneur(module, action, pattern, cluster)
    ```
 
 3. **Proposition règle** (Telegram inline buttons)
@@ -118,7 +118,7 @@ L'architecture dit "Friday détecte les patterns récurrents automatiquement" ma
    [✅ Créer règle] [✏️ Modifier] [❌ Ignorer]
    ```
 
-4. **Validation Antonio** → Insertion `core.correction_rules`
+4. **Validation Mainteneur** → Insertion `core.correction_rules`
 
 ### 2.3 Extraction pattern commun
 
@@ -160,7 +160,7 @@ def extract_common_pattern(corrections: list[dict]) -> dict:
 
 **Solution** :
 - Seuil de similarité élevé (0.85 sur embeddings)
-- Validation manuelle Antonio avant activation règle
+- Validation manuelle Mainteneur avant activation règle
 - Option "Ignorer ce pattern" → Blacklist
 
 ---
@@ -222,13 +222,13 @@ python scripts/compare_ram_estimates.py \
 
 **❌ Intégration OpenClaw Day 1 REJETÉE**
 
-**Raison** : Score décisionnel Antonio = 20/100 points → Friday Natif + Heartbeat custom
+**Raison** : Score décisionnel Mainteneur = 20/100 points → Friday Natif + Heartbeat custom
 
-| Critère décisionnel | Réponse Antonio | Points | Justification |
+| Critère décisionnel | Réponse Mainteneur | Points | Justification |
 |---------------------|-----------------|--------|---------------|
 | **Multi-chat nécessaire ?** | ❌ NON | +0 | Telegram suffit, pas besoin WhatsApp/Discord |
 | **Skills identifiées (≥10) ?** | ❌ NON | +0 | Aucune skill ClawHub utile identifiée |
-| **Heartbeat critique Day 1 ?** | ✅ OUI | +20 | Proactivité essentielle pour Antonio |
+| **Heartbeat critique Day 1 ?** | ✅ OUI | +20 | Proactivité essentielle pour Mainteneur |
 | **Risque acceptable ?** | ⚠️ INCERTAIN | +0 | Pas à l'aise avec 5-10% risque PII |
 
 **Score total : 20 points < 30 → Option 1 : Friday Natif**
@@ -251,9 +251,9 @@ python scripts/compare_ram_estimates.py \
 | Bénéfice | Gain estimé | Condition |
 |----------|-------------|-----------|
 | Heartbeat proactif | 5-10h économisées | vs cron n8n manuel |
-| Multi-chat intégrations | 15-25h économisées | ❌ Antonio n'en a pas besoin |
+| Multi-chat intégrations | 15-25h économisées | ❌ Mainteneur n'en a pas besoin |
 | Skills auditées | 0-50h économisées | ❌ Aucune skill identifiée |
-| **TOTAL réaliste Antonio** | **5-10h** | Heartbeat UNIQUEMENT |
+| **TOTAL réaliste Mainteneur** | **5-10h** | Heartbeat UNIQUEMENT |
 
 **ROI calculé** :
 ```
@@ -319,7 +319,7 @@ class FridayHeartbeat:
 **Conditions réévaluation OpenClaw** :
 
 **SI** dans 6 mois (août 2026) :
-1. Antonio identifie ≥10 skills ClawHub auditées utiles
+1. Mainteneur identifie ≥10 skills ClawHub auditées utiles
 2. Besoin multi-chat émerge (WhatsApp, Discord)
 3. Écosystème OpenClaw s'est stabilisé (supply chain cleaner)
 4. Heartbeat natif Friday s'avère insuffisant
@@ -353,11 +353,11 @@ Workflows n8n mentionnent `${TELEGRAM_CHAT_ID}` mais aucun doc n'explique commen
 **Étapes** :
 1. Ouvrir Telegram → Rechercher [@BotFather](https://t.me/botfather)
 2. Envoyer `/newbot`
-3. Choisir nom (ex: "Friday 2.0") + username (ex: @friday_antonio_bot)
+3. Choisir nom (ex: "Friday 2.0") + username (ex: @friday_mainteneur_bot)
 4. BotFather répond avec token : `1234567890:ABCdefGHIjklMNOpqrsTUVwxyz`
 5. Copier token → `.env` : `TELEGRAM_BOT_TOKEN=1234567890:ABC...`
 
-#### **TELEGRAM_CHAT_ID** (Antonio)
+#### **TELEGRAM_CHAT_ID** (Mainteneur)
 
 **Méthode 1 - Via bot @userinfobot** (plus simple) :
 1. Ouvrir Telegram → Rechercher [@userinfobot](https://t.me/userinfobot)
@@ -573,7 +573,7 @@ L'architecture dit "accuracy <90% sur 1 semaine" mais ne definit pas formellemen
 accuracy(module, action, semaine) = 1 - (corrections / total_actions)
 
 Ou :
-- corrections = nombre d'actions corrigees par Antonio dans la semaine
+- corrections = nombre d'actions corrigees par Mainteneur dans la semaine
 - total_actions = nombre total d'actions executees (status: auto, propose validee)
 ```
 
@@ -598,8 +598,8 @@ La retrogradation s'applique **par module ET par action** (pas globalement) :
 
 - Calcul : Cron nightly a 02:00 (nightly_metrics)
 - Fenetre : 7 jours glissants (pas semaine calendaire)
-- Notification : Antonio recoit un message Telegram si un trust level change
-- Override : Antonio peut forcer un trust level via `/confiance set email.classify auto`
+- Notification : Mainteneur recoit un message Telegram si un trust level change
+- Override : Mainteneur peut forcer un trust level via `/confiance set email.classify auto`
 
 ### 7.6 Anti-oscillation
 
@@ -701,7 +701,7 @@ Les mappings Presidio (ex: `[PERSON_1] -> "Jean Dupont"`) suivent ce cycle :
 
 #### **Solution debugging Trust Layer** (ajout 2026-02-05, code review adversarial CRITIQUE #4)
 
-**Problematique** : Comment Antonio corrige-t-il une action via Trust Layer si le texte est anonymise dans les receipts ?
+**Problematique** : Comment Mainteneur corrige-t-il une action via Trust Layer si le texte est anonymise dans les receipts ?
 
 **Solution retenue** : Stockage chiffre pgcrypto + acces commande Telegram `/receipt <id> --decrypt`
 
@@ -734,7 +734,7 @@ Les mappings Presidio (ex: `[PERSON_1] -> "Jean Dupont"`) suivent ce cycle :
    # bot/commands/receipt.py
    @friday_action(module="trust", action="decrypt_receipt", trust_default="blocked")
    async def handle_receipt_decrypt(receipt_id: str, user_id: int):
-       # Verifier que user = Antonio uniquement
+       # Verifier que user = Mainteneur uniquement
        if user_id != ANTONIO_TELEGRAM_ID:
            return "❌ Acces refuse (admin uniquement)"
 
@@ -764,7 +764,7 @@ Les mappings Presidio (ex: `[PERSON_1] -> "Jean Dupont"`) suivent ce cycle :
        return f"🔓 Mapping dechiffre:\n{format_mapping(mapping)}"
    ```
 
-4. **Usage Antonio** :
+4. **Usage Mainteneur** :
    ```
    /receipt abc-123            # Voir receipt avec texte anonymise
    /receipt abc-123 --decrypt  # Dechiffrer temporairement pour debug (audit trail)
@@ -773,7 +773,7 @@ Les mappings Presidio (ex: `[PERSON_1] -> "Jean Dupont"`) suivent ce cycle :
 **Garanties RGPD** :
 - ✅ Mappings chiffres au repos (pgcrypto AES-256)
 - ✅ Cle de chiffrement dans .env chiffre (age/SOPS)
-- ✅ Acces restreint Antonio uniquement
+- ✅ Acces restreint Mainteneur uniquement
 - ✅ Audit trail de chaque dechiffrement
 - ✅ Purge automatique apres 30 jours (retention limitee)
 - ✅ Pas d'affichage en clair dans logs (mapping ephemere en memoire Telegram)
@@ -850,7 +850,7 @@ L'architecture initiale spécifiait "canal unique Telegram + progressive disclos
 
 **Tout mélangé dans un seul fil = illisible et contre-productif.**
 
-Antonio a soulevé la question : *"Si tout arrive sur le même canal que le bot... tout ça risque d'être illisible"* → Discussion Party Mode a validé cette préoccupation et conduit à l'architecture ci-dessous.
+Mainteneur a soulevé la question : *"Si tout arrive sur le même canal que le bot... tout ça risque d'être illisible"* → Discussion Party Mode a validé cette préoccupation et conduit à l'architecture ci-dessous.
 
 ### 11.2 Décision : Supergroup avec 5 Topics Spécialisés
 
@@ -868,7 +868,7 @@ graph TB
         T5[📊 Metrics & Logs]
     end
 
-    Antonio((Antonio)) <-->|Conversations| T1
+    Mainteneur((Mainteneur)) <-->|Conversations| T1
     Heartbeat[Heartbeat Engine] -->|Messages proactifs| T1
     EmailAgent[Email Agent] -->|Classifications| T2
     TrustLayer[Trust Layer] -->|Validations| T3
@@ -876,7 +876,7 @@ graph TB
     Metrics[Metrics Service] -->|Stats| T5
 
     style T1 fill:#90EE90
-    style Antonio fill:#FFD700
+    style Mainteneur fill:#FFD700
 ```
 
 #### Topic 1: 💬 Chat & Proactive (DEFAULT, BIDIRECTIONNEL)
@@ -884,7 +884,7 @@ graph TB
 **Rôle** : Conversation principale continue avec Friday
 
 **Contenu** :
-- Conversations Antonio ↔ Friday (questions, commandes, réponses)
+- Conversations Mainteneur ↔ Friday (questions, commandes, réponses)
 - Commandes : `/status`, `/journal`, `/receipt`, `/confiance`, `/stats`
 - Heartbeat checks proactifs (Friday initie toutes les 30min)
 - Suggestions contextuelles et reminders (deadlines thèse, échéances)
@@ -892,10 +892,10 @@ graph TB
 
 **Caractéristiques** :
 - Topic par défaut du supergroup (ouverture automatique)
-- Bidirectionnel : Antonio et Friday échangent naturellement
+- Bidirectionnel : Mainteneur et Friday échangent naturellement
 - Préserve le contexte conversationnel (heartbeat → question → réponse dans même fil)
 
-**Rationale fusion Chat + Heartbeat** : Antonio a suggéré de fusionner les topics "General/Chat" et "Proactive/Heartbeat" initialement séparés. Rationale validée par Mary (Analyst) : *"Le heartbeat N'EST PAS une notification passive - c'est une invitation à interagir"*. Séparer conversation et proactivité fragmenterait le dialogue naturel.
+**Rationale fusion Chat + Heartbeat** : Mainteneur a suggéré de fusionner les topics "General/Chat" et "Proactive/Heartbeat" initialement séparés. Rationale validée par Mary (Analyst) : *"Le heartbeat N'EST PAS une notification passive - c'est une invitation à interagir"*. Séparer conversation et proactivité fragmenterait le dialogue naturel.
 
 #### Topic 2: 📬 Email & Communications
 
@@ -1009,7 +1009,7 @@ def route_event_to_topic(event: Event) -> int:
 
 **Pourquoi recoder ça ?** On donne la granularité (topics), Mainteneur configure son téléphone selon ses besoins.
 
-**Flexibilité utilisateur** : Antonio peut muter/unmuter topics selon le contexte :
+**Flexibilité utilisateur** : Mainteneur peut muter/unmuter topics selon le contexte :
 - **Mode Normal** : Tous topics actifs → voit tout en temps réel
 - **Mode Focus** : Mute Email + Metrics, garde Actions + System → validations + alertes uniquement
 - **Mode Deep Work** : Mute tout sauf System → alertes critiques uniquement
@@ -1095,7 +1095,7 @@ TOPIC_METRICS_ID=<thread_id topic 5>
 
 ### 11.7 Onboarding UX
 
-Quand Antonio rejoint le supergroup la première fois, Friday envoie un **message onboarding dans Chat & Proactive** :
+Quand Mainteneur rejoint le supergroup la première fois, Friday envoie un **message onboarding dans Chat & Proactive** :
 
 ```
 🎉 Bienvenue dans Friday 2.0 Control, Mainteneur !
@@ -1116,7 +1116,7 @@ Commandes utiles : /status, /journal, /confiance
 Prêt à commencer ? 🚀
 ```
 
-**Suggestion Mary (Analyst)** : Ce message aide Antonio à comprendre **où regarder pour quoi** sans lire 50 pages de doc.
+**Suggestion Mary (Analyst)** : Ce message aide Mainteneur à comprendre **où regarder pour quoi** sans lire 50 pages de doc.
 
 ### 11.8 Impact sur Stories Existantes
 
@@ -1129,7 +1129,7 @@ Prêt à commencer ? 🚀
    - Tester tous les cas de routage (unit tests)
 
 2. Bot Telegram doit gérer messages entrants (bidirectionnel)
-   - Listener sur topic Chat & Proactive pour commandes Antonio
+   - Listener sur topic Chat & Proactive pour commandes Mainteneur
    - Réponses dans le même thread_id
 
 3. Inline buttons pour validations dans Actions & Validations topic
@@ -1163,7 +1163,7 @@ Prêt à commencer ? 🚀
    - Mise à jour CLAUDE.md
    - Mise à jour DECISION_LOG.md
 
-2. **Story 1.6.2 : Supergroup Setup** (manuel Antonio)
+2. **Story 1.6.2 : Supergroup Setup** (manuel Mainteneur)
    - Créer supergroup Telegram
    - Activer topics feature
    - Créer 5 topics nommés
@@ -1202,7 +1202,7 @@ Les fonctionnalités suivantes sont **hors scope v1.0** :
 - **Telegram Mini Apps intégration** : Dashboard interactif in-app
 - **Multi-langue topics** : Noms topics localisés (FR/EN selon config)
 
-**Réévaluation** : 3 mois après Story 1.6 déployée (feedback Antonio).
+**Réévaluation** : 3 mois après Story 1.6 déployée (feedback Mainteneur).
 
 ---
 

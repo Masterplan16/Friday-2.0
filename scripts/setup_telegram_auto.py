@@ -17,9 +17,26 @@ from pathlib import Path
 from telegram import Update
 from telegram.ext import Application, ContextTypes, MessageHandler, filters
 
-# ✅ TOKEN PRÉ-REMPLI (fourni par Antonio)
-TOKEN = "8099504071:AAEN_XrVq9lo91-lNRYrW1GbcfTp3i6Am38"
-ANTONIO_USER_ID = 8324884712
+# ✅ TOKEN et USER ID depuis variables d'environnement (sécurisé)
+TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+ANTONIO_USER_ID_STR = os.getenv("ANTONIO_USER_ID")
+
+# Validation fail-explicit
+if not TOKEN:
+    raise ValueError(
+        "TELEGRAM_BOT_TOKEN environment variable required.\n"
+        "Déchiffrez les secrets avec: ./scripts/load-secrets.sh"
+    )
+if not ANTONIO_USER_ID_STR:
+    raise ValueError(
+        "ANTONIO_USER_ID environment variable required.\n"
+        "Déchiffrez les secrets avec: ./scripts/load-secrets.sh"
+    )
+
+try:
+    ANTONIO_USER_ID = int(ANTONIO_USER_ID_STR)
+except ValueError:
+    raise ValueError(f"ANTONIO_USER_ID must be a valid integer, got: {ANTONIO_USER_ID_STR}")
 
 # Stockage des IDs détectés
 detected_topics = {}

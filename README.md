@@ -229,6 +229,21 @@ sops -e .env.example > .env.enc
 sops -d .env.enc > .env
 ```
 
+**Variables d'environnement requises** (structure complète dans [`.env.example`](.env.example)) :
+
+| Variable | Description | Exemple |
+|----------|-------------|---------|
+| `TELEGRAM_BOT_TOKEN` | Token du bot Telegram (@BotFather) | `1234567890:ABCdef...` |
+| `TELEGRAM_SUPERGROUP_ID` | ID du supergroup Telegram | `-1001234567890` |
+| `ANTONIO_USER_ID` | ID utilisateur Telegram d'Antonio | `123456789` |
+| `TOPIC_*_ID` | Thread IDs des 5 topics Telegram | `2`, `3`, `4`, `5`, `6` |
+| `ANTHROPIC_API_KEY` | Clé API Claude (Anthropic) | `sk-ant-...` |
+| `DATABASE_URL` | URL PostgreSQL complète | `postgresql://user:pass@host:5432/db` |
+| `REDIS_URL` | URL Redis complète | `redis://:pass@host:6379/0` |
+| `LOG_LEVEL` | Niveau de logging | `INFO` |
+
+📋 **Note** : Toutes les valeurs sensibles DOIVENT être chiffrées avec SOPS. Voir [docs/secrets-management.md](docs/secrets-management.md) pour le workflow complet.
+
 ### Dépendances verrouillées
 
 Les dépendances Python sont lockées dans `agents/requirements-lock.txt` pour garantir des builds reproductibles (NFR23).

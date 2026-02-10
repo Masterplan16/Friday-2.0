@@ -55,7 +55,7 @@ from apply_migrations import (  # noqa: E402
 # Test 3.1 / AC#1+8: Les 12 migrations existent et sont bien formees
 # ============================================================================
 class TestMigrationFilesExist:
-    """Verifie que les 16 migrations existent et sont ordonnees."""
+    """Verifie que les 18 migrations existent et sont ordonnees."""
 
     EXPECTED_MIGRATIONS = [
         "001_init_schemas",
@@ -74,12 +74,14 @@ class TestMigrationFilesExist:
         "014_telegram_config",
         "015_user_settings",
         "016_trust_metrics_anti_oscillation",
+        "017_action_receipts_extended_status",
+        "018_trust_metrics_missing_columns",
     ]
 
-    def test_sixteen_migration_files_exist(self, migration_files: list[Path]) -> None:
-        """AC#1: 16 migrations disponibles."""
-        assert len(migration_files) == 16, (
-            f"Expected 16 migration files, found {len(migration_files)}: "
+    def test_migration_files_exist(self, migration_files: list[Path]) -> None:
+        """AC#1: 18 migrations disponibles."""
+        assert len(migration_files) == 18, (
+            f"Expected 18 migration files, found {len(migration_files)}: "
             f"{[f.name for f in migration_files]}"
         )
 
@@ -170,12 +172,12 @@ class TestMigrationsTracking:
         assert "version" in script
         assert "checksum" in script
 
-    def test_sixteen_migrations_would_produce_sixteen_records(
+    def test_migrations_would_produce_tracking_records(
         self, migration_files: list[Path]
     ) -> None:
-        """Les 16 fichiers de migration produiraient 16 enregistrements dans schema_migrations."""
-        assert len(migration_files) == 16, (
-            f"Expected 16 migration files to produce 16 tracking records, "
+        """Les 18 fichiers de migration produiraient 18 enregistrements dans schema_migrations."""
+        assert len(migration_files) == 18, (
+            f"Expected 18 migration files to produce 18 tracking records, "
             f"found {len(migration_files)}"
         )
 

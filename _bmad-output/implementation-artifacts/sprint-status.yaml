@@ -1,4 +1,4 @@
-# Mis a jour 2026-02-09 : D17, D19, Story 1.2 review (12/12 migrations validees sur PG reel)
+# Mis a jour 2026-02-10 : Story 1.10 done (34/34 tests, code review 15 findings fixes)
 # generated: 2026-02-08
 # project: Friday 2.0
 # project_key: NOKEY
@@ -56,8 +56,8 @@ development_status:
   1-7-feedback-loop-correction-rules: done  # 2026-02-09: Code review Opus 4.6 completée - 15 issues fixées (6 CRITICAL, 5 HIGH, 4 MEDIUM). Tests complétés (17+ tests vs 2 triviaux), PII anonymisation ajoutée, documentation troubleshooting étendue. 9 fichiers modifiés.
   1-8-trust-metrics-retrogradation: done  # 2026-02-10: Code review complétée - 13 issues corrigés, 30/30 tests PASS ✅
   1-9-bot-telegram-core-topics: done  # 2026-02-09: COMPLETE - 22 bugs fixed, bot tested successfully, 7/7 ACs ✅, validation permissions corrected, Redis ACL TODO avant VPS prod
-  1-10-bot-telegram-inline-buttons-validation: backlog
-  1-11-commandes-telegram-trust-budget: backlog
+  1-10-bot-telegram-inline-buttons-validation: done  # 2026-02-10: Code review adversariale — 15 issues fixes (3C+5H+5M+2L), 34/34 tests, ActionExecutor C1, race condition C2, whitelist C3, status 'executed' H2, validated_by H4.
+  1-11-commandes-telegram-trust-budget: done  # 2026-02-10: Code review adversariale — 15 issues fixes (3C+5H+5M+2L), 52/52 tests, pool asyncpg H1, owner check H5, RAM% C3, progressive disclosure M4
   1-12-backup-chiffre-sync-pc: backlog  # code existe mais pas de story file ni audit bugs
   1-13-self-healing-tier-1-2: backlog  # code existe mais pas de story file ni audit bugs
   1-14-monitoring-docker-images: backlog

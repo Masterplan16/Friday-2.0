@@ -127,7 +127,7 @@ class ActionResult(BaseModel):
         """Valide que status est valide."""
         if v is None:
             return v
-        valid_statuses = {"auto", "pending", "approved", "rejected", "corrected"}
+        valid_statuses = {"auto", "pending", "approved", "rejected", "corrected", "expired", "error", "executed"}
         if v not in valid_statuses:
             raise ValueError(f"status must be one of {valid_statuses}")
         return v

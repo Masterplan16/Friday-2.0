@@ -1,7 +1,8 @@
 """
 Tests unitaires pour bot/handlers/commands.py
 
-Story 1.9 - Tests handlers commandes Telegram (/help, /status, etc.).
+Story 1.9 - Tests handlers commandes Telegram (/help, /start).
+Story 1.11 - Stubs supprimes, commandes reelles dans trust_budget_commands.py.
 """
 
 import pytest
@@ -12,7 +13,7 @@ from bot.handlers import commands
 
 @pytest.fixture
 def mock_update():
-    """Fixture Update Telegram mocké."""
+    """Fixture Update Telegram mocke."""
     update = MagicMock(spec=Update)
     update.effective_user = MagicMock(spec=User)
     update.effective_user.id = 123456
@@ -28,34 +29,29 @@ def mock_update():
 
 @pytest.fixture
 def mock_context():
-    """Fixture Context Telegram mocké."""
+    """Fixture Context Telegram mocke."""
     context = MagicMock()
     return context
-
-
-# ═══════════════════════════════════════════════════════════
-# Tests commandes (3 tests requis)
-# ═══════════════════════════════════════════════════════════
 
 
 @pytest.mark.asyncio
 async def test_command_help(mock_update, mock_context):
     """
-    Test 1/3: Commande /help retourne liste commandes (AC5).
+    Test 1/2: Commande /help retourne liste commandes (AC5).
 
-    Vérifie que /help affiche la liste complète des commandes
-    disponibles dans le format défini par AC5.
+    Verifie que /help affiche la liste complete des commandes
+    disponibles dans le format defini par AC5.
     """
     await commands.help_command(mock_update, mock_context)
 
-    # Vérifier que reply_text a été appelé
+    # Verifier que reply_text a ete appele
     mock_update.message.reply_text.assert_called_once()
 
-    # Récupérer le texte envoyé
+    # Recuperer le texte envoye
     call_args = mock_update.message.reply_text.call_args
     text = call_args[0][0]
 
-    # Vérifier contenu (AC5)
+    # Verifier contenu (AC5)
     assert "Commandes Friday 2.0" in text
     assert "CONVERSATION" in text
     assert "CONSULTATION" in text
@@ -67,77 +63,34 @@ async def test_command_help(mock_update, mock_context):
     assert "/budget" in text
     assert "telegram-user-guide.md" in text
 
-    # Vérifier parse_mode=Markdown
+    # Verifier parse_mode=Markdown
     assert call_args[1]["parse_mode"] == "Markdown"
 
 
 @pytest.mark.asyncio
 async def test_command_start(mock_update, mock_context):
     """
-    Test 2/3: Commande /start est un alias de /help.
+    Test 2/2: Commande /start est un alias de /help.
 
-    Vérifie que /start appelle help_command() et retourne le même texte.
+    Verifie que /start appelle help_command() et retourne le meme texte.
     """
     with patch("bot.handlers.commands.help_command", new=AsyncMock()) as mock_help:
         await commands.start_command(mock_update, mock_context)
 
-        # Vérifier que help_command a été appelé avec les bons arguments
+        # Verifier que help_command a ete appele avec les bons arguments
         mock_help.assert_called_once_with(mock_update, mock_context)
 
 
-@pytest.mark.asyncio
-async def test_command_status_stub(mock_update, mock_context):
+def test_no_stub_commands_remain():
     """
-    Test 3/3: Commandes Story 1.11 retournent stubs.
+    Story 1.11: Verifie que les stubs ont ete supprimes de commands.py.
 
-    Vérifie que /status (et autres commandes Story 1.11) retournent
-    un message indiquant qu'elles seront disponibles dans Story 1.11.
+    Les 6 commandes (status, journal, receipt, confiance, stats, budget)
+    sont maintenant dans trust_budget_commands.py.
     """
-    await commands.status_command_stub(mock_update, mock_context)
-
-    # Vérifier que reply_text a été appelé
-    mock_update.message.reply_text.assert_called_once()
-
-    # Récupérer le texte envoyé
-    call_args = mock_update.message.reply_text.call_args
-    text = call_args[0][0]
-
-    # Vérifier contenu stub
-    assert "Story 1.11" in text
-    assert "status" in text.lower()
-
-
-# ═══════════════════════════════════════════════════════════
-# Tests complémentaires
-# ═══════════════════════════════════════════════════════════
-
-
-@pytest.mark.asyncio
-async def test_all_stub_commands_return_stub_message(mock_update, mock_context):
-    """
-    Test: Toutes les commandes stubs (Story 1.11) retournent un message stub.
-
-    Vérifie que journal, receipt, confiance, stats, budget retournent tous
-    un message indiquant Story 1.11.
-    """
-    stub_commands = [
-        commands.journal_command_stub,
-        commands.receipt_command_stub,
-        commands.confiance_command_stub,
-        commands.stats_command_stub,
-        commands.budget_command_stub,
-    ]
-
-    for stub_command in stub_commands:
-        # Reset mock
-        mock_update.message.reply_text.reset_mock()
-
-        # Appeler commande
-        await stub_command(mock_update, mock_context)
-
-        # Vérifier stub message
-        mock_update.message.reply_text.assert_called_once()
-        call_args = mock_update.message.reply_text.call_args
-        text = call_args[0][0]
-
-        assert "Story 1.11" in text
+    assert not hasattr(commands, "status_command_stub")
+    assert not hasattr(commands, "journal_command_stub")
+    assert not hasattr(commands, "receipt_command_stub")
+    assert not hasattr(commands, "confiance_command_stub")
+    assert not hasattr(commands, "stats_command_stub")
+    assert not hasattr(commands, "budget_command_stub")

@@ -47,11 +47,45 @@ C'est **votre conversation principale avec Friday**. Utilisez ce topic pour :
 
 **Commandes disponibles :**
 ```
-/status          Voir l'état du système (services, RAM, dernières actions)
-/journal         Afficher les 20 dernières actions
-/receipt abc123  Voir le détail d'une action spécifique
-/confiance       Tableau des taux de confiance par module
+/status          Dashboard temps réel (services, dernières actions)
+/journal         20 dernières actions chronologiques
+/receipt <id>    Détail d'une action (-v pour sous-étapes)
+/confiance       Accuracy par module/action
 /stats           Métriques globales agrégées
+/budget          Consommation API Claude du mois
+```
+
+**Flag `-v` (verbose)** : Ajoutez `-v` à toute commande pour plus de détails.
+```
+/confiance -v    Ajoute colonnes recommandation + alertes rétrogradation
+/receipt abc -v  Affiche les sous-étapes détaillées
+/journal -v      Ajoute input_summary et reasoning
+```
+
+**Exemple `/status`** :
+```
+Dashboard Friday 2.0
+
+SERVICES
+  PostgreSQL : OK
+  Redis : OK
+  Bot : OK (uptime 2j 14h)
+
+5 DERNIERES ACTIONS
+  email.classify - auto (95%) - il y a 3min
+  archiviste.ocr - auto (92%) - il y a 15min
+  ...
+```
+
+**Exemple `/budget`** :
+```
+Budget API Claude - Fevrier 2026
+
+Tokens input : 1,234,567
+Tokens output : 456,789
+Cout estime : 10.32 EUR
+Budget mensuel : 45.00 EUR
+Utilisation : 22.9%
 ```
 
 **Questions libres :**
@@ -119,7 +153,7 @@ Actions nécessitant **votre validation** (trust level = `propose`).
 
 ### Ce que vous verrez ici
 
-**Inline buttons pour approbation :**
+**Inline buttons pour approbation (Story 1.10) :**
 ```
 📝 Action en attente de validation
 
@@ -130,21 +164,31 @@ Input : Email de Sarah (demande info thèse)
 Brouillon proposé :
 "Bonjour Sarah, voici les informations demandées..."
 
-[✅ Approuver] [✏️ Modifier] [❌ Rejeter]
+[Approve] [Reject] [Correct]
 ```
+
+**Comportement des boutons :**
+- **Approve** : L'action est exécutée automatiquement, le message affiche "Approuvé"
+- **Reject** : L'action est annulée, le message affiche "Rejeté"
+- **Correct** : Friday vous demande la bonne réponse et enregistre une correction
+
+Seul le Mainteneur (OWNER_USER_ID) peut interagir avec les boutons. Un clic sur un bouton déjà traité affiche "Action déjà traitée".
+
+**Timeout configurable :**
+Si `validation_timeout_hours` est défini dans `config/telegram.yaml`, les actions non traitées expirent automatiquement après le délai configuré.
 
 **Corrections appliquées :**
 ```
-✏️ Correction enregistrée
+Correction enregistrée
 Tu as corrigé : "Email URSSAF → finance (était: professional)"
 → Pattern détecté (2 occurrences similaires)
 → Règle proposée : SI email contient "URSSAF" ALORS finance
-[✅ Créer règle] [❌ Ignorer]
+[Approve] [Reject]
 ```
 
 **Trust level changes :**
 ```
-📈 Trust level mis à jour
+Trust level mis à jour
 email.classify : propose → auto
 Raison : Accuracy 97% sur 3 semaines
 ```

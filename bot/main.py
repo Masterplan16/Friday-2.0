@@ -16,7 +16,7 @@ import time
 
 import structlog
 from bot.config import ConfigurationError, load_bot_config, validate_bot_permissions
-from bot.handlers import commands, messages, trust_commands
+from bot.handlers import commands, messages, trust_budget_commands, trust_commands
 from telegram.ext import (
     Application,
     ApplicationBuilder,
@@ -101,16 +101,32 @@ class FridayBot:
         self.application.add_handler(CommandHandler("help", commands.help_command))
         self.application.add_handler(CommandHandler("start", commands.start_command))
 
-        # Commandes Story 1.11 (stubs)
-        self.application.add_handler(CommandHandler("status", commands.status_command_stub))
-        self.application.add_handler(CommandHandler("journal", commands.journal_command_stub))
-        self.application.add_handler(CommandHandler("receipt", commands.receipt_command_stub))
-        self.application.add_handler(CommandHandler("confiance", commands.confiance_command_stub))
-        self.application.add_handler(CommandHandler("stats", commands.stats_command_stub))
-        self.application.add_handler(CommandHandler("budget", commands.budget_command_stub))
+        # Commandes Story 1.11 - Trust & Budget (AC1-AC7)
+        self.application.add_handler(CommandHandler("status", trust_budget_commands.status_command))
+        self.application.add_handler(CommandHandler("journal", trust_budget_commands.journal_command))
+        self.application.add_handler(CommandHandler("receipt", trust_budget_commands.receipt_command))
+        self.application.add_handler(CommandHandler("confiance", trust_budget_commands.confiance_command))
+        self.application.add_handler(CommandHandler("stats", trust_budget_commands.stats_command))
+        self.application.add_handler(CommandHandler("budget", trust_budget_commands.budget_command))
 
         # Commandes Story 1.8 - Trust management (AC4, AC5, AC6)
         self.application.add_handler(CommandHandler("trust", trust_commands.trust_command_router))
+
+        # Story 1.10 - Inline buttons callbacks (Approve/Reject/Correct)
+        from bot.action_executor import ActionExecutor
+        from bot.handlers.callbacks import register_callbacks_handlers
+        from bot.handlers.corrections import register_corrections_handlers
+
+        # Note: db_pool sera initialise au demarrage (placeholder None pour l'instant)
+        db_pool = getattr(self, "db_pool", None)
+        if db_pool:
+            # C1 fix: Creer ActionExecutor et le passer aux callbacks
+            action_executor = ActionExecutor(db_pool)
+            register_callbacks_handlers(self.application, db_pool, action_executor=action_executor)
+            register_corrections_handlers(self.application, db_pool)
+            logger.info("Story 1.10 callback handlers registered with ActionExecutor")
+        else:
+            logger.warning("db_pool not available, callback handlers not registered")
 
         # Messages texte libres (Chat & Proactive uniquement)
         self.application.add_handler(

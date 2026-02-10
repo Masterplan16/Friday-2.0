@@ -12,16 +12,16 @@
 ## Story
 
 As a **développeur Friday 2.0**,
-I want **un cycle de feedback complet permettant à Antonio de corriger Friday et à Friday d'apprendre des patterns de correction**,
+I want **un cycle de feedback complet permettant à Mainteneur de corriger Friday et à Friday d'apprendre des patterns de correction**,
 so that **Friday s'améliore automatiquement au fil du temps sans réinventer les mêmes erreurs**.
 
 ---
 
 ## Acceptance Criteria
 
-### AC1: Antonio peut corriger une action via Telegram (FR28) ✅
+### AC1: Mainteneur peut corriger une action via Telegram (FR28) ✅
 
-- Antonio clique sur [Correct] dans une notification trust=propose
+- Mainteneur clique sur [Correct] dans une notification trust=propose
 - Friday capture la correction textuelle ("URSSAF → finance" au lieu de "professional")
 - La correction est stockée dans `core.action_receipts.correction` TEXT
 - La correction est liée au receipt original via `feedback_comment`
@@ -31,7 +31,7 @@ so that **Friday s'améliore automatiquement au fil du temps sans réinventer le
 
 - Colonne `correction` TEXT existe (migration 011 déjà appliquée)
 - Colonne `feedback_comment` TEXT existe (migration 011 déjà appliquée)
-- Status passe de 'pending' à 'corrected' après correction Antonio
+- Status passe de 'pending' à 'corrected' après correction Mainteneur
 - Trigger `updated_at` mis à jour automatiquement
 - **Validation** : `\d core.action_receipts` montre les colonnes correction + feedback_comment
 
@@ -51,7 +51,7 @@ so that **Friday s'améliore automatiquement au fil du temps sans réinventer le
 - Inline buttons : [✅ Créer règle] [✏️ Modifier] [❌ Ignorer]
 - Clic [✅] → INSERT dans `core.correction_rules` avec source_receipts = UUID[]
 - Clic [❌] → Blacklist pattern (éviter re-proposition)
-- **Validation** : Antonio reçoit message Telegram après nightly avec proposition règle
+- **Validation** : Mainteneur reçoit message Telegram après nightly avec proposition règle
 
 ### AC5: CRUD correction_rules via Telegram (FR105) ⚠️ PARTIEL
 
@@ -60,7 +60,7 @@ so that **Friday s'améliore automatiquement au fil du temps sans réinventer le
 - `/rules edit <id>` → ❌ **NON IMPLÉMENTÉ** (reporté story future, complexité conversation multi-step) (HIGH-3)
 - `/rules delete <id>` → Désactiver règle (active=false, pas DELETE SQL) ✅
 - **Format règle** : `[Règle priorité N] Scope: SI conditions ALORS output (appliquée X fois)`
-- **Validation** : Antonio exécute `/rules list` et voit ses règles (list/show/delete implémentés, edit manquant)
+- **Validation** : Mainteneur exécute `/rules list` et voit ses règles (list/show/delete implémentés, edit manquant)
 
 ### AC6: Limit 50 règles max, injection prompt LLM ✅
 
@@ -206,7 +206,7 @@ ADD COLUMN avg_confidence FLOAT DEFAULT NULL;
 **Fichier** : `agents/src/middleware/trust.py`
 
 **Problème** : Aucun code pour :
-1. Antonio clique [Correct] → Telegram bot capture correction
+1. Mainteneur clique [Correct] → Telegram bot capture correction
 2. Bot associe correction texte au receipt original
 3. UPDATE core.action_receipts SET correction = $1, status = 'corrected' WHERE id = $2
 
@@ -217,7 +217,7 @@ ADD COLUMN avg_confidence FLOAT DEFAULT NULL;
 async def handle_correction(call):
     receipt_id = call.data.split("_")[1]
     await bot.send_message(call.from_user.id, "Quelle est la correction ? (ex: 'URSSAF → finance')")
-    # Attendre réponse Antonio → stocker dans correction
+    # Attendre réponse Mainteneur → stocker dans correction
     bot.register_next_step_handler(call.message, lambda msg: store_correction(receipt_id, msg.text))
 ```
 
@@ -282,7 +282,7 @@ async def send_telegram_validation(action_result, receipt_id):
 
 - [x] **Task 2.1** : Créer `bot/handlers/corrections.py`
   - [x] Handler callback `correct_<receipt_id>` pour inline button [Correct]
-  - [x] Prompt Antonio pour texte correction
+  - [x] Prompt Mainteneur pour texte correction
   - [x] UPDATE `core.action_receipts SET correction = $1, feedback_comment = $2, status = 'corrected', updated_at = NOW() WHERE id = $3`
 
 - [x] **Task 2.2** : Modifier `agents/src/middleware/trust.py`
@@ -417,7 +417,7 @@ Validation manuelle recommandée ou intégration dans suite E2E Story 1.11+.
 - Classes : `PascalCase` (PatternDetector, RuleProposer)
 - Fonctions : `snake_case` (detect_patterns, extract_common_pattern)
 
-**RGPD** : Corrections d'Antonio peuvent contenir du PII → anonymiser avant stockage dans correction field
+**RGPD** : Corrections d'Mainteneur peuvent contenir du PII → anonymiser avant stockage dans correction field
 
 **Error handling** :
 - Hiérarchie : `FridayError` > `FeedbackLoopError` > spécifiques
@@ -611,9 +611,9 @@ a4e4128 feat(gateway): implement fastapi gateway with healthcheck endpoints
 - Fenêtre : 7 jours glissants (pas semaine calendaire)
 
 **PRD - FRs** :
-- FR28 : Antonio peut corriger les actions de Friday, déclenchant l'apprentissage
+- FR28 : Mainteneur peut corriger les actions de Friday, déclenchant l'apprentissage
 - FR29 : Friday peut détecter des patterns de correction et proposer de nouvelles règles
-- FR105 : Antonio peut gérer les correction_rules (lister, modifier, supprimer) via Telegram
+- FR105 : Mainteneur peut gérer les correction_rules (lister, modifier, supprimer) via Telegram
 
 **Migration SQL** : [database/migrations/011_trust_system.sql](../../database/migrations/011_trust_system.sql)
 
@@ -739,7 +739,7 @@ Non applicable - Story créée via workflow BMAD `create-story`
 **2026-02-09 [HEURE ACTUELLE] UTC** — Code Review Adversarial - 15 problèmes fixés
 
 ### 🔴 CRITICAL (6 fixes)
-1. **CRIT-1** : Import-time check ANTONIO_USER_ID → Déplacé en fonction lazy `get_antonio_user_id()` pour tests
+1. **CRIT-1** : Import-time check OWNER_USER_ID → Déplacé en fonction lazy `get_antonio_user_id()` pour tests
    - Fichier : `bot/handlers/messages.py` lignes 17-29, 125-127
 2. **CRIT-2** : Version python-telegram-bot 20.8 → 21.0
    - Fichier : `bot/requirements.txt` lignes 3-5

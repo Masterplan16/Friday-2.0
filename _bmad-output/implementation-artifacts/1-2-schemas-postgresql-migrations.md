@@ -78,7 +78,7 @@ Afin que **la base de donnees PostgreSQL soit entierement structuree avec les 3 
 
 **Migration 010 (`010_knowledge_finance.sql`) — 1 bug :**
 
-6. **account_type incorrect** : Le CHECK constraint utilise `('bank', 'sas', 'eurl', 'sci', 'personal')` mais l'architecture FR37 specifie 5 perimetres : **SELARL, SCM, SCI-1, SCI-2, Perso**. Les types `sas` et `eurl` n'existent pas dans le contexte d'Antonio.
+6. **account_type incorrect** : Le CHECK constraint utilise `('bank', 'sas', 'eurl', 'sci', 'personal')` mais l'architecture FR37 specifie 5 perimetres : **SELARL, SCM, SCI-1, SCI-2, Perso**. Les types `sas` et `eurl` n'existent pas dans le contexte d'Mainteneur.
 
 **apply_migrations.py — 3 bugs :**
 

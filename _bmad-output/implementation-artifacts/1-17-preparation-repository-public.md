@@ -11,7 +11,7 @@
 
 ## Story
 
-En tant qu'**Antonio (développeur/mainteneur)**,
+En tant qu'**Mainteneur (développeur/mainteneur)**,
 Je veux **sécuriser le repository avant passage en public**,
 afin que **zéro secret ne soit exposé, le repo soit conforme aux standards de sécurité open source, et la collaboration future soit sécurisée**.
 
@@ -21,8 +21,8 @@ afin que **zéro secret ne soit exposé, le repo soit conforme aux standards de 
 
 ### AC1 : SOPS/age configuré avec vraie clé publique
 
-- ✅ `.sops.yaml` mis à jour avec vraie clé publique age d'Antonio (remplacer placeholder `age1qqq...` actuel)
-- ✅ Clé privée age stockée UNIQUEMENT sur machine locale Antonio (`~/.age/friday-key.txt`)
+- ✅ `.sops.yaml` mis à jour avec vraie clé publique age d'Mainteneur (remplacer placeholder `age1qqq...` actuel)
+- ✅ Clé privée age stockée UNIQUEMENT sur machine locale Mainteneur (`~/.age/friday-key.txt`)
 - ✅ Clé privée age JAMAIS commitée dans git
 - ✅ Test de chiffrement/déchiffrement : `sops -e .env > .env.enc && sops -d .env.enc > .env.dec && diff .env .env.dec`
 - ✅ Documentation : section "Setup développeur" dans `docs/secrets-management.md` mise à jour avec vraie clé publique
@@ -75,7 +75,7 @@ afin que **zéro secret ne soit exposé, le repo soit conforme aux standards de 
 
 - ✅ Fichier `SECURITY.md` créé à la racine avec sections :
   - **Supported Versions** : Version actuelle (1.0.0) supportée
-  - **Reporting a Vulnerability** : Email contact Antonio + délai réponse attendu (48h)
+  - **Reporting a Vulnerability** : Email contact Mainteneur + délai réponse attendu (48h)
   - **Security Best Practices** : Guide pour utilisateurs (Tailscale 2FA, SOPS/age, rotation tokens)
   - **Responsible Disclosure** : Politique divulgation coordonnée (pas de publication avant fix)
 - ✅ Référence dans README.md : lien vers SECURITY.md dans section "Sécurité"
@@ -84,17 +84,17 @@ afin que **zéro secret ne soit exposé, le repo soit conforme aux standards de 
 
 - ✅ Fichier `LICENSE` créé à la racine
 - ✅ Licence choisie : **MIT** (permissive, compatible usage personnel + futur partage)
-- ✅ Copyright : © 2026 Antonio (prénom/pseudonyme uniquement, pas nom complet)
+- ✅ Copyright : © 2026 Mainteneur (prénom/pseudonyme uniquement, pas nom complet)
 - ✅ Header licence ajouté dans fichiers principaux (optionnel, recommandé pour `agents/`, `services/`)
 
 ### AC9 : GitHub branch protection activée sur master
 
 - ✅ GitHub branch protection rules configurées sur `master` :
   - Require pull request before merging (force PR, pas de push direct)
-  - Require approvals : 1 review minimum (Antonio self-review OK pour repo solo)
+  - Require approvals : 1 review minimum (Mainteneur self-review OK pour repo solo)
   - Require status checks to pass : CI workflow (lint, test-unit, test-integration, build-validation)
   - Require branches to be up to date : true (évite merge conflicts)
-  - Do not allow bypassing : false (Antonio peut bypass en urgence)
+  - Do not allow bypassing : false (Mainteneur peut bypass en urgence)
 - ✅ Test validation : tentative push direct sur master doit être rejetée
 
 ### AC10 : GitHub Dependabot activé
@@ -104,7 +104,7 @@ afin que **zéro secret ne soit exposé, le repo soit conforme aux standards de 
 - ✅ Fichier `.github/dependabot.yml` créé avec config :
   - Package ecosystems : pip (agents/requirements.txt), docker (Dockerfile, docker-compose.yml)
   - Update schedule : weekly (lundi 8h UTC)
-  - Assignees : Antonio
+  - Assignees : Mainteneur
   - Labels : `dependencies`, `security`
 - ✅ Premier scan Dependabot exécuté (aucune vulnérabilité critique attendue)
 
@@ -126,7 +126,7 @@ afin que **zéro secret ne soit exposé, le repo soit conforme aux standards de 
   - Noter clé publique (format `age1...`) et clé privée (format `AGE-SECRET-KEY-1...`)
   - Clé privée JAMAIS partagée, clé publique utilisée pour chiffrement
 - [ ] **Subtask 1.2** : Mettre à jour `.sops.yaml` avec vraie clé publique
-  - Remplacer placeholder `age1qqqqqqq...` par vraie clé publique Antonio
+  - Remplacer placeholder `age1qqqqqqq...` par vraie clé publique Mainteneur
   - Vérifier format YAML valide
   - Commiter `.sops.yaml` (contient seulement clé publique, safe)
 - [ ] **Subtask 1.3** : Tester chiffrement/déchiffrement avec vraie clé
@@ -136,7 +136,7 @@ afin que **zéro secret ne soit exposé, le repo soit conforme aux standards de 
   - Vérifier contenu identique : `diff .env.test .env.test.dec`
   - Cleanup : `rm .env.test .env.test.enc .env.test.dec`
 - [ ] **Subtask 1.4** : Mettre à jour `docs/secrets-management.md`
-  - Remplacer exemples clés fictives par vraie clé publique Antonio
+  - Remplacer exemples clés fictives par vraie clé publique Mainteneur
   - Ajouter note : "Clé publique actuelle projet Friday 2.0"
 
 ### Task 2 : Chiffrer et commiter .env (AC2)
@@ -265,7 +265,7 @@ afin que **zéro secret ne soit exposé, le repo soit conforme aux standards de 
   - Version actuelle : 1.0.0 (MVP Day 1) - Supportée ✅
   - Versions futures : Rolling release (toujours dernière version stable)
 - [ ] **Subtask 7.3** : Section "Reporting a Vulnerability"
-  - Contact : Email Antonio (créer alias dédié ex: security+friday@...)
+  - Contact : Email Mainteneur (créer alias dédié ex: security+friday@...)
   - Délai réponse : 48h max (acknowledgment), 7 jours max (triage + plan fix)
   - Process : Email → Triage → Fix privé → Test → Disclosure coordonnée
 - [ ] **Subtask 7.4** : Section "Security Best Practices"
@@ -283,12 +283,12 @@ afin que **zéro secret ne soit exposé, le repo soit conforme aux standards de 
 
 - [ ] **Subtask 8.1** : Créer fichier `LICENSE` à la racine
   - Template MIT License : https://opensource.org/licenses/MIT
-  - Copyright : `Copyright (c) 2026 Antonio` (prénom/pseudonyme uniquement)
+  - Copyright : `Copyright (c) 2026 Mainteneur` (prénom/pseudonyme uniquement)
   - Année : 2026 (année création projet)
 - [ ] **Subtask 8.2** : Ajouter header licence dans fichiers principaux (optionnel)
   - Format header :
     ```python
-    # Copyright (c) 2026 Antonio
+    # Copyright (c) 2026 Mainteneur
     # SPDX-License-Identifier: MIT
     ```
   - Fichiers recommandés : `agents/src/__init__.py`, `services/gateway/main.py`
@@ -303,12 +303,12 @@ afin que **zéro secret ne soit exposé, le repo soit conforme aux standards de 
   - GitHub : Settings > Branches > Add branch protection rule
   - Branch name pattern : `master`
   - **Require a pull request before merging** : ✅ ON
-    - Required approvals : 1 (Antonio self-review OK)
+    - Required approvals : 1 (Mainteneur self-review OK)
     - Dismiss stale approvals : ✅ ON (si nouveau commit après review)
   - **Require status checks to pass** : ✅ ON
     - Required checks : `lint`, `test-unit`, `test-integration`, `build-validation` (4 jobs CI)
     - Require branches to be up to date : ✅ ON (évite merge conflicts)
-  - **Do not allow bypassing** : ❌ OFF (Antonio peut bypass en urgence)
+  - **Do not allow bypassing** : ❌ OFF (Mainteneur peut bypass en urgence)
   - Save changes
 - [ ] **Subtask 9.2** : Tester protection avec PR de test
   - Créer branche test : `git checkout -b test/branch-protection`
@@ -344,7 +344,7 @@ afin que **zéro secret ne soit exposé, le repo soit conforme aux standards de 
           time: "08:00"
           timezone: "Europe/Paris"
         assignees:
-          - "antonio"  # Remplacer par username GitHub Antonio
+          - "mainteneur"  # Remplacer par username GitHub Mainteneur
         labels:
           - "dependencies"
           - "security"
@@ -358,7 +358,7 @@ afin que **zéro secret ne soit exposé, le repo soit conforme aux standards de 
           time: "08:00"
           timezone: "Europe/Paris"
         assignees:
-          - "antonio"
+          - "mainteneur"
         labels:
           - "dependencies"
           - "docker"
@@ -467,7 +467,7 @@ if not TELEGRAM_BOT_TOKEN:
 ```
 
 **Fichiers concernés Story 1.17** :
-- `.sops.yaml` : Config SOPS avec clé publique age Antonio
+- `.sops.yaml` : Config SOPS avec clé publique age Mainteneur
 - `.env.enc` : Secrets chiffrés (commitable)
 - `.env.example` : Structure secrets avec valeurs fictives (guide dev)
 - `scripts/load-secrets.sh` : Script déchiffrement automatique
@@ -536,11 +536,11 @@ tests/
 #### Fichiers à modifier
 
 ```
-.sops.yaml                              # Mise à jour clé publique age Antonio (remplacer placeholder)
+.sops.yaml                              # Mise à jour clé publique age Mainteneur (remplacer placeholder)
 .gitignore                              # Vérifier patterns sensibles (*.key, *.pem, credentials.json, .age/, .sops/)
 README.md                               # Section "Sécurité" + badge licence + liens docs
 scripts/setup_telegram_auto.py          # Supprimer tokens hardcodés → os.getenv() + fail-explicit
-docs/secrets-management.md              # Mise à jour clé publique Antonio + exemples
+docs/secrets-management.md              # Mise à jour clé publique Mainteneur + exemples
 ```
 
 #### Fichiers à supprimer
@@ -762,7 +762,7 @@ git secrets --add 'REDIS_PASSWORD\s*=\s*["\'][^"\']{8,}["\']'
 - **Ecosystems supportés** : pip, docker, npm, github-actions
 - **Update schedule** : Weekly (lundi 8h) OU Monthly (1er du mois)
 - **Open PR limit** : 5 max (évite spam PR)
-- **Assignees** : Antonio (auto-assign toutes PR Dependabot)
+- **Assignees** : Mainteneur (auto-assign toutes PR Dependabot)
 - **Labels** : `dependencies`, `security` (auto-labeling)
 
 **Best practices** :
@@ -849,7 +849,7 @@ git filter-branch --force --index-filter \
 
 1. **Nettoyage historique Git** (si secrets détectés AC5)
    - Impact : Force push requis = casser clones existants
-   - Mitigation : Projet solo Antonio, aucun clone externe → impact minimal
+   - Mitigation : Projet solo Mainteneur, aucun clone externe → impact minimal
    - Fallback : Si historique complexe, créer nouveau repo clean + migration
 
 2. **Token Telegram révocation** (AC4)
@@ -860,7 +860,7 @@ git filter-branch --force --index-filter \
 3. **GitHub branch protection** (AC9)
    - Impact : Push direct master bloqué, workflow changé
    - Mitigation : Documentation claire workflow PR (créer branche → PR → merge)
-   - Fallback : Antonio peut bypass protection si urgence (setting "Do not allow bypassing" = OFF)
+   - Fallback : Mainteneur peut bypass protection si urgence (setting "Do not allow bypassing" = OFF)
 
 ---
 
@@ -884,7 +884,7 @@ git filter-branch --force --index-filter \
 
 **Fichiers à créer** (9 nouveaux) :
 - `SECURITY.md` (politique sécurité + responsible disclosure)
-- `LICENSE` (MIT, copyright Antonio 2026)
+- `LICENSE` (MIT, copyright Mainteneur 2026)
 - `.env.enc` (secrets chiffrés via SOPS)
 - `.env.example` (structure secrets, valeurs fictives)
 - `.github/dependabot.yml` (config pip + docker ecosystems)
@@ -893,7 +893,7 @@ git filter-branch --force --index-filter \
 - `tests/e2e/test_repo_security.sh` (6 tests E2E sécurité)
 
 **Fichiers à modifier** (5) :
-- `.sops.yaml` (mise à jour clé publique age Antonio)
+- `.sops.yaml` (mise à jour clé publique age Mainteneur)
 - `.gitignore` (vérification patterns sensibles)
 - `README.md` (section Sécurité + badge licence + liens docs)
 - `scripts/setup_telegram_auto.py` (supprimer tokens hardcodés → os.getenv())

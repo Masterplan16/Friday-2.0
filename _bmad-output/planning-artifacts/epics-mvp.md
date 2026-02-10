@@ -140,10 +140,10 @@ Le socle qui rend tout le reste possible. Infrastructure, Trust Layer, securite 
 
 **FRs** : FR28, FR29, FR105
 
-**Description** : Implementer le cycle de correction : Antonio corrige → Friday detecte patterns → proposition de regle → validation → regle active.
+**Description** : Implementer le cycle de correction : Mainteneur corrige → Friday detecte patterns → proposition de regle → validation → regle active.
 
 **Acceptance Criteria** :
-- Antonio peut corriger une action via Telegram (FR28)
+- Mainteneur peut corriger une action via Telegram (FR28)
 - Correction stockee dans core.action_receipts.correction
 - 2+ corrections similaires → proposition de regle via inline buttons Telegram (FR29)
 - Pattern detection : clustering semantique nightly, similarite 0.85 (ADD2)
@@ -185,7 +185,7 @@ Le socle qui rend tout le reste possible. Infrastructure, Trust Layer, securite 
 **Acceptance Criteria** :
 - Bot Telegram connecte au supergroup (ADD11)
 - 5 topics crees : Chat & Proactive (DEFAULT), Email & Communications, Actions & Validations, System & Alerts, Metrics & Logs
-- Antonio peut envoyer des messages texte au bot (FR14)
+- Mainteneur peut envoyer des messages texte au bot (FR14)
 - Routing automatique des notifications vers le topic correct (FR16)
 - Commande /help affiche la liste complete des commandes (FR18)
 - Message onboarding envoye a la premiere connexion (FR114)
@@ -205,7 +205,7 @@ Le socle qui rend tout le reste possible. Infrastructure, Trust Layer, securite 
 - Actions trust=propose → message dans topic Actions avec inline buttons [Approve] [Reject] [Correct]
 - Clic Approve → receipt.status = "approved", action executee
 - Clic Reject → receipt.status = "rejected", action annulee
-- Clic Correct → Antonio saisit correction → receipt.status = "corrected"
+- Clic Correct → Mainteneur saisit correction → receipt.status = "corrected"
 - Retour haptic (confirmation visuelle apres clic)
 - Timeout configurable (pas de timeout par defaut — attend indefiniment)
 
@@ -236,11 +236,11 @@ Le socle qui rend tout le reste possible. Infrastructure, Trust Layer, securite 
 
 **FRs** : FR36
 
-**Description** : Deployer le backup quotidien chiffre avec sync vers le PC d'Antonio.
+**Description** : Deployer le backup quotidien chiffre avec sync vers le PC d'Mainteneur.
 
 **Acceptance Criteria** :
 - Backup PostgreSQL quotidien chiffre age (NFR10)
-- Sync vers PC Antonio via Tailscale (rsync)
+- Sync vers PC Mainteneur via Tailscale (rsync)
 - En transit : Tailscale/WireGuard TLS (ADD10)
 - Au repos VPS : chiffre age
 - Au repos PC : BitLocker/LUKS
@@ -264,7 +264,7 @@ Le socle qui rend tout le reste possible. Infrastructure, Trust Layer, securite 
 - unattended-upgrades configure pour l'OS
 - monitor-ram.sh alerte si RAM > 85% dans topic System (FR44, NFR14)
 - auto-recover-ram tue les services par priorite (TTS < STT < OCR) si RAM > 91% (FR115)
-- Notification Antonio apres chaque recovery automatique (FR45)
+- Notification Mainteneur apres chaque recovery automatique (FR45)
 - Detection crash loop : > 3 restarts en 1h → alerte System (FR127)
 - Self-healing < 30s Docker restart, < 2min auto-recover-ram (NFR13)
 
@@ -283,7 +283,7 @@ Le socle qui rend tout le reste possible. Infrastructure, Trust Layer, securite 
 **Acceptance Criteria** :
 - Watchtower deploye en mode MONITOR_ONLY (FR131)
 - Alerte Telegram (topic System) si nouvelle version image disponible
-- JAMAIS d'auto-update (decision manuelle Antonio)
+- JAMAIS d'auto-update (decision manuelle Mainteneur)
 - Cron quotidien (nuit)
 
 **Estimation** : S
@@ -372,7 +372,7 @@ Le socle qui rend tout le reste possible. Infrastructure, Trust Layer, securite 
 
 **10 FRs | 7 stories | CRITIQUE**
 
-Le besoin #1 d'Antonio. Pipeline complet : reception → anonymisation → classification → extraction PJ → brouillon reponse → envoi.
+Le besoin #1 d'Mainteneur. Pipeline complet : reception → anonymisation → classification → extraction PJ → brouillon reponse → envoi.
 
 **FRs** : FR1-FR7, FR104, FR109, FR129
 
@@ -410,7 +410,7 @@ Le besoin #1 d'Antonio. Pipeline complet : reception → anonymisation → class
 - Categories : medical, finance, faculty, personnel, urgent, spam, etc.
 - Correction_rules du module email injectees dans le prompt (FR29)
 - Notification classification dans topic Email Telegram
-- Antonio peut corriger via inline buttons (FR2)
+- Mainteneur peut corriger via inline buttons (FR2)
 - Cold start : batch 10-20 emails, trust=propose, calibrage initial (FR7, D16)
 - Accuracy >= 85% sur 4 comptes IMAP (US1)
 - Latence < 30s par email (NFR1)
@@ -474,7 +474,7 @@ Le besoin #1 d'Antonio. Pipeline complet : reception → anonymisation → class
 
 **FRs** : FR104
 
-**Description** : Envoyer les emails approuves par Antonio via EmailEngine.
+**Description** : Envoyer les emails approuves par Mainteneur via EmailEngine.
 
 **Acceptance Criteria** :
 - Clic Approve → email envoye depuis le bon compte IMAP (FR104)
@@ -495,7 +495,7 @@ Le besoin #1 d'Antonio. Pipeline complet : reception → anonymisation → class
 **Acceptance Criteria** :
 - LLM detecte les taches implicites dans les emails (FR109)
 - Taches creees dans core.tasks avec reference email source
-- Trust level = propose (validation Antonio pour les premieres semaines)
+- Trust level = propose (validation Mainteneur pour les premieres semaines)
 - Notification dans topic Actions avec inline buttons
 
 **Estimation** : M
@@ -539,7 +539,7 @@ OCR, renommage intelligent, classement arborescence, recherche semantique, suivi
 **Acceptance Criteria** :
 - Arborescence initiale : Cabinet/Faculte/Finances/Personnel/Garanties (D8)
 - Classification par LLM (trust=propose les premieres semaines, puis auto)
-- Antonio peut modifier l'arborescence via commande Telegram (FR108)
+- Mainteneur peut modifier l'arborescence via commande Telegram (FR108)
 - Sous-dossiers : Finances/SELARL/YYYY/MM-Mois/, etc.
 - Pas de contamination inter-perimetres financiers (FR37 — Epic 8)
 
@@ -602,9 +602,9 @@ OCR, renommage intelligent, classement arborescence, recherche semantique, suivi
 **Description** : Recevoir et envoyer des fichiers via Telegram.
 
 **Acceptance Criteria** :
-- Antonio envoie un fichier (photo/document) via Telegram → traitement automatique (FR110)
+- Mainteneur envoie un fichier (photo/document) via Telegram → traitement automatique (FR110)
 - Fichier traite par le pipeline Archiviste (OCR → renommage → classement)
-- Antonio demande un fichier → Friday envoie le PDF complet via Telegram (FR111)
+- Mainteneur demande un fichier → Friday envoie le PDF complet via Telegram (FR111)
 - Pas juste un lien mais le fichier entier
 
 **Estimation** : M
@@ -648,7 +648,7 @@ Heartbeat Engine, briefings matinaux, digest soir, rapport hebdomadaire. Design 
 **Acceptance Criteria** :
 - Interval configurable (default 30min) (FR23)
 - LLM decideur : selectionne les checks pertinents selon le contexte (FR24)
-- ContextProvider : heure, jour, weekend, derniere activite Antonio, prochain evenement
+- ContextProvider : heure, jour, weekend, derniere activite Mainteneur, prochain evenement
 - Quiet hours 22h-8h (pas de notifications sauf urgence)
 - 80%+ du temps = silence = bon comportement (FR25)
 - Checks Day 1 : check_urgent_emails (HIGH), check_financial_alerts (MEDIUM), check_thesis_reminders (LOW)
@@ -898,7 +898,7 @@ Detection evenements, multi-casquettes, sync Google Calendar.
 
 **Acceptance Criteria** :
 - LLM extrait les informations d'evenements (date, heure, lieu, participants) (FR41)
-- Evenements proposes a Antonio via inline buttons (trust=propose)
+- Evenements proposes a Mainteneur via inline buttons (trust=propose)
 - Integration avec Google Calendar (FR102)
 
 **Estimation** : M
@@ -913,7 +913,7 @@ Detection evenements, multi-casquettes, sync Google Calendar.
 
 **Acceptance Criteria** :
 - Lecture : recuperation evenements existants (S3)
-- Ecriture : creation d'evenements valides par Antonio (FR102)
+- Ecriture : creation d'evenements valides par Mainteneur (FR102)
 - Sync bidirectionnelle : modifications Google Calendar refletees dans Friday
 - Multi-calendriers (medecin, enseignant, chercheur)
 - ContextProvider du Heartbeat utilise les evenements agenda
@@ -953,7 +953,7 @@ Detection evenements, multi-casquettes, sync Google Calendar.
 **Sequence d'implementation suggeree** :
 1. Epic 1 (Socle) — prerequis a tout
 2. Epic 6 (Memoire) — PostgreSQL knowledge.* + pgvector necessaires pour Epic 3 [D19]
-3. Epic 2 (Email) — besoin #1 Antonio
+3. Epic 2 (Email) — besoin #1 Mainteneur
 4. Epic 3 (Archiviste) — inseparable du pipeline email (PJ)
 5. Epic 5 (Vocal) — STT/TTS transversal
 6. Epic 7 (Agenda) — detecte evenements dans emails

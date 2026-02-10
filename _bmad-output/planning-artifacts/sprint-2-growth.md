@@ -12,7 +12,7 @@ Classification 5 perimetres financiers, import CSV, anomalies, audit abonnements
 
 ### Story 8.1 : Import & Classification Bancaire
 
-As a Antonio,
+As a Mainteneur,
 I want importer mes releves bancaires CSV et les classifier par perimetre,
 So que mes 5 structures financieres soient suivies separement.
 
@@ -36,14 +36,14 @@ So que mes 5 structures financieres soient suivies separement.
 
 ### Story 8.2 : Suivi Depenses & Tresorerie
 
-As a Antonio,
+As a Mainteneur,
 I want voir l'evolution de mes depenses et tresorerie par perimetre,
 So que je puisse anticiper les problemes financiers.
 
 **Acceptance Criteria:**
 
 **Given** des transactions classees existent pour un perimetre
-**When** Antonio demande le suivi via Telegram (/finance [perimetre])
+**When** Mainteneur demande le suivi via Telegram (/finance [perimetre])
 **Then** un resume est affiche : solde actuel, depenses du mois, evolution vs mois precedent (FR60)
 **And** les tendances significatives sont mises en evidence
 
@@ -51,7 +51,7 @@ So que je puisse anticiper les problemes financiers.
 
 ### Story 8.3 : Detection Anomalies Financieres
 
-As a Antonio,
+As a Mainteneur,
 I want etre alerte en cas de facture double ou depense inhabituelle,
 So que je detecte les erreurs ou fraudes rapidement.
 
@@ -60,7 +60,7 @@ So que je detecte les erreurs ou fraudes rapidement.
 **Given** une transaction est identique a une precedente (meme montant + fournisseur + delai < 30j)
 **When** le pipeline de detection s'execute
 **Then** une alerte "facture potentiellement en double" est envoyee dans le topic Actions (FR61)
-**And** le trust level est "propose" (Antonio confirme ou ignore)
+**And** le trust level est "propose" (Mainteneur confirme ou ignore)
 
 **Given** une transaction depasse 2 ecarts-types par rapport au fournisseur
 **When** le pipeline de detection s'execute
@@ -71,7 +71,7 @@ So que je detecte les erreurs ou fraudes rapidement.
 
 ### Story 8.4 : Audit Abonnements
 
-As a Antonio,
+As a Mainteneur,
 I want un inventaire complet de mes abonnements avec leur utilisation,
 So que je puisse identifier ceux que je paie inutilement.
 
@@ -87,13 +87,13 @@ So que je puisse identifier ceux que je paie inutilement.
 
 ### Story 8.5 : Export Comptable & Factures
 
-As a Antonio,
+As a Mainteneur,
 I want preparer un dossier comptable par structure et par mois,
 So que mon comptable recoive des donnees propres et classees.
 
 **Acceptance Criteria:**
 
-**Given** Antonio demande un export comptable pour un perimetre/mois
+**Given** Mainteneur demande un export comptable pour un perimetre/mois
 **When** le rapport est genere
 **Then** les factures sont classees par structure/mois au format CSV ou PDF (FR148)
 
@@ -109,7 +109,7 @@ Pre-correction methodologique, anti-hallucination references, 4 theses en parall
 
 ### Story 9.1 : Integration Google Docs API
 
-As a Antonio,
+As a Mainteneur,
 I want que Friday puisse inserer des suggestions dans les Google Docs de mes thesards,
 So que mes corrections soient directement visibles en mode revision.
 
@@ -120,7 +120,7 @@ So que mes corrections soient directement visibles en mode revision.
 **Then** l'analyse est declenchee automatiquement
 
 **Given** Friday a genere des suggestions methodologiques
-**When** les suggestions sont approuvees par Antonio (trust=propose)
+**When** les suggestions sont approuvees par Mainteneur (trust=propose)
 **Then** elles sont inserees en mode revision dans le Google Doc (FR52)
 **And** le thesard voit les suggestions sans savoir que Friday existe (J4)
 
@@ -132,7 +132,7 @@ So que mes corrections soient directement visibles en mode revision.
 
 ### Story 9.2 : Analyse Methodologique These
 
-As a Antonio,
+As a Mainteneur,
 I want que Friday analyse la structure et la qualite methodologique de chaque these,
 So que je puisse guider mes thesards plus efficacement.
 
@@ -152,7 +152,7 @@ So que je puisse guider mes thesards plus efficacement.
 
 ### Story 9.3 : Anti-Hallucination References
 
-As a Antonio,
+As a Mainteneur,
 I want verifier que toutes les references citees existent reellement,
 So qu'aucune these ne contienne de references inventees.
 
@@ -170,7 +170,7 @@ So qu'aucune these ne contienne de references inventees.
 
 ### Story 9.4 : Completion Bibliographique
 
-As a Antonio,
+As a Mainteneur,
 I want que Friday identifie les articles cles manquants dans la bibliographie,
 So que les theses soient mieux ancrees dans la litterature.
 
@@ -179,7 +179,7 @@ So que les theses soient mieux ancrees dans la litterature.
 **Given** le domaine de recherche est identifie depuis le contenu de la these
 **When** Friday recherche les articles cles dans PubMed/Semantic Scholar
 **Then** une liste d'articles potentiellement manquants est proposee avec justification (FR58, FR145)
-**And** le trust level est "propose" (Antonio valide les suggestions)
+**And** le trust level est "propose" (Mainteneur valide les suggestions)
 
 ---
 
@@ -189,13 +189,13 @@ Analyse de contrats, clauses abusives, comparaison de versions, rappels echeance
 
 ### Story 10.1 : Analyse Contrat a la Demande
 
-As a Antonio,
+As a Mainteneur,
 I want soumettre un contrat pour analyse depuis Telegram,
 So que je puisse comprendre rapidement les points cles et risques.
 
 **Acceptance Criteria:**
 
-**Given** Antonio envoie un contrat (PDF/image) via Telegram
+**Given** Mainteneur envoie un contrat (PDF/image) via Telegram
 **When** le document est OCR-e et anonymise via Presidio (FR70)
 **Then** Claude Sonnet 4.5 analyse le contrat et genere un resume : parties, objet, duree, clauses cles, risques (FR67)
 **And** le trust level est "propose"
@@ -204,7 +204,7 @@ So que je puisse comprendre rapidement les points cles et risques.
 
 ### Story 10.2 : Detection Clauses Abusives & Versions
 
-As a Antonio,
+As a Mainteneur,
 I want detecter les clauses abusives et comparer les versions d'un contrat,
 So que je puisse negocier en connaissance de cause.
 
@@ -224,7 +224,7 @@ So que je puisse negocier en connaissance de cause.
 
 ### Story 10.3 : Rappels Renouvellement Contrats
 
-As a Antonio,
+As a Mainteneur,
 I want etre prevenu avant l'echeance de mes contrats,
 So que je puisse renouveler ou resilier a temps.
 
@@ -243,7 +243,7 @@ Transcription audio, compte-rendu structure, extraction cascade, lien bibliograp
 
 ### Story 11.1 : Integration Plaud & Transcription
 
-As a Antonio,
+As a Mainteneur,
 I want que mes enregistrements Plaud soient transcrits automatiquement,
 So que je n'aie pas a retranscrire manuellement mes reunions.
 
@@ -258,7 +258,7 @@ So que je n'aie pas a retranscrire manuellement mes reunions.
 
 ### Story 11.2 : Compte-Rendu Structure
 
-As a Antonio,
+As a Mainteneur,
 I want un resume structure de chaque reunion/consultation,
 So que je puisse relire l'essentiel en 30 secondes.
 
@@ -281,7 +281,7 @@ So que rien ne soit perdu apres une reunion.
 
 **Given** une transcription contient des actions ("il faut relancer le fournisseur")
 **When** l'extraction s'execute
-**Then** les taches sont proposees a Antonio via inline buttons (FR65)
+**Then** les taches sont proposees a Mainteneur via inline buttons (FR65)
 **And** les evenements sont proposes pour ajout au calendrier
 
 **Given** des informations extraites concernent differents modules
@@ -292,7 +292,7 @@ So que rien ne soit perdu apres une reunion.
 
 ### Story 11.4 : Lien Plaud vers Bibliographie PubMed
 
-As a Antonio,
+As a Mainteneur,
 I want que les articles mentionnes en reunion soient retrouves et ajoutes a la biblio,
 So que je n'oublie pas de referencer ce dont on a parle.
 
@@ -301,7 +301,7 @@ So que je n'oublie pas de referencer ce dont on a parle.
 **Given** une transcription mentionne un auteur ou un titre d'article ("l'etude de Dupont 2023 sur les SGLT2")
 **When** Friday detecte la mention
 **Then** une recherche PubMed/Semantic Scholar est effectuee automatiquement (FR139)
-**And** les resultats sont proposes a Antonio pour ajout a la bibliographie de la these concernee (trust=propose)
+**And** les resultats sont proposes a Mainteneur pour ajout a la bibliographie de la these concernee (trust=propose)
 
 ---
 
@@ -365,7 +365,7 @@ Benchmark mensuel, metriques LLM, alerte obsolescence, migration facilitee.
 
 ### Story 13.1 : Benchmark Mensuel Automatise
 
-As a Antonio,
+As a Mainteneur,
 I want un benchmark mensuel comparant Claude aux concurrents,
 So que je sache si un meilleur modele existe.
 
@@ -386,7 +386,7 @@ So que je sache si un meilleur modele existe.
 
 ### Story 13.2 : Metriques LLM par Modele
 
-As a Antonio,
+As a Mainteneur,
 I want suivre les metriques detaillees de chaque appel LLM,
 So que je puisse optimiser les couts et la qualite.
 
@@ -401,7 +401,7 @@ So que je puisse optimiser les couts et la qualite.
 
 ### Story 13.3 : Cost-Aware Routing & Migration
 
-As a Antonio,
+As a Mainteneur,
 I want que Friday alerte si le budget API est depasse et puisse changer de modele,
 So que les couts restent maitrise sans interruption de service.
 
@@ -414,7 +414,7 @@ So que les couts restent maitrise sans interruption de service.
 **Given** le budget est depasse
 **When** le cost-aware routing est actif
 **Then** un modele moins couteux est utilise automatiquement pour les taches non-critiques (FR134)
-**And** une notification est envoyee a Antonio
+**And** une notification est envoyee a Mainteneur
 
 **Given** une decision de migration de provider LLM est prise
 **When** le nouvel adaptateur est deploye

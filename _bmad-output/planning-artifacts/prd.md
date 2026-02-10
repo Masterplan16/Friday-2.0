@@ -114,14 +114,14 @@ decisions:
 
 # Product Requirements Document - Friday 2.0
 
-**Author:** Antonio
+**Author:** Mainteneur
 **Date:** 2026-02-08
 
 ## Executive Summary
 
-**Friday 2.0** est un ecosysteme d'intelligence personnelle auto-heberge, proactif et apprenant. Assistant IA personnel a memoire eternelle pour Antonio (medecin, enseignant-chercheur). Single-user, jamais commercialise.
+**Friday 2.0** est un ecosysteme d'intelligence personnelle auto-heberge, proactif et apprenant. Assistant IA personnel a memoire eternelle pour Mainteneur (medecin, enseignant-chercheur). Single-user, jamais commercialise.
 
-**Differentiateur** : Second cerveau qui ingere, comprend, agit, communique, apprend et analyse — pousse l'information au bon moment sans qu'Antonio aille la chercher.
+**Differentiateur** : Second cerveau qui ingere, comprend, agit, communique, apprend et analyse — pousse l'information au bon moment sans qu'Mainteneur aille la chercher.
 
 **Type** : Self-hosted AI Personal Assistant Platform
 **Domaine** : Personal Productivity with Sensitive Data (Finance/Legal)
@@ -134,9 +134,9 @@ decisions:
 
 | ID | Critere | Mesure | Seuil | Priorite |
 |----|---------|--------|-------|----------|
-| US1 | Emails tries sans intervention | Accuracy classification automatique sur 4 comptes IMAP (~20 mails/jour) | >=85% accuracy, 0 email urgent manque | **CRITIQUE** (priorite #1 Antonio) |
+| US1 | Emails tries sans intervention | Accuracy classification automatique sur 4 comptes IMAP (~20 mails/jour) | >=85% accuracy, 0 email urgent manque | **CRITIQUE** (priorite #1 Mainteneur) |
 | US2 | Documents retrouvables instantanement | Desktop Search semantique temps de reponse + pertinence top-5 | <3s, resultats pertinents dans top-5 | Day 1 |
-| US3 | Proactivite utile | Ratio notifications Heartbeat jugees utiles par Antonio | >=80% notifications pertinentes | Day 1 |
+| US3 | Proactivite utile | Ratio notifications Heartbeat jugees utiles par Mainteneur | >=80% notifications pertinentes | Day 1 |
 | US4 | Briefing matinal complet | Agregation toutes infos necessaires pour demarrer la journee | <2min de lecture, 0 info critique manquee | Day 1 |
 | US5 | Vocal operationnel | Question voix via Telegram -> reponse complete | <=30s (STT + LLM + TTS) | Day 1 |
 | US6 | Theses supervisees efficacement | Suggestions methodologiques pertinentes via Google Docs API | Temps review reduit, feedback actionnable | Month 1-3 |
@@ -146,7 +146,7 @@ decisions:
 
 | ID | Critere | Mesure | Seuil |
 |----|---------|--------|-------|
-| TS1 | Stabilite systeme | Tous services operationnels sans crash ni intervention manuelle | **"Tout fonctionne sans planter"** (critere #1 Antonio) |
+| TS1 | Stabilite systeme | Tous services operationnels sans crash ni intervention manuelle | **"Tout fonctionne sans planter"** (critere #1 Mainteneur) |
 | TS2 | RAM stable | Usage memoire VPS-4 48 Go en permanence | <=85% (<=40.8 Go) |
 | TS3 | RGPD respecte | PII anonymisees avant tout LLM cloud (Presidio + spaCy-fr) | 100% PII sur dataset test, 0 fuite |
 | TS4 | Trust Layer fiable | Accuracy par module/action avec retrogradation automatique | >=90% accuracy, echantillon >=10 |
@@ -156,7 +156,7 @@ decisions:
 
 ### Measurable Outcomes
 
-**Moment "aha" defini par Antonio** : Quand tout fonctionne sans planter — stabilite systeme = critere de succes fondamental.
+**Moment "aha" defini par Mainteneur** : Quand tout fonctionne sans planter — stabilite systeme = critere de succes fondamental.
 
 **Indicateur principal** : Pipeline email operationnel de bout en bout (reception -> anonymisation -> classification -> extraction PJ -> archivage -> notification Telegram) sans intervention humaine et sans crash.
 
@@ -218,33 +218,33 @@ Infrastructure et premiers modules metier formant un systeme autonome et stable.
 
 ## User Journeys
 
-### J1 — Antonio : Journee type (Happy Path)
+### J1 — Mainteneur : Journee type (Happy Path)
 
 **8h00 — Petit-dejeuner.** Telephone vibre : briefing matinal Friday dans le topic Chat Telegram.
 
-> "Bonjour Antonio. 3 emails urgents (Dr. Martin — resultat labo, Doyen — convocation jury jeudi, comptable — TVA a signer). 12 emails classes automatiquement. 2 PJ archivees (facture EDF → Finances/SELARL/2026/02-Fevrier, courrier ARS → Cabinet/Admin). Julie n'a pas touche son Google Doc depuis 12 jours — soutenance dans 6 semaines. CT voiture dans 45 jours."
+> "Bonjour Mainteneur. 3 emails urgents (Dr. Martin — resultat labo, Doyen — convocation jury jeudi, comptable — TVA a signer). 12 emails classes automatiquement. 2 PJ archivees (facture EDF → Finances/SELARL/2026/02-Fevrier, courrier ARS → Cabinet/Admin). Julie n'a pas touche son Google Doc depuis 12 jours — soutenance dans 6 semaines. CT voiture dans 45 jours."
 
-Antonio lit en 90 secondes. Un email du doyen est mal classe — il corrige via inline button. Friday note la correction.
+Mainteneur lit en 90 secondes. Un email du doyen est mal classe — il corrige via inline button. Friday note la correction.
 
-**8h30 — En voiture.** Antonio envoie un vocal Telegram : "Friday, qu'est-ce que j'avais lu sur les inhibiteurs SGLT2 le mois dernier ?". Friday transcrit (Faster-Whisper), cherche dans pgvector (PostgreSQL), repond en vocal (Kokoro TTS) avec les 3 documents les plus pertinents.
+**8h30 — En voiture.** Mainteneur envoie un vocal Telegram : "Friday, qu'est-ce que j'avais lu sur les inhibiteurs SGLT2 le mois dernier ?". Friday transcrit (Faster-Whisper), cherche dans pgvector (PostgreSQL), repond en vocal (Kokoro TTS) avec les 3 documents les plus pertinents.
 
 **9h-12h — Consultations.** Friday travaille en silence. Emails classes en continu. PJ facture OCR-ee, renommee `2026-02-08_Facture_Labo-Cerba_145EUR.pdf`, classee dans Finances/SELARL/2026/02-Fevrier. Email VIP (comptable) → notification dans topic Email.
 
-**14h — Entre deux patients.** 2 actions en attente dans Actions : brouillon reponse email (trust=propose), classement financier incertain (confiance 0.72). Antonio approuve le brouillon, corrige le classement. Friday apprend.
+**14h — Entre deux patients.** 2 actions en attente dans Actions : brouillon reponse email (trust=propose), classement financier incertain (confiance 0.72). Mainteneur approuve le brouillon, corrige le classement. Friday apprend.
 
-**18h — Digest soir automatique** dans Metrics : 18 emails traites, 2 corrections, accuracy 89%, 4 documents archives, 0 alerte systeme. Antonio n'a rien demande — Friday a pousse l'info.
+**18h — Digest soir automatique** dans Metrics : 18 emails traites, 2 corrections, accuracy 89%, 4 documents archives, 0 alerte systeme. Mainteneur n'a rien demande — Friday a pousse l'info.
 
-### J2 — Antonio : Urgence en consultation (Edge Case)
+### J2 — Mainteneur : Urgence en consultation (Edge Case)
 
 **10h15 — En pleine consultation.** Email du doyen (VIP) : "Jury these Julie annule URGENT". Friday detecte urgence (VIP + mot-cle) → notification push dans topic Email.
 
-**10h30 — Fin consultation.** Antonio lit le resume Friday + brouillon reponse (trust=propose). Modifie une phrase, approuve. Friday envoie via EmailEngine. 2 minutes au lieu de 10.
+**10h30 — Fin consultation.** Mainteneur lit le resume Friday + brouillon reponse (trust=propose). Modifie une phrase, approuve. Friday envoie via EmailEngine. 2 minutes au lieu de 10.
 
-**Scenario d'echec :** Presidio crash → Friday STOP (fail-explicit), email non traite, alerte dans topic System. Self-Healing tente restart. Echec apres 2 tentatives → alerte Telegram Antonio.
+**Scenario d'echec :** Presidio crash → Friday STOP (fail-explicit), email non traite, alerte dans topic System. Self-Healing tente restart. Echec apres 2 tentatives → alerte Telegram Mainteneur.
 
 ### J3 — Friday : Monitoring proactif (Push-first)
 
-Antonio ne tape JAMAIS /status. Tout est pousse automatiquement :
+Mainteneur ne tape JAMAIS /status. Tout est pousse automatiquement :
 
 - **18h quotidien** : Digest soir dans Metrics (emails, corrections, accuracy, documents, alertes)
 - **Dimanche soir** : Rapport hebdomadaire auto (tableau trust par module, tendances accuracy, budget API consomme)
@@ -253,7 +253,7 @@ Antonio ne tape JAMAIS /status. Tout est pousse automatiquement :
 
 Les commandes /status, /journal, /confiance, /receipt, /stats, /help restent disponibles en fallback. /help affiche la liste complete des commandes.
 
-**Scenario Self-Healing :** RAM 87% → alerte System. RAM 91% → auto-recover-ram tue Kokoro TTS (priorite basse). Antonio recoit : "RAM critique 91% — Kokoro TTS arrete. Vocal TTS indisponible. STT toujours fonctionnel."
+**Scenario Self-Healing :** RAM 87% → alerte System. RAM 91% → auto-recover-ram tue Kokoro TTS (priorite basse). Mainteneur recoit : "RAM critique 91% — Kokoro TTS arrete. Vocal TTS indisponible. STT toujours fonctionnel."
 
 ### J4 — Julie (Thesarde) : Interaction indirecte
 
@@ -263,11 +263,11 @@ Julie ouvre son Google Doc. Elle decouvre des suggestions en mode revision :
 
 > Suggestion : "Reference Dupont et al. 2019 non trouvee dans PubMed. Verifier existence ou remplacer."
 
-Julie ne sait pas que Friday existe. Elle pense qu'Antonio a ecrit les suggestions manuellement. Cote Friday : action tuteur_these.review executee avec trust=propose, Antonio a valide avant push. Contenu these anonymise via Presidio avant traitement LLM cloud.
+Julie ne sait pas que Friday existe. Elle pense qu'Mainteneur a ecrit les suggestions manuellement. Cote Friday : action tuteur_these.review executee avec trust=propose, Mainteneur a valide avant push. Contenu these anonymise via Presidio avant traitement LLM cloud.
 
 ### J5 — Friday : Agent autonome (Heartbeat & Nightly)
 
-**14h30 — Heartbeat** (interval 30min). Contexte : mardi, jour ouvrable, derniere activite Antonio il y a 45min. LLM decideur selectionne checks :
+**14h30 — Heartbeat** (interval 30min). Contexte : mardi, jour ouvrable, derniere activite Mainteneur il y a 45min. LLM decideur selectionne checks :
 - check_urgent_emails (HIGH) → 0 urgent non traite
 - check_financial_alerts (MEDIUM) → RAS
 - check_thesis_reminders (LOW) → skippe
@@ -415,7 +415,7 @@ Voir section consolidee **Project Scoping > Risques et mitigations** pour la tab
 ### Validation
 
 - Trust Layer : Metriques accuracy par module/action, retrogradation automatique = validation continue
-- Push-first : Critere US3 (>=80% notifications jugees pertinentes par Antonio)
+- Push-first : Critere US3 (>=80% notifications jugees pertinentes par Mainteneur)
 - Heartbeat : Monitoring ratio signal/bruit (80%+ du temps = silence = bon comportement)
 - Fail-explicit : Tests integration Presidio crash → pipeline STOP
 
@@ -486,7 +486,7 @@ Architecture event-driven single-user sur VPS personnel (Docker Compose). Interf
 
 **Approche** : Tout Day 1 en bloc — pas de cercles progressifs. Friday doit etre complet et utilisable au quotidien des le premier jour.
 
-**Philosophie** : Problem-solving MVP — le minimum pour que Friday remplace le traitement manuel des emails, documents, et informations quotidiennes d'Antonio.
+**Philosophie** : Problem-solving MVP — le minimum pour que Friday remplace le traitement manuel des emails, documents, et informations quotidiennes d'Mainteneur.
 
 **Budget mensuel** : ~25 EUR VPS + ~45 EUR API Claude Sonnet 4.5 + ~3 EUR benchmark veille = **~73 EUR/mois**
 
@@ -498,7 +498,7 @@ Architecture event-driven single-user sur VPS personnel (Docker Compose). Interf
 | 2 | Trust Layer | Prerequis a tout module |
 | 3 | Presidio anonymisation | Prerequis RGPD |
 | 4 | Bot Telegram (5 topics) | Interface unique |
-| 5 | Pipeline Mail | Besoin #1 Antonio |
+| 5 | Pipeline Mail | Besoin #1 Mainteneur |
 | 6 | Archiviste (OCR + classement) | Inseparable du pipeline mail (PJ) |
 | 7 | Briefing matinal | Push-first, valeur quotidienne |
 | 8 | Desktop Search | Retrouver instantanement |
@@ -512,7 +512,7 @@ Architecture event-driven single-user sur VPS personnel (Docker Compose). Interf
 
 ### Cold Start (D16)
 
-Au demarrage, ~100 emails non lus dans les 4 comptes IMAP. Traitement par batch de 10-20, tout en trust=propose. Antonio valide les premiers lots → Friday se calibre. Les corrections alimentent immediatement les correction_rules.
+Au demarrage, ~100 emails non lus dans les 4 comptes IMAP. Traitement par batch de 10-20, tout en trust=propose. Mainteneur valide les premiers lots → Friday se calibre. Les corrections alimentent immediatement les correction_rules.
 
 ### Post-MVP (Month 1-3)
 
@@ -545,8 +545,8 @@ Aide consultation, Menus & Courses, Coach, Entretien cyclique, Generateur TCS/EC
 | R9 | Backup corrompu | Perte donnees | Test restore mensuel, backup chiffre age, sync PC via Tailscale |
 | R10 | Migration 110k lente/couteuse | Retard demarrage | Batch nuit, ~18-24h, ~$45 Claude API, checkpointing resume |
 | R11 | Cold start 100 emails | Surcharge initiale | Batch 10-20, trust=propose, calibrage progressif |
-| R12 | Push-first = spam | Antonio ignore Friday | Quiet hours 22h-8h, ratio signal/bruit surveille (US3 >=80%) |
-| R13 | Trust Layer trop conservateur | Trop de validations manuelles | Seuils ajustables, promotion manuelle Antonio |
+| R12 | Push-first = spam | Mainteneur ignore Friday | Quiet hours 22h-8h, ratio signal/bruit surveille (US3 >=80%) |
+| R13 | Trust Layer trop conservateur | Trop de validations manuelles | Seuils ajustables, promotion manuelle Mainteneur |
 | R14 | Heartbeat decideur imprecis | Faux positifs/negatifs | Claude Sonnet 4.5, fallback checks statiques |
 
 ## Functional Requirements
@@ -554,10 +554,10 @@ Aide consultation, Menus & Courses, Coach, Entretien cyclique, Generateur TCS/EC
 ### Email & Communications
 
 - **FR1** : Friday peut classifier automatiquement les emails entrants des 4 comptes IMAP
-- **FR2** : Antonio peut visualiser et corriger les classifications via inline buttons Telegram
+- **FR2** : Mainteneur peut visualiser et corriger les classifications via inline buttons Telegram
 - **FR3** : Friday peut extraire les pieces jointes et les transmettre au module Archiviste
 - **FR4** : Friday peut rediger des brouillons de reponse email soumis a validation
-- **FR5** : Antonio peut designer des expediteurs VIP via commande Telegram /vip
+- **FR5** : Mainteneur peut designer des expediteurs VIP via commande Telegram /vip
 - **FR6** : Friday peut detecter les emails urgents (VIP + patterns appris)
 - **FR7** : Friday peut traiter un backlog d'emails non lus par lots priorises (cold start)
 
@@ -566,17 +566,17 @@ Aide consultation, Menus & Courses, Coach, Entretien cyclique, Generateur TCS/EC
 - **FR8** : Friday peut effectuer l'OCR sur images et PDF
 - **FR9** : Friday peut renommer les documents avec une convention standardisee
 - **FR10** : Friday peut classer les documents dans une arborescence configurable et evolutive (initiale : Cabinet/Faculte/Finances/Personnel/Garanties)
-- **FR11** : Antonio peut rechercher des documents par requete semantique
+- **FR11** : Mainteneur peut rechercher des documents par requete semantique
 - **FR12** : Friday peut suivre les dates d'expiration de garanties et notifier proactivement
-- **FR13** : Antonio peut rechercher des documents par requete vocale
+- **FR13** : Mainteneur peut rechercher des documents par requete vocale
 
 ### Interface & Communication
 
-- **FR14** : Antonio peut interagir avec Friday via messages texte Telegram
-- **FR15** : Antonio peut interagir avec Friday via messages vocaux Telegram
+- **FR14** : Mainteneur peut interagir avec Friday via messages texte Telegram
+- **FR15** : Mainteneur peut interagir avec Friday via messages vocaux Telegram
 - **FR16** : Friday peut router ses notifications vers le topic Telegram approprie (Chat/Email/Actions/System/Metrics)
-- **FR17** : Antonio peut valider ou rejeter les actions proposees via inline buttons
-- **FR18** : Antonio peut consulter la liste des commandes disponibles via /help
+- **FR17** : Mainteneur peut valider ou rejeter les actions proposees via inline buttons
+- **FR18** : Mainteneur peut consulter la liste des commandes disponibles via /help
 - **FR19** : Friday peut repondre en synthese vocale (TTS)
 
 ### Proactivite & Intelligence
@@ -592,18 +592,18 @@ Aide consultation, Menus & Courses, Coach, Entretien cyclique, Generateur TCS/EC
 
 - **FR26** : Chaque action Friday produit un recu standardise (confidence, reasoning, input/output)
 - **FR27** : Les actions s'executent selon leur trust level assigne (auto/propose/blocked)
-- **FR28** : Antonio peut corriger les actions de Friday, declenchant l'apprentissage
+- **FR28** : Mainteneur peut corriger les actions de Friday, declenchant l'apprentissage
 - **FR29** : Friday peut detecter des patterns de correction et proposer de nouvelles regles
 - **FR30** : Les trust levels se retrogradent automatiquement si accuracy < seuil
-- **FR31** : Antonio peut promouvoir manuellement un trust level apres accuracy soutenue
-- **FR32** : Antonio peut consulter les metriques de confiance par module via /confiance
-- **FR33** : Antonio peut consulter le detail d'un recu d'action via /receipt
+- **FR31** : Mainteneur peut promouvoir manuellement un trust level apres accuracy soutenue
+- **FR32** : Mainteneur peut consulter les metriques de confiance par module via /confiance
+- **FR33** : Mainteneur peut consulter le detail d'un recu d'action via /receipt
 
 ### Securite & Conformite
 
 - **FR34** : Tout texte est anonymise via Presidio avant tout appel LLM cloud
 - **FR35** : Friday stoppe le traitement si le service d'anonymisation est indisponible (fail-explicit)
-- **FR36** : Les backups sont chiffres et synchronises vers le PC d'Antonio quotidiennement
+- **FR36** : Les backups sont chiffres et synchronises vers le PC d'Mainteneur quotidiennement
 - **FR37** : Les donnees financieres sont classees dans le bon perimetre (SELARL/SCM/SCI-1/SCI-2/Perso) sans contamination croisee
 
 ### Graphe de connaissances & Memoire
@@ -621,18 +621,18 @@ Aide consultation, Menus & Courses, Coach, Entretien cyclique, Generateur TCS/EC
 
 - **FR43** : Les services redemarrent automatiquement en cas d'echec
 - **FR44** : L'usage RAM est surveille avec actions de recovery automatique
-- **FR45** : Friday peut alerter Antonio sur les problemes systeme via Telegram
+- **FR45** : Friday peut alerter Mainteneur sur les problemes systeme via Telegram
 - **FR46** : Les 110k emails historiques peuvent etre migres avec checkpointing et reprise
 
 ### Personnalisation
 
-- **FR47** : Antonio peut configurer la personnalite de Friday (ton, tutoiement, humour, verbosite)
+- **FR47** : Mainteneur peut configurer la personnalite de Friday (ton, tutoiement, humour, verbosite)
 
 ### Veille & Gouvernance modele
 
 - **FR48** : Friday peut executer un benchmark mensuel automatise comparant le modele LLM actuel aux concurrents
-- **FR49** : Friday peut alerter Antonio si un modele concurrent est significativement superieur
-- **FR50** : Antonio peut declencher une migration de provider LLM via changement d'adaptateur
+- **FR49** : Friday peut alerter Mainteneur si un modele concurrent est significativement superieur
+- **FR50** : Mainteneur peut declencher une migration de provider LLM via changement d'adaptateur
 
 ## Non-Functional Requirements
 
@@ -674,7 +674,7 @@ Aide consultation, Menus & Courses, Coach, Entretien cyclique, Generateur TCS/EC
 | NFR17 | Anthropic API resilience | Comportement si API Claude indisponible | Retry automatique (3 tentatives, backoff exponentiel), alerte System |
 | NFR18 | EmailEngine resilience | Comportement si EmailEngine crash | Alerte immediate, adaptateur swappable IMAP direct |
 | NFR19 | Telegram API resilience | Comportement si Telegram indisponible | Queue messages, retry, log local |
-| NFR20 | Google Docs API (post-MVP) | Comportement si API Docs indisponible | Skip thesis review, notifier Antonio, retry prochain cycle |
+| NFR20 | Google Docs API (post-MVP) | Comportement si API Docs indisponible | Skip thesis review, notifier Mainteneur, retry prochain cycle |
 
 ### Maintenabilite
 

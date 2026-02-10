@@ -10,7 +10,7 @@ Status: in-progress
 
 ## Story
 
-En tant qu'**Antonio**,
+En tant qu'**Mainteneur**,
 Je veux **interagir avec Friday via un bot Telegram organisé en 5 topics spécialisés**,
 Afin de **recevoir des notifications contextuelles filtrables et maintenir une conversation bidirectionnelle continue**.
 
@@ -44,8 +44,8 @@ TOPIC_SYSTEM_ID=<thread_id>
 TOPIC_METRICS_ID=<thread_id>
 ```
 
-### AC3: Antonio peut envoyer des messages texte au bot (FR14) ✅
-- Antonio envoie un message dans topic Chat & Proactive
+### AC3: Mainteneur peut envoyer des messages texte au bot (FR14) ✅
+- Mainteneur envoie un message dans topic Chat & Proactive
 - Bot reçoit le message (webhook ou polling)
 - Message loggé avec context (user_id, thread_id, timestamp)
 - Bot répond dans le même topic (echo test Day 1)
@@ -102,11 +102,11 @@ Tests de routage:
 ```
 
 ### AC6: Message onboarding première connexion (FR114) ✅
-Quand Antonio rejoint le supergroup la première fois:
+Quand Mainteneur rejoint le supergroup la première fois:
 - Bot détecte nouveau membre (event `chat_member`)
 - Envoie message onboarding dans Chat & Proactive:
 ```
-👋 Bienvenue Antonio !
+👋 Bienvenue Mainteneur !
 
 Je suis Friday 2.0, ton assistant IA personnel.
 
@@ -138,8 +138,8 @@ Modes définis (documentation uniquement, pas de code):
 ## Tasks / Subtasks
 
 ### Task 1: Setup Infrastructure Bot (AC1) 🔧
-- [x] Créer bot via @BotFather (MANUEL - Antonio)
-- [x] Obtenir TELEGRAM_BOT_TOKEN (MANUEL - Antonio)
+- [x] Créer bot via @BotFather (MANUEL - Mainteneur)
+- [x] Obtenir TELEGRAM_BOT_TOKEN (MANUEL - Mainteneur)
 - [ ] Créer `bot/` directory structure:
   ```
   bot/
@@ -180,11 +180,11 @@ Modes définis (documentation uniquement, pas de code):
 ---
 
 ### Task 2: Setup Supergroup & Topics (AC2) 📂
-- [x] Créer supergroup "Friday 2.0 Control" (MANUEL - Antonio)
-- [x] Activer Topics dans supergroup (MANUEL - Antonio)
-- [x] Créer 5 topics avec noms/icônes corrects (MANUEL - Antonio)
-- [x] Ajouter bot au supergroup (MANUEL - Antonio)
-- [x] Promouvoir bot admin avec droits (MANUEL - Antonio)
+- [x] Créer supergroup "Friday 2.0 Control" (MANUEL - Mainteneur)
+- [x] Activer Topics dans supergroup (MANUEL - Mainteneur)
+- [x] Créer 5 topics avec noms/icônes corrects (MANUEL - Mainteneur)
+- [x] Ajouter bot au supergroup (MANUEL - Mainteneur)
+- [x] Promouvoir bot admin avec droits (MANUEL - Mainteneur)
 - [ ] Améliorer `scripts/extract_telegram_thread_ids.py`:
   - [ ] Validation automatique droits admin bot
   - [ ] Extraction thread IDs sans poster messages manuels (utiliser getForumTopicIconStickers API)
@@ -314,7 +314,7 @@ Modes définis (documentation uniquement, pas de code):
 ### Task 5: Onboarding Message (AC6) 👋
 - [ ] Implémenter détection nouveau membre:
   - [ ] Handler event `chat_member` (new_chat_member)
-  - [ ] Vérifier user_id == Antonio (pas autre membre)
+  - [ ] Vérifier user_id == Mainteneur (pas autre membre)
 - [ ] Implémenter onboarding:
   - [ ] Vérifier flag `core.user_settings.onboarding_sent`
   - [ ] Si FALSE → envoyer message onboarding (AC6)
@@ -334,7 +334,7 @@ Modes définis (documentation uniquement, pas de code):
 
 **Bugs critiques identifiés**:
 14. ❌ **BUG-1.9.14**: Pas d'idempotence → si bot redémarre pendant onboarding, message envoyé 2x (spam)
-15. ❌ **BUG-1.9.15**: Pas de vérification user_id → envoie onboarding à TOUS les membres ajoutés (pas juste Antonio)
+15. ❌ **BUG-1.9.15**: Pas de vérification user_id → envoie onboarding à TOUS les membres ajoutés (pas juste Mainteneur)
 
 **Tests requis**:
 - [ ] `test_onboarding_sent_once()` - Message envoyé 1x seulement
@@ -426,7 +426,7 @@ Modes définis (documentation uniquement, pas de code):
     # 4. Vérifier message apparaît dans topic correct
     ```
   - [ ] Checklist manuelle:
-    - [ ] Antonio envoie "Hello Friday" dans Chat & Proactive
+    - [ ] Mainteneur envoie "Hello Friday" dans Chat & Proactive
     - [ ] Bot répond "Echo: Hello Friday"
     - [ ] /help affiche liste commandes
     - [ ] Onboarding message reçu (si premier join)
@@ -441,7 +441,7 @@ Modes définis (documentation uniquement, pas de code):
 - **5 topics spécialisés** = équilibre simplicité/granularité
 - **Bidirectionnel (Topic 1)** vs **Unidirectionnel (Topics 2-5)**
 - **Routing séquentiel** par source → module → type → priority → default
-- **Progressive disclosure** : Antonio mute/unmute selon contexte (natif Telegram)
+- **Progressive disclosure** : Mainteneur mute/unmute selon contexte (natif Telegram)
 
 **Contraintes techniques**:
 - **python-telegram-bot** library (v20.x recommandé)
@@ -532,7 +532,7 @@ tests/
 | BUG-1.9.12 | Pas de validation event.type | Fallback silencieux sans log | Valider type, log warning si invalide |
 | BUG-1.9.13 | thread_id incorrect en prod | Messages routés mauvais topic | Vérification manuelle thread IDs |
 | BUG-1.9.14 | Pas d'idempotence onboarding | Spam si bot redémarre | Flag onboarding_sent persistant |
-| BUG-1.9.15 | Onboarding envoyé à tous | Pas juste Antonio | Vérifier user_id == Antonio |
+| BUG-1.9.15 | Onboarding envoyé à tous | Pas juste Mainteneur | Vérifier user_id == Mainteneur |
 
 **Priorité fixes** :
 - **P0 (Bloquant)** : BUG-1.9.1, BUG-1.9.2, BUG-1.9.6, BUG-1.9.8
@@ -559,7 +559,7 @@ tests/
 **Sources architecture** :
 - [Architecture addendum §11](_docs/architecture-addendum-20260205.md#11-stratégie-de-notification--telegram-topics-architecture) - Stratégie Topics complète
 - [Telegram Topics Setup Guide](docs/telegram-topics-setup.md) - Guide setup manuel
-- [Telegram User Guide](docs/telegram-user-guide.md) - Guide utilisateur Antonio
+- [Telegram User Guide](docs/telegram-user-guide.md) - Guide utilisateur Mainteneur
 - [Epics MVP](../_bmad-output/planning-artifacts/epics-mvp.md) - Story 1.9 requirements (lignes 179-194)
 
 **Sources techniques** :
@@ -606,7 +606,7 @@ Aucun crash ou erreur bloquante durant l'implémentation. Tous les bugs document
 7. **CRIT-7**: Service `friday-bot` absent de docker-compose.yml → ajouté service complet dans `docker-compose.yml:326-376`
 
 #### HIGH Fixes (9)
-1. **HIGH-1**: `ANTONIO_USER_ID` fallback "0" dangereux → raise ValueError si envvar manquante dans `messages.py:17-21`
+1. **HIGH-1**: `OWNER_USER_ID` fallback "0" dangereux → raise ValueError si envvar manquante dans `messages.py:17-21`
 2. **HIGH-2**: Rate limiting pas implémenté → TODO ajouté (Story future) - config existe déjà dans `telegram.yaml:7-9`
 3. **HIGH-3**: Redis Pub/Sub pas implémenté → TODO ajouté (Story future) - routing.py prêt
 4. **HIGH-4**: File List vide → remplie complètement ci-dessous

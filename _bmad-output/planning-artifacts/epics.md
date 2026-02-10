@@ -93,10 +93,10 @@ Ce document fournit le decoupage complet en epics et stories pour Friday 2.0, de
 **Email & Communications (FR1-FR7)**
 
 - FR1 : Friday peut classifier automatiquement les emails entrants des 4 comptes IMAP
-- FR2 : Antonio peut visualiser et corriger les classifications via inline buttons Telegram
+- FR2 : Mainteneur peut visualiser et corriger les classifications via inline buttons Telegram
 - FR3 : Friday peut extraire les pieces jointes et les transmettre au module Archiviste
 - FR4 : Friday peut rediger des brouillons de reponse email soumis a validation
-- FR5 : Antonio peut designer des expediteurs VIP via commande Telegram /vip
+- FR5 : Mainteneur peut designer des expediteurs VIP via commande Telegram /vip
 - FR6 : Friday peut detecter les emails urgents (VIP + patterns appris)
 - FR7 : Friday peut traiter un backlog d'emails non lus par lots priorises (cold start)
 
@@ -105,17 +105,17 @@ Ce document fournit le decoupage complet en epics et stories pour Friday 2.0, de
 - FR8 : Friday peut effectuer l'OCR sur images et PDF
 - FR9 : Friday peut renommer les documents avec une convention standardisee
 - FR10 : Friday peut classer les documents dans une arborescence configurable et evolutive (Cabinet/Faculte/Finances/Personnel/Garanties)
-- FR11 : Antonio peut rechercher des documents par requete semantique
+- FR11 : Mainteneur peut rechercher des documents par requete semantique
 - FR12 : Friday peut suivre les dates d'expiration de garanties et notifier proactivement
-- FR13 : Antonio peut rechercher des documents par requete vocale
+- FR13 : Mainteneur peut rechercher des documents par requete vocale
 
 **Interface & Communication (FR14-FR19)**
 
-- FR14 : Antonio peut interagir avec Friday via messages texte Telegram
-- FR15 : Antonio peut interagir avec Friday via messages vocaux Telegram
+- FR14 : Mainteneur peut interagir avec Friday via messages texte Telegram
+- FR15 : Mainteneur peut interagir avec Friday via messages vocaux Telegram
 - FR16 : Friday peut router ses notifications vers le topic Telegram approprie (Chat/Email/Actions/System/Metrics)
-- FR17 : Antonio peut valider ou rejeter les actions proposees via inline buttons
-- FR18 : Antonio peut consulter la liste des commandes disponibles via /help
+- FR17 : Mainteneur peut valider ou rejeter les actions proposees via inline buttons
+- FR18 : Mainteneur peut consulter la liste des commandes disponibles via /help
 - FR19 : Friday peut repondre en synthese vocale (TTS)
 
 **Proactivite & Intelligence (FR20-FR25)**
@@ -131,18 +131,18 @@ Ce document fournit le decoupage complet en epics et stories pour Friday 2.0, de
 
 - FR26 : Chaque action Friday produit un recu standardise (confidence, reasoning, input/output)
 - FR27 : Les actions s'executent selon leur trust level assigne (auto/propose/blocked)
-- FR28 : Antonio peut corriger les actions de Friday, declenchant l'apprentissage
+- FR28 : Mainteneur peut corriger les actions de Friday, declenchant l'apprentissage
 - FR29 : Friday peut detecter des patterns de correction et proposer de nouvelles regles
 - FR30 : Les trust levels se retrogradent automatiquement si accuracy < seuil
-- FR31 : Antonio peut promouvoir manuellement un trust level apres accuracy soutenue
-- FR32 : Antonio peut consulter les metriques de confiance par module via /confiance
-- FR33 : Antonio peut consulter le detail d'un recu d'action via /receipt
+- FR31 : Mainteneur peut promouvoir manuellement un trust level apres accuracy soutenue
+- FR32 : Mainteneur peut consulter les metriques de confiance par module via /confiance
+- FR33 : Mainteneur peut consulter le detail d'un recu d'action via /receipt
 
 **Securite & Conformite (FR34-FR37)**
 
 - FR34 : Tout texte est anonymise via Presidio avant tout appel LLM cloud
 - FR35 : Friday stoppe le traitement si le service d'anonymisation est indisponible (fail-explicit)
-- FR36 : Les backups sont chiffres et synchronises vers le PC d'Antonio quotidiennement
+- FR36 : Les backups sont chiffres et synchronises vers le PC d'Mainteneur quotidiennement
 - FR37 : Les donnees financieres sont classees dans le bon perimetre (SELARL/SCM/SCI-1/SCI-2/Perso) sans contamination croisee
 
 **Graphe de connaissances & Memoire (FR38-FR40)**
@@ -160,18 +160,18 @@ Ce document fournit le decoupage complet en epics et stories pour Friday 2.0, de
 
 - FR43 : Les services redemarrent automatiquement en cas d'echec
 - FR44 : L'usage RAM est surveille avec actions de recovery automatique
-- FR45 : Friday peut alerter Antonio sur les problemes systeme via Telegram
+- FR45 : Friday peut alerter Mainteneur sur les problemes systeme via Telegram
 - FR46 : Les 110k emails historiques peuvent etre migres avec checkpointing et reprise
 
 **Personnalisation (FR47)**
 
-- FR47 : Antonio peut configurer la personnalite de Friday (ton, tutoiement, humour, verbosite)
+- FR47 : Mainteneur peut configurer la personnalite de Friday (ton, tutoiement, humour, verbosite)
 
 **Veille & Gouvernance modele (FR48-FR50)**
 
 - FR48 : Friday peut executer un benchmark mensuel automatise comparant le modele LLM actuel aux concurrents
-- FR49 : Friday peut alerter Antonio si un modele concurrent est significativement superieur
-- FR50 : Antonio peut declencher une migration de provider LLM via changement d'adaptateur
+- FR49 : Friday peut alerter Mainteneur si un modele concurrent est significativement superieur
+- FR50 : Mainteneur peut declencher une migration de provider LLM via changement d'adaptateur
 
 **Tuteur These (FR51-FR55)**
 
@@ -262,7 +262,7 @@ Ce document fournit le decoupage complet en epics et stories pour Friday 2.0, de
 
 - FR97 : Friday peut maintenir automatiquement le CV academique (publications, theses, enseignement)
 - FR98 : Friday peut envoyer des reponses automatiques aux mails non urgents en mode HS
-- FR99 : Friday peut alerter les thesards de l'indisponibilite d'Antonio
+- FR99 : Friday peut alerter les thesards de l'indisponibilite d'Mainteneur
 - FR100 : Friday peut preparer un briefing de reprise au retour
 
 **Optimisation Fiscale (FR101)**
@@ -273,32 +273,32 @@ Ce document fournit le decoupage complet en epics et stories pour Friday 2.0, de
 
 - FR102 : Friday peut synchroniser Google Calendar de maniere bidirectionnelle (lecture + ecriture)
 - FR103 : Friday peut detecter les nouveaux fichiers dans un dossier surveille (watchdog)
-- FR104 : Friday peut envoyer les emails approuves par Antonio via EmailEngine
-- FR105 : Antonio peut gerer les correction_rules (lister, modifier, supprimer) via Telegram
-- FR106 : Antonio peut suivre le budget API en temps reel via /budget
+- FR104 : Friday peut envoyer les emails approuves par Mainteneur via EmailEngine
+- FR105 : Mainteneur peut gerer les correction_rules (lister, modifier, supprimer) via Telegram
+- FR106 : Mainteneur peut suivre le budget API en temps reel via /budget
 - FR107 : Friday peut purger automatiquement les donnees temporaires (mappings 30j, logs 7j, backups 30j)
-- FR108 : Antonio peut modifier l'arborescence de classement documentaire
+- FR108 : Mainteneur peut modifier l'arborescence de classement documentaire
 - FR109 : Friday peut extraire des taches depuis emails/transcriptions et les creer dans le systeme de taches
-- FR110 : Antonio peut envoyer des fichiers (photo/document) via Telegram pour traitement
+- FR110 : Mainteneur peut envoyer des fichiers (photo/document) via Telegram pour traitement
 - FR111 : Friday peut envoyer les fichiers retrouves via Telegram (PDF complet, pas juste lien)
 - FR112 : Friday peut traiter un dossier complet en batch a la demande ("range mes Downloads")
 - FR113 : Friday peut nettoyer automatiquement la zone de transit VPS + rotation des logs >7j + backups >30j
 - FR114 : Friday peut envoyer un message d'onboarding Telegram (guide topics + commandes)
-- FR115 : Friday peut auto-recovery RAM par priorite (kill TTS avant STT, notifie Antonio)
+- FR115 : Friday peut auto-recovery RAM par priorite (kill TTS avant STT, notifie Mainteneur)
 - FR116 : Friday peut indexer la base documentaire du programme d'etudes medicales (RAG pgvector) [D19]
 - FR117 : Friday peut generer le briefing matinal en version audio vocale (TTS Kokoro)
 - FR118 : Friday peut surveiller les conflits de calendrier (Heartbeat Phase 3)
 - FR119 : Friday peut envoyer des rappels de suivi patients (Heartbeat Phase 3)
 - FR120 : Friday peut envoyer des rappels de renouvellement de contrats (Heartbeat Phase 3)
 - FR121 : Friday peut envoyer des rappels d'entretien equipements (Heartbeat Phase 3)
-- FR122 : Antonio peut overrider manuellement un trust level via /trust set
+- FR122 : Mainteneur peut overrider manuellement un trust level via /trust set
 - FR123 : Friday peut importer des CSV bancaires via workflow n8n dedie
 - FR124 : Friday peut traiter des fichiers via workflow n8n dedie
 - FR125 : Friday peut surveiller les nouveaux enregistrements Plaud via workflow n8n (GDrive watch)
 - FR126 : Friday peut executer un script cleanup-disk automatique (cron)
 - FR127 : Friday peut detecter les restarts anormaux de services (crash loop)
 - FR128 : Friday peut coacher en mode trust=blocked avec validation medicale obligatoire
-- FR129 : Friday peut apprendre le style redactionnel d'Antonio (table core.writing_examples, few-shot injection)
+- FR129 : Friday peut apprendre le style redactionnel d'Mainteneur (table core.writing_examples, few-shot injection)
 - ~~FR130~~ : **RETIRE** — doublon de FR21 (digest soir)
 - FR131 : Friday peut surveiller les images Docker via Watchtower (MONITOR_ONLY, alerte sans auto-update)
 - FR132 : Friday peut verifier la sante des APIs externes (cron 30min, Anthropic, EmailEngine OAuth)
@@ -355,7 +355,7 @@ Ce document fournit le decoupage complet en epics et stories pour Friday 2.0, de
 - NFR17 : Anthropic API resilience — retry 3 tentatives, backoff exponentiel, alerte System
 - NFR18 : EmailEngine resilience — alerte immediate, adaptateur swappable IMAP direct
 - NFR19 : Telegram API resilience — queue messages, retry, log local
-- NFR20 : Google Docs API (post-MVP) — skip thesis review si indisponible, notifier Antonio
+- NFR20 : Google Docs API (post-MVP) — skip thesis review si indisponible, notifier Mainteneur
 
 **Maintenabilite (NFR21-NFR24)**
 

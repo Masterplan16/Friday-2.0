@@ -83,8 +83,8 @@ services:
       --save 60 10000
     volumes:
       - redis-data:/data
-    # NOTE: ACL désactivé pour dev local (problème encodage Windows CRLF)
-    # TODO: Corriger encodage avant déploiement VPS production
+    # NOTE: ACL désactivé pour dev local (pas nécessaire en environnement contrôlé)
+    # PRODUCTION: Décommenter la ligne ci-dessous pour activer ACL (fichier déjà en LF Unix ✓)
     # - ./config/redis.acl:/etc/redis/users.acl:ro
     ports:
       - "127.0.0.1:6379:6379"

@@ -146,7 +146,7 @@ omit = ["*/tests/*", "*/__pycache__/*"]
 
 [tool.coverage.report]
 show_missing = true
-fail_under = 60
+fail_under = 70
 
 # ---------------------------------------------------------------------------
 # flake8 (via setup.cfg or .flake8 since flake8 doesn't read pyproject.toml)
@@ -157,4 +157,4 @@ fail_under = 60
 # ---------------------------------------------------------------------------
 [tool.sqlfluff.core]
 dialect = "postgres"
-max_line_length = 120
+max_line_length = 100

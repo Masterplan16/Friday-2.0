@@ -4,7 +4,7 @@ Status: done
 
 ## Story
 
-As a **utilisateur de Friday 2.0 (Antonio)**,
+As a **utilisateur de Friday 2.0 (Mainteneur)**,
 I want **que tout texte contenant des données personnelles (PII) soit automatiquement anonymisé via Presidio + spaCy-fr AVANT tout appel au LLM cloud (Claude Sonnet 4.5), avec un comportement fail-explicit qui stoppe le pipeline si l'anonymisation échoue**,
 so that **ma conformité RGPD soit garantie, qu'aucune donnée sensible ne soit jamais transmise à un service externe, et que toute défaillance soit immédiatement visible plutôt que silencieuse**.
 

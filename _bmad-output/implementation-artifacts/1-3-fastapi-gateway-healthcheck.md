@@ -123,7 +123,7 @@ Afin que **tous les services soient accessibles via une API REST sécurisée ave
 |------------|--------|---------------|
 | **Langage** | Python 3.12+ | LangGraph requirement |
 | **Framework** | FastAPI | Performance async, OpenAPI natif |
-| **Auth** | Bearer token simple (single-user) | Antonio seul utilisateur, pas besoin OAuth2 complet |
+| **Auth** | Bearer token simple (single-user) | Mainteneur seul utilisateur, pas besoin OAuth2 complet |
 | **Logging** | structlog (JSON) | JAMAIS print(), JAMAIS emojis dans les logs |
 | **Validation** | Pydantic v2 | Schemas API + config |
 | **ORM** | **AUCUN** | asyncpg brut uniquement |
@@ -319,7 +319,7 @@ async def verify_token(token: str = Depends(oauth2_scheme)) -> dict:
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    return {"username": "antonio"}  # Single user
+    return {"username": "mainteneur"}  # Single user
 
 # Dependency pour protéger les routes
 async def get_current_user(user: dict = Depends(verify_token)) -> dict:

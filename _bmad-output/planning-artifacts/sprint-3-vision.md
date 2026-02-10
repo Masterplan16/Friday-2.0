@@ -16,13 +16,13 @@ Outils d'aide a la decision clinique. **Tout en trust=blocked** — validation m
 
 ### Story 14.1 : Interpretation Traces ECG
 
-As a Antonio (medecin),
+As a Mainteneur (medecin),
 I want soumettre un ECG en PDF pour obtenir une interpretation assistee,
 So que j'aie un second avis rapide en consultation.
 
 **Acceptance Criteria:**
 
-**Given** Antonio envoie un PDF d'ECG via Telegram
+**Given** Mainteneur envoie un PDF d'ECG via Telegram
 **When** le PDF est anonymise (Presidio) et analyse par Claude Sonnet 4.5
 **Then** une interpretation est generee avec : rythme, frequence, anomalies detectees (FR74)
 **And** le trust level est "blocked" — analyse seule, aucune action (FR128)
@@ -32,13 +32,13 @@ So que j'aie un second avis rapide en consultation.
 
 ### Story 14.2 : Verification Interactions Medicamenteuses
 
-As a Antonio (medecin),
+As a Mainteneur (medecin),
 I want verifier rapidement les interactions entre medicaments,
 So que je prescrive en securite.
 
 **Acceptance Criteria:**
 
-**Given** Antonio demande "interactions entre metformine et ramipril"
+**Given** Mainteneur demande "interactions entre metformine et ramipril"
 **When** les bases BDPM/Vidal sont interrogees (S7)
 **Then** les interactions connues sont listees avec niveau de gravite (FR75, FR141)
 **And** le trust level est "blocked"
@@ -47,17 +47,17 @@ So que je prescrive en securite.
 
 ### Story 14.3 : Recommandations HAS & Posologies
 
-As a Antonio (medecin),
+As a Mainteneur (medecin),
 I want acceder rapidement aux recommandations HAS et calculer des posologies,
 So que je puisse repondre aux questions cliniques en consultation.
 
 **Acceptance Criteria:**
 
-**Given** Antonio demande "recommandation HAS diabete type 2"
+**Given** Mainteneur demande "recommandation HAS diabete type 2"
 **When** les bases de reference sont interrogees
 **Then** les recommandations actuelles sont affichees (FR76, FR142)
 
-**Given** Antonio demande "posologie amoxicilline enfant 25kg"
+**Given** Mainteneur demande "posologie amoxicilline enfant 25kg"
 **When** le calcul est effectue via Vidal/Antibioclic (S7)
 **Then** la posologie recommandee est affichee avec references (FR77, FR143)
 **And** le trust level est "blocked"
@@ -66,7 +66,7 @@ So que je puisse repondre aux questions cliniques en consultation.
 
 ### Story 14.4 : Rappels Suivi Patients
 
-As a Antonio (medecin),
+As a Mainteneur (medecin),
 I want etre rappele pour les suivis de patients,
 So que je n'oublie aucune consultation de controle.
 
@@ -75,21 +75,21 @@ So que je n'oublie aucune consultation de controle.
 **Given** un suivi patient est enregistre (post-consultation, post-intervention)
 **When** la date de suivi approche
 **Then** un rappel proactif est envoye dans le topic Chat (FR119, Heartbeat Phase 3)
-**And** le trust level est "propose" (Antonio decide de l'action)
+**And** le trust level est "propose" (Mainteneur decide de l'action)
 
 ---
 
 ### Story 14.5 : Automatisation Doctolib
 
-As a Antonio,
+As a Mainteneur,
 I want que Friday puisse prendre des RDV sur Doctolib,
 So que je n'aie pas a naviguer manuellement sur le site.
 
 **Acceptance Criteria:**
 
-**Given** Antonio demande "prends un RDV dentiste semaine prochaine"
+**Given** Mainteneur demande "prends un RDV dentiste semaine prochaine"
 **When** le bot Playwright navigue sur Doctolib (T12)
-**Then** les creneaux disponibles sont presentes a Antonio via inline buttons (FR135)
+**Then** les creneaux disponibles sont presentes a Mainteneur via inline buttons (FR135)
 **And** le trust level est "propose" (validation avant reservation)
 
 ---
@@ -116,7 +116,7 @@ Planification alimentaire et sportive pour la famille.
 
 ### Story 15.1 : Planification Menus Hebdomadaires
 
-As a Antonio,
+As a Mainteneur,
 I want que Friday planifie les menus de la semaine,
 So que ma famille mange equilibre sans que je passe du temps a planifier.
 
@@ -132,7 +132,7 @@ So que ma famille mange equilibre sans que je passe du temps a planifier.
 
 ### Story 15.2 : Generation Liste de Courses
 
-As a Antonio,
+As a Mainteneur,
 I want une liste de courses generee automatiquement depuis les menus,
 So que je n'oublie rien au supermarche.
 
@@ -147,7 +147,7 @@ So que je n'oublie rien au supermarche.
 
 ### Story 15.3 : Recettes du Jour
 
-As a Antonio,
+As a Mainteneur,
 I want recevoir les recettes du jour chaque matin,
 So que je sache quoi preparer sans chercher.
 
@@ -162,13 +162,13 @@ So que je sache quoi preparer sans chercher.
 
 ### Story 15.4 : Programme Sportif & Integration Agenda
 
-As a Antonio,
+As a Mainteneur,
 I want un programme sportif adapte integre a mon agenda,
 So que le sport soit planifie autour de mes contraintes.
 
 **Acceptance Criteria:**
 
-**Given** les objectifs sportifs d'Antonio sont configures
+**Given** les objectifs sportifs d'Mainteneur sont configures
 **When** le programme est genere
 **Then** les seances sont adaptees au niveau et progressives (FR81)
 **And** les seances sont integrees dans l'agenda selon les creneaux libres (FR82)
@@ -182,7 +182,7 @@ Suivi maintenance vehicule, chaudiere, equipements.
 
 ### Story 16.1 : Suivi Cycles Entretien
 
-As a Antonio,
+As a Mainteneur,
 I want que Friday suive les cycles d'entretien de mes equipements,
 So que je n'oublie jamais une vidange ou un controle technique.
 
@@ -196,14 +196,14 @@ So que je n'oublie jamais une vidange ou un controle technique.
 
 ### Story 16.2 : Proposition Prise de RDV
 
-As a Antonio,
+As a Mainteneur,
 I want que Friday propose de prendre RDV quand un entretien approche,
 So que je n'aie qu'a valider.
 
 **Acceptance Criteria:**
 
 **Given** un rappel d'entretien est envoye
-**When** Antonio souhaite agir
+**When** Mainteneur souhaite agir
 **Then** Friday propose des actions : recherche garage, prise RDV (Playwright si supporte) (FR85)
 **And** le trust level est "propose"
 
@@ -215,7 +215,7 @@ Creation de materiel pedagogique pour l'enseignement medical.
 
 ### Story 17.1 : Indexation Programme Etudes
 
-As a Antonio (enseignant),
+As a Mainteneur (enseignant),
 I want que la base documentaire du programme medical soit indexee,
 So que Friday puisse creer du contenu pedagogique aligne.
 
@@ -230,7 +230,7 @@ So que Friday puisse creer du contenu pedagogique aligne.
 
 ### Story 17.2 : Generateur TCS
 
-As a Antonio (enseignant),
+As a Mainteneur (enseignant),
 I want generer des vignettes cliniques TCS a partir du programme,
 So que je puisse creer des exercices pedagogiques rapidement.
 
@@ -240,13 +240,13 @@ So que je puisse creer des exercices pedagogiques rapidement.
 **When** Friday genere une vignette TCS
 **Then** elle contient : scenario clinique, question, options, reponses du panel (FR86)
 **And** un panel d'experts est simule pour la correction (FR87, FR146)
-**And** le trust level est "propose" (Antonio valide avant utilisation)
+**And** le trust level est "propose" (Mainteneur valide avant utilisation)
 
 ---
 
 ### Story 17.3 : Generateur ECOS
 
-As a Antonio (enseignant),
+As a Mainteneur (enseignant),
 I want generer des examens cliniques objectifs structures,
 So que je puisse preparer les evaluations pratiques.
 
@@ -261,7 +261,7 @@ So que je puisse preparer les evaluations pratiques.
 
 ### Story 17.4 : Actualisateur Cours
 
-As a Antonio (enseignant),
+As a Mainteneur (enseignant),
 I want que mes cours existants soient mis a jour avec les dernieres recommandations,
 So que le contenu soit toujours a jour.
 
@@ -278,7 +278,7 @@ So que le contenu soit toujours a jour.
 
 ### Story 18.1 : Indexation Photos BeeStation
 
-As a Antonio,
+As a Mainteneur,
 I want que mes photos BeeStation soient indexees et classees,
 So que je puisse retrouver n'importe quelle photo facilement.
 
@@ -293,27 +293,27 @@ So que je puisse retrouver n'importe quelle photo facilement.
 
 ### Story 18.2 : Recherche Photos Semantique
 
-As a Antonio,
+As a Mainteneur,
 I want rechercher mes photos par description ("vacances corse 2024", "gateau anniversaire"),
 So que je n'aie pas a parcourir des dossiers.
 
 **Acceptance Criteria:**
 
 **Given** les photos sont indexees avec embeddings dans pgvector (PostgreSQL) [D19]
-**When** Antonio envoie une requete de recherche
+**When** Mainteneur envoie une requete de recherche
 **Then** les photos correspondantes sont retournees via Telegram (FR93, FR140)
 
 ---
 
 ### Story 18.3 : Inventaire Collection JV
 
-As a Antonio,
+As a Mainteneur,
 I want un inventaire complet de ma collection de jeux video,
 So que je connaisse la valeur de ma collection.
 
 **Acceptance Criteria:**
 
-**Given** Antonio soumet des photos/descriptions de ses jeux
+**Given** Mainteneur soumet des photos/descriptions de ses jeux
 **When** Friday analyse les jeux
 **Then** un inventaire est cree : titre, plateforme, edition, etat, photo (FR94)
 
@@ -321,7 +321,7 @@ So que je connaisse la valeur de ma collection.
 
 ### Story 18.4 : Veille Prix & Valeur JV
 
-As a Antonio,
+As a Mainteneur,
 I want suivre la valeur de ma collection et etre alerte des bonnes affaires,
 So que je puisse vendre ou acheter au bon moment.
 
@@ -336,27 +336,27 @@ So que je puisse vendre ou acheter au bon moment.
 
 ### Story 18.5 : Document Preuve Assurance JV
 
-As a Antonio,
+As a Mainteneur,
 I want generer un document d'inventaire valorise pour mon assurance,
 So que ma collection soit couverte en cas de sinistre.
 
 **Acceptance Criteria:**
 
 **Given** l'inventaire JV avec valeurs est a jour
-**When** Antonio demande un export assurance
+**When** Mainteneur demande un export assurance
 **Then** un document PDF est genere : inventaire complet avec photos, valeurs, total (FR150)
 
 ---
 
 ### Story 18.6 : CV Academique Auto-Maintenu
 
-As a Antonio (enseignant-chercheur),
+As a Mainteneur (enseignant-chercheur),
 I want que mon CV academique se mette a jour automatiquement,
 So que je n'aie plus a le faire manuellement.
 
 **Acceptance Criteria:**
 
-**Given** Friday connait les publications, theses dirigees, et enseignements d'Antonio
+**Given** Friday connait les publications, theses dirigees, et enseignements d'Mainteneur
 **When** un nouvel element est detecte (nouvelle publication, soutenance these)
 **Then** le CV academique est mis a jour automatiquement (FR97)
 **And** le trust level est "propose"
@@ -365,18 +365,18 @@ So que je n'aie plus a le faire manuellement.
 
 ### Story 18.7 : Mode HS / Vacances
 
-As a Antonio,
+As a Mainteneur,
 I want activer un mode vacances qui gere les emails en mon absence,
 So que je puisse deconnecter sereinement.
 
 **Acceptance Criteria:**
 
-**Given** Antonio active le mode HS via Telegram (/hs on)
+**Given** Mainteneur active le mode HS via Telegram (/hs on)
 **When** des emails non urgents arrivent
 **Then** des reponses automatiques sont envoyees (FR98)
-**And** les thesards sont alertes de l'indisponibilite d'Antonio (FR99)
+**And** les thesards sont alertes de l'indisponibilite d'Mainteneur (FR99)
 
-**Given** Antonio desactive le mode HS (/hs off)
+**Given** Mainteneur desactive le mode HS (/hs off)
 **When** il reprend le travail
 **Then** un briefing de reprise complet est genere : resume de tout ce qui s'est passe pendant l'absence (FR100, FR152)
 **And** le briefing est envoye dans le topic Chat
@@ -387,13 +387,13 @@ So que je puisse deconnecter sereinement.
 
 ### Story 19.1 : Aide Decision Achat Complexe
 
-As a Antonio,
+As a Mainteneur,
 I want une analyse basee sur ma situation financiere reelle avant un achat important,
 So que je prenne des decisions eclairees.
 
 **Acceptance Criteria:**
 
-**Given** Antonio soumet un projet d'achat (voiture, travaux)
+**Given** Mainteneur soumet un projet d'achat (voiture, travaux)
 **When** Friday analyse la situation financiere (5 perimetres)
 **Then** un rapport est genere : capacite financiere, impact tresorerie, recommandation (FR90, FR91)
 **And** le trust level est "propose" (JAMAIS d'action automatique sur les finances)
@@ -402,7 +402,7 @@ So que je prenne des decisions eclairees.
 
 ### Story 19.2 : Suggestions Optimisation Fiscale
 
-As a Antonio,
+As a Mainteneur,
 I want des suggestions d'optimisation fiscale entre mes structures,
 So que je minimise ma charge fiscale legalement.
 
@@ -422,7 +422,7 @@ So que je minimise ma charge fiscale legalement.
 
 ### Story 20.1 : Evaluation Technique Graphiti/Neo4j
 
-As a Antonio,
+As a Mainteneur,
 I want evaluer si une migration du graphe de connaissances est pertinente,
 So que Friday utilise le meilleur outil disponible.
 
@@ -432,7 +432,7 @@ So que Friday utilise le meilleur outil disponible.
 **When** l'evaluation technique est menee
 **Then** les criteres sont verifies : Graphiti > 500 stars GitHub, doc API complete, tests 100k+ entites
 **And** une recommandation est formulee : migrer vers Graphiti, migrer vers Neo4j CE, ou rester sur PostgreSQL + pgvector (KISS) [D19]
-**And** aucune migration n'est effectuee sans validation explicite d'Antonio
+**And** aucune migration n'est effectuee sans validation explicite d'Mainteneur
 
 ---
 

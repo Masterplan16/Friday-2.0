@@ -226,7 +226,7 @@ EMAILENGINE_ENCRYPTION_KEY=<généré via openssl rand>
 
 # Telegram
 TELEGRAM_BOT_TOKEN=<depuis BotFather>
-TELEGRAM_CHAT_ID=<ID chat Antonio>
+TELEGRAM_CHAT_ID=<ID chat Mainteneur>
 
 # Anthropic API (Claude Sonnet 4.5 - D17)
 ANTHROPIC_API_KEY=<depuis console.anthropic.com>

@@ -11,7 +11,7 @@
 
 ## Story
 
-En tant qu'**Antonio (développeur/mainteneur)**,
+En tant qu'**Mainteneur (développeur/mainteneur)**,
 Je veux **un pipeline CI/CD automatisé pour tests et déploiement sécurisé**,
 afin que **chaque modification soit validée automatiquement et le déploiement sur VPS soit reproductible**.
 

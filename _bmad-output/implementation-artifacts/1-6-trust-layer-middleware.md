@@ -149,7 +149,7 @@ valid_statuses = {"auto", "pending", "approved", "rejected", "corrected"}
 
 **Explication des statuts manquants** :
 - `approved` : Validation Telegram acceptée (clic [Approve])
-- `corrected` : Antonio a corrigé l'action après exécution
+- `corrected` : Mainteneur a corrigé l'action après exécution
 - `completed` (ancien) : Remplacé par `approved` (cohérence avec SQL)
 
 ---

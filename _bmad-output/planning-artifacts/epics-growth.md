@@ -57,7 +57,7 @@ Classification 5 perimetres, import CSV, detection anomalies, audit abonnements,
 **Acceptance Criteria** :
 - Detection factures en double (meme montant + meme fournisseur + delai < 30j)
 - Detection depenses inhabituelles (> 2 ecarts-types)
-- Trust level = propose (validation Antonio)
+- Trust level = propose (validation Mainteneur)
 - 0 faux negatif critique (US7)
 
 **Estimation** : M
@@ -117,7 +117,7 @@ Pre-correction methodologique Google Docs, anti-hallucination references, 4 thes
 - Google Docs API v1 Suggestions (pas commentaires ancres — S2)
 - Support 4 theses en parallele max (FR53)
 - Insertion suggestions mode revision (FR52)
-- Trust level = propose (Antonio valide avant push vers thesard)
+- Trust level = propose (Mainteneur valide avant push vers thesard)
 
 **Estimation** : M
 

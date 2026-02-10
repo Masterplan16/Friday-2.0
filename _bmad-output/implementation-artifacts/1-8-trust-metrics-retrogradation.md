@@ -13,7 +13,7 @@
 
 As a **Friday 2.0 system**,
 I want **un système de calcul automatique des métriques trust avec rétrogradation/promotion automatique des trust levels**,
-so that **Friday s'améliore continuellement et reste fiable sans intervention manuelle constante d'Antonio**.
+so that **Friday s'améliore continuellement et reste fiable sans intervention manuelle constante d'Mainteneur**.
 
 ---
 
@@ -99,12 +99,12 @@ so that **Friday s'améliore continuellement et reste fiable sans intervention m
 ### AC6: Override manuel trust level (FR122) ❌ NON IMPLÉMENTÉ
 
 - Commande Telegram `/trust set <module> <action> <level>`
-- **Aucune condition** : Antonio peut forcer n'importe quel trust level
+- **Aucune condition** : Mainteneur peut forcer n'importe quel trust level
 - Bypass anti-oscillation et seuils accuracy
 - Update immédiat `config/trust_levels.yaml` (module.action: <level>)
 - Événement Redis Streams : `friday:events:trust.level.changed` (reason: manual_override)
 - Réponse Telegram : "⚙️ Override : Module email.classify forcé à 'auto' (bypass conditions)"
-- Log WARNING : "Manual trust override by Antonio: email.classify → auto"
+- Log WARNING : "Manual trust override by Mainteneur: email.classify → auto"
 - **Validation** : `/trust set email classify blocked` → vérifier trust_levels.yaml modifié
 
 **Code existant** : ❌ Aucune commande /trust dans bot/handlers/
@@ -146,7 +146,7 @@ so that **Friday s'améliore continuellement et reste fiable sans intervention m
 - `detect_retrogradations()` détecte correctement les rétrogradations (accuracy <90%)
 - Envoie alertes Redis Streams
 - MAIS ne modifie JAMAIS le fichier `config/trust_levels.yaml`
-- Résultat : Antonio reçoit notification mais trust level reste 'auto' → Friday continue de s'exécuter en auto malgré accuracy faible
+- Résultat : Mainteneur reçoit notification mais trust level reste 'auto' → Friday continue de s'exécuter en auto malgré accuracy faible
 
 **Impact** : Critique — rétrogradation ineffective, Trust Layer non fiable
 
@@ -234,7 +234,7 @@ if total >= 5 and accuracy < 0.70 and current_trust == "propose":
 **Problème** :
 - AC4, AC5, AC6 requièrent `/trust promote`, `/trust set`
 - Aucun handler Telegram pour ces commandes n'existe
-- Antonio ne peut PAS promouvoir manuellement les modules
+- Mainteneur ne peut PAS promouvoir manuellement les modules
 
 **Dépendance bloquante** : Story 1.11 (Commandes Telegram Trust & Budget) doit implémenter `/trust promote` et `/trust set`
 
@@ -659,7 +659,7 @@ a4e4128 feat(gateway): implement fastapi gateway with healthcheck endpoints
 accuracy(module, action, semaine) = 1 - (corrections / total_actions)
 
 Où :
-- corrections = nombre d'actions corrigées par Antonio dans la semaine
+- corrections = nombre d'actions corrigées par Mainteneur dans la semaine
 - total_actions = nombre total d'actions exécutées (status: auto, propose validée)
 ```
 
@@ -678,7 +678,7 @@ Où :
 
 **PRD - FRs** :
 - FR30 : Les trust levels se rétrogradent automatiquement si accuracy < seuil
-- FR31 : Antonio peut promouvoir manuellement un trust level après accuracy soutenue
+- FR31 : Mainteneur peut promouvoir manuellement un trust level après accuracy soutenue
 - FR122 : Override manuel trust level (bypass conditions)
 
 **Migration SQL** : [database/migrations/011_trust_system.sql](../../database/migrations/011_trust_system.sql), [database/migrations/013_trust_metrics_columns.sql](../../database/migrations/013_trust_metrics_columns.sql)

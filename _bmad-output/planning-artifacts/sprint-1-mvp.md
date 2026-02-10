@@ -155,7 +155,7 @@ So that toutes les actions soient tracees et auditables.
 **When** la fonction s'execute
 **Then** un receipt est cree avec status="pending"
 **And** un message avec inline buttons [Approve] [Reject] [Correct] est envoye dans le topic Actions
-**And** l'action n'est PAS executee tant qu'Antonio n'a pas approuve
+**And** l'action n'est PAS executee tant qu'Mainteneur n'a pas approuve
 
 **Given** une fonction decoree avec `trust_default="blocked"`
 **When** la fonction s'execute
@@ -171,28 +171,28 @@ So that toutes les actions soient tracees et auditables.
 
 ### Story 1.7 : Feedback Loop & Correction Rules
 
-As a Antonio,
+As a Mainteneur,
 I want corriger les actions de Friday et qu'il apprenne de mes corrections,
 So that Friday s'ameliore continuellement sans intervention technique.
 
 **Acceptance Criteria:**
 
 **Given** un receipt dans le topic Actions avec inline buttons
-**When** Antonio clique [Correct] et saisit la correction
+**When** Mainteneur clique [Correct] et saisit la correction
 **Then** le receipt est mis a jour avec status="corrected" et le champ `correction` est rempli
 **And** l'evenement `action.corrected` est publie dans Redis Streams
 
 **Given** 2+ corrections similaires existent pour un meme module/action (similarite >= 0.85)
 **When** le nightly pattern detection s'execute (ADD2)
-**Then** une proposition de regle est envoyee a Antonio via inline buttons dans le topic Actions
+**Then** une proposition de regle est envoyee a Mainteneur via inline buttons dans le topic Actions
 **And** la proposition contient : conditions, output attendu, source_receipts
 
-**Given** Antonio approuve une proposition de regle
+**Given** Mainteneur approuve une proposition de regle
 **When** la regle est creee
 **Then** elle est inseree dans `core.correction_rules` avec active=true
 **And** elle est injectee dans les prompts des prochaines actions du module concerne
 
-**Given** Antonio veut gerer les regles existantes
+**Given** Mainteneur veut gerer les regles existantes
 **When** il utilise /rules list, /rules edit [id], /rules delete [id]
 **Then** les regles sont listees/modifiees/supprimees dans `core.correction_rules`
 
@@ -222,7 +222,7 @@ So that les modules peu fiables soient retrogrades sans intervention humaine.
 **Then** la promotion n'est PAS appliquee (anti-oscillation)
 **And** le delai restant est indique
 
-**Given** Antonio execute `/trust set email classify auto`
+**Given** Mainteneur execute `/trust set email classify auto`
 **When** la commande est traitee
 **Then** le trust level est force a "auto" immediatement (override manuel — FR122)
 **And** un receipt d'override est cree
@@ -231,14 +231,14 @@ So that les modules peu fiables soient retrogrades sans intervention humaine.
 
 ### Story 1.9 : Bot Telegram Core & Topics
 
-As a Antonio,
+As a Mainteneur,
 I want interagir avec Friday via Telegram avec 5 topics specialises,
 So que chaque type d'information ait son propre canal sans melange.
 
 **Acceptance Criteria:**
 
 **Given** le bot Telegram est demarre et connecte au supergroup
-**When** Antonio envoie un message texte dans le topic Chat
+**When** Mainteneur envoie un message texte dans le topic Chat
 **Then** Friday recoit le message, le traite et repond dans le meme topic
 
 **Given** les 5 topics sont crees (Chat & Proactive, Email, Actions, System, Metrics)
@@ -246,12 +246,12 @@ So que chaque type d'information ait son propre canal sans melange.
 **Then** elle est routee vers le topic Email (pas Chat, pas System)
 **And** le routing suit la logique definie dans ADD11
 
-**Given** Antonio tape /help dans n'importe quel topic
+**Given** Mainteneur tape /help dans n'importe quel topic
 **When** le bot recoit la commande
 **Then** la liste complete des commandes est affichee avec descriptions courtes
 **And** les commandes incluent : /status, /journal, /receipt, /confiance, /stats, /budget, /vip, /trust, /rules, /help
 
-**Given** c'est la premiere connexion d'Antonio
+**Given** c'est la premiere connexion d'Mainteneur
 **When** le bot detecte un nouvel utilisateur
 **Then** un message d'onboarding est envoye avec guide des topics et commandes principales (FR114)
 
@@ -259,7 +259,7 @@ So que chaque type d'information ait son propre canal sans melange.
 
 ### Story 1.10 : Bot Telegram Inline Buttons & Validation
 
-As a Antonio,
+As a Mainteneur,
 I want valider ou rejeter les actions proposees via des boutons inline,
 So que je puisse controler Friday rapidement sans taper de texte.
 
@@ -270,18 +270,18 @@ So que je puisse controler Friday rapidement sans taper de texte.
 **Then** un message apparait dans le topic Actions avec inline buttons [Approve] [Reject] [Correct]
 **And** le message contient : input_summary, output_summary, confidence
 
-**Given** Antonio clique [Approve]
+**Given** Mainteneur clique [Approve]
 **When** le callback est traite
 **Then** le receipt passe en status="approved"
 **And** l'action est executee (ex: email classe dans la categorie proposee)
 **And** le message est mis a jour avec un indicateur visuel de confirmation
 
-**Given** Antonio clique [Reject]
+**Given** Mainteneur clique [Reject]
 **When** le callback est traite
 **Then** le receipt passe en status="rejected"
 **And** l'action n'est PAS executee
 
-**Given** Antonio clique [Correct] et saisit "finance" au lieu de "medical"
+**Given** Mainteneur clique [Correct] et saisit "finance" au lieu de "medical"
 **When** la correction est enregistree
 **Then** le receipt passe en status="corrected" avec correction="finance"
 **And** le feedback loop (Story 1.7) prend le relais
@@ -290,27 +290,27 @@ So que je puisse controler Friday rapidement sans taper de texte.
 
 ### Story 1.11 : Commandes Telegram Trust & Budget
 
-As a Antonio,
+As a Mainteneur,
 I want consulter les metriques de confiance et le budget API via Telegram,
 So que je puisse surveiller la qualite et les couts de Friday.
 
 **Acceptance Criteria:**
 
-**Given** Antonio tape /confiance
+**Given** Mainteneur tape /confiance
 **When** la commande est traitee
 **Then** un tableau est affiche avec : module, action, accuracy%, trust_level, nb_actions (FR32)
 
-**Given** Antonio tape /receipt [uuid]
+**Given** Mainteneur tape /receipt [uuid]
 **When** le receipt existe
 **Then** le detail complet est affiche : input_summary, output_summary, confidence, reasoning, created_at
 **And** avec l'option -v, les steps detailles sont aussi affiches (FR33)
 
-**Given** Antonio tape /budget
+**Given** Mainteneur tape /budget
 **When** la commande est traitee
 **Then** s'affichent : consommation API Claude mois courant en EUR, projection fin de mois, % du budget utilise
 **And** alerte si projection > 75 EUR/mois (NFR25)
 
-**Given** Antonio tape /journal
+**Given** Mainteneur tape /journal
 **When** la commande est traitee
 **Then** les 20 dernieres actions sont listees avec : timestamp, module, action, status, confidence
 
@@ -318,7 +318,7 @@ So que je puisse surveiller la qualite et les couts de Friday.
 
 ### Story 1.12 : Backup Chiffre & Sync PC
 
-As a Antonio,
+As a Mainteneur,
 I want que mes donnees soient sauvegardees quotidiennement et chiffrees,
 So que je ne perde jamais rien meme en cas de panne catastrophique.
 
@@ -328,9 +328,9 @@ So que je ne perde jamais rien meme en cas de panne catastrophique.
 **When** le script backup.sh se lance
 **Then** un dump PostgreSQL complet est genere
 **And** le dump est chiffre avec `age` (NFR10)
-**And** le fichier chiffre est synchronise vers le PC d'Antonio via Tailscale (rsync)
+**And** le fichier chiffre est synchronise vers le PC d'Mainteneur via Tailscale (rsync)
 
-**Given** un backup chiffre existe sur le PC d'Antonio
+**Given** un backup chiffre existe sur le PC d'Mainteneur
 **When** un test de restore est execute (mensuel)
 **Then** le dump est dechiffre et restaure dans une base de test
 **And** l'integrite des donnees est verifiee (NFR16)
@@ -346,7 +346,7 @@ So que je ne perde jamais rien meme en cas de panne catastrophique.
 
 As a systeme Friday,
 I want me recuperer automatiquement des pannes courantes,
-So qu'Antonio n'ait pas a intervenir manuellement.
+So qu'Mainteneur n'ait pas a intervenir manuellement.
 
 **Acceptance Criteria:**
 
@@ -361,7 +361,7 @@ So qu'Antonio n'ait pas a intervenir manuellement.
 **Given** la RAM VPS depasse 91%
 **When** l'auto-recover-ram se declenche
 **Then** les services sont tues par priorite : TTS (Kokoro) d'abord, puis STT (Whisper), puis OCR (Surya) (FR115)
-**And** Antonio est notifie : "RAM critique 91% — Kokoro TTS arrete. Vocal TTS indisponible."
+**And** Mainteneur est notifie : "RAM critique 91% — Kokoro TTS arrete. Vocal TTS indisponible."
 **And** la recovery complete en < 2min (NFR13)
 
 **Given** un service a redemaree > 3 fois en 1 heure
@@ -411,7 +411,7 @@ So que les donnees personnelles ne persistent pas au-dela du necessaire.
 
 ## Epic 2 : Pipeline Email Intelligent
 
-Le besoin #1 d'Antonio : emails tries, PJ archivees, reponses brouillonnees — sans intervention humaine.
+Le besoin #1 d'Mainteneur : emails tries, PJ archivees, reponses brouillonnees — sans intervention humaine.
 
 ### Story 2.1 : Integration EmailEngine & Reception
 
@@ -435,7 +435,7 @@ So que chaque email soit traite des sa reception.
 
 ### Story 2.2 : Classification Email LLM
 
-As a Antonio,
+As a Mainteneur,
 I want que mes emails soient automatiquement classes par categorie,
 So que je n'aie plus a trier manuellement.
 
@@ -455,7 +455,7 @@ So que je n'aie plus a trier manuellement.
 **Given** la classification a un trust level "propose" ou confidence < 0.85
 **When** le receipt est cree
 **Then** un message avec inline buttons est envoye dans le topic Actions
-**And** Antonio peut approuver, rejeter ou corriger
+**And** Mainteneur peut approuver, rejeter ou corriger
 
 **Given** c'est le cold start (D16) avec ~100 emails non lus
 **When** le traitement batch demarre
@@ -466,13 +466,13 @@ So que je n'aie plus a trier manuellement.
 
 ### Story 2.3 : Detection VIP & Urgence
 
-As a Antonio,
+As a Mainteneur,
 I want etre alerte immediatement pour les emails VIP et urgents,
 So que je ne manque jamais un email critique.
 
 **Acceptance Criteria:**
 
-**Given** Antonio execute /vip dr.martin@example.com
+**Given** Mainteneur execute /vip dr.martin@example.com
 **When** la commande est traitee
 **Then** l'adresse est enregistree comme VIP via le Trust Layer (D7)
 
@@ -509,7 +509,7 @@ So que les documents soient automatiquement OCR-es et classes.
 
 ### Story 2.5 : Brouillon Reponse Email
 
-As a Antonio,
+As a Mainteneur,
 I want que Friday prepare des brouillons de reponse pour mes emails,
 So que je gagne du temps en validant plutot qu'en redigeant.
 
@@ -522,19 +522,19 @@ So que je gagne du temps en validant plutot qu'en redigeant.
 
 **Given** des exemples de style redactionnel existent dans core.writing_examples
 **When** le brouillon est genere
-**Then** le style d'Antonio est reproduit via few-shot injection (FR129)
+**Then** le style d'Mainteneur est reproduit via few-shot injection (FR129)
 
 ---
 
 ### Story 2.6 : Envoi Emails Approuves
 
-As a Antonio,
+As a Mainteneur,
 I want envoyer les brouillons approuves directement depuis Telegram,
 So que je n'aie pas a ouvrir mon client mail.
 
 **Acceptance Criteria:**
 
-**Given** Antonio clique [Send] sur un brouillon de reponse
+**Given** Mainteneur clique [Send] sur un brouillon de reponse
 **When** le callback est traite
 **Then** l'email est envoye via EmailEngine depuis le bon compte IMAP (FR104)
 **And** un receipt est cree avec status="approved"
@@ -544,7 +544,7 @@ So que je n'aie pas a ouvrir mon client mail.
 
 ### Story 2.7 : Extraction Taches depuis Emails
 
-As a Antonio,
+As a Mainteneur,
 I want que les taches mentionnees dans mes emails soient automatiquement detectees,
 So que rien ne tombe entre les mailles du filet.
 
@@ -553,9 +553,9 @@ So que rien ne tombe entre les mailles du filet.
 **Given** un email contient une tache implicite ("merci de me renvoyer le document avant vendredi")
 **When** Claude Sonnet 4.5 analyse l'email
 **Then** la tache est extraite avec : description, deadline, priorite (FR109)
-**And** elle est proposee a Antonio via inline buttons dans le topic Actions (trust=propose)
+**And** elle est proposee a Mainteneur via inline buttons dans le topic Actions (trust=propose)
 
-**Given** Antonio approuve la tache
+**Given** Mainteneur approuve la tache
 **When** le callback est traite
 **Then** la tache est creee dans `core.tasks` avec reference a l'email source
 
@@ -567,7 +567,7 @@ OCR, renommage, classement, recherche semantique — les documents trouves insta
 
 ### Story 3.1 : OCR & Renommage Intelligent
 
-As a Antonio,
+As a Mainteneur,
 I want que mes documents soient OCR-es et renommes automatiquement,
 So que je retrouve facilement chaque document par son nom.
 
@@ -587,7 +587,7 @@ So que je retrouve facilement chaque document par son nom.
 
 ### Story 3.2 : Classement Arborescence
 
-As a Antonio,
+As a Mainteneur,
 I want que mes documents soient classes automatiquement dans la bonne arborescence,
 So que tout soit range sans effort.
 
@@ -600,9 +600,9 @@ So que tout soit range sans effort.
 
 **Given** le classement est incertain (confidence < 0.80)
 **When** le receipt est cree
-**Then** le trust level passe a "propose" et Antonio valide via inline buttons
+**Then** le trust level passe a "propose" et Mainteneur valide via inline buttons
 
-**Given** Antonio veut modifier l'arborescence
+**Given** Mainteneur veut modifier l'arborescence
 **When** il envoie une commande via Telegram (FR108)
 **Then** la nouvelle structure est prise en compte pour les prochains classements
 
@@ -610,13 +610,13 @@ So que tout soit range sans effort.
 
 ### Story 3.3 : Recherche Semantique Documents
 
-As a Antonio,
+As a Mainteneur,
 I want rechercher mes documents par requete en langage naturel,
 So que je retrouve n'importe quel document en quelques secondes.
 
 **Acceptance Criteria:**
 
-**Given** Antonio envoie une requete texte (ex: "facture EDF janvier 2026")
+**Given** Mainteneur envoie une requete texte (ex: "facture EDF janvier 2026")
 **When** la requete est convertie en embedding et comparee dans pgvector (PostgreSQL) [D19]
 **Then** les top-5 resultats les plus pertinents sont retournes en < 3s (NFR3)
 **And** chaque resultat contient : nom du fichier, score de pertinence, extrait du contenu
@@ -625,7 +625,7 @@ So que je retrouve n'importe quel document en quelques secondes.
 
 ### Story 3.4 : Suivi Garanties
 
-As a Antonio,
+As a Mainteneur,
 I want etre notifie avant l'expiration de mes garanties,
 So que je puisse agir avant qu'il ne soit trop tard.
 
@@ -663,18 +663,18 @@ So que les documents scannes ou importes soient traites sans intervention.
 
 ### Story 3.6 : Fichiers via Telegram
 
-As a Antonio,
+As a Mainteneur,
 I want envoyer et recevoir des fichiers directement via Telegram,
 So que je puisse archiver ou retrouver des documents depuis mon telephone.
 
 **Acceptance Criteria:**
 
-**Given** Antonio envoie un fichier (photo/PDF/document) via Telegram
+**Given** Mainteneur envoie un fichier (photo/PDF/document) via Telegram
 **When** le bot recoit le fichier
 **Then** le fichier est traite par le pipeline Archiviste (OCR → renommage → classement) (FR110)
 **And** le resultat est confirme dans le topic Email ou Chat
 
-**Given** Antonio demande un fichier ("envoie-moi la facture EDF de janvier")
+**Given** Mainteneur demande un fichier ("envoie-moi la facture EDF de janvier")
 **When** la recherche semantique trouve le document
 **Then** le fichier PDF complet est envoye via Telegram (pas juste un lien) (FR111)
 
@@ -682,20 +682,20 @@ So que je puisse archiver ou retrouver des documents depuis mon telephone.
 
 ### Story 3.7 : Traitement Batch Dossier
 
-As a Antonio,
+As a Mainteneur,
 I want pouvoir dire "range mes Downloads" et que tout soit traite,
 So que je puisse nettoyer un dossier entier en une commande.
 
 **Acceptance Criteria:**
 
-**Given** Antonio envoie "range mes Downloads" via Telegram
+**Given** Mainteneur envoie "range mes Downloads" via Telegram
 **When** le bot identifie le dossier cible
 **Then** tous les fichiers du dossier sont traites par le pipeline Archiviste (FR112)
 **And** la progression est affichee dans le topic Metrics (X/N fichiers)
 
 **Given** le traitement batch est termine
 **When** le rapport est genere
-**Then** Antonio recoit : N fichiers traites, N classes, N echecs avec raisons
+**Then** Mainteneur recoit : N fichiers traites, N classes, N echecs avec raisons
 
 ---
 
@@ -707,13 +707,13 @@ Friday pousse l'information au bon moment — design push-first (D9).
 
 As a systeme Friday,
 I want verifier proactivement les situations urgentes selon le contexte,
-So qu'Antonio soit prevenu avant de devoir demander.
+So qu'Mainteneur soit prevenu avant de devoir demander.
 
 **Acceptance Criteria:**
 
 **Given** l'interval Heartbeat est de 30 minutes et il est dans les heures actives (8h-22h)
 **When** le tick Heartbeat se declenche
-**Then** le ContextProvider fournit : heure, jour, weekend, derniere activite Antonio, prochain evenement
+**Then** le ContextProvider fournit : heure, jour, weekend, derniere activite Mainteneur, prochain evenement
 **And** Claude Sonnet 4.5 decide quels checks executer selon le contexte (FR24)
 
 **Given** le LLM decide d'executer check_urgent_emails (HIGH)
@@ -727,13 +727,13 @@ So qu'Antonio soit prevenu avant de devoir demander.
 
 **Given** aucun check ne detecte d'anomalie
 **When** tous les checks sont termines
-**Then** Friday ne notifie PAS Antonio (80%+ du temps = silence = bon comportement)
+**Then** Friday ne notifie PAS Mainteneur (80%+ du temps = silence = bon comportement)
 
 ---
 
 ### Story 4.2 : Briefing Matinal 8h
 
-As a Antonio,
+As a Mainteneur,
 I want recevoir un briefing complet chaque matin a 8h,
 So que je demarre ma journee informe en 90 secondes.
 
@@ -754,7 +754,7 @@ So que je demarre ma journee informe en 90 secondes.
 
 ### Story 4.3 : Digest Soir 18h
 
-As a Antonio,
+As a Mainteneur,
 I want recevoir un resume de la journee a 18h,
 So que je puisse voir ce que Friday a fait sans avoir a demander.
 
@@ -769,7 +769,7 @@ So que je puisse voir ce que Friday a fait sans avoir a demander.
 
 ### Story 4.4 : Rapport Hebdomadaire
 
-As a Antonio,
+As a Mainteneur,
 I want recevoir un rapport hebdomadaire chaque dimanche soir,
 So que je puisse suivre les tendances de Friday sur la semaine.
 
@@ -784,7 +784,7 @@ So que je puisse suivre les tendances de Friday sur la semaine.
 
 ### Story 4.5 : Alertes Immediates Push
 
-As a Antonio,
+As a Mainteneur,
 I want etre alerte immediatement en cas de probleme critique,
 So que je puisse reagir rapidement.
 
@@ -810,13 +810,13 @@ STT/TTS via Telegram + personnalite configurable — Friday a une voix et un car
 
 ### Story 5.1 : STT Faster-Whisper
 
-As a Antonio,
+As a Mainteneur,
 I want envoyer des messages vocaux a Friday via Telegram,
 So que je puisse interagir en voiture ou les mains occupees.
 
 **Acceptance Criteria:**
 
-**Given** Antonio envoie un message vocal Telegram
+**Given** Mainteneur envoie un message vocal Telegram
 **When** le bot recoit le fichier audio
 **Then** Faster-Whisper (local VPS, ~4 Go RAM) transcrit le message en texte (FR15)
 **And** le texte transcrit est traite comme un message texte normal
@@ -829,7 +829,7 @@ So que je puisse interagir en voiture ou les mains occupees.
 
 ### Story 5.2 : TTS Kokoro
 
-As a Antonio,
+As a Mainteneur,
 I want que Friday me reponde en vocal quand c'est pertinent,
 So que je puisse ecouter les reponses sans lire.
 
@@ -848,13 +848,13 @@ So que je puisse ecouter les reponses sans lire.
 
 ### Story 5.3 : Recherche Vocale Documents
 
-As a Antonio,
+As a Mainteneur,
 I want rechercher des documents par la voix,
 So que je puisse retrouver un document en conduisant.
 
 **Acceptance Criteria:**
 
-**Given** Antonio envoie un vocal "qu'est-ce que j'avais lu sur les inhibiteurs SGLT2 le mois dernier ?"
+**Given** Mainteneur envoie un vocal "qu'est-ce que j'avais lu sur les inhibiteurs SGLT2 le mois dernier ?"
 **When** le pipeline STT → recherche semantique → LLM → TTS s'execute
 **Then** les 3 documents les plus pertinents sont retournes avec extraits (FR13)
 **And** la reponse est envoyee en vocal (TTS)
@@ -863,7 +863,7 @@ So que je puisse retrouver un document en conduisant.
 
 ### Story 5.4 : Personnalite Configurable
 
-As a Antonio,
+As a Mainteneur,
 I want configurer le ton et le style de Friday,
 So que Friday s'adapte a mes preferences de communication.
 
@@ -874,7 +874,7 @@ So que Friday s'adapte a mes preferences de communication.
 **Then** le prompt system inclut les parametres de personnalite (D6)
 **And** le ton de la reponse correspond a la configuration (FR47)
 
-**Given** Antonio modifie le YAML
+**Given** Mainteneur modifie le YAML
 **When** le changement est detecte
 **Then** la nouvelle personnalite est appliquee sans redemarrage
 
@@ -945,7 +945,7 @@ So que je puisse changer de backend sans toucher au code metier.
 
 ### Story 6.4 : Migration 110k Emails Historiques
 
-As a Antonio,
+As a Mainteneur,
 I want migrer mes 110k emails historiques dans le graphe de connaissances,
 So que Friday ait une base de connaissances riche des le Day 1.
 
@@ -974,7 +974,7 @@ Detection d'evenements, sync Google Calendar, gestion multi-roles.
 
 ### Story 7.1 : Detection Evenements
 
-As a Antonio,
+As a Mainteneur,
 I want que Friday detecte automatiquement les evenements dans mes emails,
 So que je n'oublie aucun rendez-vous ou echeance.
 
@@ -983,9 +983,9 @@ So que je n'oublie aucun rendez-vous ou echeance.
 **Given** un email contient une information d'evenement ("reunion jeudi 14h salle 3")
 **When** Claude Sonnet 4.5 analyse l'email
 **Then** l'evenement est extrait avec : date, heure, lieu, participants, description (FR41)
-**And** l'evenement est propose a Antonio via inline buttons (trust=propose)
+**And** l'evenement est propose a Mainteneur via inline buttons (trust=propose)
 
-**Given** Antonio approuve l'evenement
+**Given** Mainteneur approuve l'evenement
 **When** le callback est traite
 **Then** l'evenement est cree dans Google Calendar (FR102)
 
@@ -993,7 +993,7 @@ So que je n'oublie aucun rendez-vous ou echeance.
 
 ### Story 7.2 : Sync Google Calendar Bidirectionnelle
 
-As a Antonio,
+As a Mainteneur,
 I want que Friday synchronise mon Google Calendar dans les deux sens,
 So que les evenements soient toujours a jour.
 
@@ -1004,7 +1004,7 @@ So que les evenements soient toujours a jour.
 **Then** les evenements sont disponibles pour le ContextProvider du Heartbeat
 **And** les conflits sont detectables
 
-**Given** Antonio cree/modifie un evenement dans Google Calendar
+**Given** Mainteneur cree/modifie un evenement dans Google Calendar
 **When** la sync bidirectionnelle detecte le changement (FR102)
 **Then** l'evenement est mis a jour dans la memoire Friday
 **And** le ContextProvider du Heartbeat est informe
@@ -1013,7 +1013,7 @@ So que les evenements soient toujours a jour.
 
 ### Story 7.3 : Multi-casquettes & Conflits Calendrier
 
-As a Antonio,
+As a Mainteneur,
 I want que Friday comprenne mes differents roles (medecin, enseignant, chercheur),
 So que le contexte soit toujours pertinent.
 

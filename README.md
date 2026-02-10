@@ -338,7 +338,9 @@ Pour déployer Friday 2.0 sur le VPS-4 OVH, voir le guide complet :
 
 ## 📄 Licence
 
-Projet personnel d'Antonio. Tous droits réservés.
+Ce projet est sous licence [MIT](LICENSE).
+
+Copyright (c) 2026 Antonio - Projet personnel Friday 2.0
 
 ---
 

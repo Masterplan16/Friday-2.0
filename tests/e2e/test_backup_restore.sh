@@ -203,6 +203,20 @@ if [ "$TEST_EMAIL" != "Test Email 1" ]; then
     ERRORS=$((ERRORS + 1))
 fi
 
+# FIX M3: Vérifier healthcheck services avec HTTP 200 validation
+echo -e "${YELLOW}Testing services healthcheck...${NC}"
+if command -v curl &> /dev/null; then
+    HEALTHCHECK_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8000/api/v1/health || echo "000")
+    if [ "$HEALTHCHECK_STATUS" = "200" ]; then
+        echo -e "${GREEN}✅ Gateway healthcheck: HTTP 200${NC}"
+    else
+        echo -e "${RED}❌ Gateway healthcheck failed: HTTP $HEALTHCHECK_STATUS${NC}"
+        ERRORS=$((ERRORS + 1))
+    fi
+else
+    echo -e "${YELLOW}⚠️  curl not found - skipping healthcheck test${NC}"
+fi
+
 #############################################
 # RÉSULTAT FINAL
 #############################################

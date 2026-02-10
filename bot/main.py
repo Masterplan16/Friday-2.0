@@ -16,7 +16,7 @@ import time
 
 import structlog
 from bot.config import ConfigurationError, load_bot_config, validate_bot_permissions
-from bot.handlers import commands, messages, trust_budget_commands, trust_commands
+from bot.handlers import backup_commands, commands, messages, trust_budget_commands, trust_commands
 from telegram.ext import (
     Application,
     ApplicationBuilder,
@@ -108,6 +108,9 @@ class FridayBot:
         self.application.add_handler(CommandHandler("confiance", trust_budget_commands.confiance_command))
         self.application.add_handler(CommandHandler("stats", trust_budget_commands.stats_command))
         self.application.add_handler(CommandHandler("budget", trust_budget_commands.budget_command))
+
+        # Commande Story 1.12 - Backup & Sync
+        self.application.add_handler(CommandHandler("backup", backup_commands.backup_command))
 
         # Commandes Story 1.8 - Trust management (AC4, AC5, AC6)
         self.application.add_handler(CommandHandler("trust", trust_commands.trust_command_router))

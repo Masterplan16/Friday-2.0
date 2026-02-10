@@ -629,13 +629,13 @@ OCR, renommage intelligent, classement arborescence, recherche semantique, suivi
 
 ## Epic 4 : Intelligence Proactive & Briefings
 
-**7 FRs | 5 stories | HIGH**
+**8 FRs | 6 stories | HIGH**
 
-Heartbeat Engine, briefings matinaux, digest soir, rapport hebdomadaire. Design push-first.
+Heartbeat Engine, briefings matinaux, digest soir, rapport hebdomadaire, agent conversationnel. Design push-first.
 
-**FRs** : FR20-FR25, FR117
+**FRs** : FR14 (conversations libres), FR20-FR25, FR117
 
-**NFRs** : NFR2 (briefing < 60s)
+**NFRs** : NFR2 (briefing < 60s), NFR4 (vocal round-trip ≤30s)
 
 **Dependances** : Epic 1 (socle), Epic 2 (emails), Epic 3 (documents)
 
@@ -723,6 +723,83 @@ Heartbeat Engine, briefings matinaux, digest soir, rapport hebdomadaire. Design 
 - Design push-first (D9) : tout est pousse, commandes en fallback
 
 **Estimation** : S
+
+---
+
+### Story 4.6 : Agent Conversationnel & Task Dispatcher
+
+**FRs** : FR14 (messages texte libres), extension pour tâches manuelles
+
+**Description** : Implementer l'agent conversationnel Friday capable de comprendre les intentions en langage naturel et de router vers les actions appropriées.
+
+**Acceptance Criteria** :
+- Detection intention via Claude Sonnet 4.5 (confidence ≥0.7)
+- Creation taches dans core.tasks depuis langage naturel ("Friday, rappelle-moi de faire X")
+- Extraction parametres : description, date echeance (dates relatives : "demain", "lundi prochain"), priorite
+- Confirmation conversationnelle apres chaque action
+- Trust level = propose Day 1 → auto apres 2 semaines accuracy ≥95%
+- Anonymisation PII via Presidio avant appel LLM
+- Receipts crees via @friday_action (Story 1.6)
+- Routing vers modules metier existants (search_document, query_agenda) ou fallback "Fonctionnalite a venir"
+- Intent unknown → message clarification avec liste capacites
+
+**Dependances** : Stories 1.5 (Presidio), 1.6 (Trust Layer), 1.9 (Bot Telegram), migration 003 (core.tasks)
+
+**Fichiers crees** :
+- agents/src/agents/conversational/agent.py
+- agents/src/agents/conversational/intent_detector.py
+- agents/src/agents/conversational/task_creator.py
+- agents/src/agents/conversational/dispatcher.py
+- agents/src/agents/conversational/models.py
+- agents/src/agents/conversational/prompts.py
+
+**Fichiers modifies** :
+- bot/handlers/messages.py (remplacer echo par appel conversational)
+- config/trust_levels.yaml (ajouter section conversational)
+
+**Tests** : 32 tests unitaires + 6 E2E
+
+**Estimation** : L (25h)
+
+---
+
+### Story 4.7 : Task Management Commands & Daily Briefing Integration
+
+**FRs** : Extension FR14 (consultation tâches), FR20 (intégration briefing)
+
+**Description** : Implémenter les commandes Telegram pour consulter, rechercher, compléter et supprimer les tâches créées via Story 4.6. Intégrer une section "Tâches du jour" dans le briefing matinal 8h (Story 4.2).
+
+**Acceptance Criteria** :
+- `/taches` liste les 10 tâches actives (status IN ('pending', 'running'))
+- `/taches -done` liste les tâches complétées
+- `/taches -overdue` liste les tâches en retard (due_date < NOW)
+- `/taches -urgent` liste les tâches haute priorité (priority >= 3)
+- `/taches search <query>` recherche dans descriptions (ILIKE)
+- `/taches <id>` affiche détail complet d'une tâche
+- `/tache complete <id>` marque comme complétée via @friday_action (trust=auto)
+- `/tache delete <id>` supprime avec confirmation inline button
+- Briefing matinal 8h (Story 4.2) inclut section "📋 Tâches du jour" avec overdue + today
+- Progressive disclosure : 10 résultats par défaut, -v pour détails complets
+- Pagination si >20 résultats
+
+**Dépendances** : Stories 1.6 (Trust Layer), 1.9 (Bot Telegram), 4.6 (création tâches), 4.2 (briefing — backlog)
+
+**Fichiers créés** :
+- database/migrations/020_add_due_date_to_tasks.sql
+- bot/handlers/task_commands.py
+- tests/unit/bot/test_task_commands.py
+- tests/e2e/bot/test_task_management_e2e.py
+
+**Fichiers modifiés** :
+- bot/handlers/commands.py (ajouter /taches dans help)
+- bot/main.py (enregistrer handlers)
+- config/trust_levels.yaml (section task_management)
+- docs/telegram-user-guide.md
+- Story 4.2 (modifier AC pour inclure section tâches)
+
+**Tests** : 15 tests unitaires + 3 E2E
+
+**Estimation** : M (8h)
 
 ---
 
@@ -941,14 +1018,14 @@ Detection evenements, multi-casquettes, sync Google Calendar.
 
 | Epic | Stories | FRs | Estimation totale |
 |------|---------|-----|-------------------|
-| 1. Socle Operationnel | 15 | 28 | XL |
+| 1. Socle Operationnel | 17 | 28 | XL |
 | 2. Pipeline Email | 7 | 10 | L |
 | 3. Archiviste | 7 | 11 | L |
-| 4. Proactivite | 5 | 7 | M-L |
+| 4. Proactivite | 6 | 8 | L |
 | 5. Vocal | 4 | 4 | M |
 | 6. Memoire | 4 | 4 | L |
 | 7. Agenda | 3 | 4 | M |
-| **TOTAL** | **45** | **68+14 transversaux = 82** | |
+| **TOTAL** | **48** | **69+14 transversaux = 83** | |
 
 **Sequence d'implementation suggeree** :
 1. Epic 1 (Socle) — prerequis a tout

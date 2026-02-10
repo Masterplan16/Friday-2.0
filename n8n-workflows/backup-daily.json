@@ -1,0 +1,147 @@
+{
+  "name": "Friday Backup Daily",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 3 * * *"
+            }
+          ]
+        }
+      },
+      "id": "backup-daily-cron",
+      "name": "Schedule: 03h00 Daily",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "command": "bash /scripts/backup.sh",
+        "options": {}
+      },
+      "id": "backup-postgres",
+      "name": "Backup PostgreSQL",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "command": "bash /scripts/rsync-to-pc.sh",
+        "options": {}
+      },
+      "id": "sync-to-pc",
+      "name": "Sync to PC",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://friday-bot:8080/api/telegram/send",
+        "method": "POST",
+        "jsonParameters": true,
+        "options": {},
+        "bodyParametersJson": "={ \"topic_id\": \"{{ $env.TOPIC_SYSTEM_ID }}\", \"message\": \"✅ Backup quotidien terminé\\n\\nFichier: {{ $json.filename }}\\nTaille: {{ $json.size_mb }} MB\\nChecksum: {{ $json.checksum.substring(0, 8) }}...\\nSync PC: ✅\" }"
+      },
+      "id": "notify-success",
+      "name": "Notify Success (Telegram)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://friday-bot:8080/api/telegram/send",
+        "method": "POST",
+        "jsonParameters": true,
+        "options": {},
+        "bodyParametersJson": "={ \"topic_id\": \"{{ $env.TOPIC_SYSTEM_ID }}\", \"message\": \"🚨 ERREUR Backup\n\nÉchec: {{ $json.error }}\nTimestamp: {{ $now }}\" }"
+      },
+      "id": "notify-error",
+      "name": "Notify Error (Telegram)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [650, 500]
+    }
+  ],
+  "connections": {
+    "Schedule: 03h00 Daily": {
+      "main": [
+        [
+          {
+            "node": "Backup PostgreSQL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Backup PostgreSQL": {
+      "main": [
+        [
+          {
+            "node": "Sync to PC",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Backup PostgreSQL": {
+      "error": [
+        [
+          {
+            "node": "Notify Error (Telegram)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sync to PC": {
+      "main": [
+        [
+          {
+            "node": "Notify Success (Telegram)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ],
+      "error": [
+        [
+          {
+            "node": "Notify Error (Telegram)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "timezone": "Europe/Paris"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "backup",
+      "id": "backup-tag"
+    },
+    {
+      "name": "critical",
+      "id": "critical-tag"
+    }
+  ],
+  "triggerCount": 1,
+  "updatedAt": "2026-02-10T00:00:00.000Z",
+  "versionId": "1"
+}

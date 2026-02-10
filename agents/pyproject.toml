@@ -32,6 +32,7 @@ markers = [
     "integration: Integration tests",
     "e2e: End-to-end tests",
     "slow: Slow tests",
+    "presidio_live: Presidio live tests (require Presidio service)",
 ]
 addopts = "-v --tb=short"
 

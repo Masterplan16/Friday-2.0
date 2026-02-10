@@ -93,7 +93,7 @@ COMMENT ON COLUMN ingestion.telegram_messages.chat_id IS 'Chat ID (supergroup)';
 COMMENT ON COLUMN ingestion.telegram_messages.thread_id IS 'Thread ID du topic (NULL si General)';
 COMMENT ON COLUMN ingestion.telegram_messages.message_id IS 'Message ID unique Telegram';
 COMMENT ON COLUMN ingestion.telegram_messages.text IS 'Contenu texte du message';
-COMMENT ON COLUMN ingestion.telegram_messages.sent_at IS 'Timestamp du message (heure Telegram)';
+COMMENT ON COLUMN ingestion.telegram_messages.sent_at IS 'Horodatage du message (heure Telegram)';
 COMMENT ON COLUMN ingestion.telegram_messages.processed IS 'Indique si le message a été traité par Friday';
 
 COMMIT;

@@ -65,6 +65,6 @@ EXECUTE FUNCTION core.update_user_settings_updated_at();
 -- INSERT INTO core.user_settings (user_id, username, full_name, onboarding_sent)
 -- VALUES (123456789, '@mainteneur', 'owner Lopez', FALSE)
 -- ON CONFLICT (user_id) DO NOTHING;
--- ☝️ Commenté - sera inséré automatiquement au runtime
+-- Note: Commente - sera insere automatiquement au runtime
 
 COMMIT;

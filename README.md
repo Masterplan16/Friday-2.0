@@ -161,6 +161,42 @@ friday-2.0/
 | **Hébergement** | OVH France (RGPD compliant) |
 | **LLM** | Claude Sonnet 4.5 (Anthropic API) — Presidio anonymise AVANT tout appel (D17) |
 | **SSH** | Uniquement via Tailscale (pas de port 22 ouvert) |
+| **Branch Protection** | Master branch protected - PR required, status checks enforced |
+| **Dependency Scanning** | Dependabot automated updates (weekly) |
+
+### 🔑 Secrets Management
+
+Tous les secrets sont chiffrés avec **age + SOPS** avant d'être commitées :
+- ✅ `.env.enc` contient secrets chiffrés (commitable en toute sécurité)
+- ✅ `.env.example` structure complète avec valeurs fictives
+- ✅ Clé privée age stockée localement uniquement (`~/.age/friday-key.txt`)
+- ✅ Rotation tokens régulière (tous les 3-6 mois)
+
+📘 **Documentation complète** : [docs/secrets-management.md](docs/secrets-management.md)
+
+### 🛡️ Security Policy
+
+Rapporter une vulnérabilité : Voir [SECURITY.md](SECURITY.md) pour procédure complète.
+
+- **Réponse** : Accusé réception sous 48h
+- **Correction** : 7 jours (critique), 14 jours (high), 30 jours (medium)
+- **Divulgation** : Coordonnée avec publication du fix
+
+### 🔍 Security Audit
+
+Audit mensuel automatisé via git-secrets :
+- ✅ Scan historique Git complet
+- ✅ Détection tokens API, credentials, clés privées
+- ✅ Validation .gitignore et SOPS encryption
+
+📘 **Procédures d'audit** : [docs/security-audit.md](docs/security-audit.md)
+
+### 🚀 Branch Protection & CI/CD
+
+- **Master branch** : Protected (PR obligatoire, 1 review minimum)
+- **Status checks** : lint, test-unit, test-integration, build-validation
+- **Dependabot** : Mises à jour automatiques hebdomadaires (lundi 8h UTC)
+- **E2E Security Tests** : 6 tests automatisés ([tests/e2e/test_repo_security.sh](tests/e2e/test_repo_security.sh))
 
 ---
 

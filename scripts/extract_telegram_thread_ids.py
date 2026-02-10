@@ -135,7 +135,6 @@ async def extract_thread_ids():
         for update in updates:
             if update.message and update.message.chat.id == supergroup_id:
                 thread_id = update.message.message_thread_id
-                text = update.message.text or ""
 
                 if thread_id and thread_id not in thread_ids.values():
                     # Essayer de deviner le topic par le texte
@@ -163,7 +162,7 @@ async def extract_thread_ids():
                 f.write(f"{topic['env_var']}={thread_id}\n")
 
         print(f"\n✅ Fichier généré : {env_output}")
-        print(f"   Copier le contenu dans votre .env principal")
+        print("   Copier le contenu dans votre .env principal")
 
         if len(thread_ids) == 5:
             print("\n✅ Tous les topics détectés ! Setup terminé.")
@@ -187,7 +186,8 @@ def main():
     # Vérifier Python version
     if sys.version_info < (3, 11):
         print(
-            f"⚠️  Python 3.11+ recommandé (vous avez {sys.version_info.major}.{sys.version_info.minor})"
+            f"⚠️  Python 3.11+ recommandé "
+            f"(vous avez {sys.version_info.major}.{sys.version_info.minor})"
         )
 
     # Lancer extraction

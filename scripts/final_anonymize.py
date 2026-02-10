@@ -19,7 +19,7 @@ def anonymize(file_path):
             file_path.write_text(content, encoding="utf-8")
             print(f"[OK] {file_path.relative_to(Path.cwd())}")
             return True
-    except Exception as e:
+    except Exception:
         pass
     return False
 

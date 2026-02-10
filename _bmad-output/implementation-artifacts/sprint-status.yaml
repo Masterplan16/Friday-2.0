@@ -63,7 +63,7 @@ development_status:
   1-14-monitoring-docker-images: backlog
   1-15-cleanup-purge-rgpd: backlog
   1-16-ci-cd-pipeline-github-actions: done  # 2026-02-10: Code review completee - 17 issues fixees (3C+4H+6M+4L), AC8 logs JSON ajoutes, rollback intelligent, git pull safe, validation Telegram, subtasks 5.2-5.4 demarquees
-  1-17-preparation-repository-public: backlog
+  1-17-preparation-repository-public: done  # 2026-02-10: Code review adversarial - 13 issues fixes (4C+4H+3M+2L), 11/11 AC valides, 57/57 subtasks, PR #1 merged
   epic-1-retrospective: optional
 
   # Epic 2: Pipeline Email Intelligent (7 stories | 10 FRs)

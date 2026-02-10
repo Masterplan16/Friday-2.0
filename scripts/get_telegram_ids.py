@@ -10,7 +10,6 @@ Usage:
 """
 
 import asyncio
-import os
 
 from telegram import Update
 from telegram.ext import Application, ContextTypes, MessageHandler, filters
@@ -47,7 +46,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         chat_id = update.message.chat_id
         user_id = update.effective_user.id
 
-        print(f"📱 Message direct reçu:")
+        print("📱 Message direct reçu:")
         print(f"   User ID: {user_id}")
         print(f"   Chat ID: {chat_id}")
         print()
@@ -67,7 +66,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         print(f"✅ Topic {len(received_topics)}/5 détecté:")
         print(f"   Supergroup ID: {chat_id}")
         print(f"   Thread ID: {thread_id}")
-        print(f"   (Note le Thread ID pour ce topic)")
+        print("   (Note le Thread ID pour ce topic)")
         print()
 
         if len(received_topics) == 5:

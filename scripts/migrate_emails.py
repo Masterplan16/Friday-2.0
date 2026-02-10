@@ -28,6 +28,7 @@ import asyncio
 import json
 import logging
 import os
+import re
 import tempfile
 import time
 from dataclasses import dataclass
@@ -45,12 +46,11 @@ ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 # Validation
 if not POSTGRES_DSN or not ANTHROPIC_API_KEY:
     raise EnvironmentError(
-        "POSTGRES_DSN et ANTHROPIC_API_KEY doivent etre definis via variable d'environnement ou .env "
-        "(utiliser age/SOPS pour les secrets, jamais de credentials en clair)"
+        "POSTGRES_DSN et ANTHROPIC_API_KEY doivent etre definis via variable d'environnement "
+        "ou .env (utiliser age/SOPS pour les secrets, jamais de credentials en clair)"
     )
 
 # Valider format POSTGRES_DSN
-import re
 
 DSN_PATTERN = r"^postgresql://[^@]+@[^/]+/[^?]+(\?.*)?$"
 if not re.match(DSN_PATTERN, POSTGRES_DSN):
@@ -206,14 +206,17 @@ class EmailMigrator:
 
         # TODO(Story 1.5): Brancher sur agents/src/tools/anonymize.py
         # from agents.src.tools.anonymize import anonymize_text
-        # anonymized, mapping = await anonymize_text(raw_text, context=f"migration_{email['message_id']}")
+        # anonymized, mapping = await anonymize_text(
+        #     raw_text, context=f"migration_{email['message_id']}"
+        # )
         # return anonymized
 
         # RGPD: JAMAIS envoyer de PII au cloud sans anonymisation
         raise NotImplementedError(
             "Presidio anonymization non implementee. "
             "RGPD interdit l'envoi de PII au LLM cloud sans anonymisation. "
-            "Implementer agents/src/tools/anonymize.py (Story 1.5) avant d'utiliser ce script en mode reel."
+            "Implementer agents/src/tools/anonymize.py (Story 1.5) avant d'utiliser "
+            "ce script en mode reel."
         )
 
     async def classify_email(self, email: dict, retry_count: int = 0) -> dict:
@@ -227,7 +230,7 @@ class EmailMigrator:
             await asyncio.sleep(self.rate_limit_delay)
 
             # RGPD: Anonymiser AVANT l'appel LLM cloud
-            anonymized_content = await self.anonymize_for_classification(email)
+            _anonymized_content = await self.anonymize_for_classification(email)
 
             # Appel Claude Sonnet 4.5 (TODO: implémenter avec contenu anonymisé)
             # response = await self.llm_client.complete(
@@ -280,7 +283,8 @@ class EmailMigrator:
                 await self.db.execute(
                     """
                     INSERT INTO ingestion.emails
-                    (message_id, sender, subject, body_text, category, priority, confidence, received_at, processed_at)
+                    (message_id, sender, subject, body_text, category, priority,
+                     confidence, received_at, processed_at)
                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
                 """,
                     email["message_id"],
@@ -419,7 +423,10 @@ async def main():
         "--rate-limit",
         type=int,
         default=RATE_LIMIT_RPM,
-        help=f"Rate limit Anthropic API en req/min (défaut: {RATE_LIMIT_RPM}). Ajuster selon tier Anthropic",
+        help=(
+            f"Rate limit Anthropic API en req/min (défaut: {RATE_LIMIT_RPM}). "
+            "Ajuster selon tier Anthropic"
+        ),
     )
     args = parser.parse_args()
 

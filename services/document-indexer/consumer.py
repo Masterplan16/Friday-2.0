@@ -83,7 +83,6 @@ class DocumentIndexerConsumer:
             data: {document_id, filename, doc_type, category, ocr_text}
         """
         document_id = data.get("document_id")
-        filename = data.get("filename")
         doc_type = data.get("doc_type")
         ocr_text = data.get("ocr_text", "")
 

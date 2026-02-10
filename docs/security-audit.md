@@ -166,7 +166,7 @@ git secrets --scan-history
 
 ```bash
 # Créer fichier test avec vrai format token
-echo "TELEGRAM_BOT_TOKEN=REVOKED_TELEGRAM_TOKEN_1" > test.txt
+echo "TELEGRAM_BOT_TOKEN=123456789:ABCdefGHIjklMNOpqrsTUVwxyz1234567890" > test.txt
 
 # Scanner fichier
 git secrets --scan test.txt

@@ -49,9 +49,19 @@ ENV/
 
 # Secrets (SOPS encrypted files are OK to commit)
 *.key
+*.pem
 !*.key.age
 credentials.json
 service-account.json
+secrets.yaml
+secrets*.yaml
+!secrets*.yaml.enc
+.age/
+.sops/
+
+# Allow encrypted files explicitly
+!.env.enc
+!.env.*.enc
 
 # Logs
 logs/

@@ -10,7 +10,7 @@ BEGIN;
 -- dans le supergroup Telegram Friday 2.0 Control.
 
 CREATE TABLE IF NOT EXISTS core.telegram_config (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     supergroup_id BIGINT NOT NULL,
     topic_name TEXT NOT NULL,
     topic_key TEXT NOT NULL,  -- Clé technique (ex: "chat_proactive")
@@ -32,13 +32,13 @@ CREATE INDEX IF NOT EXISTS idx_telegram_config_thread_id
 ON core.telegram_config(thread_id);
 
 -- Commentaires
-COMMENT ON TABLE core.telegram_config IS 'Configuration des topics Telegram (mapping nom → thread_id)';
-COMMENT ON COLUMN core.telegram_config.supergroup_id IS 'Chat ID du supergroup Friday 2.0 Control (négatif)';
-COMMENT ON COLUMN core.telegram_config.topic_name IS 'Nom affiché du topic (ex: "Chat & Proactive")';
-COMMENT ON COLUMN core.telegram_config.topic_key IS 'Clé technique unique (ex: "chat_proactive")';
+COMMENT ON TABLE core.telegram_config IS 'Configuration des topics Telegram (mapping nom -> thread_id)';
+COMMENT ON COLUMN core.telegram_config.supergroup_id IS 'Chat ID du supergroup Friday 2.0 Control (negatif)';
+COMMENT ON COLUMN core.telegram_config.topic_name IS 'Nom affiche du topic (ex: "Chat & Proactive")';
+COMMENT ON COLUMN core.telegram_config.topic_key IS 'Cle technique unique (ex: "chat_proactive")';
 COMMENT ON COLUMN core.telegram_config.thread_id IS 'Thread ID du topic dans Telegram (>0)';
-COMMENT ON COLUMN core.telegram_config.icon IS 'Emoji/icon du topic (ex: "💬")';
-COMMENT ON COLUMN core.telegram_config.description IS 'Description du rôle du topic';
+COMMENT ON COLUMN core.telegram_config.icon IS 'Emoji/icon du topic (ex: icon)';
+COMMENT ON COLUMN core.telegram_config.description IS 'Description du role du topic';
 
 -- =====================================================================
 -- Données initiales (5 topics) - DÉSACTIVÉ
@@ -53,11 +53,11 @@ COMMENT ON COLUMN core.telegram_config.description IS 'Description du rôle du t
 -- Exemple d'insertion manuelle après extraction:
 -- INSERT INTO core.telegram_config (supergroup_id, topic_name, topic_key, thread_id, icon, description)
 -- VALUES
---     (-1001234567890, 'Chat & Proactive', 'chat_proactive', 42, '💬', 'Conversation bidirectionnelle avec owner, heartbeat, reminders'),
---     (-1001234567890, 'Email & Communications', 'email', 43, '📬', 'Notifications email: classifications, PJ, emails urgents'),
---     (-1001234567890, 'Actions & Validations', 'actions', 44, '🤖', 'Actions nécessitant validation (trust=propose), inline buttons'),
---     (-1001234567890, 'System & Alerts', 'system', 45, '🚨', 'Santé système: RAM >85%, services down, erreurs critiques'),
---     (-1001234567890, 'Metrics & Logs', 'metrics', 46, '📊', 'Métriques non-critiques: actions auto, stats, logs')
+--     (-1001234567890, 'Chat & Proactive', 'chat_proactive', 42, 'ICON', 'Conversation bidirectionnelle avec owner, heartbeat, reminders'),
+--     (-1001234567890, 'Email & Communications', 'email', 43, 'ICON', 'Notifications email: classifications, PJ, emails urgents'),
+--     (-1001234567890, 'Actions & Validations', 'actions', 44, 'ICON', 'Actions necessitant validation (trust=propose), inline buttons'),
+--     (-1001234567890, 'System & Alerts', 'system', 45, 'ICON', 'Sante systeme: RAM >85%, services down, erreurs critiques'),
+--     (-1001234567890, 'Metrics & Logs', 'metrics', 46, 'ICON', 'Metriques non-critiques: actions auto, stats, logs')
 -- ON CONFLICT (topic_key) DO UPDATE SET thread_id = EXCLUDED.thread_id, updated_at = NOW();
 
 -- =====================================================================
@@ -66,7 +66,7 @@ COMMENT ON COLUMN core.telegram_config.description IS 'Description du rôle du t
 -- Stocke tous les messages reçus depuis Telegram pour historique et debugging.
 
 CREATE TABLE IF NOT EXISTS ingestion.telegram_messages (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id BIGINT NOT NULL,
     chat_id BIGINT NOT NULL,
     thread_id INTEGER,  -- NULL si message dans General topic

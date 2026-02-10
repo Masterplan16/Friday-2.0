@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "friday-bot"
+version = "2.0.0"
+description = "Friday 2.0 Telegram Bot"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "python-telegram-bot>=22.6",
+    "structlog>=24.1.0",
+    "asyncpg>=0.31.0",
+    "python-dotenv>=1.2.1",
+    "pyyaml>=6.0.1",
+]
+
+[tool.setuptools]
+packages = ["bot"]

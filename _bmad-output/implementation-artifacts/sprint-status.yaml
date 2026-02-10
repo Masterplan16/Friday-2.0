@@ -1,4 +1,4 @@
-# Mis a jour 2026-02-10 : Story 1.10 done (34/34 tests, code review 15 findings fixes)
+# Mis a jour 2026-02-10 : Story 1.13 ready-for-dev (6 bugs identifies, 22-31 tests requis, 5 AC manquent)
 # generated: 2026-02-08
 # project: Friday 2.0
 # project_key: NOKEY
@@ -59,7 +59,7 @@ development_status:
   1-10-bot-telegram-inline-buttons-validation: done  # 2026-02-10: Code review adversariale — 15 issues fixes (3C+5H+5M+2L), 34/34 tests, ActionExecutor C1, race condition C2, whitelist C3, status 'executed' H2, validated_by H4.
   1-11-commandes-telegram-trust-budget: done  # 2026-02-10: Code review adversariale — 15 issues fixes (3C+5H+5M+2L), 52/52 tests, pool asyncpg H1, owner check H5, RAM% C3, progressive disclosure M4
   1-12-backup-chiffre-sync-pc: done  # 2026-02-10: Code review adversarial - 15 issues fixés (4C+6H+5M). ImportError fix, /backup handler registered, SSH MITM fix, n8n JSON output, retry 9h, 5 unit tests, curl validation, portable find. 6/6 AC ✅, 28 fichiers.
-  1-13-self-healing-tier-1-2: backlog  # code existe mais pas de story file ni audit bugs
+  1-13-self-healing-tier-1-2: done  # 2026-02-10: CODE REVIEW COMPLETE ✅ - 8 issues fixés (1C+4M+3L), 6/6 AC ✅, 13/13 tasks, 28 tests (24 unit + 4 integration), 20 fichiers créés, 11 modifiés. Self-healing Tier 1-2: Docker restart, auto-recovery RAM (91%), OS updates, crash loop detection, error handler global. DB logging activé, tests telegram-notify ajoutés, paths configurables n8n.
   1-14-monitoring-docker-images: backlog
   1-15-cleanup-purge-rgpd: backlog
   1-16-ci-cd-pipeline-github-actions: done  # 2026-02-10: Code review completee - 17 issues fixees (3C+4H+6M+4L), AC8 logs JSON ajoutes, rollback intelligent, git pull safe, validation Telegram, subtasks 5.2-5.4 demarquees

@@ -1,0 +1,189 @@
+{
+  "name": "Detect Crash Loop (Story 1.13)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "*/10 * * * *"
+            }
+          ]
+        }
+      },
+      "name": "Schedule Every 10 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [
+        250,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "command": "bash ${FRIDAY_HOME:-/opt/friday}/scripts/detect-crash-loop.sh"
+      },
+      "name": "Execute Crash Loop Detector",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        450,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{$json[\"exitCode\"]}}",
+              "operation": "equal",
+              "value2": 1
+            }
+          ]
+        }
+      },
+      "name": "Crash Loop Detected?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        650,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Extract crashed services from script output\nconst output = items[0].json.stdout || '';\nconst services = [];\n\n// Parse output to extract service names\nconst lines = output.split('\\n');\nfor (const line of lines) {\n  if (line.includes('CRASH LOOP DETECTED:')) {\n    const match = line.match(/CRASH LOOP DETECTED: ([\\w-]+)/);\n    if (match) {\n      services.push(match[1]);\n    }\n  }\n}\n\nreturn [\n  {\n    json: {\n      crash_loop_detected: true,\n      crashed_services: services,\n      full_output: output,\n      timestamp: new Date().toISOString()\n    }\n  }\n];"
+      },
+      "name": "Parse Crashed Services",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        850,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://api.telegram.org/bot{{$env.TELEGRAM_BOT_TOKEN}}/sendMessage",
+        "options": {
+          "timeout": 30000
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "chat_id",
+              "value": "={{$env.TELEGRAM_CHAT_ID}}"
+            },
+            {
+              "name": "message_thread_id",
+              "value": "={{$env.TOPIC_SYSTEM_ID}}"
+            },
+            {
+              "name": "text",
+              "value": "🚨 *CRASH LOOP DETECTION (n8n)*\\n\\nCrashed services: {{$json[\"crashed_services\"].join(', ')}}\\n\\nTimestamp: {{$json[\"timestamp\"]}}\\n\\nServices have been stopped.\\nManual intervention required!"
+            },
+            {
+              "name": "parse_mode",
+              "value": "Markdown"
+            }
+          ]
+        }
+      },
+      "name": "Alert Crash Loop (Telegram)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [
+        1050,
+        200
+      ]
+    },
+    {
+      "parameters": {},
+      "name": "No Crash Loop - OK",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        850,
+        400
+      ]
+    }
+  ],
+  "connections": {
+    "Schedule Every 10 Minutes": {
+      "main": [
+        [
+          {
+            "node": "Execute Crash Loop Detector",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute Crash Loop Detector": {
+      "main": [
+        [
+          {
+            "node": "Crash Loop Detected?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crash Loop Detected?": {
+      "main": [
+        [
+          {
+            "node": "Parse Crashed Services",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Crash Loop - OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Crashed Services": {
+      "main": [
+        [
+          {
+            "node": "Alert Crash Loop (Telegram)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "errorWorkflow": "friday-error-handler",
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "story-1-13",
+      "id": "1"
+    },
+    {
+      "name": "self-healing",
+      "id": "2"
+    },
+    {
+      "name": "critical",
+      "id": "3"
+    }
+  ],
+  "meta": {
+    "instanceId": "friday-vps"
+  }
+}

@@ -344,7 +344,7 @@ Attendre encore 9 jour(s).
 
 ### `/trust set <module> <action> <level>`
 
-Override manuel (bypass conditions) - Reserved Antonio (AC6).
+Override manuel (bypass conditions) - Reserved Mainteneur (AC6).
 
 **Usage** :
 

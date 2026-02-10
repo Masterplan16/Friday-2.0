@@ -19,14 +19,14 @@ topics:
   - name: "Chat & Proactive"
     key: "chat_proactive"
     icon: "💬"
-    description: "Conversation bidirectionnelle avec Antonio, heartbeat, reminders"
-    behavior: "bidirectional"  # Antonio peut envoyer des messages
+    description: "Conversation bidirectionnelle avec Mainteneur, heartbeat, reminders"
+    behavior: "bidirectional"  # Mainteneur peut envoyer des messages
 
   - name: "Email & Communications"
     key: "email"
     icon: "📬"
     description: "Notifications email: classifications, PJ, emails urgents"
-    behavior: "unidirectional"  # Friday → Antonio uniquement
+    behavior: "unidirectional"  # Friday → Mainteneur uniquement
 
   - name: "Actions & Validations"
     key: "actions"
@@ -47,7 +47,7 @@ topics:
     behavior: "unidirectional"
 
 # User modes (documentation uniquement, pas de code)
-# Antonio configure le muting nativement dans Telegram
+# Mainteneur configure le muting nativement dans Telegram
 user_modes:
   normal:
     description: "Tous topics actifs (5/5)"

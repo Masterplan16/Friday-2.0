@@ -46,7 +46,7 @@ async def trust_command_router(update: Update, context: ContextTypes.DEFAULT_TYP
             "  → Conditions : accuracy + anti-oscillation\n\n"
             "• `/trust set <module> <action> <level>`\n"
             "  → Override manuel (bypass conditions)\n"
-            "  → Reserved Antonio\n\n"
+            "  → Reserved owner\n\n"
             "**Exemples :**\n"
             "• `/trust promote email classify`\n"
             "• `/trust set finance classify_transaction blocked`",
@@ -222,7 +222,7 @@ async def trust_set_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     """
     Handler /trust set <module> <action> <level> - Override manuel trust level (AC6).
 
-    Bypass toutes conditions (anti-oscillation, accuracy) - Reserved Antonio.
+    Bypass toutes conditions (anti-oscillation, accuracy) - Reserved owner.
 
     Args:
         update: Update Telegram
@@ -270,7 +270,7 @@ async def trust_set_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 
         # Log WARNING pour override manuel
         logger.warning(
-            "Manual trust override by Antonio",
+            "Manual trust override by owner",
             module=module,
             action=action,
             old_level=old_level,

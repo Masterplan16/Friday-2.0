@@ -271,7 +271,7 @@ Supergroup "Friday 2.0 Control" avec **5 topics** :
 
 **Alternatives considérées** :
 1. **Canal unique avec filtrage intelligent** : Rejetée car impossibilité de mute sélectif (tout ou rien)
-2. **2-3 canaux séparés** : Rejetée car perte de contexte entre canaux, Antonio préfère topics
+2. **2-3 canaux séparés** : Rejetée car perte de contexte entre canaux, Mainteneur préfère topics
 3. **6 topics (Chat + Proactive séparés)** : Rejetée car fragmente conversation naturelle
 4. **5 topics avec fusion Chat + Proactive** : Retenue (suggestion Antonio validée par équipe)
 
@@ -288,7 +288,7 @@ else → Metrics & Logs
 - **Story 1.8** (Alerting/Metrics) : Service doit router multi-topics (+4h dev, +2h tests)
 - **Story 4.1** (Heartbeat Engine) : S'affiche dans Chat & Proactive (compatible)
 - **Story 1.9** (Bot Telegram Core & Topics) : Telegram Topics Implementation (17-18h total)
-  - Setup supergroup manuel Antonio (15min)
+  - Setup supergroup manuel Mainteneur (15min)
   - Bot routing implementation (4h dev + 1h tests)
   - Inline buttons + commands → Story 1.10
   - E2E testing + deployment (2h tests + 1h deploy)

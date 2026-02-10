@@ -9,7 +9,7 @@
 ## ✅ Validation Acceptance Criteria
 
 ### AC1 : SOPS/age configuré avec vraie clé publique
-- [x] `.sops.yaml` mis à jour avec clé publique Antonio (`age17zcpkg...`)
+- [x] `.sops.yaml` mis à jour avec clé publique Mainteneur (`age17zcpkg...`)
 - [x] Clé privée stockée localement uniquement (`~/.age/friday-key.txt`)
 - [x] Test chiffrement/déchiffrement round-trip validé
 - [x] Documentation `docs/secrets-management.md` mise à jour

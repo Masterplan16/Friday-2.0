@@ -57,13 +57,13 @@ FOR EACH ROW
 EXECUTE FUNCTION core.update_user_settings_updated_at();
 
 -- =====================================================================
--- Données initiales: Antonio (user principal)
+-- Données initiales: owner (user principal)
 -- =====================================================================
--- Note: Le user_id réel d'Antonio sera inséré au premier message reçu.
+-- Note: Le user_id réel d'owner sera inséré au premier message reçu.
 -- Cette ligne est un placeholder pour documentation.
 
 -- INSERT INTO core.user_settings (user_id, username, full_name, onboarding_sent)
--- VALUES (123456789, '@antonio', 'Antonio Lopez', FALSE)
+-- VALUES (123456789, '@antonio', 'owner Lopez', FALSE)
 -- ON CONFLICT (user_id) DO NOTHING;
 -- ☝️ Commenté - sera inséré automatiquement au runtime
 

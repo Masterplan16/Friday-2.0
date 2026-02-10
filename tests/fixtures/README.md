@@ -41,7 +41,7 @@
 ```
 
 **Création** :
-- **Responsable** : Antonio (fournit 20 exemples réels anonymisés)
+- **Responsable** : Mainteneur (fournit 20 exemples réels anonymisés)
 - **Quand** : Avant Story 1.5 (Trust Layer dépend de Presidio)
 - **Durée estimée** : 1-2h (collecte + formatting)
 
@@ -86,7 +86,7 @@
 
 **Création** :
 - **Méthode** : Export 50 emails représentatifs depuis Thunderbird
-- **Responsable** : Antonio (sélection + anonymisation)
+- **Responsable** : Mainteneur (sélection + anonymisation)
 - **Quand** : Avant Story 2 (module Email)
 - **Durée estimée** : 2-3h (export + anonymisation + labelling)
 
@@ -156,7 +156,7 @@ date,amount,vendor,category,account,is_anomaly,anomaly_type
 
 **Création** :
 - **Méthode** : Export CSV bancaires SELARL + ajout anomalies synthétiques
-- **Responsable** : Antonio (fournit CSV réel + indique anomalies connues)
+- **Responsable** : Mainteneur (fournit CSV réel + indique anomalies connues)
 - **Quand** : Avant Story 6 (module Suivi Financier)
 - **Durée estimée** : 1h
 
@@ -190,7 +190,7 @@ tests/fixtures/thesis_extracts/
 
 **Création** :
 - **Méthode** : Extraits anonymisés de thèses réelles
-- **Responsable** : Antonio (fournit 20 extraits + annote erreurs)
+- **Responsable** : Mainteneur (fournit 20 extraits + annote erreurs)
 - **Quand** : Avant Story 7 (module Tuteur Thèse)
 - **Durée estimée** : 3-4h
 
@@ -208,7 +208,7 @@ tests/fixtures/thesis_extracts/
 | **Finance Anomalies** | P1 | Avant Story 6 | 1h | Antonio |
 | **Tuteur Thèse** | P2 | Avant Story 7 | 3-4h | Antonio |
 
-**Total effort estimé** : 9-13h de travail Antonio (collecte + anonymisation + labelling)
+**Total effort estimé** : 9-13h de travail Mainteneur (collecte + anonymisation + labelling)
 
 ---
 

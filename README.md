@@ -1,12 +1,12 @@
 # Friday 2.0 - Second Cerveau Personnel
 
-**Système d'intelligence personnelle multi-agents pour Antonio**
+**Système d'intelligence personnelle multi-agents**
 
 ---
 
 ## 🎯 Vision
 
-Friday 2.0 est un système d'IA personnel qui agit comme un **second cerveau** proactif, poussant l'information au bon moment plutôt que d'attendre qu'on la cherche. Il combine 23 modules spécialisés couvrant tous les aspects de la vie professionnelle et personnelle d'Antonio.
+Friday 2.0 est un système d'IA personnel qui agit comme un **second cerveau** proactif, poussant l'information au bon moment plutôt que d'attendre qu'on la cherche. Il combine 23 modules spécialisés couvrant tous les aspects de la vie professionnelle et personnelle de l'utilisateur.
 
 ---
 
@@ -14,7 +14,7 @@ Friday 2.0 est un système d'IA personnel qui agit comme un **second cerveau** p
 
 | Aspect | Détail |
 |--------|--------|
-| **Utilisateur** | Antonio (extension famille envisageable) |
+| **Utilisateur** | Utilisateur principal (extension famille envisageable) |
 | **Modules** | 23 agents spécialisés (médecin, enseignant, financier, personnel) |
 | **Tech Stack** | Python 3.12 + LangGraph + n8n + Claude Sonnet 4.5 + PostgreSQL 16 + Redis 7 |
 | **Budget** | ~73€/mois (VPS OVH VPS-4 ~25€ + Claude API ~45€ + veille ~3€) |
@@ -271,7 +271,7 @@ sops -d .env.enc > .env
 |----------|-------------|---------|
 | `TELEGRAM_BOT_TOKEN` | Token du bot Telegram (@BotFather) | `1234567890:ABCdef...` |
 | `TELEGRAM_SUPERGROUP_ID` | ID du supergroup Telegram | `-1001234567890` |
-| `ANTONIO_USER_ID` | ID utilisateur Telegram d'Antonio | `123456789` |
+| `OWNER_USER_ID` | ID utilisateur Telegram principal | `123456789` |
 | `TOPIC_*_ID` | Thread IDs des 5 topics Telegram | `2`, `3`, `4`, `5`, `6` |
 | `ANTHROPIC_API_KEY` | Clé API Claude (Anthropic) | `sk-ant-...` |
 | `DATABASE_URL` | URL PostgreSQL complète | `postgresql://user:pass@host:5432/db` |
@@ -376,7 +376,7 @@ Pour déployer Friday 2.0 sur le VPS-4 OVH, voir le guide complet :
 
 Ce projet est sous licence [MIT](LICENSE).
 
-Copyright (c) 2026 Antonio - Projet personnel Friday 2.0
+Copyright (c) 2026 Friday 2.0 Project
 
 ---
 

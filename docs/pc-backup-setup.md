@@ -171,7 +171,7 @@ cat ~/.ssh/friday_backup_key.pub
 ### **2. Autoriser clé publique sur le PC**
 
 ```bash
-# Sur le PC Antonio (WSL/Linux/macOS)
+# Sur le PC Mainteneur (WSL/Linux/macOS)
 mkdir -p ~/.ssh
 chmod 700 ~/.ssh
 

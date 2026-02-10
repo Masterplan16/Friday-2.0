@@ -79,7 +79,7 @@ def sample_correction_rules():
             hit_count=5,
             active=True,
             created_at=datetime.now(UTC),
-            created_by="Antonio",
+            created_by="owner",
         ),
         CorrectionRule(
             id=uuid4(),
@@ -93,7 +93,7 @@ def sample_correction_rules():
             hit_count=10,
             active=True,
             created_at=datetime.now(UTC),
-            created_by="Antonio",
+            created_by="owner",
         ),
     ]
 
@@ -163,7 +163,7 @@ async def test_load_correction_rules(trust_manager, mock_db_pool):
                 "hit_count": 5,
                 "active": True,
                 "created_at": datetime.now(UTC),
-                "created_by": "Antonio",
+                "created_by": "owner",
             }
         ]
     )
@@ -387,7 +387,7 @@ async def test_friday_action_injects_rules_prompt(
                 "hit_count": 5,
                 "active": True,
                 "created_at": datetime.now(UTC),
-                "created_by": "Antonio",
+                "created_by": "owner",
             },
             {
                 "id": uuid4(),
@@ -401,7 +401,7 @@ async def test_friday_action_injects_rules_prompt(
                 "hit_count": 3,
                 "active": True,
                 "created_at": datetime.now(UTC),
-                "created_by": "Antonio",
+                "created_by": "owner",
             },
         ]
     )

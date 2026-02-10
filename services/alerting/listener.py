@@ -127,7 +127,7 @@ class AlertingListener:
         elif event_type == "action.validated":
             module = data.get("module", "unknown")
             action = data.get("action", "unknown")
-            validated_by = data.get("validated_by", "Antonio")
+            validated_by = data.get("validated_by", "owner")
             message = f"✅ **Action Validated**\n\n" f"{module}.{action} validé par {validated_by}"
         elif event_type == "system.alert":
             alert_type = data.get("alert_type", "unknown")

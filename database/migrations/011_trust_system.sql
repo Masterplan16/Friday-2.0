@@ -31,8 +31,8 @@ CREATE TABLE IF NOT EXISTS core.action_receipts (
     payload JSONB,                         -- Données techniques optionnelles (steps, keywords, etc.)
 
     -- Feedback
-    correction TEXT,                       -- Correction d'Antonio si action erronée
-    feedback_comment TEXT,                 -- Commentaire additionnel d'Antonio
+    correction TEXT,                       -- Correction d'owner si action erronée
+    feedback_comment TEXT,                 -- Commentaire additionnel d'owner
 
     -- Métadonnées
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -109,7 +109,7 @@ CREATE TABLE IF NOT EXISTS core.trust_metrics (
 
     -- Métriques
     total_actions INTEGER NOT NULL,        -- Nombre total d'actions exécutées
-    corrected_actions INTEGER NOT NULL,    -- Nombre d'actions corrigées par Antonio
+    corrected_actions INTEGER NOT NULL,    -- Nombre d'actions corrigées par owner
     accuracy FLOAT NOT NULL,               -- 1 - (corrected / total)
 
     -- Trust level actuel

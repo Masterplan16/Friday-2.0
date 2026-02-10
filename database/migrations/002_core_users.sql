@@ -1,6 +1,6 @@
 -- Migration 002: Core users table
 -- Date: 2026-02-05
--- Description: Table utilisateurs (Antonio Day 1, extension famille envisageable)
+-- Description: Table utilisateurs (owner Day 1, extension famille envisageable)
 
 BEGIN;
 
@@ -22,7 +22,7 @@ CREATE INDEX idx_users_telegram_id ON core.users(telegram_id);
 CREATE INDEX idx_users_active ON core.users(active) WHERE active = true;
 
 -- Commentaires
-COMMENT ON TABLE core.users IS 'Utilisateurs Friday 2.0 (Antonio Day 1)';
+COMMENT ON TABLE core.users IS 'Utilisateurs Friday 2.0 (owner Day 1)';
 COMMENT ON COLUMN core.users.telegram_id IS 'ID Telegram unique (canal unique de communication)';
 COMMENT ON COLUMN core.users.preferences IS 'Préférences utilisateur (JSON: langue, timezone, notifications)';
 

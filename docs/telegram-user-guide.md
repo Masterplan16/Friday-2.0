@@ -2,7 +2,7 @@
 
 **Date** : 2026-02-05
 **Version** : 1.0
-**Pour** : Antonio (utilisateur final)
+**Pour** : Mainteneur (utilisateur final)
 
 ---
 

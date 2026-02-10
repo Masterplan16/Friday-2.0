@@ -262,7 +262,7 @@ async def test_detect_patterns_real_scenario():
     """Test detect_patterns avec scénario réaliste (3 corrections URSSAF)."""
     pool, conn = mock_db_pool()
 
-    # Scénario : Antonio corrige 3x "URSSAF" -> finance
+    # Scénario : owner corrige 3x "URSSAF" -> finance
     conn.fetch.return_value = [
         {
             "id": uuid4(),

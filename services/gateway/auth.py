@@ -1,7 +1,7 @@
 """
 Friday 2.0 - Bearer token authentication.
 
-Single-user auth for Antonio. Token from API_TOKEN env var (age/SOPS encrypted).
+Single-user auth for owner. Token from API_TOKEN env var (age/SOPS encrypted).
 """
 
 import structlog

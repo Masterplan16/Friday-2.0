@@ -53,7 +53,7 @@ COMMENT ON COLUMN core.telegram_config.description IS 'Description du rôle du t
 -- Exemple d'insertion manuelle après extraction:
 -- INSERT INTO core.telegram_config (supergroup_id, topic_name, topic_key, thread_id, icon, description)
 -- VALUES
---     (-1001234567890, 'Chat & Proactive', 'chat_proactive', 42, '💬', 'Conversation bidirectionnelle avec Antonio, heartbeat, reminders'),
+--     (-1001234567890, 'Chat & Proactive', 'chat_proactive', 42, '💬', 'Conversation bidirectionnelle avec owner, heartbeat, reminders'),
 --     (-1001234567890, 'Email & Communications', 'email', 43, '📬', 'Notifications email: classifications, PJ, emails urgents'),
 --     (-1001234567890, 'Actions & Validations', 'actions', 44, '🤖', 'Actions nécessitant validation (trust=propose), inline buttons'),
 --     (-1001234567890, 'System & Alerts', 'system', 45, '🚨', 'Santé système: RAM >85%, services down, erreurs critiques'),

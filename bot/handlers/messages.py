@@ -16,13 +16,13 @@ from telegram.ext import ChatMemberHandler, ContextTypes
 logger = structlog.get_logger(__name__)
 
 
-# User ID Antonio (pour vérification onboarding) - LAZY LOAD pour tests (CRIT-1 fix)
+# User ID owner (pour vérification onboarding) - LAZY LOAD pour tests (CRIT-1 fix)
 def get_antonio_user_id() -> int:
     """
     Récupère ANTONIO_USER_ID depuis envvar (lazy load pour tests).
 
     Returns:
-        User ID Antonio
+        User ID owner
 
     Raises:
         ValueError: Si ANTONIO_USER_ID envvar manquante
@@ -120,7 +120,7 @@ async def handle_new_member(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     """
     Handler pour nouveaux membres ajoutés au supergroup (AC6).
 
-    Envoie message d'onboarding la première fois qu'Antonio rejoint.
+    Envoie message d'onboarding la première fois qu'owner rejoint.
     Implémente idempotence (BUG-1.9.14 fix).
 
     Args:
@@ -133,11 +133,11 @@ async def handle_new_member(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     new_member: ChatMember = update.chat_member.new_chat_member
     user_id = new_member.user.id
 
-    # BUG-1.9.15 fix: Vérifier que c'est Antonio (CRIT-1: appel lazy)
+    # BUG-1.9.15 fix: Vérifier que c'est owner (CRIT-1: appel lazy)
     antonio_id = get_antonio_user_id()
     if antonio_id > 0 and user_id != antonio_id:
         logger.info(
-            "Nouveau membre détecté (pas Antonio, onboarding ignoré)",
+            "Nouveau membre détecté (pas owner, onboarding ignoré)",
             user_id=user_id,
             username=new_member.user.username,
         )
@@ -167,7 +167,7 @@ async def handle_new_member(update: Update, context: ContextTypes.DEFAULT_TYPE) 
             return
 
         # Envoyer message onboarding (AC6)
-        onboarding_message = """👋 **Bienvenue Antonio !**
+        onboarding_message = """👋 **Bienvenue owner !**
 
 Je suis Friday 2.0, ton assistant IA personnel.
 

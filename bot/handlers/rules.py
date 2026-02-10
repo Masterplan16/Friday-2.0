@@ -1,7 +1,7 @@
 """
 Bot Telegram - Commandes /rules CRUD (Story 1.7, AC5).
 
-Permet à Antonio de gérer les correction_rules via Telegram.
+Permet à owner de gérer les correction_rules via Telegram.
 """
 
 import asyncpg

@@ -1,7 +1,7 @@
 -- Migration 012: Table emails_legacy pour import bulk 110k emails existants
 -- Date: 2026-02-05
 -- Description: Création de la table ingestion.emails_legacy pour stocker les 110 000 emails
---              existants des 4 comptes IMAP d'Antonio avant migration vers ingestion.emails
+--              existants des 4 comptes IMAP d'owner avant migration vers ingestion.emails
 -- Prérequis: Migration 004 (ingestion.emails) doit être appliquée
 -- Usage: Cette table est utilisée par scripts/migrate_emails.py pour la migration one-shot
 

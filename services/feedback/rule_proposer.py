@@ -211,7 +211,7 @@ class RuleProposer:
         """
         Crée une correction_rule depuis une proposition (AC4).
 
-        Appelé par callback handler Telegram après validation Antonio.
+        Appelé par callback handler Telegram après validation owner.
 
         Args:
             rule_proposal: Règle formatée depuis format_rule_proposal()

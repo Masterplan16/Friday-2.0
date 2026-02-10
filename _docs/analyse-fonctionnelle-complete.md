@@ -320,8 +320,8 @@ Téléchargement CSV banque → PC (~/Documents/Finance/Import/)
 
 | Niveau | Comportement | Exemples | Risque si erreur |
 |--------|-------------|----------|------------------|
-| 🟢 **AUTO** | Friday exécute, Antonio notifié après coup | OCR, renommage fichier, indexation, extraction PJ | Gênant (mauvais classement) |
-| 🟡 **PROPOSE** | Friday prépare, Antonio valide avant (inline buttons Telegram) | Classification email, création tâche, ajout agenda, import finance | Perte de temps |
+| 🟢 **AUTO** | Friday exécute, Mainteneur notifié après coup | OCR, renommage fichier, indexation, extraction PJ | Gênant (mauvais classement) |
+| 🟡 **PROPOSE** | Friday prépare, Mainteneur valide avant (inline buttons Telegram) | Classification email, création tâche, ajout agenda, import finance | Perte de temps |
 | 🔴 **BLOCKED** | Friday analyse, JAMAIS d'action autonome | Envoi mail, conseil médical, analyse juridique, communication thésards | Conséquence réelle (réputation, légal, santé) |
 
 **Initialisation Day 1** :
@@ -411,7 +411,7 @@ class ActionResult(BaseModel):
 
 **2 métriques distinctes** :
 - `model_confidence` : ce que le LLM pense (technique, interne)
-- `historical_accuracy` : taux de réussite réel basé sur corrections Antonio (métier, visible)
+- `historical_accuracy` : taux de réussite réel basé sur corrections Mainteneur (métier, visible)
 
 **C'est `historical_accuracy` qui détermine promotions/rétrogradations.**
 
@@ -451,7 +451,7 @@ Calcul quotidien (cron 18h00) :
 - Niveau 2 : `/journal` si besoin de creuser
 - Niveau 3 : `/receipt -v` si besoin du détail technique
 
-**99% du temps, Antonio reste au niveau 1.** Le Trust Layer fonctionne quand Antonio n'a PAS besoin de l'utiliser.
+**99% du temps, Mainteneur reste au niveau 1.** Le Trust Layer fonctionne quand Antonio n'a PAS besoin de l'utiliser.
 
 #### 3.2.8 Alertes temps réel (erreurs critiques)
 
@@ -540,7 +540,7 @@ asyncio background task (non-bloquant)
 
 ### 3.3.4 Exemple d'usage concret
 
-**Scénario : Mardi 14h30, Antonio entre deux consultations**
+**Scénario : Mardi 14h30, Mainteneur entre deux consultations**
 
 **En arrière-plan (invisible pour Antonio)** :
 ```
@@ -695,7 +695,7 @@ Antonio clique [Envoyer maintenant] → Mail envoyé
 
 Antonio a 5 minutes, il veut retrouver un article :
 ```
-🎤 Antonio (message vocal Telegram)
+🎤 Mainteneur (message vocal Telegram)
 "Friday, retrouve ce que j'avais lu sur les inhibiteurs SGLT2
 pour l'insuffisance cardiaque, c'était il y a environ 6 mois"
 ```
@@ -818,7 +818,7 @@ Syncthing sync → PC
 Suppression ~/Documents/Uploads/scan_001.pdf
 ```
 
-**15 secondes après le scan**, Antonio reçoit notification Telegram :
+**15 secondes après le scan**, Mainteneur reçoit notification Telegram :
 ```
 📄 Document archivé
 2026-02-05_Facture_Restaurant_LeBistrot_87-50.pdf
@@ -838,7 +838,7 @@ Antonio clique [Voir fichier] si besoin, sinon il continue sa journée.
 
 Antonio cherche un ancien article sur son PC. Au lieu de fouiller les dossiers, il envoie message Telegram :
 ```
-🎤 Antonio (vocal)
+🎤 Mainteneur (vocal)
 "Friday, retrouve l'article sur la fibrillation auriculaire
 que j'avais téléchargé pour le cours de cardiologie"
 ```
@@ -879,7 +879,7 @@ VPS - Module Desktop Search
   ↓
 Index à jour en permanence
 
-Requête Antonio (Telegram) → Embedding query
+Requête Mainteneur (Telegram) → Embedding query
                                    ↓
                          pgvector similarity search (D19)
                                    ↓
@@ -939,7 +939,7 @@ Fichiers PC (~/Documents/) → Watchdog détecte changements
                                   ↓
                    Insert PostgreSQL metadata
 
-Requête Antonio (Telegram vocal) → Embedding query
+Requête Mainteneur (Telegram vocal) → Embedding query
                                          ↓
                                pgvector similarity search (D19)
                                          ↓
@@ -1124,7 +1124,7 @@ Antonio clique [📊 Résumé complet] → Friday génère analyse complète (vi
 
 Antonio a téléchargé 15 PDF médicaux hier soir dans ~/Downloads/. Il envoie :
 ```
-🎤 Antonio (vocal Telegram)
+🎤 Mainteneur (vocal Telegram)
 "Friday, peux-tu ranger mon dossier Downloads ?"
 ```
 
@@ -1218,7 +1218,7 @@ Syncthing sync → PC (classement automatique)
 Suppression ~/Documents/Uploads/ (dossier vide)
 ```
 
-**30 secondes après le dernier scan**, Antonio reçoit notification Telegram :
+**30 secondes après le dernier scan**, Mainteneur reçoit notification Telegram :
 ```
 ✅ 5 documents archivés
 

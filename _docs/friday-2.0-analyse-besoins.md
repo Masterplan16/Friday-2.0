@@ -17,7 +17,7 @@ Friday 2.0 n'est pas une application. C'est un **écosystème d'intelligence per
 
 | Caractéristique | Description |
 |----------------|-------------|
-| Utilisateur unique | Antonio (extension famille envisageable plus tard) |
+| Utilisateur unique | Mainteneur (extension famille envisageable plus tard) |
 | Usage | Strictement individuel, jamais commercialisé |
 | Périmètre | Vie professionnelle ET personnelle |
 | Philosophie | Le système travaille en permanence, pousse l'info au bon moment, l'utilisateur ne va pas chercher |
@@ -208,7 +208,7 @@ Le ton, le tutoiement/vouvoiement, l'humour, le style de communication sont conf
 - Génération automatique de la liste de courses
 - ~~**Commande automatique sur Carrefour Drive**~~ (hors scope - automation web non fiable, voir docs/playwright-automation-spec.md)
 - Recettes du jour envoyées chaque matin
-- Validation par Antonio (vocale possible)
+- Validation par Mainteneur (vocale possible)
 
 #### Coach remise en forme
 - Programme sportif adapté au niveau, progressif

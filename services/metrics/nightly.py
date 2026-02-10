@@ -415,7 +415,7 @@ class MetricsAggregator:
             )
 
         except Exception as e:
-            # MED-4 fix: Logging CRITICAL + alerte Redis pour Antonio
+            # MED-4 fix: Logging CRITICAL + alerte Redis pour owner
             logger.critical(
                 "Pattern detection FAILED - feedback loop interrompu",
                 error=str(e),
@@ -423,7 +423,7 @@ class MetricsAggregator:
                 exc_info=True,
             )
 
-            # Envoyer alerte Redis Streams pour notification Antonio
+            # Envoyer alerte Redis Streams pour notification owner
             try:
                 await self.redis_client.xadd(
                     "friday:events:nightly.pattern_detection.failed",

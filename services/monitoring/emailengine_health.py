@@ -11,6 +11,7 @@ import aiohttp
 
 logger = logging.getLogger(__name__)
 
+
 class EmailEngineHealthMonitor:
     """
     Monitor actif pour détecter problèmes EmailEngine:
@@ -26,7 +27,7 @@ class EmailEngineHealthMonitor:
         emailengine_url: str,
         emailengine_token: str,
         telegram_bot_token: str,
-        telegram_chat_id: str
+        telegram_chat_id: str,
     ):
         self.emailengine_url = emailengine_url.rstrip("/")
         self.emailengine_token = emailengine_token
@@ -47,13 +48,13 @@ class EmailEngineHealthMonitor:
                 async with session.get(
                     f"{self.emailengine_url}/v1/accounts",
                     headers=headers,
-                    timeout=aiohttp.ClientTimeout(total=10)
+                    timeout=aiohttp.ClientTimeout(total=10),
                 ) as resp:
                     if resp.status != 200:
                         logger.error(f"EmailEngine API error: {resp.status}")
                         await self._send_alert(
                             "🚨 EmailEngine API inaccessible",
-                            f"Status: {resp.status}. Vérifier service EmailEngine."
+                            f"Status: {resp.status}. Vérifier service EmailEngine.",
                         )
                         return {}
 
@@ -68,16 +69,14 @@ class EmailEngineHealthMonitor:
 
                         # Alerte si compte déconnecté
                         if state != "connected":
-                            logger.warning(
-                                f"❌ Account {account_id} is {state}"
-                            )
+                            logger.warning(f"❌ Account {account_id} is {state}")
                             await self._send_alert(
                                 f"🚨 Compte email {account_id} déconnecté !",
                                 f"État: {state}\n\n"
                                 f"Action requise:\n"
                                 f"1. Vérifier token OAuth/IMAP dans EmailEngine UI\n"
                                 f"2. Re-authentifier si nécessaire\n"
-                                f"3. Vérifier logs EmailEngine pour cause détaillée"
+                                f"3. Vérifier logs EmailEngine pour cause détaillée",
                             )
 
                     logger.info(
@@ -91,14 +90,14 @@ class EmailEngineHealthMonitor:
             logger.error("❌ EmailEngine timeout")
             await self._send_alert(
                 "🚨 EmailEngine timeout",
-                "Service EmailEngine ne répond pas. Vérifier si le service est UP."
+                "Service EmailEngine ne répond pas. Vérifier si le service est UP.",
             )
             return {}
         except Exception as e:
             logger.error(f"❌ EmailEngine health check error: {e}", exc_info=True)
             await self._send_alert(
                 "🚨 Erreur healthcheck EmailEngine",
-                f"Erreur: {str(e)}\n\nVérifier logs monitoring."
+                f"Erreur: {str(e)}\n\nVérifier logs monitoring.",
             )
             return {}
 
@@ -126,10 +125,12 @@ class EmailEngineHealthMonitor:
                 payload = {
                     "chat_id": self.telegram_chat_id,
                     "text": f"**{title}**\n\n{message}",
-                    "parse_mode": "Markdown"
+                    "parse_mode": "Markdown",
                 }
 
-                async with session.post(url, json=payload, timeout=aiohttp.ClientTimeout(total=10)) as resp:
+                async with session.post(
+                    url, json=payload, timeout=aiohttp.ClientTimeout(total=10)
+                ) as resp:
                     if resp.status != 200:
                         logger.error(f"❌ Failed to send Telegram alert: {resp.status}")
                     else:
@@ -153,7 +154,7 @@ async def main():
         emailengine_url=os.getenv("EMAILENGINE_URL", "http://emailengine:3000"),
         emailengine_token=os.getenv("EMAILENGINE_TOKEN"),
         telegram_bot_token=os.getenv("TELEGRAM_BOT_TOKEN"),
-        telegram_chat_id=os.getenv("TELEGRAM_CHAT_ID")
+        telegram_chat_id=os.getenv("TELEGRAM_CHAT_ID"),
     )
 
     # Vérifier état comptes
@@ -174,8 +175,7 @@ async def main():
 
 if __name__ == "__main__":
     logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
 
     exit_code = asyncio.run(main())

@@ -17,9 +17,8 @@ from typing import Any, Callable, Optional
 
 import asyncpg
 import yaml
-from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup
-
 from agents.src.middleware.models import ActionResult, CorrectionRule
+from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup
 
 logger = logging.getLogger(__name__)
 
@@ -55,9 +54,7 @@ class TrustManager:
 
         # Telegram configuration (Story 1.7 - inline buttons validation)
         self.telegram_bot = telegram_bot or self._init_telegram_bot()
-        self.telegram_topic_id = telegram_topic_id or int(
-            os.getenv("TOPIC_ACTIONS_ID", "0")
-        )
+        self.telegram_topic_id = telegram_topic_id or int(os.getenv("TOPIC_ACTIONS_ID", "0"))
         self.telegram_supergroup_id = int(os.getenv("TELEGRAM_SUPERGROUP_ID", "0"))
 
     def _init_telegram_bot(self) -> Optional[Bot]:

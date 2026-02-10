@@ -10,8 +10,9 @@ Usage:
     5. Envoie UN message dans le groupe
 """
 
-import requests
 import sys
+
+import requests
 
 # ⚠️ REMPLACE PAR TON TOKEN @BotFather
 TOKEN = "TON_TOKEN_ICI"
@@ -70,10 +71,7 @@ for update in updates:
         thread_id = message.get("message_thread_id")
 
         if chat_id not in supergroups:
-            supergroups[chat_id] = {
-                "title": title,
-                "threads": set()
-            }
+            supergroups[chat_id] = {"title": title, "threads": set()}
 
         if thread_id:
             supergroups[chat_id]["threads"].add(thread_id)
@@ -93,7 +91,7 @@ for chat_id, info in supergroups.items():
     print(f"📱 Groupe: {info['title']}")
     print(f"   Supergroup ID: {chat_id}")
 
-    if info['threads']:
+    if info["threads"]:
         print(f"   Thread IDs détectés: {sorted(info['threads'])}")
 
     print()
@@ -101,9 +99,9 @@ for chat_id, info in supergroups.items():
     print(f"TELEGRAM_SUPERGROUP_ID={chat_id}")
     print()
 
-    if info['threads']:
+    if info["threads"]:
         print("Thread IDs (note bien quel topic correspond à quel ID!):")
-        for tid in sorted(info['threads']):
+        for tid in sorted(info["threads"]):
             print(f"# Topic ?: {tid}")
         print()
 

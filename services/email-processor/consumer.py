@@ -5,12 +5,13 @@
 import asyncio
 import json
 import logging
-from typing import Dict, Any
+from typing import Any, Dict
 
 import redis.asyncio as redis
-from agents.src.middleware.trust import friday_action, ActionResult
+from agents.src.middleware.trust import ActionResult, friday_action
 
 logger = logging.getLogger(__name__)
+
 
 class EmailProcessorConsumer:
     """
@@ -30,7 +31,7 @@ class EmailProcessorConsumer:
         redis_url: str,
         stream: str = "email.received",
         group: str = "email-processor",
-        consumer_name: str = "worker-1"
+        consumer_name: str = "worker-1",
     ):
         self.redis = redis.from_url(redis_url, decode_responses=True)
         self.stream = stream
@@ -49,7 +50,7 @@ class EmailProcessorConsumer:
                     consumername=self.consumer_name,
                     streams={self.stream: ">"},  # ">" = nouveaux messages uniquement
                     count=10,  # Batch de 10 événements max
-                    block=5000  # Block 5s si aucun événement
+                    block=5000,  # Block 5s si aucun événement
                 )
 
                 if not events:
@@ -80,10 +81,7 @@ class EmailProcessorConsumer:
 
     def _deserialize_payload(self, payload: Dict[str, str]) -> Dict[str, Any]:
         """Désérialise le payload Redis (JSON strings)"""
-        return {
-            k: json.loads(v) if v.startswith(("{", "[")) else v
-            for k, v in payload.items()
-        }
+        return {k: json.loads(v) if v.startswith(("{", "[")) else v for k, v in payload.items()}
 
     async def process_email_received(self, event_id: str, data: Dict[str, Any]):
         """
@@ -120,7 +118,9 @@ class EmailProcessorConsumer:
     async def _send_telegram_notification(self, email_id: str, category: str):
         """Envoie notification Telegram pour email prioritaire"""
         # TODO Story 2: Implémenter envoi Telegram via bot API
-        logger.info(f"📱 [TODO] Send Telegram notification for email {email_id} (category={category})")
+        logger.info(
+            f"📱 [TODO] Send Telegram notification for email {email_id} (category={category})"
+        )
 
     async def _extract_tasks_from_email(self, email_id: str):
         """Extrait tâches détectées dans l'email"""
@@ -145,11 +145,7 @@ class EmailProcessorConsumer:
             idle_time_ms: Temps minimum depuis dernier delivery (défaut: 60s)
         """
         pending = await self.redis.xpending_range(
-            self.stream,
-            self.group,
-            min="-",
-            max="+",
-            count=100
+            self.stream, self.group, min="-", max="+", count=100
         )
 
         if not pending:
@@ -158,9 +154,9 @@ class EmailProcessorConsumer:
         logger.warning(f"⚠️  Found {len(pending)} pending events, attempting recovery...")
 
         for entry in pending:
-            event_id = entry['message_id']
-            consumer = entry['consumer']
-            idle_ms = entry['time_since_delivered']
+            event_id = entry["message_id"]
+            consumer = entry["consumer"]
+            idle_ms = entry["time_since_delivered"]
 
             if idle_ms < idle_time_ms:
                 continue  # Pas encore timeout
@@ -171,7 +167,7 @@ class EmailProcessorConsumer:
                 self.group,
                 self.consumer_name,
                 min_idle_time=idle_time_ms,
-                message_ids=[event_id]
+                message_ids=[event_id],
             )
 
             if claimed:
@@ -191,10 +187,7 @@ async def main():
     redis_url = os.getenv("REDIS_URL", "redis://localhost:6379")
     consumer_name = os.getenv("CONSUMER_NAME", f"worker-{os.getpid()}")
 
-    consumer = EmailProcessorConsumer(
-        redis_url=redis_url,
-        consumer_name=consumer_name
-    )
+    consumer = EmailProcessorConsumer(redis_url=redis_url, consumer_name=consumer_name)
 
     # Lancer recovery des pending events toutes les minutes
     async def recovery_loop():
@@ -203,15 +196,11 @@ async def main():
             await consumer.claim_pending_events()
 
     # Lancer consumer + recovery en parallèle
-    await asyncio.gather(
-        consumer.start(),
-        recovery_loop()
-    )
+    await asyncio.gather(consumer.start(), recovery_loop())
 
 
 if __name__ == "__main__":
     logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
     asyncio.run(main())

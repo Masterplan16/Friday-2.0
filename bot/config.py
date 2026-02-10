@@ -5,11 +5,11 @@ Charge la configuration du bot depuis les variables d'environnement et config/te
 """
 
 import os
-import yaml
 from pathlib import Path
 from typing import Any
-import structlog
 
+import structlog
+import yaml
 from bot.models import BotConfig, TopicConfig
 
 logger = structlog.get_logger(__name__)
@@ -91,7 +91,9 @@ def load_bot_config() -> BotConfig:
             with open(config_path, "r", encoding="utf-8") as f:
                 yaml_config = yaml.safe_load(f) or {}
         except Exception as e:
-            logger.warning("Erreur lecture config/telegram.yaml, utilisation defaults", error=str(e))
+            logger.warning(
+                "Erreur lecture config/telegram.yaml, utilisation defaults", error=str(e)
+            )
 
     # 4. Construire BotConfig avec validation Pydantic
     try:
@@ -130,7 +132,9 @@ async def validate_bot_permissions(bot: Any, supergroup_id: int) -> None:
     try:
         member = await bot.get_chat_member(chat_id=supergroup_id, user_id=bot.id)
         if member.status not in ["administrator", "creator"]:
-            raise ConfigurationError(f"Bot n'est pas admin dans le supergroup (status: {member.status})")
+            raise ConfigurationError(
+                f"Bot n'est pas admin dans le supergroup (status: {member.status})"
+            )
 
         # Vérifier permissions spécifiques (None = "tous les droits" pour admin, True = explicite)
         required_perms = ["can_post_messages", "can_manage_topics"]

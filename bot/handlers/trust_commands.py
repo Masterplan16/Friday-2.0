@@ -6,13 +6,13 @@ Story 1.8 - AC4, AC5, AC6 :
 - /trust set <module> <action> <level> : Override manuel (bypass conditions)
 """
 
-import asyncpg
 import os
 from datetime import datetime, timedelta
 from typing import Any
-import yaml
 
+import asyncpg
 import structlog
+import yaml
 from telegram import Update
 from telegram.ext import ContextTypes
 
@@ -50,7 +50,7 @@ async def trust_command_router(update: Update, context: ContextTypes.DEFAULT_TYP
             "**Exemples :**\n"
             "• `/trust promote email classify`\n"
             "• `/trust set finance classify_transaction blocked`",
-            parse_mode="Markdown"
+            parse_mode="Markdown",
         )
         return
 
@@ -71,7 +71,7 @@ async def trust_command_router(update: Update, context: ContextTypes.DEFAULT_TYP
             f"❌ **Sous-commande inconnue** : `{subcommand}`\n\n"
             f"Sous-commandes valides : `promote`, `set`\n\n"
             f"Tapez `/trust` pour voir l'aide.",
-            parse_mode="Markdown"
+            parse_mode="Markdown",
         )
 
 
@@ -101,7 +101,7 @@ async def trust_promote_command(update: Update, context: ContextTypes.DEFAULT_TY
         await update.message.reply_text(
             "❌ Usage : `/trust promote <module> <action>`\n"
             "Exemple : `/trust promote email classify`",
-            parse_mode="Markdown"
+            parse_mode="Markdown",
         )
         return
 
@@ -115,7 +115,7 @@ async def trust_promote_command(update: Update, context: ContextTypes.DEFAULT_TY
         if current_level == "auto":
             await update.message.reply_text(
                 f"ℹ️ Module `{module}.{action}` est déjà au niveau **auto** (maximum).",
-                parse_mode="Markdown"
+                parse_mode="Markdown",
             )
             return
 
@@ -129,7 +129,7 @@ async def trust_promote_command(update: Update, context: ContextTypes.DEFAULT_TY
                     f"Dernière transition : {last_change.strftime('%Y-%m-%d')}\n"
                     f"Jours écoulés : {days_since_change}/14 minimum\n\n"
                     f"Attendre encore {14 - days_since_change} jour(s).",
-                    parse_mode="Markdown"
+                    parse_mode="Markdown",
                 )
                 return
 
@@ -144,7 +144,7 @@ async def trust_promote_command(update: Update, context: ContextTypes.DEFAULT_TY
                 await update.message.reply_text(
                     f"❌ **Promotion refusée** : Échantillon insuffisant\n\n"
                     f"Actions sur 2 semaines : {total_actions}/20 minimum",
-                    parse_mode="Markdown"
+                    parse_mode="Markdown",
                 )
                 return
 
@@ -153,7 +153,7 @@ async def trust_promote_command(update: Update, context: ContextTypes.DEFAULT_TY
                     f"❌ **Promotion refusée** : Accuracy insuffisante\n\n"
                     f"Accuracy sur 2 semaines : {avg_accuracy:.1%}\n"
                     f"Seuil requis : 95%",
-                    parse_mode="Markdown"
+                    parse_mode="Markdown",
                 )
                 return
 
@@ -165,7 +165,7 @@ async def trust_promote_command(update: Update, context: ContextTypes.DEFAULT_TY
                 f"Transition : **propose** → **auto**\n"
                 f"Accuracy : {avg_accuracy:.1%} (sur 2 semaines)\n"
                 f"Actions : {total_actions}",
-                parse_mode="Markdown"
+                parse_mode="Markdown",
             )
 
         elif current_level == "blocked":
@@ -178,7 +178,7 @@ async def trust_promote_command(update: Update, context: ContextTypes.DEFAULT_TY
                 await update.message.reply_text(
                     f"❌ **Promotion refusée** : Échantillon insuffisant\n\n"
                     f"Actions sur 4 semaines : {total_actions}/10 minimum",
-                    parse_mode="Markdown"
+                    parse_mode="Markdown",
                 )
                 return
 
@@ -187,7 +187,7 @@ async def trust_promote_command(update: Update, context: ContextTypes.DEFAULT_TY
                     f"❌ **Promotion refusée** : Accuracy insuffisante\n\n"
                     f"Accuracy sur 4 semaines : {avg_accuracy:.1%}\n"
                     f"Seuil requis : 90%",
-                    parse_mode="Markdown"
+                    parse_mode="Markdown",
                 )
                 return
 
@@ -199,7 +199,7 @@ async def trust_promote_command(update: Update, context: ContextTypes.DEFAULT_TY
                 f"Transition : **blocked** → **propose**\n"
                 f"Accuracy : {avg_accuracy:.1%} (sur 4 semaines)\n"
                 f"Actions : {total_actions}",
-                parse_mode="Markdown"
+                parse_mode="Markdown",
             )
 
         logger.info(
@@ -207,15 +207,14 @@ async def trust_promote_command(update: Update, context: ContextTypes.DEFAULT_TY
             module=module,
             action=action,
             old_level=current_level,
-            new_level="auto" if current_level == "propose" else "propose"
+            new_level="auto" if current_level == "propose" else "propose",
         )
 
     except Exception as e:
         logger.error("Trust promote command failed", error=str(e), exc_info=True)
         await update.message.reply_text(
-            f"❌ **Erreur** : {str(e)}\n\n"
-            f"Vérifiez que le module/action existe.",
-            parse_mode="Markdown"
+            f"❌ **Erreur** : {str(e)}\n\n" f"Vérifiez que le module/action existe.",
+            parse_mode="Markdown",
         )
 
 
@@ -238,7 +237,7 @@ async def trust_set_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
             "❌ Usage : `/trust set <module> <action> <level>`\n"
             "Niveaux valides : `auto`, `propose`, `blocked`\n\n"
             "Exemple : `/trust set email classify blocked`",
-            parse_mode="Markdown"
+            parse_mode="Markdown",
         )
         return
 
@@ -251,7 +250,7 @@ async def trust_set_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         await update.message.reply_text(
             f"❌ **Niveau invalide** : `{new_level}`\n\n"
             f"Valeurs acceptées : `auto`, `propose`, `blocked`",
-            parse_mode="Markdown"
+            parse_mode="Markdown",
         )
         return
 
@@ -262,7 +261,7 @@ async def trust_set_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         if old_level == new_level:
             await update.message.reply_text(
                 f"ℹ️ Module `{module}.{action}` est déjà au niveau **{new_level}**.",
-                parse_mode="Markdown"
+                parse_mode="Markdown",
             )
             return
 
@@ -275,7 +274,7 @@ async def trust_set_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
             module=module,
             action=action,
             old_level=old_level,
-            new_level=new_level
+            new_level=new_level,
         )
 
         await update.message.reply_text(
@@ -283,15 +282,12 @@ async def trust_set_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
             f"Module : `{module}.{action}`\n"
             f"Transition : **{old_level}** → **{new_level}**\n\n"
             f"⚠️ Bypass des conditions (anti-oscillation, accuracy)",
-            parse_mode="Markdown"
+            parse_mode="Markdown",
         )
 
     except Exception as e:
         logger.error("Trust set command failed", error=str(e), exc_info=True)
-        await update.message.reply_text(
-            f"❌ **Erreur** : {str(e)}",
-            parse_mode="Markdown"
-        )
+        await update.message.reply_text(f"❌ **Erreur** : {str(e)}", parse_mode="Markdown")
 
 
 # ────────────────────────────────────────────────────────────

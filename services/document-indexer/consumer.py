@@ -5,11 +5,12 @@
 import asyncio
 import json
 import logging
-from typing import Dict, Any
+from typing import Any, Dict
 
 import redis.asyncio as redis
 
 logger = logging.getLogger(__name__)
+
 
 class DocumentIndexerConsumer:
     """
@@ -28,7 +29,7 @@ class DocumentIndexerConsumer:
         redis_url: str,
         stream: str = "document.processed",
         group: str = "document-indexer",
-        consumer_name: str = "worker-1"
+        consumer_name: str = "worker-1",
     ):
         self.redis = redis.from_url(redis_url, decode_responses=True)
         self.stream = stream
@@ -46,7 +47,7 @@ class DocumentIndexerConsumer:
                     consumername=self.consumer_name,
                     streams={self.stream: ">"},
                     count=10,
-                    block=5000
+                    block=5000,
                 )
 
                 if not events:
@@ -71,10 +72,7 @@ class DocumentIndexerConsumer:
 
     def _deserialize_payload(self, payload: Dict[str, str]) -> Dict[str, Any]:
         """Désérialise le payload Redis (JSON strings)"""
-        return {
-            k: json.loads(v) if v.startswith(("{", "[")) else v
-            for k, v in payload.items()
-        }
+        return {k: json.loads(v) if v.startswith(("{", "[")) else v for k, v in payload.items()}
 
     async def process_document(self, event_id: str, data: Dict[str, Any]):
         """
@@ -120,11 +118,7 @@ class DocumentIndexerConsumer:
     async def claim_pending_events(self, idle_time_ms: int = 60000):
         """Recovery des événements pending (cf email-processor)"""
         pending = await self.redis.xpending_range(
-            self.stream,
-            self.group,
-            min="-",
-            max="+",
-            count=100
+            self.stream, self.group, min="-", max="+", count=100
         )
 
         if not pending:
@@ -133,8 +127,8 @@ class DocumentIndexerConsumer:
         logger.warning("Found %d pending events, attempting recovery...", len(pending))
 
         for entry in pending:
-            event_id = entry['message_id']
-            idle_ms = entry['time_since_delivered']
+            event_id = entry["message_id"]
+            idle_ms = entry["time_since_delivered"]
 
             if idle_ms < idle_time_ms:
                 continue
@@ -144,7 +138,7 @@ class DocumentIndexerConsumer:
                 self.group,
                 self.consumer_name,
                 min_idle_time=idle_time_ms,
-                message_ids=[event_id]
+                message_ids=[event_id],
             )
 
             if claimed:
@@ -162,25 +156,18 @@ async def main():
     redis_url = os.getenv("REDIS_URL", "redis://localhost:6379")
     consumer_name = os.getenv("CONSUMER_NAME", f"worker-{os.getpid()}")
 
-    consumer = DocumentIndexerConsumer(
-        redis_url=redis_url,
-        consumer_name=consumer_name
-    )
+    consumer = DocumentIndexerConsumer(redis_url=redis_url, consumer_name=consumer_name)
 
     async def recovery_loop():
         while True:
             await asyncio.sleep(60)
             await consumer.claim_pending_events()
 
-    await asyncio.gather(
-        consumer.start(),
-        recovery_loop()
-    )
+    await asyncio.gather(consumer.start(), recovery_loop())
 
 
 if __name__ == "__main__":
     logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
     asyncio.run(main())

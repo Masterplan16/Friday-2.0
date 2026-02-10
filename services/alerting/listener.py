@@ -41,9 +41,7 @@ class AlertingListener:
         self.telegram_chat_id = os.getenv("TELEGRAM_CHAT_ID")
 
         if not self.telegram_token or not self.telegram_chat_id:
-            raise ValueError(
-                "TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID must be set"
-            )
+            raise ValueError("TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID must be set")
 
         self.redis_client: aioredis.Redis | None = None
         self.telegram_bot = Bot(token=self.telegram_token)
@@ -62,9 +60,7 @@ class AlertingListener:
 
     async def connect(self) -> None:
         """Connecte à Redis et crée les consumer groups."""
-        self.redis_client = await aioredis.from_url(
-            self.redis_url, decode_responses=True
-        )
+        self.redis_client = await aioredis.from_url(self.redis_url, decode_responses=True)
         logger.info("Connected to Redis", redis_url=self.redis_url)
 
         # Créer consumer groups si nécessaire
@@ -132,10 +128,7 @@ class AlertingListener:
             module = data.get("module", "unknown")
             action = data.get("action", "unknown")
             validated_by = data.get("validated_by", "Antonio")
-            message = (
-                f"✅ **Action Validated**\n\n"
-                f"{module}.{action} validé par {validated_by}"
-            )
+            message = f"✅ **Action Validated**\n\n" f"{module}.{action} validé par {validated_by}"
         elif event_type == "system.alert":
             alert_type = data.get("alert_type", "unknown")
             threshold = data.get("threshold", "unknown")

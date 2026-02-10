@@ -26,18 +26,17 @@ Version: 1.0.0 (Story 1.5 - Code Review fix C2)
 
 import os
 from typing import Optional
-import structlog
-from anthropic import AsyncAnthropic
-from pydantic import BaseModel, Field
 
+import structlog
 from agents.src.tools.anonymize import (
-    anonymize_text,
-    deanonymize_text,
     AnonymizationError,
     AnonymizationResult,
+    anonymize_text,
+    deanonymize_text,
 )
+from anthropic import AsyncAnthropic
 from config.exceptions import PipelineError
-
+from pydantic import BaseModel, Field
 
 logger = structlog.get_logger(__name__)
 
@@ -48,9 +47,7 @@ class LLMResponse(BaseModel):
     content: str = Field(..., description="Texte de réponse (deanonymisé si PII)")
     model: str = Field(..., description="Modèle LLM utilisé")
     usage: dict = Field(default_factory=dict, description="Tokens utilisés")
-    anonymization_applied: bool = Field(
-        False, description="True si anonymisation a été appliquée"
-    )
+    anonymization_applied: bool = Field(False, description="True si anonymisation a été appliquée")
 
 
 class LLMError(PipelineError):
@@ -86,9 +83,7 @@ class ClaudeAdapter:
         """
         self.api_key = api_key or os.getenv("ANTHROPIC_API_KEY")
         if not self.api_key:
-            raise ValueError(
-                "ANTHROPIC_API_KEY manquante (env var ou paramètre constructor)"
-            )
+            raise ValueError("ANTHROPIC_API_KEY manquante (env var ou paramètre constructor)")
 
         self.model = model
         self.anonymize_by_default = anonymize_by_default
@@ -178,9 +173,7 @@ class ClaudeAdapter:
 
             # 4. Deanonymiser la réponse
             if anonymization_result and anonymization_result.mapping:
-                response_text = await deanonymize_text(
-                    response_text, anonymization_result.mapping
-                )
+                response_text = await deanonymize_text(response_text, anonymization_result.mapping)
                 logger.debug(
                     "response_deanonymized",
                     placeholders_restored=len(anonymization_result.mapping),

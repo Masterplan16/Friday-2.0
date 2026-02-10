@@ -80,14 +80,15 @@ grep 'public key:' ~/.age/friday-key.txt
 
 **Output exemple** :
 ```
-# created: 2026-02-05T10:30:00Z
-# public key: age1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq
+# created: 2026-02-10T09:15:42Z
+# public key: age17zcpkgjxdyk6g34anhymukncq49dtf6k4f3vgp5fchsv04a8quzq7rjn8t
 AGE-SECRET-KEY-1XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 ```
 
 **⚠️ CRITIQUE** :
 - **Clé privée** (`AGE-SECRET-KEY-1...`) = SECRET, ne JAMAIS commiter
-- **Clé publique** (`age1qqq...`) = Partageable, utilisée pour chiffrer
+- **Clé publique** (`age17zcpkg...`) = Partageable, utilisée pour chiffrer
+- **Clé publique actuelle projet Friday 2.0** : `age17zcpkgjxdyk6g34anhymukncq49dtf6k4f3vgp5fchsv04a8quzq7rjn8t`
 
 ### **2. Configurer SOPS**
 
@@ -96,11 +97,21 @@ Créer `.sops.yaml` à la racine du projet :
 ```yaml
 # .sops.yaml
 creation_rules:
-  - path_regex: \.env\.enc$
-    age: age1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq  # Remplacer par VOTRE clé publique
+  # Fichiers .env (sources non chiffrées)
+  - path_regex: \.env$
+    age: age17zcpkgjxdyk6g34anhymukncq49dtf6k4f3vgp5fchsv04a8quzq7rjn8t  # Clé publique Antonio
 
-  - path_regex: secrets.*\.yaml\.enc$
-    age: age1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq
+  # Fichiers .env chiffrés (pour édition in-place)
+  - path_regex: \.env\.enc$
+    age: age17zcpkgjxdyk6g34anhymukncq49dtf6k4f3vgp5fchsv04a8quzq7rjn8t  # Clé publique Antonio
+
+  # Fichiers secrets YAML/JSON
+  - path_regex: secrets.*\.(yaml|json)$
+    age: age17zcpkgjxdyk6g34anhymukncq49dtf6k4f3vgp5fchsv04a8quzq7rjn8t
+
+  # Fichiers secrets YAML/JSON chiffrés
+  - path_regex: secrets.*\.(yaml|json)\.enc$
+    age: age17zcpkgjxdyk6g34anhymukncq49dtf6k4f3vgp5fchsv04a8quzq7rjn8t
 ```
 
 **Ce fichier PEUT être commité** (contient seulement la clé publique).
@@ -120,11 +131,12 @@ ANTHROPIC_API_KEY=sk-ant-abc123def456
 TELEGRAM_BOT_TOKEN=1234567890:ABCdefGHI
 EOF
 
-# 2. Chiffrer avec SOPS
-sops -e .env > .env.enc
+# 2. Chiffrer avec SOPS (spécifier format dotenv)
+export SOPS_AGE_KEY_FILE=~/.age/friday-key.txt
+sops --input-type dotenv --output-type dotenv -e .env > .env.enc
 
 # 3. Vérifier que .env.enc est chiffré
-cat .env.enc  # Doit montrer du contenu chiffré illisible
+cat .env.enc  # Doit montrer du contenu chiffré avec metadata sops_*
 
 # 4. SUPPRIMER .env en clair
 rm .env
@@ -150,7 +162,8 @@ git commit -m "Add encrypted secrets"
 
 ```bash
 # Déchiffrer .env.enc → .env (temporaire)
-sops -d .env.enc > .env
+export SOPS_AGE_KEY_FILE=~/.age/friday-key.txt
+sops --input-type dotenv --output-type dotenv -d .env.enc > .env
 
 # Utiliser normalement
 docker compose up -d
@@ -163,7 +176,8 @@ rm .env
 
 ```bash
 # Export variables d'environnement directement
-export $(sops -d .env.enc | xargs)
+export SOPS_AGE_KEY_FILE=~/.age/friday-key.txt
+export $(sops --input-type dotenv --output-type dotenv -d .env.enc | xargs)
 
 # Vérifier
 echo $DATABASE_URL

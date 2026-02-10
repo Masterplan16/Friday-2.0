@@ -26,24 +26,28 @@ async def db_pool() -> AsyncGenerator[asyncpg.Pool, None]:
     """
     Fixture PostgreSQL Pool pour tests d'intégration.
 
-    Utilise les variables d'environnement :
-    - POSTGRES_HOST (default: localhost)
-    - POSTGRES_PORT (default: 5432)
-    - POSTGRES_DB (default: friday_test)
-    - POSTGRES_USER (default: friday)
-    - POSTGRES_PASSWORD (default: friday_test)
+    Utilise DATABASE_URL en priorité, sinon variables d'environnement individuelles :
+    - DATABASE_URL (ex: postgresql://user:pass@host:5432/db)
+    - Ou POSTGRES_HOST, POSTGRES_PORT, POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD
 
     IMPORTANT : La base de données doit exister et avoir les migrations appliquées.
     """
-    pool = await asyncpg.create_pool(
-        host=os.getenv("POSTGRES_HOST", "localhost"),
-        port=int(os.getenv("POSTGRES_PORT", "5432")),
-        database=os.getenv("POSTGRES_DB", "friday_test"),
-        user=os.getenv("POSTGRES_USER", "friday"),
-        password=os.getenv("POSTGRES_PASSWORD", "friday_test"),
-        min_size=2,
-        max_size=5,
-    )
+    database_url = os.getenv("DATABASE_URL")
+
+    if database_url:
+        # Utiliser DATABASE_URL si défini (prioritaire pour CI/CD)
+        pool = await asyncpg.create_pool(dsn=database_url, min_size=2, max_size=5)
+    else:
+        # Fallback sur variables individuelles (dev local)
+        pool = await asyncpg.create_pool(
+            host=os.getenv("POSTGRES_HOST", "localhost"),
+            port=int(os.getenv("POSTGRES_PORT", "5432")),
+            database=os.getenv("POSTGRES_DB", "friday_test"),
+            user=os.getenv("POSTGRES_USER", "friday_test"),
+            password=os.getenv("POSTGRES_PASSWORD", "test_password"),
+            min_size=2,
+            max_size=5,
+        )
 
     yield pool
 

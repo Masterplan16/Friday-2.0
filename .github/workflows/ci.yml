@@ -239,6 +239,19 @@ jobs:
           timeout 30 bash -c 'until redis-cli -h localhost -p 6379 ping; do sleep 1; done'
           echo "{\"timestamp\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"level\":\"INFO\",\"message\":\"Redis is ready\",\"job\":\"test-integration\"}"
 
+      - name: Apply database migrations
+        env:
+          DATABASE_URL: postgresql://friday_test:test_password@localhost:5432/friday_test
+        run: |
+          echo "{\"timestamp\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"level\":\"INFO\",\"message\":\"Applying database migrations\",\"job\":\"test-integration\"}"
+          echo "::notice::Applying database migrations..."
+          python scripts/apply_migrations.py --no-backup || {
+            echo "{\"timestamp\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"level\":\"ERROR\",\"message\":\"Migration application failed\",\"job\":\"test-integration\"}"
+            echo "::error::Migration application failed"
+            exit 1
+          }
+          echo "{\"timestamp\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"level\":\"INFO\",\"message\":\"Migrations applied successfully\",\"job\":\"test-integration\"}"
+
       - name: Run integration tests
         env:
           DATABASE_URL: postgresql://friday_test:test_password@localhost:5432/friday_test

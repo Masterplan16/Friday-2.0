@@ -7,12 +7,13 @@ Permet de capturer feedback textuel et mettre à jour core.action_receipts.
 HIGH-2 fix: Anonymise PII via Presidio avant stockage (RGPD compliance).
 """
 
-import asyncpg
 import os
 import sys
+
+import asyncpg
 import structlog
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ContextTypes, CallbackQueryHandler
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram.ext import CallbackQueryHandler, ContextTypes
 
 # HIGH-2 fix: Import Presidio pour anonymisation PII
 # Path hack pour import depuis agents/src/tools
@@ -176,9 +177,7 @@ class CorrectionsHandler:
             context.user_data.pop("awaiting_correction_for", None)
 
 
-def register_corrections_handlers(
-    application, db_pool: asyncpg.Pool
-) -> CorrectionsHandler:
+def register_corrections_handlers(application, db_pool: asyncpg.Pool) -> CorrectionsHandler:
     """
     Enregistre les handlers de corrections dans l'application Telegram.
 
@@ -195,9 +194,7 @@ def register_corrections_handlers(
 
     # Handler callback bouton [Correct]
     application.add_handler(
-        CallbackQueryHandler(
-            handler.handle_correct_button, pattern=r"^correct_[a-f0-9\-]+$"
-        )
+        CallbackQueryHandler(handler.handle_correct_button, pattern=r"^correct_[a-f0-9\-]+$")
     )
 
     # Handler texte correction

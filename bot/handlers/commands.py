@@ -59,29 +59,41 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
 async def status_command_stub(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Stub /status - Implémentée dans Story 1.11."""
-    await update.message.reply_text("⏳ Commande `/status` disponible dans Story 1.11", parse_mode="Markdown")
+    await update.message.reply_text(
+        "⏳ Commande `/status` disponible dans Story 1.11", parse_mode="Markdown"
+    )
 
 
 async def journal_command_stub(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Stub /journal - Implémentée dans Story 1.11."""
-    await update.message.reply_text("⏳ Commande `/journal` disponible dans Story 1.11", parse_mode="Markdown")
+    await update.message.reply_text(
+        "⏳ Commande `/journal` disponible dans Story 1.11", parse_mode="Markdown"
+    )
 
 
 async def receipt_command_stub(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Stub /receipt - Implémentée dans Story 1.11."""
-    await update.message.reply_text("⏳ Commande `/receipt` disponible dans Story 1.11", parse_mode="Markdown")
+    await update.message.reply_text(
+        "⏳ Commande `/receipt` disponible dans Story 1.11", parse_mode="Markdown"
+    )
 
 
 async def confiance_command_stub(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Stub /confiance - Implémentée dans Story 1.11."""
-    await update.message.reply_text("⏳ Commande `/confiance` disponible dans Story 1.11", parse_mode="Markdown")
+    await update.message.reply_text(
+        "⏳ Commande `/confiance` disponible dans Story 1.11", parse_mode="Markdown"
+    )
 
 
 async def stats_command_stub(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Stub /stats - Implémentée dans Story 1.11."""
-    await update.message.reply_text("⏳ Commande `/stats` disponible dans Story 1.11", parse_mode="Markdown")
+    await update.message.reply_text(
+        "⏳ Commande `/stats` disponible dans Story 1.11", parse_mode="Markdown"
+    )
 
 
 async def budget_command_stub(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Stub /budget - Implémentée dans Story 1.11."""
-    await update.message.reply_text("⏳ Commande `/budget` disponible dans Story 1.11", parse_mode="Markdown")
+    await update.message.reply_text(
+        "⏳ Commande `/budget` disponible dans Story 1.11", parse_mode="Markdown"
+    )

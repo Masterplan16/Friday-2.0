@@ -50,13 +50,9 @@ class MemorystoreAdapter:
         """
         try:
             async with self.db_pool.acquire() as conn:
-                result = await conn.fetchval(
-                    "SELECT 1 FROM pg_extension WHERE extname = 'vector'"
-                )
+                result = await conn.fetchval("SELECT 1 FROM pg_extension WHERE extname = 'vector'")
                 if not result:
-                    logger.warning(
-                        "pgvector extension not found - run migration 008 first"
-                    )
+                    logger.warning("pgvector extension not found - run migration 008 first")
                     return
 
             self._pgvector_initialized = True
@@ -96,16 +92,19 @@ class MemorystoreAdapter:
                 VALUES ($1, $2, $3, $4, $5, $6)
                 RETURNING id
                 """,
-                node_id, node_type, name, metadata, now, now,
+                node_id,
+                node_type,
+                name,
+                metadata,
+                now,
+                now,
             )
 
             logger.info("Created node: %s (%s)", name, node_type)
 
             # 2. Si embedding fourni, stocker dans pgvector
             if embedding:
-                await self._store_embedding(
-                    conn, node_id, node_type, embedding, metadata
-                )
+                await self._store_embedding(conn, node_id, node_type, embedding, metadata)
 
         return str(created_id)
 
@@ -147,7 +146,10 @@ class MemorystoreAdapter:
                 )
                 LIMIT 1
                 """,
-                node_type, email, source_id, name,
+                node_type,
+                email,
+                source_id,
+                name,
             )
 
         if existing_id:
@@ -186,7 +188,12 @@ class MemorystoreAdapter:
                 VALUES ($1, $2, $3, $4, $5, $6)
                 RETURNING id
                 """,
-                edge_id, from_node_id, to_node_id, relation_type, metadata, now,
+                edge_id,
+                from_node_id,
+                to_node_id,
+                relation_type,
+                metadata,
+                now,
             )
 
         logger.info(
@@ -225,7 +232,10 @@ class MemorystoreAdapter:
             (source_type, source_id, embedding, metadata)
             VALUES ($1, $2, $3::vector, $4)
             """,
-            source_type, source_id, vector_str, metadata,
+            source_type,
+            source_id,
+            vector_str,
+            metadata,
         )
 
         logger.debug("Stored embedding for node: %s", source_id)
@@ -263,7 +273,10 @@ class MemorystoreAdapter:
                 ORDER BY embedding <=> $1::vector
                 LIMIT $4
                 """,
-                vector_str, source_type, score_threshold, limit,
+                vector_str,
+                source_type,
+                score_threshold,
+                limit,
             )
         else:
             rows = await self.db_pool.fetch(
@@ -274,7 +287,9 @@ class MemorystoreAdapter:
                 ORDER BY embedding <=> $1::vector
                 LIMIT $3
                 """,
-                vector_str, score_threshold, limit,
+                vector_str,
+                score_threshold,
+                limit,
             )
 
         return [

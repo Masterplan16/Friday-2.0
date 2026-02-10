@@ -11,9 +11,8 @@ from typing import Any
 
 import asyncpg
 import structlog
-from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup
-
 from services.feedback.pattern_detector import PatternCluster
+from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup
 
 logger = structlog.get_logger(__name__)
 
@@ -56,9 +55,7 @@ class RuleProposer:
 
         supergroup_id_str = os.getenv("TELEGRAM_SUPERGROUP_ID")
         if not supergroup_id_str:
-            raise ValueError(
-                "TELEGRAM_SUPERGROUP_ID envvar manquante - requis pour envoi Telegram"
-            )
+            raise ValueError("TELEGRAM_SUPERGROUP_ID envvar manquante - requis pour envoi Telegram")
         self.telegram_supergroup_id = int(supergroup_id_str)
 
     def _init_telegram_bot(self) -> Bot | None:
@@ -85,10 +82,7 @@ class RuleProposer:
             Dict avec rule_name, conditions (JSONB), output (JSONB), scope, priority
         """
         # Générer nom de règle unique
-        rule_name = (
-            f"pattern_{cluster.module}_{cluster.action_type}_"
-            f"{uuid.uuid4().hex[:8]}"
-        )
+        rule_name = f"pattern_{cluster.module}_{cluster.action_type}_" f"{uuid.uuid4().hex[:8]}"
 
         # Conditions : mots-clés récurrents
         conditions = {
@@ -141,9 +135,7 @@ class RuleProposer:
             return None
 
         if not self.telegram_supergroup_id or not self.telegram_topic_id:
-            logger.error(
-                "Telegram supergroup_id or topic_id not configured, cannot send proposal"
-            )
+            logger.error("Telegram supergroup_id or topic_id not configured, cannot send proposal")
             return None
 
         # Préparer message de proposition
@@ -173,15 +165,9 @@ class RuleProposer:
         cluster_id = str(uuid.uuid4())  # ID temporaire pour tracking
         keyboard = [
             [
-                InlineKeyboardButton(
-                    "✅ Créer règle", callback_data=f"create_rule_{cluster_id}"
-                ),
-                InlineKeyboardButton(
-                    "✏️ Modifier", callback_data=f"modify_rule_{cluster_id}"
-                ),
-                InlineKeyboardButton(
-                    "❌ Ignorer", callback_data=f"ignore_pattern_{cluster_id}"
-                ),
+                InlineKeyboardButton("✅ Créer règle", callback_data=f"create_rule_{cluster_id}"),
+                InlineKeyboardButton("✏️ Modifier", callback_data=f"modify_rule_{cluster_id}"),
+                InlineKeyboardButton("❌ Ignorer", callback_data=f"ignore_pattern_{cluster_id}"),
             ]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
@@ -266,9 +252,7 @@ class RuleProposer:
         )
         return str(rule_id)
 
-    async def propose_rules_from_patterns(
-        self, patterns: list[PatternCluster]
-    ) -> list[str]:
+    async def propose_rules_from_patterns(self, patterns: list[PatternCluster]) -> list[str]:
         """
         Pipeline complet : propose rules depuis patterns détectés (AC4).
 

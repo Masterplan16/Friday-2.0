@@ -161,6 +161,42 @@ friday-2.0/
 | **Hébergement** | OVH France (RGPD compliant) |
 | **LLM** | Claude Sonnet 4.5 (Anthropic API) — Presidio anonymise AVANT tout appel (D17) |
 | **SSH** | Uniquement via Tailscale (pas de port 22 ouvert) |
+| **Branch Protection** | Master branch protected - PR required, status checks enforced |
+| **Dependency Scanning** | Dependabot automated updates (weekly) |
+
+### 🔑 Secrets Management
+
+Tous les secrets sont chiffrés avec **age + SOPS** avant d'être commitées :
+- ✅ `.env.enc` contient secrets chiffrés (commitable en toute sécurité)
+- ✅ `.env.example` structure complète avec valeurs fictives
+- ✅ Clé privée age stockée localement uniquement (`~/.age/friday-key.txt`)
+- ✅ Rotation tokens régulière (tous les 3-6 mois)
+
+📘 **Documentation complète** : [docs/secrets-management.md](docs/secrets-management.md)
+
+### 🛡️ Security Policy
+
+Rapporter une vulnérabilité : Voir [SECURITY.md](SECURITY.md) pour procédure complète.
+
+- **Réponse** : Accusé réception sous 48h
+- **Correction** : 7 jours (critique), 14 jours (high), 30 jours (medium)
+- **Divulgation** : Coordonnée avec publication du fix
+
+### 🔍 Security Audit
+
+Audit mensuel automatisé via git-secrets :
+- ✅ Scan historique Git complet
+- ✅ Détection tokens API, credentials, clés privées
+- ✅ Validation .gitignore et SOPS encryption
+
+📘 **Procédures d'audit** : [docs/security-audit.md](docs/security-audit.md)
+
+### 🚀 Branch Protection & CI/CD
+
+- **Master branch** : Protected (PR obligatoire, 1 review minimum)
+- **Status checks** : lint, test-unit, test-integration, build-validation
+- **Dependabot** : Mises à jour automatiques hebdomadaires (lundi 8h UTC)
+- **E2E Security Tests** : 6 tests automatisés ([tests/e2e/test_repo_security.sh](tests/e2e/test_repo_security.sh))
 
 ---
 
@@ -228,6 +264,21 @@ sops -e .env.example > .env.enc
 # Déchiffrer avant lancement (automatique via docker-compose avec init script)
 sops -d .env.enc > .env
 ```
+
+**Variables d'environnement requises** (structure complète dans [`.env.example`](.env.example)) :
+
+| Variable | Description | Exemple |
+|----------|-------------|---------|
+| `TELEGRAM_BOT_TOKEN` | Token du bot Telegram (@BotFather) | `1234567890:ABCdef...` |
+| `TELEGRAM_SUPERGROUP_ID` | ID du supergroup Telegram | `-1001234567890` |
+| `ANTONIO_USER_ID` | ID utilisateur Telegram d'Antonio | `123456789` |
+| `TOPIC_*_ID` | Thread IDs des 5 topics Telegram | `2`, `3`, `4`, `5`, `6` |
+| `ANTHROPIC_API_KEY` | Clé API Claude (Anthropic) | `sk-ant-...` |
+| `DATABASE_URL` | URL PostgreSQL complète | `postgresql://user:pass@host:5432/db` |
+| `REDIS_URL` | URL Redis complète | `redis://:pass@host:6379/0` |
+| `LOG_LEVEL` | Niveau de logging | `INFO` |
+
+📋 **Note** : Toutes les valeurs sensibles DOIVENT être chiffrées avec SOPS. Voir [docs/secrets-management.md](docs/secrets-management.md) pour le workflow complet.
 
 ### Dépendances verrouillées
 
@@ -323,7 +374,9 @@ Pour déployer Friday 2.0 sur le VPS-4 OVH, voir le guide complet :
 
 ## 📄 Licence
 
-Projet personnel d'Antonio. Tous droits réservés.
+Ce projet est sous licence [MIT](LICENSE).
+
+Copyright (c) 2026 Antonio - Projet personnel Friday 2.0
 
 ---
 

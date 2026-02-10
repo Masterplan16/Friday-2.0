@@ -16,6 +16,8 @@ import time
 from typing import Any
 
 import structlog
+from bot.config import ConfigurationError, load_bot_config, validate_bot_permissions
+from bot.handlers import commands, messages, trust_commands
 from telegram import Update
 from telegram.ext import (
     Application,
@@ -24,9 +26,6 @@ from telegram.ext import (
     MessageHandler,
     filters,
 )
-
-from bot.config import load_bot_config, validate_bot_permissions, ConfigurationError
-from bot.handlers import commands, messages, trust_commands
 
 logger = structlog.get_logger(__name__)
 
@@ -59,14 +58,18 @@ class FridayBot:
 
         for attempt in range(1, max_retries + 1):
             try:
-                logger.info("Tentative connexion bot Telegram", attempt=attempt, max_retries=max_retries)
+                logger.info(
+                    "Tentative connexion bot Telegram", attempt=attempt, max_retries=max_retries
+                )
 
                 # Construire application avec token (BUG-1.9.1 fix: validation token)
                 self.application = ApplicationBuilder().token(self.config.token).build()
 
                 # Tester connexion en récupérant info bot
                 bot_info = await self.application.bot.get_me()
-                logger.info("Connexion bot réussie", bot_username=bot_info.username, bot_id=bot_info.id)
+                logger.info(
+                    "Connexion bot réussie", bot_username=bot_info.username, bot_id=bot_info.id
+                )
 
                 # Valider permissions admin (BUG-1.9.7 fix + CRIT-3 fix: async)
                 await validate_bot_permissions(self.application.bot, self.config.supergroup_id)
@@ -87,7 +90,9 @@ class FridayBot:
                     logger.info("Retry après backoff", backoff_sec=backoff)
                     await asyncio.sleep(backoff)
                 else:
-                    raise Exception(f"Impossible de se connecter au bot après {max_retries} tentatives: {e}")
+                    raise Exception(
+                        f"Impossible de se connecter au bot après {max_retries} tentatives: {e}"
+                    )
 
     def register_handlers(self) -> None:
         """Enregistre tous les handlers de messages et commandes."""
@@ -116,6 +121,7 @@ class FridayBot:
 
         # Onboarding nouveaux membres (AC6) - CRIT-1 fix
         from telegram.ext import ChatMemberHandler
+
         self.application.add_handler(
             ChatMemberHandler(messages.handle_new_member, ChatMemberHandler.CHAT_MEMBER)
         )
@@ -141,10 +147,13 @@ class FridayBot:
                 # Si heartbeat échoue >5min, alerter System topic
                 time_since_last_success = time.time() - self.last_heartbeat_success
                 if time_since_last_success > 300:  # 5 minutes
-                    logger.critical("Bot déconnecté >5min, alerte System", downtime_sec=time_since_last_success)
+                    logger.critical(
+                        "Bot déconnecté >5min, alerte System", downtime_sec=time_since_last_success
+                    )
                     # MED-1 fix: Envoyer alerte via Redis Streams
                     try:
                         import redis.asyncio as redis_async
+
                         redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
                         redis_client = await redis_async.from_url(redis_url)
                         await redis_client.xadd(

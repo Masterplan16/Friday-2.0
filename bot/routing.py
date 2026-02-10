@@ -6,7 +6,7 @@ vers les topics Telegram appropriés (AC4).
 """
 
 import structlog
-from bot.models import TelegramEvent, BotConfig
+from bot.models import BotConfig, TelegramEvent
 
 logger = structlog.get_logger(__name__)
 

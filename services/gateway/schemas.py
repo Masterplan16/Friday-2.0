@@ -10,7 +10,6 @@ from typing import Literal
 
 from pydantic import BaseModel
 
-
 ServiceStatusType = Literal["up", "down", "not_deployed"]
 SystemStatusType = Literal["healthy", "degraded", "unhealthy"]
 

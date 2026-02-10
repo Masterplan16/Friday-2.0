@@ -17,11 +17,7 @@ dependencies = [
 ]
 
 [tool.setuptools]
-# Automatic package discovery for flat-layout
-# Finds all packages (handlers/, keyboards/, utils/) in the current directory
-packages = {find = {exclude = ["tests*"]}}
-
-# Alternative: explicitly list the root package files and sub-packages
-# If auto-discovery fails, we can explicitly list:
-# py-modules = ["config", "main", "models", "routing"]
-# packages = ["handlers", "keyboards", "utils"]
+# Flat-layout: Le répertoire courant (bot/) est le package racine "bot"
+# Cette config indique que bot/__init__.py, bot/handlers/, etc. sont accessibles via "import bot.xxx"
+package-dir = {"bot" = "."}
+packages = ["bot", "bot.handlers", "bot.keyboards", "bot.utils"]

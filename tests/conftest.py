@@ -17,6 +17,44 @@ import pytest
 
 
 # ==========================================
+# Integration Tests Guard
+# ==========================================
+
+
+@pytest.fixture(scope="session", autouse=True)
+def skip_if_no_integration():
+    """
+    Garde pour tests d'intégration.
+
+    Skip automatiquement tous les tests marqués @pytest.mark.integration
+    si la variable d'environnement INTEGRATION_TESTS n'est pas définie.
+
+    Usage:
+        export INTEGRATION_TESTS=1
+        pytest tests/integration -m integration
+    """
+    # Cette fixture est autouse=True, donc elle s'exécute pour tous les tests
+    # Mais on ne skip que si le test est marqué "integration"
+    pass
+
+
+def pytest_collection_modifyitems(config, items):
+    """
+    Hook pytest pour modifier les tests collectés.
+
+    Skip automatiquement les tests marqués "integration" si INTEGRATION_TESTS
+    n'est pas défini dans l'environnement.
+    """
+    if not os.getenv("INTEGRATION_TESTS"):
+        skip_integration = pytest.mark.skip(
+            reason="INTEGRATION_TESTS=1 not set - skipping integration tests"
+        )
+        for item in items:
+            if "integration" in item.keywords:
+                item.add_marker(skip_integration)
+
+
+# ==========================================
 # PostgreSQL Fixtures
 # ==========================================
 

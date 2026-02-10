@@ -41,6 +41,42 @@ updates:
       include: "scope"
     open-pull-requests-limit: 5
 
+  # Alerting service Python dependencies
+  - package-ecosystem: "pip"
+    directory: "/services/alerting"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "08:00"
+      timezone: "Europe/Paris"
+    assignees:
+      - "Masterplan16"
+    labels:
+      - "dependencies"
+      - "python"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
+    open-pull-requests-limit: 5
+
+  # Metrics service Python dependencies
+  - package-ecosystem: "pip"
+    directory: "/services/metrics"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "08:00"
+      timezone: "Europe/Paris"
+    assignees:
+      - "Masterplan16"
+    labels:
+      - "dependencies"
+      - "python"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
+    open-pull-requests-limit: 5
+
   # Bot Python dependencies
   - package-ecosystem: "pip"
     directory: "/bot"

@@ -1,8 +1,8 @@
 {
   "dataset_name": "Email Classification Validation Dataset",
-  "version": "1.0.0",
-  "created": "2026-02-05",
-  "description": "Dataset pour valider accuracy classification emails (Story 2). Target accuracy >= 85%",
+  "version": "2.0.0",
+  "created": "2026-02-10",
+  "description": "Dataset étendu pour valider accuracy classification emails (Story 2). 50 emails couvrant 8 catégories. Target accuracy >= 85%",
   "emails": [
     {
       "id": "email_medical_001",
@@ -112,10 +112,7 @@
       "expected_category": "personal",
       "expected_priority": "low",
       "min_confidence": 0.5,
-      "allow_multiple_categories": [
-        "personal",
-        "professional"
-      ],
+      "allow_multiple_categories": ["personal", "professional"],
       "reasoning": "Contexte insuffisant - pourrait être perso ou pro selon expéditeur"
     },
     {
@@ -127,8 +124,398 @@
       "expected_priority": "low",
       "min_confidence": 0.9,
       "reasoning": "Newsletter classique avec option désabonnement"
+    },
+    {
+      "id": "email_medical_003",
+      "subject": "Prescription médicaments - Renouvellement",
+      "text": "Votre ordonnance pour Amoxicilline expire le 20/02. Prenez RDV pour renouvellement. Cabinet Dr. Leroux",
+      "sender": "secretariat@cabinet-leroux.fr",
+      "expected_category": "medical",
+      "expected_priority": "medium",
+      "min_confidence": 0.85,
+      "reasoning": "Prescription médicale avec deadline renouvellement"
+    },
+    {
+      "id": "email_medical_004",
+      "subject": "Résultats IRM - RDV nécessaire",
+      "text": "Bonjour, vos résultats IRM sont disponibles. Merci de prendre RDV pour discussion. Anomalie détectée nécessitant examen complémentaire.",
+      "sender": "radiologie@hospital.fr",
+      "expected_category": "medical",
+      "expected_priority": "high",
+      "min_confidence": 0.9,
+      "reasoning": "Résultats médicaux avec anomalie = priorité haute"
+    },
+    {
+      "id": "email_finance_003",
+      "subject": "Déclaration TVA Q4 2025",
+      "text": "Votre déclaration TVA Q4 2025 est prête. Montant à payer : 4580€. Échéance : 25/02/2026. PJ: declaration_tva.pdf",
+      "sender": "expert-comptable@cabinet-dupuis.fr",
+      "expected_category": "finance",
+      "expected_priority": "high",
+      "min_confidence": 0.9,
+      "reasoning": "Déclaration fiscale avec échéance proche"
+    },
+    {
+      "id": "email_finance_004",
+      "subject": "Virement reçu - 3500€",
+      "text": "Un virement de 3500€ a été crédité sur votre compte le 10/02. Émetteur: CLIENT_XYZ",
+      "sender": "alertes@banque.fr",
+      "expected_category": "finance",
+      "expected_priority": "low",
+      "min_confidence": 0.85,
+      "reasoning": "Notification bancaire informative (virement reçu)"
+    },
+    {
+      "id": "email_thesis_003",
+      "subject": "Chapitre 3 - Questions méthodologie",
+      "text": "Bonjour Owner, j'ai des questions sur la méthodologie du chapitre 3. Pouvez-vous relire ma section 3.2 ? Merci, Sophie",
+      "sender": "sophie.bernard@univ-marseille.fr",
+      "expected_category": "thesis",
+      "expected_priority": "medium",
+      "min_confidence": 0.8,
+      "reasoning": "Question thèse nécessitant relecture encadrant"
+    },
+    {
+      "id": "email_thesis_004",
+      "subject": "Inscription soutenance - deadline 01/03",
+      "text": "Owner, rappel : inscription administrative soutenance avant le 01/03. Merci de me valider les documents. Laura",
+      "sender": "laura.petit@univ-nice.fr",
+      "expected_category": "thesis",
+      "expected_priority": "high",
+      "min_confidence": 0.85,
+      "reasoning": "Deadline administrative importante pour soutenance"
+    },
+    {
+      "id": "email_professional_002",
+      "subject": "Formation sécurité obligatoire",
+      "text": "Rappel : formation sécurité incendie obligatoire le 18/02 à 9h. Présence obligatoire. Service RH",
+      "sender": "rh@hospital.fr",
+      "expected_category": "professional",
+      "expected_priority": "high",
+      "min_confidence": 0.85,
+      "reasoning": "Formation obligatoire = priorité haute"
+    },
+    {
+      "id": "email_professional_003",
+      "subject": "CR réunion projet XYZ",
+      "text": "Bonjour, ci-joint le compte-rendu de notre réunion du 08/02. Prochaine réunion : 22/02. Cordialement",
+      "sender": "chef-projet@hospital.fr",
+      "expected_category": "professional",
+      "expected_priority": "low",
+      "min_confidence": 0.75,
+      "reasoning": "CR informatif sans action urgente requise"
+    },
+    {
+      "id": "email_personal_002",
+      "subject": "Dîner vendredi soir",
+      "text": "Salut ! On te propose un dîner vendredi soir chez nous. Vers 20h ? Bisous, Paul & Léa",
+      "sender": "paul.martin@free.fr",
+      "expected_category": "personal",
+      "expected_priority": "low",
+      "min_confidence": 0.8,
+      "reasoning": "Invitation informelle entre amis"
+    },
+    {
+      "id": "email_personal_003",
+      "subject": "Photos vacances été 2025",
+      "text": "Coucou ! Je t'envoie enfin les photos de nos vacances en Corse. On était bien ! Bises, Anne",
+      "sender": "anne.durand@gmail.com",
+      "expected_category": "personal",
+      "expected_priority": "low",
+      "min_confidence": 0.85,
+      "reasoning": "Partage photos personnel sans urgence"
+    },
+    {
+      "id": "email_spam_002",
+      "subject": "Votre colis est bloqué - action requise",
+      "text": "Votre colis Chronopost est bloqué. Payez 2,99€ de frais douaniers : http://fake-chrono.xyz/track",
+      "sender": "colis@chrono-scam.xyz",
+      "expected_category": "spam",
+      "expected_priority": "low",
+      "min_confidence": 0.95,
+      "reasoning": "Phishing classique usurpation identité transporteur"
+    },
+    {
+      "id": "email_spam_003",
+      "subject": "Prolongez votre pénis de 10cm",
+      "text": "Méthode révolutionnaire garantie 100%. Achetez maintenant : http://spam-pills.com",
+      "sender": "promo@spam-pills.com",
+      "expected_category": "spam",
+      "expected_priority": "low",
+      "min_confidence": 0.99,
+      "reasoning": "Spam médical évident"
+    },
+    {
+      "id": "email_legal_002",
+      "subject": "Bail commercial - Renouvellement",
+      "text": "Votre bail commercial arrive à échéance le 31/03/2026. Souhaitez-vous le renouveler ? Réponse avant 15/02. Maître Dupont, notaire",
+      "sender": "etude@notaire-dupont.fr",
+      "expected_category": "legal",
+      "expected_priority": "high",
+      "min_confidence": 0.85,
+      "reasoning": "Document légal avec échéance importante"
+    },
+    {
+      "id": "email_newsletter_002",
+      "subject": "TechCrunch Daily - 10/02/2026",
+      "text": "Top stories today: [articles tech]. Unsubscribe anytime.",
+      "sender": "daily@techcrunch.com",
+      "expected_category": "newsletter",
+      "expected_priority": "low",
+      "min_confidence": 0.9,
+      "reasoning": "Newsletter tech quotidienne"
+    },
+    {
+      "id": "email_medical_005",
+      "subject": "Vaccination rappel - Adulte",
+      "text": "Rappel : vaccination DTP recommandée tous les 10 ans. Dernière injection : 2016. Prenez RDV. Cabinet infirmier",
+      "sender": "infirmier@centre-sante.fr",
+      "expected_category": "medical",
+      "expected_priority": "medium",
+      "min_confidence": 0.8,
+      "reasoning": "Rappel vaccination préventif (pas urgent mais recommandé)"
+    },
+    {
+      "id": "email_finance_005",
+      "subject": "Assurance habitation - Échéance",
+      "text": "Votre assurance habitation arrive à échéance le 01/03. Montant : 450€/an. Renouvellement automatique sauf opposition avant 15/02.",
+      "sender": "contrats@assurance-maif.fr",
+      "expected_category": "finance",
+      "expected_priority": "medium",
+      "min_confidence": 0.85,
+      "reasoning": "Contrat assurance avec date échéance"
+    },
+    {
+      "id": "email_finance_006",
+      "subject": "Avis d'imposition 2026",
+      "text": "Votre avis d'imposition 2026 est disponible sur impots.gouv.fr. Montant : 3200€. Prélèvement le 25/02.",
+      "sender": "noreply@dgfip.finances.gouv.fr",
+      "expected_category": "finance",
+      "expected_priority": "high",
+      "min_confidence": 0.95,
+      "reasoning": "Document fiscal officiel avec prélèvement imminent"
+    },
+    {
+      "id": "email_thesis_005",
+      "subject": "Article co-auteur - Corrections",
+      "text": "Owner, j'ai intégré vos corrections sur l'article. Soumission à la revue prévue fin février. Merci encore, Thomas",
+      "sender": "thomas.rousseau@univ-toulouse.fr",
+      "expected_category": "thesis",
+      "expected_priority": "medium",
+      "min_confidence": 0.75,
+      "reasoning": "Article de recherche en cours (co-encadrement doctorant)"
+    },
+    {
+      "id": "email_professional_004",
+      "subject": "Congés validés - Février 2026",
+      "text": "Votre demande de congés du 24/02 au 28/02 a été approuvée. Bon repos ! RH",
+      "sender": "rh@hospital.fr",
+      "expected_category": "professional",
+      "expected_priority": "low",
+      "min_confidence": 0.85,
+      "reasoning": "Validation administrative (informatif, pas d'action requise)"
+    },
+    {
+      "id": "email_personal_004",
+      "subject": "Cadeau papa - On se cotise ?",
+      "text": "Salut ! Pour l'anniv de papa, on se cotise ? J'ai vu une montre à 150€. Tu es partant ? Bisous, Julien",
+      "sender": "julien.lopez@orange.fr",
+      "expected_category": "personal",
+      "expected_priority": "low",
+      "min_confidence": 0.8,
+      "reasoning": "Organisation familiale informelle"
+    },
+    {
+      "id": "email_spam_004",
+      "subject": "Crédit rapide sans justificatif",
+      "text": "Obtenez 5000€ en 24h sans justificatif de revenus. Taux exceptionnel 0,5%. Cliquez : http://credit-scam.com",
+      "sender": "credits@fake-bank.xyz",
+      "expected_category": "spam",
+      "expected_priority": "low",
+      "min_confidence": 0.95,
+      "reasoning": "Offre financière frauduleuse (taux irréaliste, sans justificatif)"
+    },
+    {
+      "id": "email_legal_003",
+      "subject": "Succession - Documents à signer",
+      "text": "Maître Lopez, veuillez trouver les documents de succession de Mme Martin. Signature requise avant fin février. Cordialement, Maître Dubois",
+      "sender": "etude@notaire-dubois.fr",
+      "expected_category": "legal",
+      "expected_priority": "high",
+      "min_confidence": 0.9,
+      "reasoning": "Acte notarié succession avec deadline"
+    },
+    {
+      "id": "email_newsletter_003",
+      "subject": "Briefing Médecine - Semaine 6",
+      "text": "Actualités médicales de la semaine : nouvelles études, recommandations HAS. Se désabonner",
+      "sender": "briefing@revue-medicale.fr",
+      "expected_category": "newsletter",
+      "expected_priority": "low",
+      "min_confidence": 0.85,
+      "reasoning": "Newsletter professionnelle médicale"
+    },
+    {
+      "id": "email_medical_006",
+      "subject": "Bilan sanguin annuel",
+      "text": "Rappel : bilan sanguin annuel recommandé (glycémie, cholestérol). Ordonnance disponible au secrétariat. Dr. Moreau",
+      "sender": "secretariat@cabinet-moreau.fr",
+      "expected_category": "medical",
+      "expected_priority": "low",
+      "min_confidence": 0.8,
+      "reasoning": "Bilan préventif (non urgent, recommandation)"
+    },
+    {
+      "id": "email_finance_007",
+      "subject": "Prélèvement SEPA rejeté",
+      "text": "Le prélèvement SEPA de 125€ du 08/02 a été rejeté (provision insuffisante). Frais : 20€. Régularisez rapidement.",
+      "sender": "incidents@banque.fr",
+      "expected_category": "finance",
+      "expected_priority": "high",
+      "min_confidence": 0.9,
+      "reasoning": "Incident bancaire nécessitant action rapide"
+    },
+    {
+      "id": "email_thesis_006",
+      "subject": "Comité de suivi - 25/02",
+      "text": "Owner, mon comité de suivi est prévu le 25/02. Pouvez-vous valider mon rapport avant envoi ? Merci, Emma",
+      "sender": "emma.garcia@univ-bordeaux.fr",
+      "expected_category": "thesis",
+      "expected_priority": "high",
+      "min_confidence": 0.85,
+      "reasoning": "Comité de suivi = jalon important thèse, validation requise"
+    },
+    {
+      "id": "email_professional_005",
+      "subject": "Augmentation salariale 2026",
+      "text": "Votre salaire est revalorisé de 3% à compter du 01/03/2026. Nouveau salaire : 4800€ brut/mois. Direction RH",
+      "sender": "direction-rh@hospital.fr",
+      "expected_category": "professional",
+      "expected_priority": "medium",
+      "min_confidence": 0.85,
+      "reasoning": "Information RH importante (changement contractuel)"
+    },
+    {
+      "id": "email_personal_005",
+      "subject": "Match de foot dimanche",
+      "text": "Salut ! Match de foot dimanche 10h au stade. Tu viens ? On a besoin d'un gardien. Marc",
+      "sender": "marc.fontaine@hotmail.fr",
+      "expected_category": "personal",
+      "expected_priority": "low",
+      "min_confidence": 0.8,
+      "reasoning": "Activité sportive entre amis"
+    },
+    {
+      "id": "email_spam_005",
+      "subject": "Votre compte Amazon a été piraté",
+      "text": "Activité suspecte détectée. Confirmez votre identité : http://fake-amazon.xyz/verify",
+      "sender": "security@amaz0n-security.xyz",
+      "expected_category": "spam",
+      "expected_priority": "low",
+      "min_confidence": 0.95,
+      "reasoning": "Phishing usurpation Amazon (domaine suspect, urgence artificielle)"
+    },
+    {
+      "id": "email_legal_004",
+      "subject": "Contrat de travail - Avenant",
+      "text": "Suite à votre changement de fonction, veuillez signer l'avenant au contrat ci-joint. Retour avant 20/02. Service juridique",
+      "sender": "juridique@hospital.fr",
+      "expected_category": "legal",
+      "expected_priority": "high",
+      "min_confidence": 0.85,
+      "reasoning": "Document contractuel avec deadline signature"
+    },
+    {
+      "id": "email_medical_007",
+      "subject": "Rendez-vous dentiste - Rappel",
+      "text": "Rappel : RDV dentiste demain 14h. Cabinet Dr. Blanc, 12 rue de la Santé. En cas d'empêchement : 01.23.45.67.89",
+      "sender": "secretariat@cabinet-blanc.fr",
+      "expected_category": "medical",
+      "expected_priority": "medium",
+      "min_confidence": 0.85,
+      "reasoning": "Rappel RDV médical proche (lendemain)"
+    },
+    {
+      "id": "email_finance_008",
+      "subject": "Intérêts livret A - Janvier 2026",
+      "text": "Vos intérêts du livret A pour janvier 2026 : 12,50€. Capital au 31/01 : 25 300€.",
+      "sender": "epargne@caisse-epargne.fr",
+      "expected_category": "finance",
+      "expected_priority": "low",
+      "min_confidence": 0.85,
+      "reasoning": "Notification épargne informative (pas d'action requise)"
+    },
+    {
+      "id": "email_professional_006",
+      "subject": "Télétravail - Nouvelle politique",
+      "text": "Nouvelle politique télétravail : 2 jours/semaine maximum. Effectif 01/03. Demandes à soumettre via l'intranet. Direction",
+      "sender": "direction@hospital.fr",
+      "expected_category": "professional",
+      "expected_priority": "medium",
+      "min_confidence": 0.8,
+      "reasoning": "Changement politique entreprise (important mais pas urgent)"
+    },
+    {
+      "id": "email_personal_006",
+      "subject": "Recette tarte aux pommes",
+      "text": "Coucou ! Comme promis, voici ma recette de tarte aux pommes. Bisous, Mamie",
+      "sender": "mamie.lopez@laposte.net",
+      "expected_category": "personal",
+      "expected_priority": "low",
+      "min_confidence": 0.9,
+      "reasoning": "Partage recette familial (très personnel, pas urgent)"
+    },
+    {
+      "id": "email_spam_006",
+      "subject": "Rencontres coquines près de chez vous",
+      "text": "Des milliers de célibataires vous attendent. Inscription gratuite : http://dating-scam.com",
+      "sender": "rencontres@spam-dating.xyz",
+      "expected_category": "spam",
+      "expected_priority": "low",
+      "min_confidence": 0.99,
+      "reasoning": "Spam site de rencontre adulte évident"
+    },
+    {
+      "id": "email_newsletter_004",
+      "subject": "Les Échos - Sélection du jour",
+      "text": "Actualité économique : CAC40, marchés, entreprises. Désinscription : cliquez ici",
+      "sender": "newsletter@lesechos.fr",
+      "expected_category": "newsletter",
+      "expected_priority": "low",
+      "min_confidence": 0.9,
+      "reasoning": "Newsletter économique quotidienne"
+    },
+    {
+      "id": "email_ambiguous_002",
+      "subject": "Ton avis ?",
+      "text": "Salut, t'en penses quoi ? Dis-moi vite !",
+      "sender": "alice@gmail.com",
+      "expected_category": "personal",
+      "expected_priority": "low",
+      "min_confidence": 0.4,
+      "allow_multiple_categories": ["personal", "professional"],
+      "reasoning": "Contexte très insuffisant, impossible à catégoriser avec certitude"
     }
   ],
+  "statistics": {
+    "total_emails": 50,
+    "category_distribution": {
+      "medical": 7,
+      "finance": 8,
+      "thesis": 6,
+      "professional": 6,
+      "personal": 6,
+      "spam": 6,
+      "legal": 4,
+      "newsletter": 4,
+      "ambiguous": 3
+    },
+    "priority_distribution": {
+      "high": 15,
+      "medium": 16,
+      "low": 19
+    }
+  },
   "usage": "pytest tests/integration/test_email_classification_quality.py",
-  "acceptance_criteria": "Accuracy >= 85% sur ce dataset (min 11/13 correct)"
+  "acceptance_criteria": "Accuracy >= 85% sur ce dataset (min 43/50 correct, 86%)"
 }

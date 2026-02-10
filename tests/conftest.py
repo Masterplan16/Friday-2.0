@@ -114,16 +114,40 @@ async def clean_tables(db_pool: asyncpg.Pool):
 
     ATTENTION : Supprime TOUTES les données des tables testées.
     À utiliser uniquement sur base de test, jamais en production.
+
+    Nettoie les 3 schemas : core, ingestion, knowledge
     """
     async with db_pool.acquire() as conn:
+        # Core schema
         await conn.execute("TRUNCATE TABLE core.action_receipts CASCADE")
         await conn.execute("TRUNCATE TABLE core.correction_rules CASCADE")
         await conn.execute("TRUNCATE TABLE core.trust_metrics CASCADE")
+        # Ingestion schema
+        await conn.execute("TRUNCATE TABLE ingestion.emails CASCADE")
+        await conn.execute("TRUNCATE TABLE ingestion.emails_legacy CASCADE")
+        await conn.execute("TRUNCATE TABLE ingestion.documents CASCADE")
+        await conn.execute("TRUNCATE TABLE ingestion.media CASCADE")
+        # Knowledge schema
+        await conn.execute("TRUNCATE TABLE knowledge.entities CASCADE")
+        await conn.execute("TRUNCATE TABLE knowledge.embeddings CASCADE")
+        await conn.execute("TRUNCATE TABLE knowledge.thesis_notes CASCADE")
+        await conn.execute("TRUNCATE TABLE knowledge.finance_transactions CASCADE")
 
     yield
 
     # Cleanup après test
     async with db_pool.acquire() as conn:
+        # Core schema
         await conn.execute("TRUNCATE TABLE core.action_receipts CASCADE")
         await conn.execute("TRUNCATE TABLE core.correction_rules CASCADE")
         await conn.execute("TRUNCATE TABLE core.trust_metrics CASCADE")
+        # Ingestion schema
+        await conn.execute("TRUNCATE TABLE ingestion.emails CASCADE")
+        await conn.execute("TRUNCATE TABLE ingestion.emails_legacy CASCADE")
+        await conn.execute("TRUNCATE TABLE ingestion.documents CASCADE")
+        await conn.execute("TRUNCATE TABLE ingestion.media CASCADE")
+        # Knowledge schema
+        await conn.execute("TRUNCATE TABLE knowledge.entities CASCADE")
+        await conn.execute("TRUNCATE TABLE knowledge.embeddings CASCADE")
+        await conn.execute("TRUNCATE TABLE knowledge.thesis_notes CASCADE")
+        await conn.execute("TRUNCATE TABLE knowledge.finance_transactions CASCADE")

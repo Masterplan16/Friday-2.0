@@ -7,6 +7,7 @@ Modèles de données pour événements Telegram, configuration topics, etc.
 import re
 from datetime import datetime
 from typing import Any
+
 from pydantic import BaseModel, Field, field_validator
 
 
@@ -68,7 +69,9 @@ class BotConfig(BaseModel):
     supergroup_id: int = Field(..., description="Chat ID du supergroup Friday 2.0 Control")
     topics: dict[str, TopicConfig] = Field(..., description="Mapping nom → config topic")
     heartbeat_interval_sec: int = Field(60, description="Intervalle heartbeat en secondes")
-    rate_limit_msg_per_sec: int = Field(25, description="Rate limit messages/sec (marge sécurité vs 30)")
+    rate_limit_msg_per_sec: int = Field(
+        25, description="Rate limit messages/sec (marge sécurité vs 30)"
+    )
     max_message_length: int = Field(4096, description="Longueur max message Telegram")
 
     @field_validator("token")

@@ -19,7 +19,6 @@ import asyncpg
 import redis.asyncio as aioredis
 import schedule
 import structlog
-
 from services.feedback.pattern_detector import PatternDetector
 from services.feedback.rule_proposer import RuleProposer
 
@@ -52,9 +51,7 @@ class MetricsAggregator:
     async def connect(self) -> None:
         """Connecte à PostgreSQL et Redis."""
         self.db_pool = await asyncpg.create_pool(self.db_url)
-        self.redis_client = await aioredis.from_url(
-            self.redis_url, decode_responses=True
-        )
+        self.redis_client = await aioredis.from_url(self.redis_url, decode_responses=True)
         logger.info("Connected to PostgreSQL and Redis")
 
     async def disconnect(self) -> None:
@@ -368,7 +365,9 @@ class MetricsAggregator:
         for retro in retrogradations:
             old_level = retro["old_level"]
             new_level = retro["new_level"]
-            reason = reason_map.get((old_level, new_level), f"retrogradation {old_level} -> {new_level}")
+            reason = reason_map.get(
+                (old_level, new_level), f"retrogradation {old_level} -> {new_level}"
+            )
 
             event_data = {
                 "module": retro["module"],
@@ -380,9 +379,7 @@ class MetricsAggregator:
                 "reason": reason,
             }
 
-            await self.redis_client.xadd(
-                "friday:events:trust.level.changed", event_data
-            )
+            await self.redis_client.xadd("friday:events:trust.level.changed", event_data)
 
         logger.info("Retrogradation alerts sent", count=len(retrogradations))
 

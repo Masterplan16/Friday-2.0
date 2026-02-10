@@ -6,6 +6,6 @@ Ce package contient les modules pour :
 - Proposition de règles depuis clusters (rule_proposer.py - Story 1.9)
 """
 
-from .pattern_detector import PatternDetector, PatternCluster
+from .pattern_detector import PatternCluster, PatternDetector
 
 __all__ = ["PatternDetector", "PatternCluster"]

@@ -13,8 +13,9 @@ Token pré-rempli, zéro configuration.
 import asyncio
 import os
 from pathlib import Path
+
 from telegram import Update
-from telegram.ext import Application, MessageHandler, filters, ContextTypes
+from telegram.ext import Application, ContextTypes, MessageHandler, filters
 
 # ✅ TOKEN PRÉ-REMPLI (fourni par Antonio)
 TOKEN = "8099504071:AAEN_XrVq9lo91-lNRYrW1GbcfTp3i6Am38"
@@ -81,7 +82,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         # Nouveau topic détecté
         detected_topics[thread_id] = {
             "text": message.text or "[media]",
-            "from": message.from_user.first_name if message.from_user else "Unknown"
+            "from": message.from_user.first_name if message.from_user else "Unknown",
         }
 
         print(f"✅ Topic {len(detected_topics)}/5 détecté :")

@@ -11,8 +11,9 @@ Usage:
 
 import asyncio
 import os
+
 from telegram import Update
-from telegram.ext import Application, MessageHandler, filters, ContextTypes
+from telegram.ext import Application, ContextTypes, MessageHandler, filters
 
 # ⚠️ REMPLACE PAR TON TOKEN @BotFather
 TOKEN = "TON_TOKEN_ICI"

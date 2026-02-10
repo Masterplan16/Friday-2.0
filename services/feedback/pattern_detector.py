@@ -38,18 +38,12 @@ class PatternCluster(BaseModel):
 
     module: str = Field(..., description="Module concerné (ex: 'email')")
     action_type: str = Field(..., description="Type d'action (ex: 'classify')")
-    corrections: list[str] = Field(
-        ..., description="Liste des corrections textuelles similaires"
-    )
-    receipt_ids: list[UUID] = Field(
-        ..., description="IDs des receipts correspondants"
-    )
+    corrections: list[str] = Field(..., description="Liste des corrections textuelles similaires")
+    receipt_ids: list[UUID] = Field(..., description="IDs des receipts correspondants")
     similarity_score: float = Field(
         ..., ge=0.0, le=1.0, description="Score de similarité du cluster (0.0-1.0)"
     )
-    common_keywords: list[str] = Field(
-        ..., description="Mots-clés récurrents dans les corrections"
-    )
+    common_keywords: list[str] = Field(..., description="Mots-clés récurrents dans les corrections")
     target_category: str | None = Field(
         None, description="Catégorie cible majoritaire (si détectable)"
     )
@@ -100,9 +94,7 @@ class PatternDetector:
             await self.db_pool.close()
             logger.info("PatternDetector disconnected from PostgreSQL")
 
-    async def get_recent_corrections(
-        self, days: int = 7
-    ) -> list[dict[str, Any]]:
+    async def get_recent_corrections(self, days: int = 7) -> list[dict[str, Any]]:
         """
         Récupère les corrections des N derniers jours.
 
@@ -193,9 +185,7 @@ class PatternDetector:
         similarity = 1.0 - (dist / max_len)
         return max(0.0, similarity)  # Clamp à 0.0 minimum
 
-    def cluster_corrections(
-        self, corrections: list[dict[str, Any]]
-    ) -> list[list[dict[str, Any]]]:
+    def cluster_corrections(self, corrections: list[dict[str, Any]]) -> list[list[dict[str, Any]]]:
         """
         Groupe les corrections en clusters par similarité.
 
@@ -229,9 +219,7 @@ class PatternDetector:
                 if j <= i or j in used_indices:
                     continue
 
-                similarity = self.calculate_similarity(
-                    corr1["correction"], corr2["correction"]
-                )
+                similarity = self.calculate_similarity(corr1["correction"], corr2["correction"])
 
                 if similarity >= self.similarity_threshold:
                     cluster.append(corr2)
@@ -282,9 +270,7 @@ class PatternDetector:
                     target_categories.append(category)
 
             # Tokeniser mots (filtre mots courts <3 caractères)
-            words = [
-                w.strip() for w in text.split() if len(w.strip()) >= 3
-            ]
+            words = [w.strip() for w in text.split() if len(w.strip()) >= 3]
             all_words.extend(words)
 
         # Compter occurrences
@@ -302,14 +288,10 @@ class PatternDetector:
         similarities: list[float] = []
         for i, corr1 in enumerate(cluster):
             for corr2 in cluster[i + 1 :]:
-                sim = self.calculate_similarity(
-                    corr1["correction"], corr2["correction"]
-                )
+                sim = self.calculate_similarity(corr1["correction"], corr2["correction"])
                 similarities.append(sim)
 
-        avg_similarity = (
-            sum(similarities) / len(similarities) if similarities else 1.0
-        )
+        avg_similarity = sum(similarities) / len(similarities) if similarities else 1.0
 
         return {
             "common_keywords": common_keywords,

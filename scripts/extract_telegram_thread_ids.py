@@ -186,7 +186,9 @@ def main():
 
     # Vérifier Python version
     if sys.version_info < (3, 11):
-        print(f"⚠️  Python 3.11+ recommandé (vous avez {sys.version_info.major}.{sys.version_info.minor})")
+        print(
+            f"⚠️  Python 3.11+ recommandé (vous avez {sys.version_info.major}.{sys.version_info.minor})"
+        )
 
     # Lancer extraction
     try:
@@ -205,6 +207,7 @@ def main():
     except Exception as e:
         print(f"\n❌ Erreur inattendue : {e}")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)
 

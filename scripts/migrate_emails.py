@@ -23,18 +23,19 @@ Features:
 - Logs détaillés dans logs/migration.log
 """
 
-import asyncio
-import asyncpg
 import argparse
+import asyncio
 import json
 import logging
 import os
 import tempfile
 import time
-from pathlib import Path
-from datetime import datetime, timedelta
-from typing import Optional
 from dataclasses import dataclass
+from datetime import datetime, timedelta
+from pathlib import Path
+from typing import Optional
+
+import asyncpg
 
 # Configuration (chargée depuis variables d'environnement - jamais hardcodé)
 # Pas de valeurs par défaut pour les secrets (age/SOPS pour secrets, voir architecture)
@@ -50,7 +51,8 @@ if not POSTGRES_DSN or not ANTHROPIC_API_KEY:
 
 # Valider format POSTGRES_DSN
 import re
-DSN_PATTERN = r'^postgresql://[^@]+@[^/]+/[^?]+(\?.*)?$'
+
+DSN_PATTERN = r"^postgresql://[^@]+@[^/]+/[^?]+(\?.*)?$"
 if not re.match(DSN_PATTERN, POSTGRES_DSN):
     raise EnvironmentError(
         f"POSTGRES_DSN invalide: {POSTGRES_DSN}\n"
@@ -67,6 +69,7 @@ RATE_LIMIT_DELAY = 60 / RATE_LIMIT_RPM  # Délai entre requêtes
 @dataclass
 class MigrationState:
     """État de la migration"""
+
     total_emails: int
     processed: int
     failed: int
@@ -78,7 +81,13 @@ class MigrationState:
 
 
 class EmailMigrator:
-    def __init__(self, dry_run: bool = False, resume: bool = False, batch_size: int = BATCH_SIZE, rate_limit_rpm: int = RATE_LIMIT_RPM):
+    def __init__(
+        self,
+        dry_run: bool = False,
+        resume: bool = False,
+        batch_size: int = BATCH_SIZE,
+        rate_limit_rpm: int = RATE_LIMIT_RPM,
+    ):
         self.dry_run = dry_run
         self.resume = resume
         self.batch_size = batch_size
@@ -94,11 +103,8 @@ class EmailMigrator:
         Path("logs").mkdir(exist_ok=True)
         logging.basicConfig(
             level=logging.INFO,
-            format='%(asctime)s - %(levelname)s - %(message)s',
-            handlers=[
-                logging.FileHandler(LOG_FILE),
-                logging.StreamHandler()
-            ]
+            format="%(asctime)s - %(levelname)s - %(message)s",
+            handlers=[logging.FileHandler(LOG_FILE), logging.StreamHandler()],
         )
         return logging.getLogger(__name__)
 
@@ -120,16 +126,18 @@ class EmailMigrator:
         with open(checkpoint_path) as f:
             data = json.load(f)
 
-        self.logger.info("Checkpoint trouve: %d/%d emails traites", data['processed'], data['total_emails'])
+        self.logger.info(
+            "Checkpoint trouve: %d/%d emails traites", data["processed"], data["total_emails"]
+        )
         return MigrationState(
-            total_emails=data['total_emails'],
-            processed=data['processed'],
-            failed=data['failed'],
-            last_email_id=data['last_email_id'],
-            started_at=datetime.fromisoformat(data['started_at']),
-            last_checkpoint_at=datetime.fromisoformat(data['last_checkpoint_at']),
-            estimated_cost=data['estimated_cost'],
-            estimated_time_remaining=None
+            total_emails=data["total_emails"],
+            processed=data["processed"],
+            failed=data["failed"],
+            last_email_id=data["last_email_id"],
+            started_at=datetime.fromisoformat(data["started_at"]),
+            last_checkpoint_at=datetime.fromisoformat(data["last_checkpoint_at"]),
+            estimated_cost=data["estimated_cost"],
+            estimated_time_remaining=None,
         )
 
     async def save_checkpoint(self) -> None:
@@ -138,19 +146,19 @@ class EmailMigrator:
         checkpoint_dir.mkdir(exist_ok=True, parents=True)
 
         data = {
-            'total_emails': self.state.total_emails,
-            'processed': self.state.processed,
-            'failed': self.state.failed,
-            'last_email_id': self.state.last_email_id,
-            'started_at': self.state.started_at.isoformat(),
-            'last_checkpoint_at': datetime.now().isoformat(),
-            'estimated_cost': self.state.estimated_cost
+            "total_emails": self.state.total_emails,
+            "processed": self.state.processed,
+            "failed": self.state.failed,
+            "last_email_id": self.state.last_email_id,
+            "started_at": self.state.started_at.isoformat(),
+            "last_checkpoint_at": datetime.now().isoformat(),
+            "estimated_cost": self.state.estimated_cost,
         }
 
         # Atomic write: temp file + rename pour eviter corruption si crash mid-write
-        fd, tmp_path = tempfile.mkstemp(dir=str(checkpoint_dir), suffix='.tmp')
+        fd, tmp_path = tempfile.mkstemp(dir=str(checkpoint_dir), suffix=".tmp")
         try:
-            with os.fdopen(fd, 'w') as f:
+            with os.fdopen(fd, "w") as f:
                 json.dump(data, f, indent=2)
             Path(tmp_path).replace(CHECKPOINT_FILE)
         except Exception:
@@ -158,8 +166,7 @@ class EmailMigrator:
             raise
 
         self.logger.debug(
-            "Checkpoint sauvegarde: %d/%d",
-            self.state.processed, self.state.total_emails
+            "Checkpoint sauvegarde: %d/%d", self.state.processed, self.state.total_emails
         )
 
     async def get_emails_to_migrate(self, batch_size: int = BATCH_SIZE) -> list[dict]:
@@ -234,25 +241,27 @@ class EmailMigrator:
             if self.dry_run:
                 # Dry run: simuler classification
                 return {
-                    'category': 'test',
-                    'priority': 'low',
-                    'confidence': 0.95,
-                    'keywords': ['test']
+                    "category": "test",
+                    "priority": "low",
+                    "confidence": 0.95,
+                    "keywords": ["test"],
                 }
 
             # Parse response (TODO)
             return {
-                'category': 'uncategorized',
-                'priority': 'low',
-                'confidence': 0.5,
-                'keywords': []
+                "category": "uncategorized",
+                "priority": "low",
+                "confidence": 0.5,
+                "keywords": [],
             }
 
         except Exception as e:
             if retry_count < MAX_RETRIES:
                 # Retry exponentiel: 2^retry_count secondes
-                wait_time = 2 ** retry_count
-                self.logger.warning("Erreur classification (tentative %d/%d): %s", retry_count + 1, MAX_RETRIES, e)
+                wait_time = 2**retry_count
+                self.logger.warning(
+                    "Erreur classification (tentative %d/%d): %s", retry_count + 1, MAX_RETRIES, e
+                )
                 self.logger.info("Retry dans %ds...", wait_time)
                 await asyncio.sleep(wait_time)
                 return await self.classify_email(email, retry_count + 1)
@@ -268,19 +277,20 @@ class EmailMigrator:
 
             # 2. Insertion dans ingestion.emails (nouveau schema)
             if not self.dry_run:
-                await self.db.execute("""
+                await self.db.execute(
+                    """
                     INSERT INTO ingestion.emails
                     (message_id, sender, subject, body_text, category, priority, confidence, received_at, processed_at)
                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
                 """,
-                    email['message_id'],
-                    email['sender'],
-                    email['subject'],
-                    email['body_text'],
-                    classification['category'],
-                    classification['priority'],
-                    classification['confidence'],
-                    email['received_at']
+                    email["message_id"],
+                    email["sender"],
+                    email["subject"],
+                    email["body_text"],
+                    classification["category"],
+                    classification["priority"],
+                    classification["confidence"],
+                    email["received_at"],
                 )
 
             # 3. Publier event Redis (pour pipeline downstream: extraction PJ, graphe, etc.)
@@ -293,10 +303,10 @@ class EmailMigrator:
             self.state.estimated_cost += 0.003
 
             self.state.processed += 1
-            self.state.last_email_id = email['message_id']
+            self.state.last_email_id = email["message_id"]
 
         except Exception as e:
-            self.logger.error("Echec migration email %s: %s", email['message_id'], e)
+            self.logger.error("Echec migration email %s: %s", email["message_id"], e)
             self.state.failed += 1
             # Continue avec les autres emails (ne pas bloquer toute la migration)
 
@@ -319,11 +329,15 @@ class EmailMigrator:
                 started_at=datetime.now(),
                 last_checkpoint_at=datetime.now(),
                 estimated_cost=0.0,
-                estimated_time_remaining=None
+                estimated_time_remaining=None,
             )
             self.logger.info("Demarrage migration: %d emails a traiter", total_count)
         else:
-            self.logger.info("Reprise migration: %d/%d deja traites", self.state.processed, self.state.total_emails)
+            self.logger.info(
+                "Reprise migration: %d/%d deja traites",
+                self.state.processed,
+                self.state.total_emails,
+            )
 
         if self.dry_run:
             self.logger.warning("MODE DRY-RUN: Aucune modification reelle")
@@ -352,14 +366,19 @@ class EmailMigrator:
                 if self.state.processed > 0:
                     avg_time_per_email = elapsed / self.state.processed
                     remaining_emails = self.state.total_emails - self.state.processed
-                    self.state.estimated_time_remaining = timedelta(seconds=avg_time_per_email * remaining_emails)
+                    self.state.estimated_time_remaining = timedelta(
+                        seconds=avg_time_per_email * remaining_emails
+                    )
 
                 if self.state.processed % 10 == 0:  # Log tous les 10 emails
                     self.logger.info(
                         "Progress: %d/%d (%.1f%%) - Failed: %d - ETA: %s - Cost: $%.4f",
-                        self.state.processed, self.state.total_emails,
-                        progress_pct, self.state.failed,
-                        self.state.estimated_time_remaining, self.state.estimated_cost
+                        self.state.processed,
+                        self.state.total_emails,
+                        progress_pct,
+                        self.state.failed,
+                        self.state.estimated_time_remaining,
+                        self.state.estimated_cost,
                     )
 
             # Checkpoint tous les batch_size emails
@@ -389,17 +408,26 @@ class EmailMigrator:
 
 async def main():
     parser = argparse.ArgumentParser(description="Migration emails Friday 2.0")
-    parser.add_argument('--resume', action='store_true', help="Reprendre depuis dernier checkpoint")
-    parser.add_argument('--dry-run', action='store_true', help="Simulation sans modification réelle")
-    parser.add_argument('--batch-size', type=int, default=BATCH_SIZE, help=f"Taille batch (défaut: {BATCH_SIZE})")
-    parser.add_argument('--rate-limit', type=int, default=RATE_LIMIT_RPM, help=f"Rate limit Anthropic API en req/min (défaut: {RATE_LIMIT_RPM}). Ajuster selon tier Anthropic")
+    parser.add_argument("--resume", action="store_true", help="Reprendre depuis dernier checkpoint")
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Simulation sans modification réelle"
+    )
+    parser.add_argument(
+        "--batch-size", type=int, default=BATCH_SIZE, help=f"Taille batch (défaut: {BATCH_SIZE})"
+    )
+    parser.add_argument(
+        "--rate-limit",
+        type=int,
+        default=RATE_LIMIT_RPM,
+        help=f"Rate limit Anthropic API en req/min (défaut: {RATE_LIMIT_RPM}). Ajuster selon tier Anthropic",
+    )
     args = parser.parse_args()
 
     migrator = EmailMigrator(
         dry_run=args.dry_run,
         resume=args.resume,
         batch_size=args.batch_size,
-        rate_limit_rpm=args.rate_limit
+        rate_limit_rpm=args.rate_limit,
     )
     await migrator.run(batch_size=args.batch_size)
 

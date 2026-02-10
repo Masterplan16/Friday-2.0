@@ -92,9 +92,7 @@ class HealthChecker:
             await self._http_client.aclose()
             self._http_client = None
 
-    async def check_http_service(
-        self, name: str, url: str
-    ) -> tuple[ServiceStatusType, int | None]:
+    async def check_http_service(self, name: str, url: str) -> tuple[ServiceStatusType, int | None]:
         """Check an HTTP service health endpoint."""
         start = time.monotonic()
         try:
@@ -148,9 +146,7 @@ class HealthChecker:
 
         http_tasks: dict[str, asyncio.Task[tuple[ServiceStatusType, int | None]]] = {}
         for name, config in SERVICE_CHECKS.items():
-            http_tasks[name] = asyncio.create_task(
-                self.check_http_service(name, config["url"])
-            )
+            http_tasks[name] = asyncio.create_task(self.check_http_service(name, config["url"]))
 
         # Gather results
         pg_status, pg_latency = await pg_task

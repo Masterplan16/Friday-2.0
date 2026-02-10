@@ -25,11 +25,11 @@ Version: 1.0.0 (Story 1.5.1)
 import os
 import re
 from typing import Dict, List, Optional
+
 import httpx
 import structlog
-from pydantic import BaseModel, Field
-
 from config.exceptions import PipelineError
+from pydantic import BaseModel, Field
 
 # Configuration Presidio (via env vars)
 PRESIDIO_ANALYZER_URL = os.getenv("PRESIDIO_ANALYZER_URL", "http://presidio-analyzer:5001")
@@ -38,16 +38,16 @@ PRESIDIO_TIMEOUT = int(os.getenv("PRESIDIO_TIMEOUT", "30"))
 
 # Entités sensibles à détecter (France)
 FRENCH_ENTITIES = [
-    "PERSON",           # Noms, prénoms
-    "EMAIL_ADDRESS",    # Emails
-    "PHONE_NUMBER",     # Téléphones
-    "IBAN_CODE",        # IBAN bancaires
-    "NRP",              # Numéro INSEE (Numéro de Sécurité Sociale)
-    "LOCATION",         # Adresses, villes
-    "DATE_TIME",        # Dates
+    "PERSON",  # Noms, prénoms
+    "EMAIL_ADDRESS",  # Emails
+    "PHONE_NUMBER",  # Téléphones
+    "IBAN_CODE",  # IBAN bancaires
+    "NRP",  # Numéro INSEE (Numéro de Sécurité Sociale)
+    "LOCATION",  # Adresses, villes
+    "DATE_TIME",  # Dates
     "MEDICAL_LICENSE",  # Numéros RPPS médecins
-    "FR_NIR",           # NIR Sécurité Sociale
-    "CREDIT_CARD",      # Numéros de carte bancaire (requis par pii_samples.json sample 004)
+    "FR_NIR",  # NIR Sécurité Sociale
+    "CREDIT_CARD",  # Numéros de carte bancaire (requis par pii_samples.json sample 004)
 ]
 
 logger = structlog.get_logger(__name__)
@@ -88,17 +88,19 @@ class AnonymizationResult(BaseModel):
 
     Migration dataclass → Pydantic (Subtask 1.7, Bug B7).
     """
+
     anonymized_text: str = Field(..., description="Texte anonymisé avec placeholders")
     entities_found: List[Dict] = Field(default_factory=list, description="Entités PII détectées")
     mapping: Dict[str, str] = Field(
         default_factory=dict,
-        description="Mapping éphémère placeholder → valeur originale (JAMAIS persisté)"
+        description="Mapping éphémère placeholder → valeur originale (JAMAIS persisté)",
     )
     confidence_min: float = Field(..., ge=0.0, le=1.0, description="Confidence minimale (0.0-1.0)")
 
 
 class AnonymizationError(PipelineError):
     """Erreur pipeline anonymisation (hérite de PipelineError selon hiérarchie Story 1.2)"""
+
     pass
 
 
@@ -106,7 +108,7 @@ async def anonymize_text(
     text: str,
     language: str = "fr",
     entities: Optional[List[str]] = None,
-    context: Optional[str] = None
+    context: Optional[str] = None,
 ) -> AnonymizationResult:
     """
     Anonymise un texte via Presidio AVANT envoi LLM cloud (RGPD obligatoire).
@@ -145,10 +147,7 @@ async def anonymize_text(
 
     if not text or not text.strip():
         return AnonymizationResult(
-            anonymized_text=text,
-            entities_found=[],
-            mapping={},
-            confidence_min=1.0
+            anonymized_text=text, entities_found=[], mapping={}, confidence_min=1.0
         )
 
     entities_to_detect = entities or FRENCH_ENTITIES
@@ -164,7 +163,7 @@ async def anonymize_text(
                 "text": text,
                 "language": language,
                 "entities": entities_to_detect,
-            }
+            },
         )
         analyze_response.raise_for_status()
         entities_found = analyze_response.json()
@@ -173,10 +172,7 @@ async def anonymize_text(
             # Aucune PII détectée
             logger.debug("no_pii_detected", context=context)
             return AnonymizationResult(
-                anonymized_text=text,
-                entities_found=[],
-                mapping={},
-                confidence_min=1.0
+                anonymized_text=text, entities_found=[], mapping={}, confidence_min=1.0
             )
 
         # 2. Anonymisation: remplacer entités par placeholders
@@ -192,8 +188,8 @@ async def anonymize_text(
                     "PHONE_NUMBER": {"type": "replace", "new_value": "[PHONE_{{{{ID}}}}]"},
                     "IBAN_CODE": {"type": "replace", "new_value": "[IBAN_{{{{ID}}}}]"},
                     "LOCATION": {"type": "replace", "new_value": "[LOCATION_{{{{ID}}}}]"},
-                }
-            }
+                },
+            },
         )
         anonymize_response.raise_for_status()
         anonymization_result = anonymize_response.json()
@@ -213,8 +209,7 @@ async def anonymize_text(
         # 4. Calculer confidence minimale (M2 fix: validation robuste)
         try:
             confidence_min = min(
-                (entity.get("score", 1.0) for entity in entities_found),
-                default=1.0
+                (entity.get("score", 1.0) for entity in entities_found), default=1.0
             )
         except (TypeError, ValueError) as e:
             # Fallback si entities_found malformé
@@ -229,14 +224,14 @@ async def anonymize_text(
             "anonymization_success",
             entities_count=len(entities_found),
             confidence_min=confidence_min,
-            context=context
+            context=context,
         )
 
         return AnonymizationResult(
             anonymized_text=anonymized_text,
             entities_found=entities_found,
             mapping=mapping,
-            confidence_min=confidence_min
+            confidence_min=confidence_min,
         )
 
     except httpx.HTTPError as e:
@@ -281,7 +276,9 @@ async def deanonymize_text(anonymized_text: str, mapping: Dict[str, str]) -> str
     return deanonymized
 
 
-def _build_mapping(original_text: str, entities: List[Dict], anonymized_text: str) -> Dict[str, str]:
+def _build_mapping(
+    original_text: str, entities: List[Dict], anonymized_text: str
+) -> Dict[str, str]:
     """
     Construit mapping placeholder → valeur originale (éphémère).
 
@@ -292,6 +289,7 @@ def _build_mapping(original_text: str, entities: List[Dict], anonymized_text: st
     générés par Presidio au lieu de deviner leur format.
     """
     import re
+
     mapping = {}
 
     # Extraire valeurs originales depuis positions dans entities

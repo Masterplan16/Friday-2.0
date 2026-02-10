@@ -4,15 +4,17 @@ Bot Telegram Friday 2.0 - Message Handlers
 Handlers pour messages texte libres et événements de groupe (nouveaux membres).
 """
 
-import asyncpg
 import os
-import structlog
 from datetime import datetime
-from telegram import Update, ChatMember
+
+import asyncpg
+import structlog
+from telegram import ChatMember, Update
 from telegram.constants import MessageLimit
-from telegram.ext import ContextTypes, ChatMemberHandler
+from telegram.ext import ChatMemberHandler, ContextTypes
 
 logger = structlog.get_logger(__name__)
+
 
 # User ID Antonio (pour vérification onboarding) - LAZY LOAD pour tests (CRIT-1 fix)
 def get_antonio_user_id() -> int:

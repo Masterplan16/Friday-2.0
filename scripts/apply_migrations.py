@@ -32,7 +32,6 @@ from urllib.parse import unquote, urlparse
 import asyncpg
 import structlog
 
-
 # ---------------------------------------------------------------------------
 # Exceptions
 # ---------------------------------------------------------------------------
@@ -78,9 +77,11 @@ def configure_logging() -> structlog.stdlib.BoundLogger:
             structlog.contextvars.merge_contextvars,
             structlog.processors.add_log_level,
             structlog.processors.TimeStamper(fmt="iso"),
-            structlog.dev.ConsoleRenderer()
-            if sys.stderr.isatty()
-            else structlog.processors.JSONRenderer(),
+            (
+                structlog.dev.ConsoleRenderer()
+                if sys.stderr.isatty()
+                else structlog.processors.JSONRenderer()
+            ),
         ],
         wrapper_class=structlog.stdlib.BoundLogger,
         context_class=dict,
@@ -310,9 +311,7 @@ async def backup_database(
             stderr=asyncio.subprocess.PIPE,
             env=env,
         )
-        _, stderr = await asyncio.wait_for(
-            proc.communicate(), timeout=BACKUP_TIMEOUT_SECONDS
-        )
+        _, stderr = await asyncio.wait_for(proc.communicate(), timeout=BACKUP_TIMEOUT_SECONDS)
     except asyncio.TimeoutError:
         proc.kill()
         raise BackupError(
@@ -320,9 +319,7 @@ async def backup_database(
         )
 
     if proc.returncode != 0:
-        raise BackupError(
-            f"pg_dump echoue (code {proc.returncode}): {stderr.decode().strip()}"
-        )
+        raise BackupError(f"pg_dump echoue (code {proc.returncode}): {stderr.decode().strip()}")
 
     log.info(
         "backup cree",
@@ -502,9 +499,7 @@ async def main(
                     "objets detectes dans schema public",
                     violations=violations,
                 )
-                raise MigrationError(
-                    f"Objets dans schema public apres migration: {violations}"
-                )
+                raise MigrationError(f"Objets dans schema public apres migration: {violations}")
             log.info("verification schema public: OK")
 
             log.info("toutes les migrations appliquees avec succes")
@@ -514,9 +509,7 @@ async def main(
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Applique les migrations SQL Friday 2.0"
-    )
+    parser = argparse.ArgumentParser(description="Applique les migrations SQL Friday 2.0")
     parser.add_argument(
         "--dry-run",
         action="store_true",

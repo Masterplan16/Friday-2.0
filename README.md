@@ -324,10 +324,8 @@ Pour déployer Friday 2.0 sur le VPS-4 OVH, voir le guide complet :
 
 ## 📊 Status du projet
 
-<!-- LOW #16 FIX: Badge visible après Story 1.17 (repo public) -->
 ![CI Status](https://github.com/Masterplan16/Friday-2.0/workflows/CI/badge.svg)
-
-> **Note** : Le badge CI sera visible après la Story 1.17 (Préparation repository public).
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
 
 | Phase | Status |
 |-------|--------|
@@ -382,3 +380,5 @@ Copyright (c) 2026 Friday 2.0 Project
 
 **Version** : 1.4.0 (2026-02-05)
 **Dernière mise à jour** : Code review adversarial complet (22 issues fixes) + Fichiers critiques créés (migrations, docs, scripts)
+
+<!-- CI validation test - Story 1.16 subtask 5.2 -->

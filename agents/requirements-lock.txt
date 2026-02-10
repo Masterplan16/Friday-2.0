@@ -26,7 +26,6 @@ docstring_parser==0.17.0
 fastapi==0.128.5
 filelock==3.20.3
 flake8==7.3.0
--e git+https://github.com/Masterplan16/Friday-2.0.git@77886f8ff99cae243be40be1576e0b302e81fcaa#egg=friday_2
 grpcio==1.78.0
 h11==0.16.0
 h2==4.3.0

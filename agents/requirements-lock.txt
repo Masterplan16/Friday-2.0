@@ -15,7 +15,7 @@ click==8.3.1
 cloudpathlib==0.23.0
 colorama==0.4.6
 confection==0.1.5
-coverage==7.13.3
+coverage==7.13.4
 croniter==6.0.0
 cryptography==44.0.3
 cymem==2.0.13

@@ -87,7 +87,7 @@ python-Levenshtein==0.27.3
 python-telegram-bot==22.6
 pytokens==0.4.1
 pytz==2025.2
-PyYAML==6.0.1
+PyYAML==6.0.3
 RapidFuzz==3.14.3
 redis==5.0.1
 regex==2026.1.15

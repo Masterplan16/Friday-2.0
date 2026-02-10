@@ -55,7 +55,7 @@ class TestDockerImageVersions:
 
     def test_redis_version(self, main_config):
         image = main_config["services"]["redis"]["image"]
-        assert image == "redis:7.8-alpine"
+        assert image == "redis:7.4-alpine"
 
     def test_qdrant_not_active(self, main_config):
         """Qdrant doit etre retire (Decision D19 - pgvector Day 1)."""

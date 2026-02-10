@@ -55,7 +55,7 @@ from apply_migrations import (  # noqa: E402
 # Test 3.1 / AC#1+8: Les 12 migrations existent et sont bien formees
 # ============================================================================
 class TestMigrationFilesExist:
-    """Verifie que les 12 migrations existent et sont ordonnees."""
+    """Verifie que les 16 migrations existent et sont ordonnees."""
 
     EXPECTED_MIGRATIONS = [
         "001_init_schemas",
@@ -70,12 +70,16 @@ class TestMigrationFilesExist:
         "010_knowledge_finance",
         "011_trust_system",
         "012_ingestion_emails_legacy",
+        "013_trust_metrics_columns",
+        "014_telegram_config",
+        "015_user_settings",
+        "016_trust_metrics_anti_oscillation",
     ]
 
-    def test_twelve_migration_files_exist(self, migration_files: list[Path]) -> None:
-        """AC#1: 12 migrations disponibles."""
-        assert len(migration_files) == 12, (
-            f"Expected 12 migration files, found {len(migration_files)}: "
+    def test_sixteen_migration_files_exist(self, migration_files: list[Path]) -> None:
+        """AC#1: 16 migrations disponibles."""
+        assert len(migration_files) == 16, (
+            f"Expected 16 migration files, found {len(migration_files)}: "
             f"{[f.name for f in migration_files]}"
         )
 
@@ -166,12 +170,12 @@ class TestMigrationsTracking:
         assert "version" in script
         assert "checksum" in script
 
-    def test_twelve_migrations_would_produce_twelve_records(
+    def test_sixteen_migrations_would_produce_sixteen_records(
         self, migration_files: list[Path]
     ) -> None:
-        """Les 12 fichiers de migration produiraient 12 enregistrements dans schema_migrations."""
-        assert len(migration_files) == 12, (
-            f"Expected 12 migration files to produce 12 tracking records, "
+        """Les 16 fichiers de migration produiraient 16 enregistrements dans schema_migrations."""
+        assert len(migration_files) == 16, (
+            f"Expected 16 migration files to produce 16 tracking records, "
             f"found {len(migration_files)}"
         )
 

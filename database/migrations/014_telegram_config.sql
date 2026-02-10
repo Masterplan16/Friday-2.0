@@ -72,14 +72,14 @@ CREATE TABLE IF NOT EXISTS ingestion.telegram_messages (
     thread_id INTEGER,  -- NULL si message dans General topic
     message_id INTEGER NOT NULL,
     text TEXT,
-    timestamp TIMESTAMPTZ NOT NULL,
+    sent_at TIMESTAMPTZ NOT NULL,
     processed BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Index pour recherche par user_id + timestamp (queries fréquentes)
-CREATE INDEX IF NOT EXISTS idx_telegram_messages_user_timestamp
-ON ingestion.telegram_messages(user_id, timestamp DESC);
+-- Index pour recherche par user_id + sent_at (queries fréquentes)
+CREATE INDEX IF NOT EXISTS idx_telegram_messages_user_sent_at
+ON ingestion.telegram_messages(user_id, sent_at DESC);
 
 -- Index pour recherche par processed (queue processing)
 CREATE INDEX IF NOT EXISTS idx_telegram_messages_processed
@@ -93,7 +93,7 @@ COMMENT ON COLUMN ingestion.telegram_messages.chat_id IS 'Chat ID (supergroup)';
 COMMENT ON COLUMN ingestion.telegram_messages.thread_id IS 'Thread ID du topic (NULL si General)';
 COMMENT ON COLUMN ingestion.telegram_messages.message_id IS 'Message ID unique Telegram';
 COMMENT ON COLUMN ingestion.telegram_messages.text IS 'Contenu texte du message';
-COMMENT ON COLUMN ingestion.telegram_messages.timestamp IS 'Timestamp du message (heure Telegram)';
+COMMENT ON COLUMN ingestion.telegram_messages.sent_at IS 'Timestamp du message (heure Telegram)';
 COMMENT ON COLUMN ingestion.telegram_messages.processed IS 'Indique si le message a été traité par Friday';
 
 COMMIT;

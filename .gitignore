@@ -146,3 +146,4 @@ services/qdrant/storage/
 
 # Zep data
 services/zep/data/
+.env

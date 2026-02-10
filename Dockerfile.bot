@@ -1,7 +1,7 @@
 # Dockerfile.bot - Bot Telegram Friday 2.0
 # Story 1.9 - Container isolé pour bot Telegram avec polling
 
-FROM python:3.11-slim
+FROM python:3.14-slim
 
 # Métadonnées
 LABEL maintainer="Friday 2.0"

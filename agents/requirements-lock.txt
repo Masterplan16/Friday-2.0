@@ -88,7 +88,6 @@ python-Levenshtein==0.27.3
 python-telegram-bot==22.6
 pytokens==0.4.1
 pytz==2025.2
-pywin32==311
 PyYAML==6.0.1
 qdrant-client==1.16.2
 RapidFuzz==3.14.3

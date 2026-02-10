@@ -35,8 +35,8 @@ Friday 2.0 utilise **Playwright** pour automatiser les sites web connus et stabl
    - Rechercher produit
    - Sélectionner premier résultat (ou meilleure correspondance)
    - Ajouter au panier
-4. Afficher récapitulatif à Antonio (via Telegram)
-5. Attendre validation Antonio (inline buttons)
+4. Afficher récapitulatif à Mainteneur (via Telegram)
+5. Attendre validation Mainteneur (inline buttons)
 6. Si approuvé : choisir créneau + finaliser
 7. Si rejeté : abandonner ou éditer
 

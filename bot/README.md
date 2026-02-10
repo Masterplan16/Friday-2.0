@@ -35,7 +35,7 @@ TOPIC_SYSTEM_ID=<thread_id>
 TOPIC_METRICS_ID=<thread_id>
 ```
 
-### User ID Antonio (obligatoire)
+### User ID Mainteneur (obligatoire)
 ```bash
 ANTONIO_USER_ID=<user_id>                 # Pour onboarding uniquement Antonio
 ```

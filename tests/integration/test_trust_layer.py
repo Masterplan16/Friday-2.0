@@ -5,7 +5,7 @@ IMPORTANT : Ces tests nécessitent PostgreSQL réel avec migrations appliquées.
 
 Tests couverts :
 - E2E : Décorateur → INSERT receipt → SELECT vérification
-- Correction rules : Antonio corrige → règle créée → règle appliquée
+- Correction rules : owner corrige → règle créée → règle appliquée
 - Trust levels : auto exécute, propose attend, blocked bloque
 """
 
@@ -290,7 +290,7 @@ async def test_feedback_loop_correction_to_rule(
     Test : Feedback loop complet correction → règle créée → règle appliquée.
 
     Vérifie que :
-    1. Antonio peut créer une correction_rule manuellement
+    1. owner peut créer une correction_rule manuellement
     2. La règle est chargée au prochain appel
     3. La règle est injectée dans le prompt (_rules_prompt)
     """
@@ -315,7 +315,7 @@ async def test_feedback_loop_correction_to_rule(
             0,
             True,
             datetime.now(UTC),
-            "Antonio",
+            "owner",
         )
 
     # 2. Charger les règles

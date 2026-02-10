@@ -136,7 +136,7 @@ result = await presidio_deanonymize(response)
 
 **Promotion/rétrogradation :**
 - **Rétrogradation auto** : `auto` → `propose` si accuracy <90% sur 1 semaine (échantillon ≥10 actions)
-- **Promotion manuelle** : `propose` → `auto` si accuracy ≥95% sur 3 semaines + validation Antonio
+- **Promotion manuelle** : `propose` → `auto` si accuracy ≥95% sur 3 semaines + validation Mainteneur
 - **Anti-oscillation** : Après rétrogradation, minimum 2 semaines avant nouvelle promotion
 
 Voir [addendum section 7](_docs/architecture-addendum-20260205.md) pour la définition formelle complète (formule, granularité par action, seuils minimaux).
@@ -181,8 +181,8 @@ class ActionResult(BaseModel):
 
 ```python
 # ~50 règles max → un SELECT suffit, injectées dans le prompt
-# Cycle : correction Antonio → détection pattern (2 occurrences) →
-#   proposition de règle → validation Antonio → règle active
+# Cycle : correction Mainteneur → détection pattern (2 occurrences) →
+#   proposition de règle → validation Mainteneur → règle active
 ```
 
 #### Tables SQL associées
@@ -495,7 +495,7 @@ TOPIC_ACTIONS_ID=<thread_id>
 TOPIC_SYSTEM_ID=<thread_id>
 TOPIC_METRICS_ID=<thread_id>
 
-# User Antonio
+# User Mainteneur
 ANTONIO_USER_ID=<user_id>
 
 # Database & Redis
@@ -629,7 +629,7 @@ Prérequis à tout. Infrastructure, Trust Layer, sécurité RGPD, Telegram, Self
 
 1. **Epic 1** (Socle) — prérequis à tout, stories 1.1→1.15 séquentielles
 2. **Epic 6** (Mémoire) — PostgreSQL knowledge.* + pgvector nécessaires pour Epic 3
-3. **Epic 2** (Email) — besoin #1 Antonio
+3. **Epic 2** (Email) — besoin #1 Mainteneur
 4. **Epic 3** (Archiviste) — inséparable du pipeline email (PJ)
 5. **Epic 5** (Vocal) — STT/TTS transversal
 6. **Epic 7** (Agenda) — détecte événements dans emails
@@ -738,7 +738,7 @@ New-BurntToastNotification -Text "Claude", "Toujours en cours..."
   *Versionnage modèle unique Claude Sonnet 4.5 (D17), procédure upgrade, veille mensuelle D18, surveillance accuracy/coûts, gestion budget mensuel*
 
 - **Setup PC Backup** : [docs/pc-backup-setup.md](docs/pc-backup-setup.md)
-  *Configuration complète PC Antonio pour recevoir backups quotidiens VPS via rsync/Tailscale. Guides par OS (Windows/WSL, Linux, macOS), SSH setup, tests validation*
+  *Configuration complète PC Mainteneur pour recevoir backups quotidiens VPS via rsync/Tailscale. Guides par OS (Windows/WSL, Linux, macOS), SSH setup, tests validation*
 
 ### Configuration & Scripts implémentation
 

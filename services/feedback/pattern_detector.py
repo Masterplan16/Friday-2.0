@@ -1,7 +1,7 @@
 """
 Pattern Detector pour Friday 2.0 - Détection de patterns de correction.
 
-Clustering sémantique des corrections Antonio pour détecter des patterns récurrents
+Clustering sémantique des corrections owner pour détecter des patterns récurrents
 et proposer automatiquement des correction_rules.
 
 Algorithme (ADD2 Section 2) :
@@ -56,7 +56,7 @@ class PatternDetector:
     """
     Détecteur de patterns de correction pour le feedback loop.
 
-    Analyse les corrections d'Antonio sur 7 jours glissants et détecte
+    Analyse les corrections d'owner sur 7 jours glissants et détecte
     des patterns récurrents via clustering sémantique (Levenshtein distance).
     """
 

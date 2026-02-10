@@ -67,7 +67,7 @@ async def test_full_retrogradation_workflow_auto_to_propose(db_pool, clean_table
                 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
                 """,
                 "email", "classify", "corrected", 0.88,
-                f"Email corr #{i}", "Classification erronée", "Correction Antonio",
+                f"Email corr #{i}", "Classification erronée", "Correction owner",
                 week_start + timedelta(hours=10 + i)
             )
 

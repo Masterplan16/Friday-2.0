@@ -57,7 +57,7 @@ Friday 2.0 est un assistant personnel intelligent gérant des données sensibles
 **NE PAS** créer d'issue publique GitHub pour les vulnérabilités de sécurité.
 
 **Procédure** :
-1. **Email privé** : Contactez Antonio Lopez via [antonio@exemple.com](mailto:antonio@exemple.com) *(remplacer par vraie adresse)*
+1. **Email privé** : Contactez Friday 2.0 Maintainer via [security@friday-project.example.com](mailto:security@friday-project.example.com) *(remplacer par vraie adresse)*
 2. **Objet** : `[SECURITY] Friday 2.0 - <description courte>`
 3. **Contenu** :
    - Description détaillée de la vulnérabilité
@@ -70,7 +70,7 @@ Friday 2.0 est un assistant personnel intelligent gérant des données sensibles
 - Analyse et correction sous **7 jours** (critique), **14 jours** (high), **30 jours** (medium)
 - Publication coordonnée du fix (CVE si applicable)
 
-### Pour Antonio (développeur principal)
+### Pour Mainteneur (développeur principal)
 
 En cas de découverte de vulnérabilité interne :
 1. **Évaluation immédiate** : Risque RGPD ? Exposition credentials ?
@@ -123,7 +123,7 @@ Voir [docs/secrets-management.md](docs/secrets-management.md) - Section "Partage
 | Anonymisation Presidio | Chaque PR | CI/CD (pytest) |
 | Détection secrets Git | Pre-commit | git-secrets hook |
 | Backup restore | Hebdomadaire | Cron VPS |
-| Rotation credentials | Mensuel | Antonio |
+| Rotation credentials | Mensuel | Mainteneur |
 | Scan CVE dépendances | Quotidien | Dependabot |
 
 ### Datasets de test PII
@@ -152,5 +152,5 @@ Voir [LICENSE](LICENSE) pour les détails.
 ---
 
 **Dernière mise à jour** : 2026-02-10
-**Contact sécurité** : antonio@exemple.com *(à remplacer)*
+**Contact sécurité** : security@friday-project.example.com *(à remplacer)*
 **Version** : 1.0.0

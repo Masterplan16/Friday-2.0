@@ -194,7 +194,7 @@ class CorrectionRule(BaseModel):
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC), description="Date de création"
     )
-    created_by: str = Field(default="Antonio", description="Créateur de la règle")
+    created_by: str = Field(default="owner", description="Créateur de la règle")
 
     def format_for_prompt(self) -> str:
         """
@@ -250,7 +250,7 @@ class TrustMetric(BaseModel):
         """
         Détermine si une promotion est possible (pas automatique).
 
-        Règle : accuracy >=95% sur 3 semaines + validation manuelle Antonio
+        Règle : accuracy >=95% sur 3 semaines + validation manuelle owner
         Note : La vérification "3 semaines" se fait au niveau DB.
         """
         return (

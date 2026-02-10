@@ -1,7 +1,7 @@
 """
 Tests unitaires pour bot/handlers/corrections.py (Story 1.7, Task 2.3).
 
-Teste la capture des corrections Antonio via inline button [Correct].
+Teste la capture des corrections owner via inline button [Correct].
 """
 
 import pytest
@@ -64,9 +64,9 @@ async def test_handle_correct_button_stores_receipt_id(
     Test : Bouton [Correct] stocke receipt_id dans user_data.
 
     Workflow:
-    1. Antonio clique [Correct] sur notification
+    1. owner clique [Correct] sur notification
     2. Handler stocke receipt_id dans context.user_data
-    3. Handler demande texte correction à Antonio
+    3. Handler demande texte correction à owner
     """
     handler = CorrectionsHandler(mock_db_pool)
 
@@ -76,7 +76,7 @@ async def test_handle_correct_button_stores_receipt_id(
     assert "awaiting_correction_for" in mock_context.user_data
     assert mock_context.user_data["awaiting_correction_for"] == "abc123-def4-5678-9012-345678901234"
 
-    # Vérifier message envoyé à Antonio
+    # Vérifier message envoyé à owner
     mock_update_correct_button.callback_query.message.reply_text.assert_called_once()
     call_args = mock_update_correct_button.callback_query.message.reply_text.call_args
     assert "Correction action" in call_args[0][0]
@@ -92,7 +92,7 @@ async def test_handle_correction_text_updates_receipt(
 
     Workflow:
     1. user_data contient receipt_id en attente
-    2. Antonio envoie texte correction
+    2. owner envoie texte correction
     3. Handler UPDATE core.action_receipts SET correction, status='corrected'
     """
     handler = CorrectionsHandler(mock_db_pool)
@@ -113,13 +113,13 @@ async def test_handle_correction_text_updates_receipt(
     # Vérifier paramètres SQL
     params = conn.execute.call_args[0][1:]
     assert params[0] == "URSSAF → finance"  # correction
-    assert "Antonio" in params[1]  # feedback_comment
+    assert "owner" in params[1]  # feedback_comment
     assert params[2] == "abc123-def4-5678-9012-345678901234"  # receipt_id
 
     # Vérifier user_data nettoyé
     assert "awaiting_correction_for" not in mock_context.user_data
 
-    # Vérifier confirmation à Antonio
+    # Vérifier confirmation à owner
     mock_update_correction_text.message.reply_text.assert_called_once()
     confirmation = mock_update_correction_text.message.reply_text.call_args[0][0]
     assert "Correction enregistrée" in confirmation
@@ -160,7 +160,7 @@ async def test_handle_correction_text_receipt_not_found_error(
 
     Scénario:
     - UPDATE retourne "UPDATE 0" (aucune ligne modifiée)
-    - Handler envoie message d'erreur à Antonio
+    - Handler envoie message d'erreur à owner
     """
     handler = CorrectionsHandler(mock_db_pool)
 
@@ -188,7 +188,7 @@ async def test_handle_correction_text_db_exception_error(
 
     Scénario:
     - conn.execute raise Exception (DB down, timeout, etc.)
-    - Handler catch exception et envoie message erreur à Antonio
+    - Handler catch exception et envoie message erreur à owner
     """
     handler = CorrectionsHandler(mock_db_pool)
 

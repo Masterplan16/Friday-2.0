@@ -2,7 +2,7 @@
 """
 Script ultra-automatisé pour configurer Friday 2.0 avec Telegram.
 
-Antonio n'a qu'à:
+owner n'a qu'à:
 1. Lancer ce script
 2. Envoyer 1 message dans chaque topic du groupe Friday
 3. Le script génère le .env automatiquement
@@ -47,7 +47,7 @@ print("🤖 Friday 2.0 - Configuration Telegram AUTOMATIQUE")
 print("=" * 70)
 print()
 print("✅ Token bot : OK")
-print("✅ User ID Antonio : OK")
+print("✅ User ID owner : OK")
 print()
 print("📋 INSTRUCTIONS SIMPLES :")
 print()
@@ -139,7 +139,7 @@ async def generate_env_file():
     # Trier les thread IDs (ordre d'envoi = ordre des topics)
     sorted_threads = sorted(detected_topics.keys())
 
-    # Mapping suggéré (Antonio devra vérifier l'ordre)
+    # Mapping suggéré (owner devra vérifier l'ordre)
     topic_names = [
         ("TOPIC_CHAT_PROACTIVE_ID", "💬 Chat & Proactive"),
         ("TOPIC_EMAIL_ID", "📬 Email & Communications"),

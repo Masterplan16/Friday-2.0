@@ -835,7 +835,7 @@ Les references a Zep dans les sections precedentes (6.2 notamment) doivent etre 
 ### 11.1 Contexte & Problématique
 
 **Date de décision** : 2026-02-05
-**Participants** : Antonio (Product Owner), Winston (Architect), Mary (Analyst), Amelia (Dev), via BMAD Party Mode
+**Participants** : Mainteneur (Product Owner), Winston (Architect), Mary (Analyst), Amelia (Dev), via BMAD Party Mode
 
 **Problème identifié** :
 
@@ -916,7 +916,7 @@ graph TB
 
 **Contenu** :
 - Toutes actions trust=propose avec inline buttons (Approve/Reject)
-- Corrections appliquées par Antonio (feedback loop)
+- Corrections appliquées par Mainteneur (feedback loop)
 - Trust level changes (auto→propose, propose→auto)
 - Feedbacks traités et règles créées
 
@@ -1007,7 +1007,7 @@ def route_event_to_topic(event: Event) -> int:
 - Focus modes (iOS, Android)
 - Scheduled silence (22h-8h configurable)
 
-**Pourquoi recoder ça ?** On donne la granularité (topics), Antonio configure son téléphone selon ses besoins.
+**Pourquoi recoder ça ?** On donne la granularité (topics), Mainteneur configure son téléphone selon ses besoins.
 
 **Flexibilité utilisateur** : Antonio peut muter/unmuter topics selon le contexte :
 - **Mode Normal** : Tous topics actifs → voit tout en temps réel
@@ -1098,7 +1098,7 @@ TOPIC_METRICS_ID=<thread_id topic 5>
 Quand Antonio rejoint le supergroup la première fois, Friday envoie un **message onboarding dans Chat & Proactive** :
 
 ```
-🎉 Bienvenue dans Friday 2.0 Control, Antonio !
+🎉 Bienvenue dans Friday 2.0 Control, Mainteneur !
 
 📚 Guide rapide des topics :
 

@@ -74,7 +74,7 @@ class MemorystoreAdapter:
 
         Args:
             node_type: Type de nœud (person, document, topic, event, etc.)
-            name: Nom du nœud (ex: "Antonio Lopez", "Email RE: Projet X")
+            name: Nom du nœud (ex: "owner Lopez", "Email RE: Projet X")
             metadata: Métadonnées JSON (ex: {email, company, date, etc.})
             embedding: Vecteur d'embedding optionnel (1024 dims par défaut)
 

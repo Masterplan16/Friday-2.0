@@ -1,7 +1,7 @@
 """
 Bot Telegram Friday 2.0 - Corrections Handlers
 
-Gestion des corrections Antonio sur les actions Friday (Story 1.7, AC1).
+Gestion des corrections owner sur les actions Friday (Story 1.7, AC1).
 Permet de capturer feedback textuel et mettre à jour core.action_receipts.
 
 HIGH-2 fix: Anonymise PII via Presidio avant stockage (RGPD compliance).
@@ -24,7 +24,7 @@ logger = structlog.get_logger(__name__)
 
 
 class CorrectionsHandler:
-    """Handler pour corrections Antonio via Telegram inline buttons."""
+    """Handler pour corrections owner via Telegram inline buttons."""
 
     def __init__(self, db_pool: asyncpg.Pool):
         """
@@ -42,7 +42,7 @@ class CorrectionsHandler:
         Handler callback pour bouton [Correct] (AC1).
 
         Workflow:
-        1. Antonio clique [Correct] sur notification trust=propose
+        1. owner clique [Correct] sur notification trust=propose
         2. Bot demande texte correction ("URSSAF → finance")
         3. Bot stocke correction dans core.action_receipts
 
@@ -57,12 +57,12 @@ class CorrectionsHandler:
         receipt_id = query.data.split("_", 1)[1]
 
         logger.info(
-            "Correction demandée par Antonio",
+            "Correction demandée par owner",
             receipt_id=receipt_id,
             user_id=query.from_user.id,
         )
 
-        # Demander texte correction à Antonio
+        # Demander texte correction à owner
         await query.message.reply_text(
             f"📝 **Correction action `{receipt_id[:8]}`**\n\n"
             "Quelle est la correction à appliquer ?\n"
@@ -78,12 +78,12 @@ class CorrectionsHandler:
         self, update: Update, context: ContextTypes.DEFAULT_TYPE
     ) -> int | None:
         """
-        Handler pour texte de correction envoyé par Antonio (AC1, AC2).
+        Handler pour texte de correction envoyé par owner (AC1, AC2).
 
         Workflow:
-        1. Reçoit texte correction d'Antonio
+        1. Reçoit texte correction d'owner
         2. UPDATE core.action_receipts SET correction, status='corrected'
-        3. Confirme à Antonio
+        3. Confirme à owner
 
         Args:
             update: Update Telegram
@@ -139,7 +139,7 @@ class CorrectionsHandler:
                     WHERE id = $3
                     """,
                     anonymized_correction,  # HIGH-2 fix: anonymized
-                    f"Corrected by Antonio (user_id={user_id})",
+                    f"Corrected by owner (user_id={user_id})",
                     receipt_id,
                 )
 
@@ -147,7 +147,7 @@ class CorrectionsHandler:
                 if result == "UPDATE 0":
                     raise ValueError(f"Receipt {receipt_id} introuvable")
 
-            # Confirmer à Antonio
+            # Confirmer à owner
             await update.message.reply_text(
                 f"✅ **Correction enregistrée**\n\n"
                 f"Receipt : `{receipt_id[:8]}`\n"

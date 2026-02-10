@@ -218,7 +218,7 @@ class FridayHeartbeat:
         3. LLM décide quels checks exécuter
         4. Exécute checks sélectionnés (parallèle)
         5. Filtre résultats (notify=True uniquement)
-        6. Notifie Antonio (batch, max 1 notification par tick)
+        6. Notifie Mainteneur (batch, max 1 notification par tick)
         """
         now = datetime.now()
 
@@ -249,7 +249,7 @@ class FridayHeartbeat:
             logger.debug("heartbeat_no_notifications")
             return
 
-        # 6. Notifie Antonio (batch)
+        # 6. Notifie Mainteneur (batch)
         await self._notify_batch(notifications)
 
         logger.info("heartbeat_tick_complete", checks_run=len(selected_checks), notifications=len(notifications))
@@ -496,7 +496,7 @@ class ContextProvider:
         }
 
     async def _get_last_active(self) -> Optional[datetime]:
-        """Dernière activité Antonio (dernière action receipts)"""
+        """Dernière activité Mainteneur (dernière action receipts)"""
         from agents.src.database import get_db
 
         async with get_db() as db:

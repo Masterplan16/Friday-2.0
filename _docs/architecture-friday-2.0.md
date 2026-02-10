@@ -29,7 +29,7 @@ _Ce document se construit collaborativement par etapes. Chaque section est ajout
 ### Perimetre
 
 - **23 modules** repartis en 4 couches techniques (ingestion, intelligence, agents specialises, action)
-- **Utilisateur unique** : Antonio (extension famille envisageable plus tard)
+- **Utilisateur unique** : Mainteneur (extension famille envisageable plus tard)
 - **Budget** : 50 euros/mois maximum (VPS + APIs cloud)
 - **Materiel** : Dell Pro Max 16 (Core Ultra 7 255H, 32 Go RAM, pas de GPU) — aucun modele IA ne tourne sur le laptop
 - **Philosophie** : Friday pousse l'info au bon moment, l'utilisateur ne va pas chercher
@@ -156,7 +156,7 @@ Note : les domaines utilisateur (medecin, enseignant, financier, personnel) rest
 | **Carrefour Drive commande auto** | Commande automatique courses | Browser-Use rejete (60% fiabilite), pas d'API Carrefour publique | Liste de courses generee mais pas de commande automatique | Friday genere liste → Antonio valide → Friday ouvre Carrefour Drive avec liste pre-remplie (semi-auto via Playwright) |
 | **Google Docs commentaires** | Tuteur These : Commentaires ancres dans Google Doc | API v1 : Pas de commentaires ancres, utiliser API Suggestions | UX differente : Suggestions modifiables vs Commentaires fixes | Utiliser Google Docs API Suggestions (etudiants voient suggestions a accepter/rejeter) + Note explicative dans le Doc |
 | **BeeStation Synology** | Photos stockees sur BeeStation | Pas d'API BSM, pas de support Tailscale/packages tiers | Flux indirect : Telephone → BeeStation → PC (copie manuelle/auto) → VPS (Syncthing) | Sync automatique BeeStation → PC (Synology Drive Client) + Syncthing PC → VPS |
-| **Plaud Note upload** | Transcriptions audio automatiques | Depend de l'integration GDrive de Plaud Note | Si Plaud Note n'upload pas auto sur GDrive, Antonio doit exporter manuellement | Verifier si Plaud Note Pro a auto-upload GDrive, sinon export manuel periodique |
+| **Plaud Note upload** | Transcriptions audio automatiques | Depend de l'integration GDrive de Plaud Note | Si Plaud Note n'upload pas auto sur GDrive, Mainteneur doit exporter manuellement | Verifier si Plaud Note Pro a auto-upload GDrive, sinon export manuel periodique |
 | **Budget initial** | 20-30 euros/mois (APIs cloud) | 50 euros/mois (VPS + APIs), estimation reelle ~63 euros/mois (D17 : 100% Claude Sonnet 4.5) | Budget plus eleve que prevu initial | Acceptable — qualite structured output et instruction following superieure justifie le cout API Claude ~45 euros/mois |
 | **Thunderbird** | 4 comptes mails via Thunderbird | EmailEngine (auto-heberge Docker) comme backend sync | Thunderbird reste interface utilisateur optionnelle, Friday accede via EmailEngine | Thunderbird = lecture emails classique, EmailEngine = backend API pour Friday |
 
@@ -882,8 +882,8 @@ Chaque action de Friday a un niveau de confiance configurable par Antonio :
 
 | Niveau | Comportement | Exemples |
 |--------|-------------|----------|
-| 🟢 **AUTO** | Friday agit, Antonio est notifie apres coup | OCR, renommage fichier, indexation, extraction PJ |
-| 🟡 **PROPOSE** | Friday prepare, Antonio valide avant execution (boutons inline Telegram) | Classification email, creation tache, ajout agenda, import finance |
+| 🟢 **AUTO** | Friday agit, Mainteneur est notifie apres coup | OCR, renommage fichier, indexation, extraction PJ |
+| 🟡 **PROPOSE** | Friday prepare, Mainteneur valide avant execution (boutons inline Telegram) | Classification email, creation tache, ajout agenda, import finance |
 | 🔴 **BLOQUE** | Friday analyse et presente, jamais d'action autonome | Envoi mail, conseil medical, analyse juridique, communication thesards |
 
 **Initialisation Day 1 basee sur le risque :**
@@ -1289,7 +1289,7 @@ Email : {email.subject}
 | Module | Architecture technique | Tools/APIs |
 |--------|----------------------|------------|
 | **11. Generateur TCS** | Template Jinja2 + Base programme RAG (pgvector) + Claude Sonnet 4.5 → Vignette JSON → Rendu Markdown (D19) | CrossRef API (verification references), pgvector (recherche programme etudes) (D19) |
-| **12. Generateur ECOS** | Template Jinja2 + Methodes fournies Antonio (RAG) + Claude Sonnet 4.5 → Stations ECOS JSON → Grilles evaluation (D19) | pgvector (recherche methodes) (D19), Claude Sonnet 4.5 (generation scenarios) |
+| **12. Generateur ECOS** | Template Jinja2 + Methodes fournies Mainteneur (RAG) + Claude Sonnet 4.5 → Stations ECOS JSON → Grilles evaluation (D19) | pgvector (recherche methodes) (D19), Claude Sonnet 4.5 (generation scenarios) |
 | **13. Actualisateur cours** | Cours existant Markdown/Docx → Extraction sections → Recherche references recentes (PubMed/HAS) → Claude Sonnet 4.5 → Generation sections mises a jour → Merge document | PubMed API, Legifrance PISTE (recos HAS), Claude Sonnet 4.5 |
 | **21. Collection jeux video** | Form Telegram (titre, plateforme, edition, etat) → Insert PostgreSQL (`knowledge.collection_items`) → eBay/PriceCharting scraping (Playwright) → Alerte variations cote >10% | Playwright (scraping eBay), PriceCharting API (si disponible) |
 | **22. CV academique** | Template LaTeX + Extraction donnees PostgreSQL (`knowledge.publications`, `knowledge.theses_supervised`, `knowledge.teaching_activities`) → Compilation PDF → Sync PC | PostgreSQL queries, LaTeX/Pandoc |
@@ -1306,7 +1306,7 @@ Telephone (photos) → BeeStation Synology (stockage)
                          ↓
            Synology Drive Client (auto-sync)
                          ↓
-           PC Antonio (~/Photos/BeeStation/)
+           PC Mainteneur (~/Photos/BeeStation/)
                          ↓
            Syncthing via Tailscale
                          ↓

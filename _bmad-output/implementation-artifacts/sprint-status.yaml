@@ -62,7 +62,7 @@ development_status:
   1-13-self-healing-tier-1-2: backlog  # code existe mais pas de story file ni audit bugs
   1-14-monitoring-docker-images: backlog
   1-15-cleanup-purge-rgpd: backlog
-  1-16-ci-cd-pipeline-github-actions: backlog
+  1-16-ci-cd-pipeline-github-actions: done  # 2026-02-10: Code review completee - 17 issues fixees (3C+4H+6M+4L), AC8 logs JSON ajoutes, rollback intelligent, git pull safe, validation Telegram, subtasks 5.2-5.4 demarquees
   1-17-preparation-repository-public: backlog
   epic-1-retrospective: optional
 

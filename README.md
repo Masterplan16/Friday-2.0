@@ -231,12 +231,28 @@ sops -d .env.enc > .env
 
 ### Dépendances verrouillées
 
+Les dépendances Python sont lockées dans `agents/requirements-lock.txt` pour garantir des builds reproductibles (NFR23).
+
 ```bash
 # Générer requirements-lock.txt (reproduceabilité production)
 python -m venv venv
 source venv/bin/activate  # ou: venv\Scripts\activate (Windows)
 pip install -e agents/
 pip freeze > agents/requirements-lock.txt
+```
+
+**Note** : Le fichier `requirements-lock.txt` est automatiquement utilisé par le workflow CI/CD.
+
+### Déploiement
+
+Pour déployer Friday 2.0 sur le VPS-4 OVH, voir le guide complet :
+
+📘 **[Deployment Runbook](docs/deployment-runbook.md)** — Procédure déploiement, troubleshooting, rollback manuel
+
+**Quick start déploiement :**
+```bash
+# Déploiement automatisé via Tailscale VPN
+./scripts/deploy.sh
 ```
 
 ---
@@ -256,6 +272,11 @@ pip freeze > agents/requirements-lock.txt
 ---
 
 ## 📊 Status du projet
+
+<!-- LOW #16 FIX: Badge visible après Story 1.17 (repo public) -->
+![CI Status](https://github.com/Masterplan16/Friday-2.0/workflows/CI/badge.svg)
+
+> **Note** : Le badge CI sera visible après la Story 1.17 (Préparation repository public).
 
 | Phase | Status |
 |-------|--------|

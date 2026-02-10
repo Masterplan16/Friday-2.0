@@ -2,7 +2,7 @@
 
 **Date** : 5 février 2026
 **Objectif** : Vérifier la cohérence de l'architecture avant implémentation
-**Status** : En cours de validation avec Antonio
+**Status** : En cours de validation avec Mainteneur
 
 ---
 
@@ -326,7 +326,7 @@ Téléchargement CSV banque → PC (~/Documents/Finance/Import/)
 
 **Initialisation Day 1** :
 - Tous les modules démarrent en mode **PROPOSE** (validation humaine obligatoire)
-- Promotion vers AUTO : après 3 semaines + accuracy >95% + validation manuelle Antonio
+- Promotion vers AUTO : après 3 semaines + accuracy >95% + validation manuelle Mainteneur
 - Blocage permanent : modules médicaux, juridiques, communication externe
 
 #### 3.2.2 Middleware `@friday_action` (obligatoire)
@@ -365,24 +365,24 @@ async def classify_email(email: Email) -> ActionResult:
 
 ```python
 class ActionResult(BaseModel):
-    input_summary: str       # Ce qui est entré (visible Antonio)
-    output_summary: str      # Ce qui a été fait (visible Antonio)
+    input_summary: str       # Ce qui est entré (visible Mainteneur)
+    output_summary: str      # Ce qui a été fait (visible Mainteneur)
     confidence: float        # 0.0-1.0, confidence MIN de tous les steps
-    reasoning: str           # Pourquoi cette décision (visible Antonio)
+    reasoning: str           # Pourquoi cette décision (visible Mainteneur)
     payload: dict = {}       # Données techniques (optionnel)
     steps: list[StepDetail] = []  # Sous-étapes (détail technique)
 ```
 
-**Principe** : Antonio voit TOUJOURS ce que Friday a fait, avec quel niveau de confiance, et pourquoi.
+**Principe** : Mainteneur voit TOUJOURS ce que Friday a fait, avec quel niveau de confiance, et pourquoi.
 
 #### 3.2.4 Feedback Loop (correction → règle explicite)
 
 **Cycle** :
-1. Antonio corrige une action Friday (via Telegram)
+1. Mainteneur corrige une action Friday (via Telegram)
 2. Correction stockée dans `core.action_receipts.correction`
 3. Friday détecte pattern récurrent (2+ corrections similaires)
 4. Friday propose une règle explicite (via Telegram)
-5. Antonio valide → règle active dans `core.correction_rules`
+5. Mainteneur valide → règle active dans `core.correction_rules`
 6. Règles injectées dans prompts LLM (hiérarchie : **règle > jugement LLM**)
 
 **PAS de RAG pour corrections** : ~50 règles max → un SELECT suffit.
@@ -402,7 +402,7 @@ class ActionResult(BaseModel):
 
 **Formule** (voir addendum section 7) :
 - Si `accuracy < 90%` sur 1 semaine ET échantillon ≥10 actions
-- → Rétrogradation AUTO → PROPOSE (AUTOMATIQUE, pas besoin d'intervention Antonio)
+- → Rétrogradation AUTO → PROPOSE (AUTOMATIQUE, pas besoin d'intervention Mainteneur)
 - Anti-oscillation : 2 semaines minimum avant nouvelle promotion
 
 **Justification** : Si Friday fait >10% d'erreurs, arrêt automatique du mode autonome.
@@ -447,11 +447,11 @@ Calcul quotidien (cron 18h00) :
 | `/stats` | Volumes semaine | "47 actions, 2 validations, 1 correction" |
 
 **Progressive disclosure** (UX) :
-- Niveau 1 : Résumé soir automatique (Antonio voit sans rien faire)
+- Niveau 1 : Résumé soir automatique (Mainteneur voit sans rien faire)
 - Niveau 2 : `/journal` si besoin de creuser
 - Niveau 3 : `/receipt -v` si besoin du détail technique
 
-**99% du temps, Mainteneur reste au niveau 1.** Le Trust Layer fonctionne quand Antonio n'a PAS besoin de l'utiliser.
+**99% du temps, Mainteneur reste au niveau 1.** Le Trust Layer fonctionne quand Mainteneur n'a PAS besoin de l'utiliser.
 
 #### 3.2.8 Alertes temps réel (erreurs critiques)
 
@@ -470,7 +470,7 @@ Via Redis Streams → Telegram (service alerting/listener.py) :
 
 ### 3.3.1 Décision architecturale (2026-02-05)
 
-**Problématique** : Friday doit être **proactif**, pas seulement réactif. Antonio ne doit PAS avoir à demander "Y a-t-il des emails urgents ?". Friday doit surveiller automatiquement et notifier UNIQUEMENT si important.
+**Problématique** : Friday doit être **proactif**, pas seulement réactif. Mainteneur ne doit PAS avoir à demander "Y a-t-il des emails urgents ?". Friday doit surveiller automatiquement et notifier UNIQUEMENT si important.
 
 **Alternatives considérées** :
 
@@ -480,13 +480,13 @@ Via Redis Streams → Telegram (service alerting/listener.py) :
 | **OpenClaw complet** | 70h | Heartbeat + 50+ intégrations + 1715 skills | ❌ ROI -86%, risque supply chain 12% |
 | **Heartbeat natif Friday** | 10h | Intelligence décisionnelle, intégration Trust Layer | ✅ **Retenu** |
 
-**Score décisionnel Antonio** : 20/100 points
+**Score décisionnel Mainteneur** : 20/100 points
 - Multi-chat (WhatsApp, Discord) : ❌ NON → +0
 - Skills identifiées (≥10) : ❌ NON → +0
 - Heartbeat critique Day 1 : ✅ OUI → +20
 - Risque acceptable : ⚠️ INCERTAIN → +0
 
-**Conclusion** : Antonio a besoin du heartbeat proactif (critique) MAIS pas de multi-chat ni skills OpenClaw → Heartbeat natif = 100% du bénéfice recherché pour 14% du coût OpenClaw.
+**Conclusion** : Mainteneur a besoin du heartbeat proactif (critique) MAIS pas de multi-chat ni skills OpenClaw → Heartbeat natif = 100% du bénéfice recherché pour 14% du coût OpenClaw.
 
 ### 3.3.2 Architecture Heartbeat Engine
 
@@ -536,13 +536,13 @@ asyncio background task (non-bloquant)
 | `check_upcoming_deadlines` | **medium** (si pertinent) | Échéances contrats proches | Module 8 (Droit) |
 | `check_thesis_reminders` | **low** (si temps) | Deadlines thèses étudiants | Module 9 (Thèse) |
 
-**Quiet hours** : 22h00-08h00 (pas de notifications pendant sommeil Antonio)
+**Quiet hours** : 22h00-08h00 (pas de notifications pendant sommeil Mainteneur)
 
 ### 3.3.4 Exemple d'usage concret
 
 **Scénario : Mardi 14h30, Mainteneur entre deux consultations**
 
-**En arrière-plan (invisible pour Antonio)** :
+**En arrière-plan (invisible pour Mainteneur)** :
 ```
 Heartbeat tick déclenché (interval 30min)
          ↓
@@ -565,7 +565,7 @@ Filtrage : 2 notifications à envoyer
 Notification Telegram batch
 ```
 
-**Antonio reçoit (notification Telegram unique)** :
+**Mainteneur reçoit (notification Telegram unique)** :
 ```
 🔔 HEARTBEAT (14:30)
 
@@ -578,16 +578,16 @@ Notification Telegram batch
 [Créer tâche]
 ```
 
-Antonio clique [Créer tâche] → Action exécutée via Trust Layer (PROPOSE, validation inline buttons)
+Mainteneur clique [Créer tâche] → Action exécutée via Trust Layer (PROPOSE, validation inline buttons)
 
 ### 3.3.5 Intégration Trust Layer
 
-**Principe** : Heartbeat notifie → Antonio clique inline button → Action exécutée via `@friday_action`
+**Principe** : Heartbeat notifie → Mainteneur clique inline button → Action exécutée via `@friday_action`
 
 ```python
 @friday_action(module="finance", action="create_task_from_alert", trust_default="propose")
 async def create_task_from_alert(alert: FinancialAlert) -> ActionResult:
-    """Crée tâche depuis alerte heartbeat (après validation Antonio)"""
+    """Crée tâche depuis alerte heartbeat (après validation Mainteneur)"""
     task = await db.fetchrow(
         """INSERT INTO core.tasks (title, due_date, priority, module)
            VALUES ($1, $2, $3, $4) RETURNING id""",
@@ -604,7 +604,7 @@ async def create_task_from_alert(alert: FinancialAlert) -> ActionResult:
 **Avantages vs cron n8n manuel** :
 - ✅ Intelligence décisionnelle (LLM choisit selon contexte)
 - ✅ Priorités dynamiques (high: toujours, medium/low: si pertinent)
-- ✅ Quiet hours (respecte sommeil Antonio)
+- ✅ Quiet hours (respecte sommeil Mainteneur)
 - ✅ Intégration native Trust Layer
 - ✅ Batch notifications (1 message groupé vs N messages séparés)
 
@@ -616,7 +616,7 @@ async def create_task_from_alert(alert: FinancialAlert) -> ActionResult:
 
 ## 4. MODULES FONCTIONNELS
 
-**Note** : Cette section sera complétée module par module avec validation Antonio.
+**Note** : Cette section sera complétée module par module avec validation Mainteneur.
 
 ### ✅ MODULE 1 : Moteur Vie (Email + Desktop Search)
 
@@ -640,14 +640,14 @@ async def create_task_from_alert(alert: FinancialAlert) -> ActionResult:
 
 #### 4.1.2 Exemple d'usage concret avec Telegram
 
-**SCÉNARIO RÉEL : Journée type d'Antonio**
+**SCÉNARIO RÉEL : Journée type d'Mainteneur**
 
 **7h30 - Dans la voiture, trajet cabinet**
 
-Antonio reçoit notification vocale Telegram (Kokoro TTS) :
+Mainteneur reçoit notification vocale Telegram (Kokoro TTS) :
 ```
 🎤 Friday (vocal)
-"Bonjour Antonio. 3 nouveaux mails cette nuit.
+"Bonjour Mainteneur. 3 nouveaux mails cette nuit.
 
 1. URSSAF - Échéance cotisations 28 février
    → J'ai classé en Finance, priorité haute
@@ -663,9 +663,9 @@ Antonio reçoit notification vocale Telegram (Kokoro TTS) :
    → Il propose 3 dates, je prépare une réponse ?"
 ```
 
-Antonio répond (message vocal Telegram) :
+Mainteneur répond (message vocal Telegram) :
 ```
-🎤 Antonio
+🎤 Mainteneur
 "OK pour l'URSSAF, crée la tâche.
 Pour Julie, oui lance l'analyse.
 Pour Dr. Martin, propose le mardi 12 à 14h."
@@ -682,18 +682,18 @@ Friday répond instantanément (Faster-Whisper transcrit + traite) :
 "Bonjour Dr. Martin,
 Merci pour le planning. Je te propose le mardi 12/02 à 14h pour cette réunion.
 À bientôt,
-Antonio"
+Mainteneur"
 
 [Envoyer maintenant] [Modifier] [Reporter]
 ```
 
-Antonio clique [Envoyer maintenant] → Mail envoyé
+Mainteneur clique [Envoyer maintenant] → Mail envoyé
 
 ---
 
 **14h30 - Entre deux consultations**
 
-Antonio a 5 minutes, il veut retrouver un article :
+Mainteneur a 5 minutes, il veut retrouver un article :
 ```
 🎤 Mainteneur (message vocal Telegram)
 "Friday, retrouve ce que j'avais lu sur les inhibiteurs SGLT2
@@ -723,7 +723,7 @@ Friday (texte Telegram, réponse immédiate)
     sur ce sujet le 15/09/2025
 ```
 
-Antonio clique [Envoyer extrait] → Friday envoie le PDF complet par Telegram
+Mainteneur clique [Envoyer extrait] → Friday envoie le PDF complet par Telegram
 
 ---
 
@@ -758,16 +758,16 @@ Friday envoie automatiquement :
 
 #### 4.1.3 Exemple d'usage concret sur PC
 
-**SCÉNARIO RÉEL : Antonio au bureau**
+**SCÉNARIO RÉEL : Mainteneur au bureau**
 
 **Matin - Lecture emails classique**
 
-Antonio ouvre Thunderbird sur son PC :
+Mainteneur ouvre Thunderbird sur son PC :
 - Il voit ses 4 comptes mails synchronisés normalement
 - Rien ne change dans son workflow habituel
 - Il lit, répond, classe manuellement s'il le souhaite
 
-**En arrière-plan (invisible pour Antonio)** :
+**En arrière-plan (invisible pour Mainteneur)** :
 ```
 EmailEngine (VPS) synchronise IMAP en temps réel
          ↓
@@ -782,18 +782,18 @@ Syncthing sync vers PC
 ~/Documents/Archives/[categorie]/[nom_intelligent].pdf
 ```
 
-Antonio ne voit rien de tout ça. Il reçoit juste une notification Telegram si besoin de validation.
+Mainteneur ne voit rien de tout ça. Il reçoit juste une notification Telegram si besoin de validation.
 
 ---
 
 **Midi - Scan facture restaurant**
 
-Antonio scanne une facture au cabinet :
+Mainteneur scanne une facture au cabinet :
 ```
 Scanner physique → PC (~/Documents/Uploads/scan_001.pdf)
 ```
 
-**En arrière-plan (invisible pour Antonio)** :
+**En arrière-plan (invisible pour Mainteneur)** :
 ```
 Watchdog détecte nouveau fichier ~/Documents/Uploads/
          ↓
@@ -830,13 +830,13 @@ Suppression ~/Documents/Uploads/scan_001.pdf
 [Voir fichier] [Corriger classement]
 ```
 
-Antonio clique [Voir fichier] si besoin, sinon il continue sa journée.
+Mainteneur clique [Voir fichier] si besoin, sinon il continue sa journée.
 
 ---
 
 **Soir - Recherche document local**
 
-Antonio cherche un ancien article sur son PC. Au lieu de fouiller les dossiers, il envoie message Telegram :
+Mainteneur cherche un ancien article sur son PC. Au lieu de fouiller les dossiers, il envoie message Telegram :
 ```
 🎤 Mainteneur (vocal)
 "Friday, retrouve l'article sur la fibrillation auriculaire
@@ -858,15 +858,15 @@ Friday (réponse Telegram)
    [📂 Ouvrir dossier PC] [📧 Envoyer fichier]
 ```
 
-Antonio clique [📂 Ouvrir dossier PC] → Explorateur Windows s'ouvre directement sur le bon dossier, fichier sélectionné.
+Mainteneur clique [📂 Ouvrir dossier PC] → Explorateur Windows s'ouvre directement sur le bon dossier, fichier sélectionné.
 
 **OU**
 
-Antonio clique [📧 Envoyer fichier] → Friday envoie le PDF complet par Telegram (pratique si Antonio n'est pas devant son PC à ce moment-là).
+Mainteneur clique [📧 Envoyer fichier] → Friday envoie le PDF complet par Telegram (pratique si Mainteneur n'est pas devant son PC à ce moment-là).
 
 ---
 
-**Architecture invisible pour Antonio** :
+**Architecture invisible pour Mainteneur** :
 
 ```
 PC (~/Documents/)
@@ -886,7 +886,7 @@ Requête Mainteneur (Telegram) → Embedding query
                          Résultats → Telegram
 ```
 
-**Clé** : Antonio ne touche JAMAIS au VPS. Il travaille normalement sur son PC, Friday indexe en arrière-plan.
+**Clé** : Mainteneur ne touche JAMAIS au VPS. Il travaille normalement sur son PC, Friday indexe en arrière-plan.
 
 #### 4.1.4 Architecture technique
 
@@ -1019,11 +1019,11 @@ Requête Mainteneur (Telegram vocal) → Embedding query
 
 #### 4.2.2 Exemple d'usage concret avec Telegram
 
-**SCÉNARIO RÉEL : Antonio gère ses documents**
+**SCÉNARIO RÉEL : Mainteneur gère ses documents**
 
 **Lundi 9h00 - Cabinet, entre deux patients**
 
-Antonio scanne une facture d'électricité au cabinet :
+Mainteneur scanne une facture d'électricité au cabinet :
 ```
 Scanner physique → PC (~/Documents/Uploads/scan_001.pdf)
 ```
@@ -1049,13 +1049,13 @@ Structure détectée : SELARL
 [✅ Valider] [✏️ Corriger] [📂 Voir]
 ```
 
-Antonio clique [✅ Valider] → Archivage confirmé
+Mainteneur clique [✅ Valider] → Archivage confirmé
 
 ---
 
-**Mardi 14h30 - Antonio reçoit un colis Amazon**
+**Mardi 14h30 - Mainteneur reçoit un colis Amazon**
 
-Antonio prend en photo la facture avec son téléphone :
+Mainteneur prend en photo la facture avec son téléphone :
 ```
 Téléphone → BeeStation (auto-sync)
           ↓
@@ -1085,15 +1085,15 @@ J'ai créé une alerte 60j avant l'expiration.
 [✅ OK] [Modifier]
 ```
 
-Antonio clique [✅ OK]
+Mainteneur clique [✅ OK]
 
 ---
 
-**Mercredi 18h00 - Antonio cherche un ancien contrat**
+**Mercredi 18h00 - Mainteneur cherche un ancien contrat**
 
-Antonio envoie message vocal Telegram :
+Mainteneur envoie message vocal Telegram :
 ```
-🎤 Antonio
+🎤 Mainteneur
 "Friday, retrouve le contrat de bail du cabinet,
 je crois qu'il arrive à échéance bientôt"
 ```
@@ -1116,13 +1116,13 @@ Date limite décision : 15/03/2026
 [📂 Ouvrir fichier] [📧 Envoyer PDF] [📊 Résumé complet]
 ```
 
-Antonio clique [📊 Résumé complet] → Friday génère analyse complète (via Module 8 Veilleur Droit)
+Mainteneur clique [📊 Résumé complet] → Friday génère analyse complète (via Module 8 Veilleur Droit)
 
 ---
 
 **Jeudi matin - Dossier téléchargements en vrac**
 
-Antonio a téléchargé 15 PDF médicaux hier soir dans ~/Downloads/. Il envoie :
+Mainteneur a téléchargé 15 PDF médicaux hier soir dans ~/Downloads/. Il envoie :
 ```
 🎤 Mainteneur (vocal Telegram)
 "Friday, peux-tu ranger mon dossier Downloads ?"
@@ -1143,7 +1143,7 @@ Détecté : 15 fichiers
 [OK, préviens-moi quand c'est fait]
 ```
 
-Antonio clique [OK, préviens-moi quand c'est fait]
+Mainteneur clique [OK, préviens-moi quand c'est fait]
 
 **2 minutes plus tard** :
 ```
@@ -1167,11 +1167,11 @@ Tous renommés intelligemment.
 
 #### 4.2.3 Exemple d'usage concret sur PC
 
-**SCÉNARIO RÉEL : Antonio au bureau**
+**SCÉNARIO RÉEL : Mainteneur au bureau**
 
 **Matin - Scan rapide factures**
 
-Antonio scanne 5 factures d'affilée :
+Mainteneur scanne 5 factures d'affilée :
 ```
 Scanner → PC (~/Documents/Uploads/)
   - scan_001.pdf (facture téléphone)
@@ -1181,7 +1181,7 @@ Scanner → PC (~/Documents/Uploads/)
   - scan_005.pdf (contrat assurance cabinet)
 ```
 
-**En arrière-plan (invisible pour Antonio)** :
+**En arrière-plan (invisible pour Mainteneur)** :
 ```
 Watchdog détecte 5 nouveaux fichiers
          ↓
@@ -1231,13 +1231,13 @@ Trust : 4 AUTO (confiance 92-96%)
 [Valider contrat] [Voir tous]
 ```
 
-Antonio clique [Valider contrat]
+Mainteneur clique [Valider contrat]
 
 ---
 
 **Midi - Téléchargement article médical**
 
-Antonio télécharge un PDF depuis PubMed :
+Mainteneur télécharge un PDF depuis PubMed :
 ```
 Chrome → ~/Downloads/pubmed_article_123456.pdf
 ```
@@ -1268,13 +1268,13 @@ Indexation vectorielle (pgvector) (D19)
 Syncthing sync → PC
 ```
 
-**Antonio ne voit rien**. L'article est classé automatiquement. Il le retrouvera via Desktop Search (Module 1) quand il en aura besoin.
+**Mainteneur ne voit rien**. L'article est classé automatiquement. Il le retrouvera via Desktop Search (Module 1) quand il en aura besoin.
 
 ---
 
 **Soir - Vérification garanties avant expiration**
 
-Antonio consulte son PC, ouvre Explorateur Windows :
+Mainteneur consulte son PC, ouvre Explorateur Windows :
 ```
 ~/Documents/Achats/Garanties_Actives/
 ```
@@ -1294,7 +1294,7 @@ Garanties_Actives/ (vue synthétique)
       └── 2022-01-10_Garantie_Disque_Dur_Expiree_2024-01-10.lnk
 ```
 
-Antonio voit immédiatement qu'une garantie expire bientôt (imprimante Canon).
+Mainteneur voit immédiatement qu'une garantie expire bientôt (imprimante Canon).
 
 **En parallèle, Friday envoie rappel Telegram** :
 ```
@@ -1420,7 +1420,7 @@ Sources multiples :
 | Détection garantie | **PROPOSE** | Erreur = alerte manquée (conséquence réelle) |
 | Nettoyage ~/Downloads/ | **PROPOSE** | Erreur = fichier supprimé par erreur (perte de données) |
 
-**Promotion vers AUTO** : Après 3 semaines + accuracy >95% + validation Antonio
+**Promotion vers AUTO** : Après 3 semaines + accuracy >95% + validation Mainteneur
 
 ---
 
@@ -1446,7 +1446,7 @@ Sources multiples :
 ### 5.2 Questions restantes à valider
 
 1. **Trust Levels** : Confirmé initialisation différenciée (auto/propose/blocked selon risque) ?
-2. **CSV bancaires** : Antonio télécharge manuellement depuis sites bancaires → upload PC → sync VPS ?
+2. **CSV bancaires** : Mainteneur télécharge manuellement depuis sites bancaires → upload PC → sync VPS ?
 3. **Exemples concrets** : Les scénarios Telegram + PC correspondent à l'usage réel attendu ?
 
 ---
@@ -1454,11 +1454,11 @@ Sources multiples :
 ## 6. PROCHAINES ÉTAPES
 
 ### Étape 1 : Validation Module 1 (Email + Desktop Search) ✅ EN COURS
-- [ ] Antonio valide exemples Telegram
-- [ ] Antonio valide exemples PC
-- [ ] Antonio valide architecture stockage
-- [ ] Antonio valide mesures sécurité
-- [ ] Antonio confirme Trust Levels initiaux
+- [ ] Mainteneur valide exemples Telegram
+- [ ] Mainteneur valide exemples PC
+- [ ] Mainteneur valide architecture stockage
+- [ ] Mainteneur valide mesures sécurité
+- [ ] Mainteneur confirme Trust Levels initiaux
 
 ### Étape 2 : Validation Module 2 (Archiviste)
 ### Étape 3 : Validation Modules 3-23

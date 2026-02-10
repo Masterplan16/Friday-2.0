@@ -10,7 +10,7 @@ BEGIN;
 
 CREATE TABLE IF NOT EXISTS core.user_settings (
     user_id BIGINT PRIMARY KEY,  -- User ID Telegram (PK naturelle)
-    username TEXT,  -- Username Telegram (ex: @antonio)
+    username TEXT,  -- Username Telegram (ex: @mainteneur)
     full_name TEXT,  -- Nom complet (First + Last Name)
     onboarding_sent BOOLEAN NOT NULL DEFAULT FALSE,
     onboarding_sent_at TIMESTAMPTZ,
@@ -63,7 +63,7 @@ EXECUTE FUNCTION core.update_user_settings_updated_at();
 -- Cette ligne est un placeholder pour documentation.
 
 -- INSERT INTO core.user_settings (user_id, username, full_name, onboarding_sent)
--- VALUES (123456789, '@antonio', 'owner Lopez', FALSE)
+-- VALUES (123456789, '@mainteneur', 'owner Lopez', FALSE)
 -- ON CONFLICT (user_id) DO NOTHING;
 -- ☝️ Commenté - sera inséré automatiquement au runtime
 

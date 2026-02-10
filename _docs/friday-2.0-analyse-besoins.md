@@ -4,7 +4,7 @@
 > **Date initiale** : 1er février 2026
 > **Dernière mise à jour** : 5 février 2026
 > **Version** : 1.1.0
-> **Utilisateur** : Antonio
+> **Utilisateur** : Mainteneur
 > **Statut** : Analyse terminée + corrections review adversariale v2 (VPS ~25€, 110k mails, Apple Watch retiré)
 
 ---
@@ -57,7 +57,7 @@ Friday 2.0 ne répond pas juste quand on lui parle. Elle prévient :
 > "Contrôle technique dans 6 semaines. Je prends RDV ?"
 
 ### Apprentissage
-Le système s'améliore avec les corrections d'Antonio. Au bout de 6 mois, Friday connaît ses préférences, son style, ses seuils.
+Le système s'améliore avec les corrections d'Mainteneur. Au bout de 6 mois, Friday connaît ses préférences, son style, ses seuils.
 
 ### Personnalité paramétrable
 Le ton, le tutoiement/vouvoiement, l'humour, le style de communication sont configurables par l'utilisateur.
@@ -94,7 +94,7 @@ Le ton, le tutoiement/vouvoiement, l'humour, le style de communication sont conf
   - Extraction des tâches à réaliser et référencement
   - Priorisation par ordre d'urgence
   - Extraction des pièces jointes → envoi vers l'Archiviste
-  - Brouillons de réponse (rédaction dans le style d'Antonio)
+  - Brouillons de réponse (rédaction dans le style d'Mainteneur)
 
 #### L'Archiviste (5/5)
 - **Ingestion multi-source** : scans, PJ des mails, photos téléphone, téléchargements
@@ -164,17 +164,17 @@ Le ton, le tutoiement/vouvoiement, l'humour, le style de communication sont conf
 #### Générateur TCS (3/5)
 - Création de vignettes cliniques (Tests de Concordance de Script)
 - **Simulation d'un panel d'experts** pour la correction
-- Base = programme complet des études médicales fourni par Antonio
+- Base = programme complet des études médicales fourni par Mainteneur
 
 #### Générateur ECOS (3/5)
 - Création d'Examens Cliniques Objectifs Structurés
-- Méthodes fournies par Antonio
+- Méthodes fournies par Mainteneur
 - Même base programme que les TCS
 
 #### Actualisateur de cours (3/5)
 - Mise à jour de cours **existants** avec les dernières données et recommandations
 - Pas de création from scratch
-- Process de conception de formation à implémenter (fournis par Antonio)
+- Process de conception de formation à implémenter (fournis par Mainteneur)
 
 ### 4.4 Financier
 
@@ -216,7 +216,7 @@ Le ton, le tutoiement/vouvoiement, l'humour, le style de communication sont conf
 - Lié aux menus (nutrition adaptée aux objectifs)
 - **Apple Watch Ultra** : suivi sommeil, FC, activité
 - Ajustement intelligent : mauvaise nuit → séance allégée, semaine chargée → menus simples
-- Coaching intelligent, pas condescendant (Antonio est médecin)
+- Coaching intelligent, pas condescendant (Mainteneur est médecin)
 
 **Limitations Day 1 (sans Apple Watch)** :
 - Suggestions basées UNIQUEMENT sur :
@@ -244,13 +244,13 @@ Le ton, le tutoiement/vouvoiement, l'humour, le style de communication sont conf
 
 #### CV académique (nice to have)
 - Auto-maintenu : publications, thèses dirigées, enseignement, responsabilités
-- Éditable par Antonio
+- Éditable par Mainteneur
 - Prêt pour candidatures, évaluations, dossiers de promotion
 - Un autre projet pourrait s'en occuper à terme
 
 #### Mode HS / Vacances (paramétrable)
 - Réponses automatiques aux mails non urgents
-- Alerte aux thésards : "Antonio est indisponible jusqu'au X"
+- Alerte aux thésards : "Mainteneur est indisponible jusqu'au X"
 - Tâches critiques flaggées pour le retour
 - Briefing de reprise prêt au retour
 

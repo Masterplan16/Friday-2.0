@@ -11,7 +11,7 @@
 
 ### 1.1 Problématique
 
-Friday 2.0 doit être **proactif**, pas seulement réactif. Antonio ne doit PAS avoir à demander "Y a-t-il des emails urgents ?" ou "Mes cotisations sont-elles à jour ?". Friday doit surveiller automatiquement et notifier UNIQUEMENT si important.
+Friday 2.0 doit être **proactif**, pas seulement réactif. owner ne doit PAS avoir à demander "Y a-t-il des emails urgents ?" ou "Mes cotisations sont-elles à jour ?". Friday doit surveiller automatiquement et notifier UNIQUEMENT si important.
 
 ### 1.2 Alternatives considérées
 
@@ -21,14 +21,14 @@ Friday 2.0 doit être **proactif**, pas seulement réactif. Antonio ne doit PAS 
 | **OpenClaw complet** | 70h | Heartbeat + 50+ intégrations + 1715 skills | ROI -86%, risque supply chain 12%, redondances | ❌ Rejeté |
 | **Heartbeat natif Friday** | 10h | Intelligence décisionnelle, intégration Trust Layer, contrôle total | Dev custom nécessaire | ✅ **Retenu** |
 
-**Rationale** : Antonio a besoin du heartbeat proactif (critique Day 1) MAIS pas de multi-chat ni skills OpenClaw. Implémenter natif = 10h vs 70h OpenClaw complet.
+**Rationale** : owner a besoin du heartbeat proactif (critique Day 1) MAIS pas de multi-chat ni skills OpenClaw. Implémenter natif = 10h vs 70h OpenClaw complet.
 
 ### 1.3 Inspiration OpenClaw
 
 Le Heartbeat Engine Friday s'inspire du [heartbeat OpenClaw](https://docs.openclaw.ai/automation/cron-vs-heartbeat) :
 - Agent se réveille périodiquement (interval configurable)
 - Décide dynamiquement quoi vérifier (contexte-aware)
-- Notifie Antonio SEULEMENT si pertinent
+- Notifie owner SEULEMENT si pertinent
 
 **Mais avec différences clés** :
 - ✅ Intégration native Trust Layer (`@friday_action`)
@@ -106,7 +106,7 @@ class FridayHeartbeat:
     Heartbeat proactif Friday 2.0
 
     Le Heartbeat se réveille périodiquement, analyse le contexte,
-    décide intelligemment quoi vérifier, et notifie Antonio UNIQUEMENT
+    décide intelligemment quoi vérifier, et notifie owner UNIQUEMENT
     si pertinent.
 
     Inspiration : OpenClaw heartbeat, mais intégration native Friday
@@ -314,7 +314,7 @@ class FridayHeartbeat:
             prompt = f"""Tu es Friday, assistant IA proactif. Il est {context['time'].strftime('%H:%M')} ({context['day_name']}).
 
 Contexte :
-- Dernière activité Antonio : {context.get('last_active', 'inconnue')}
+- Dernière activité owner : {context.get('last_active', 'inconnue')}
 - Prochain événement : {context.get('next_event', 'aucun')}
 - Checks déjà prévus (high) : {', '.join(high)}
 
@@ -396,7 +396,7 @@ Retourne JSON : {{"selected": ["check1", "check2"]}}
 
     async def _notify_batch(self, notifications: List[CheckResult]):
         """
-        Envoie notifications groupées à Antonio via Telegram
+        Envoie notifications groupées à owner via Telegram
 
         Format :
             🔔 HEARTBEAT (14:30)
@@ -668,7 +668,7 @@ Chaque check retourne un `CheckResult`, mais si le check déclenche une **action
 async def create_task_from_alert(alert: FinancialAlert) -> ActionResult:
     """
     Crée une tâche à partir d'une alerte financière
-    (déclenché si Antonio clique sur bouton Telegram)
+    (déclenché si owner clique sur bouton Telegram)
     """
     task = await db.fetchrow(
         """
@@ -690,7 +690,7 @@ async def create_task_from_alert(alert: FinancialAlert) -> ActionResult:
     )
 ```
 
-**Principe** : Heartbeat notifie → Antonio clique inline button → Action exécutée via Trust Layer.
+**Principe** : Heartbeat notifie → owner clique inline button → Action exécutée via Trust Layer.
 
 ---
 

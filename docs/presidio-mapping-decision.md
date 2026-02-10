@@ -2,7 +2,7 @@
 
 **Date** : 2026-02-05
 **Status** : ACCEPTÉE
-**Décideurs** : Antonio Lopez, Claude Code
+**Décideurs** : Mainteneur Lopez, Claude Code
 
 ---
 
@@ -55,7 +55,7 @@ key = f"presidio:mapping:{anonymized_token}"
 # Exemple : "presidio:mapping:[EMAIL_a3f9b2]"
 
 # Value
-value = "antonio.lopez@example.com"
+value = "mainteneur.lopez@example.com"
 
 # TTL
 ttl = 3600  # 1 heure
@@ -111,7 +111,7 @@ async def deanonymize_text(text: str) -> str:
 
 **Solution** :
 - Retry avec timeout court (30s max)
-- Si échec après retries → Log erreur + notification Antonio
+- Si échec après retries → Log erreur + notification Mainteneur
 - Re-traiter email depuis source (PostgreSQL) si besoin
 
 ---
@@ -161,11 +161,11 @@ async def deanonymize_text(text: str) -> str:
 @pytest.mark.asyncio
 async def test_presidio_mapping_roundtrip():
     """Anonymisation → Désanonymisation dans TTL"""
-    text = "Appeler Antonio Lopez à antonio@example.com"
+    text = "Appeler Mainteneur Lopez à mainteneur@example.com"
 
     # Anonymiser
     anonymized, mapping = await anonymize_text(text)
-    assert "Antonio Lopez" not in anonymized
+    assert "Mainteneur Lopez" not in anonymized
     assert "[PERSON_" in anonymized
 
     # Désanonymiser immédiatement

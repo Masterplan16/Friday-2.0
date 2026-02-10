@@ -33,7 +33,7 @@ Ce PRD s'appuie sur la documentation suivante. Toute modification à ces documen
 | [`docs/tailscale-setup.md`](docs/tailscale-setup.md) | Story 1.4 | Installation Tailscale, 2FA, device authorization |
 | [`docs/presidio-mapping-decision.md`](docs/presidio-mapping-decision.md) | Story 1.5 | Décision mapping Presidio éphémère Redis (TTL 1h, pas PostgreSQL) |
 | [`docs/ai-models-policy.md`](docs/ai-models-policy.md) | Epic 2+ | Politique versionnage modèles IA, procédure upgrade, matrix décision |
-| [`docs/pc-backup-setup.md`](docs/pc-backup-setup.md) | Backup | Guide setup PC Antonio pour rsync/Tailscale |
+| [`docs/pc-backup-setup.md`](docs/pc-backup-setup.md) | Backup | Guide setup PC Mainteneur pour rsync/Tailscale |
 | [`docs/telegram-topics-setup.md`](docs/telegram-topics-setup.md) | Story 1.9 | Setup supergroup Telegram 5 topics, extraction script |
 | [`docs/telegram-user-guide.md`](docs/telegram-user-guide.md) | Story 1.9 | Guide utilisateur commandes Telegram |
 | [`docs/playwright-automation-spec.md`](docs/playwright-automation-spec.md) | Epic 10+ | Spécification automatisation web (Carrefour Drive, etc.) |
@@ -199,7 +199,7 @@ Système de confiance et traçabilité opérationnel **AVANT tout module métier
 #### **Story 1.7 : Validation inline Telegram**
 - [ ] Trust=propose → Message Telegram avec boutons `[✅ Approuver] [❌ Rejeter] [✏️ Corriger]`
 - [ ] Callback handlers (approve, reject, correct)
-- [ ] Update `core.action_receipts.status` selon choix Antonio
+- [ ] Update `core.action_receipts.status` selon choix Mainteneur
 
 #### **Story 1.8a : Alerting**
 - [ ] `services/alerting/listener.py` (écoute Redis pub/sub)
@@ -219,7 +219,7 @@ Système de confiance et traçabilité opérationnel **AVANT tout module métier
 - [ ] Tests intégration validation Telegram
 - [ ] Tests auto-rétrogradation
 - [ ] Tests Presidio anonymisation (dataset PII)
-- [ ] Test E2E : action propose → validation Antonio → receipt updated
+- [ ] Test E2E : action propose → validation Mainteneur → receipt updated
 - **Réf.** : [`docs/testing-strategy-ai.md`](docs/testing-strategy-ai.md) (pyramide 80/15/5, datasets, métriques qualité)
 
 ### **Acceptance Criteria**
@@ -308,7 +308,7 @@ Pipeline email complet : ingestion → classification → extraction → brouill
 
 #### **2.1 EmailEngine setup**
 - [ ] Docker service EmailEngine
-- [ ] Configuration 4 comptes IMAP Antonio
+- [ ] Configuration 4 comptes IMAP Mainteneur
 - [ ] Webhook vers n8n : `/webhook/emailengine`
 
 #### **2.2 n8n Workflow Email Ingestion**
@@ -336,7 +336,7 @@ Pipeline email complet : ingestion → classification → extraction → brouill
 - AC1 : Email reçu → Webhook n8n → Classification → Insert PostgreSQL → Redis event
 - AC2 : Classification accuracy ≥85% sur dataset validation
 - AC3 : Brouillon réponse généré (trust=blocked, présentation seule)
-- AC4 : Receipt créé avec trust=propose → Antonio valide via Telegram
+- AC4 : Receipt créé avec trust=propose → Mainteneur valide via Telegram
 - AC5 : Presidio anonymise PII avant LLM cloud (test avec dataset PII) **REQUIS**
 
 ### **Livrables**
@@ -375,7 +375,7 @@ Pipeline document complet : upload → OCR → renommage intelligent → classem
 - AC1 : Upload document via Telegram → OCR → Métadonnées extraites
 - AC2 : Renommage accuracy ≥80% (exact match filename)
 - AC3 : Classification document correcte
-- AC4 : Receipt créé → Antonio valide nom → Document sync vers PC (Syncthing)
+- AC4 : Receipt créé → Mainteneur valide nom → Document sync vers PC (Syncthing)
 
 ### **Livrables**
 - Workflow n8n File Processing
@@ -403,7 +403,7 @@ Implémenter moteur de proactivité natif Friday (vs OpenClaw) : checks contextu
 #### **4.1.2 Context Provider**
 - [ ] `agents/src/core/context.py` :
   - `get_current_time_context()` : Heure, jour, weekend
-  - `get_last_activity()` : Dernière interaction Antonio
+  - `get_last_activity()` : Dernière interaction Mainteneur
   - `get_next_calendar_event()` : Prochain événement agenda
 
 #### **4.1.3 Checks Day 1**
@@ -449,7 +449,7 @@ Implémenter moteur de proactivité natif Friday (vs OpenClaw) : checks contextu
 
 ## 📦 **Epics 5-11+ : Modules métier**
 
-*(Spécifications détaillées créées au fur et à mesure, selon priorisation Antonio)*
+*(Spécifications détaillées créées au fur et à mesure, selon priorisation Mainteneur)*
 
 **Séquence suggérée** :
 1. **Epic 5** : Briefing matinal (agrégation données Epics 2-3) — **Réf.** : [`docs/n8n-workflows-spec.md`](docs/n8n-workflows-spec.md) (workflow briefing-daily)
@@ -508,7 +508,7 @@ Implémenter moteur de proactivité natif Friday (vs OpenClaw) : checks contextu
 
 **Frequence tests** : Mensuel (premier dimanche du mois)
 
-**Réf.** : [`docs/pc-backup-setup.md`](docs/pc-backup-setup.md) (setup PC Antonio rsync/Tailscale, troubleshooting)
+**Réf.** : [`docs/pc-backup-setup.md`](docs/pc-backup-setup.md) (setup PC Mainteneur rsync/Tailscale, troubleshooting)
 
 ### **Fichiers restant a creer**
 

@@ -11,13 +11,13 @@
       "sender": "dr.martin@hospital.fr",
       "expected_category": "medical",
       "expected_priority": "medium",
-      "min_confidence": 0.80,
+      "min_confidence": 0.8,
       "reasoning": "Email médical avec vocabulaire technique (ECG, bpm, rythme sinusal)"
     },
     {
       "id": "email_medical_002",
       "subject": "URGENT - Patient en détresse respiratoire",
-      "text": "Antonio, patient en salle 3 détresse respiratoire sévère. SpO2 à 85%. Besoin assistance immédiate.",
+      "text": "Owner, patient en salle 3 détresse respiratoire sévère. SpO2 à 85%. Besoin assistance immédiate.",
       "sender": "urgences@hospital.fr",
       "expected_category": "medical",
       "expected_priority": "high",
@@ -41,13 +41,13 @@
       "sender": "no-reply@bnpparibas.fr",
       "expected_category": "finance",
       "expected_priority": "low",
-      "min_confidence": 0.80,
+      "min_confidence": 0.8,
       "reasoning": "Relevé bancaire informatif (priority low car pas d'action requise)"
     },
     {
       "id": "email_thesis_001",
       "subject": "Version 3 introduction thèse - Julie",
-      "text": "Bonjour Antonio, voici la version 3 de mon introduction de thèse avec vos corrections intégrées. Merci pour votre relecture. Julie",
+      "text": "Bonjour Owner, voici la version 3 de mon introduction de thèse avec vos corrections intégrées. Merci pour votre relecture. Julie",
       "sender": "julie.martin@univ-paris.fr",
       "expected_category": "thesis",
       "expected_priority": "medium",
@@ -57,7 +57,7 @@
     {
       "id": "email_thesis_002",
       "subject": "Soutenance prévue le 15 mars - validation directeur",
-      "text": "Antonio, j'ai programmé ma soutenance le 15 mars 2026. Pourriez-vous valider la date avec le directeur de thèse ? Merci, Marc",
+      "text": "Owner, j'ai programmé ma soutenance le 15 mars 2026. Pourriez-vous valider la date avec le directeur de thèse ? Merci, Marc",
       "sender": "marc.durand@univ-lyon.fr",
       "expected_category": "thesis",
       "expected_priority": "high",
@@ -71,13 +71,13 @@
       "sender": "chef@hospital.fr",
       "expected_category": "professional",
       "expected_priority": "medium",
-      "min_confidence": 0.70,
+      "min_confidence": 0.7,
       "reasoning": "Réunion professionnelle avec date/heure"
     },
     {
       "id": "email_personal_001",
       "subject": "Anniversaire samedi - tu viens ?",
-      "text": "Salut Antonio ! On organise l'anniversaire de Sophie samedi chez nous. Tu viens ? Bisous, Marie",
+      "text": "Salut Owner ! On organise l'anniversaire de Sophie samedi chez nous. Tu viens ? Bisous, Marie",
       "sender": "marie.dupont@gmail.com",
       "expected_category": "personal",
       "expected_priority": "low",
@@ -101,7 +101,7 @@
       "sender": "agence@immobilier-paris.fr",
       "expected_category": "legal",
       "expected_priority": "high",
-      "min_confidence": 0.80,
+      "min_confidence": 0.8,
       "reasoning": "Contrat légal avec deadline signature"
     },
     {
@@ -111,8 +111,11 @@
       "sender": "pierre@gmail.com",
       "expected_category": "personal",
       "expected_priority": "low",
-      "min_confidence": 0.50,
-      "allow_multiple_categories": ["personal", "professional"],
+      "min_confidence": 0.5,
+      "allow_multiple_categories": [
+        "personal",
+        "professional"
+      ],
       "reasoning": "Contexte insuffisant - pourrait être perso ou pro selon expéditeur"
     },
     {
@@ -122,7 +125,7 @@
       "sender": "newsletter@lemonde.fr",
       "expected_category": "newsletter",
       "expected_priority": "low",
-      "min_confidence": 0.90,
+      "min_confidence": 0.9,
       "reasoning": "Newsletter classique avec option désabonnement"
     }
   ],

@@ -211,7 +211,7 @@ Transition : auto → blocked
 ```json
 {
   "level": "warning",
-  "event": "Manual trust override by Antonio",
+  "event": "Manual trust override by Mainteneur",
   "module": "email",
   "action": "classify",
   "old_level": "auto",

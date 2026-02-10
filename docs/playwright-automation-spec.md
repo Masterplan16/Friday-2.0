@@ -23,7 +23,7 @@ Friday 2.0 utilise **Playwright** pour automatiser les sites web connus et stabl
 **Mode** : **Semi-automatique**
 - Friday génère la liste de courses (Pydantic model)
 - Friday pré-remplit le formulaire Carrefour Drive via Playwright
-- Antonio valide visuellement avant confirmation
+- Mainteneur valide visuellement avant confirmation
 - Friday finalise la commande (choix créneau + paiement)
 
 **Script** : `agents/src/tools/automation/carrefour_drive.py`
@@ -235,7 +235,7 @@ async def test_full_grocery_order_flow():
 |--------|-----------|
 | **Changement UI Carrefour** | Monitoring hebdomadaire (cron), alertes Telegram si script échoue |
 | **Captcha** | Utiliser compte authentifié (moins de captchas), retry manuel si bloqué |
-| **Produits indisponibles** | Accepter échec partiel, proposer alternatives à Antonio |
+| **Produits indisponibles** | Accepter échec partiel, proposer alternatives à Mainteneur |
 | **Performance** | Headless mode, timeout courts, screenshots uniquement si erreur |
 
 ---

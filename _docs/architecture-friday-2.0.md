@@ -9,7 +9,7 @@ completedAt: '2026-02-02'
 lastReview: '2026-02-09'
 version: '1.3.0'
 project_name: 'Friday 2.0 - Second Cerveau Personnel'
-user_name: 'Antonio'
+user_name: 'Mainteneur'
 date: '2026-02-02'
 ---
 
@@ -153,7 +153,7 @@ Note : les domaines utilisateur (medecin, enseignant, financier, personnel) rest
 | Gap/Limitation | Besoins initiaux | Implementation reelle | Impact | Workaround/Solution |
 |----------------|------------------|----------------------|--------|---------------------|
 | **Apple Watch Ultra** | Source de donnees prioritaire (sommeil, FC, activite) pour Coach sportif | Pas d'API serveur, pas d'integration Day 1 | Coach sportif fonctionne sans donnees physiologiques reelles | Export manuel CSV depuis Apple Health OU app tierce avec API (a evaluer) OU Coach base sur agenda + menus uniquement |
-| **Carrefour Drive commande auto** | Commande automatique courses | Browser-Use rejete (60% fiabilite), pas d'API Carrefour publique | Liste de courses generee mais pas de commande automatique | Friday genere liste → Antonio valide → Friday ouvre Carrefour Drive avec liste pre-remplie (semi-auto via Playwright) |
+| **Carrefour Drive commande auto** | Commande automatique courses | Browser-Use rejete (60% fiabilite), pas d'API Carrefour publique | Liste de courses generee mais pas de commande automatique | Friday genere liste → Mainteneur valide → Friday ouvre Carrefour Drive avec liste pre-remplie (semi-auto via Playwright) |
 | **Google Docs commentaires** | Tuteur These : Commentaires ancres dans Google Doc | API v1 : Pas de commentaires ancres, utiliser API Suggestions | UX differente : Suggestions modifiables vs Commentaires fixes | Utiliser Google Docs API Suggestions (etudiants voient suggestions a accepter/rejeter) + Note explicative dans le Doc |
 | **BeeStation Synology** | Photos stockees sur BeeStation | Pas d'API BSM, pas de support Tailscale/packages tiers | Flux indirect : Telephone → BeeStation → PC (copie manuelle/auto) → VPS (Syncthing) | Sync automatique BeeStation → PC (Synology Drive Client) + Syncthing PC → VPS |
 | **Plaud Note upload** | Transcriptions audio automatiques | Depend de l'integration GDrive de Plaud Note | Si Plaud Note n'upload pas auto sur GDrive, Mainteneur doit exporter manuellement | Verifier si Plaud Note Pro a auto-upload GDrive, sinon export manuel periodique |
@@ -530,8 +530,8 @@ MATCH (d:Document {doc_type: "facture"})-[:MENTIONS]->(e:Entity {name: "plombier
 WHERE NOT EXISTS((t:Transaction)-[:PAID_WITH]->(d))
 RETURN d.title, d.date, d.path
 
-// Trouver les taches en retard assignees a Antonio
-MATCH (t:Task {status: "pending", assigned_to: "Antonio"})
+// Trouver les taches en retard assignees a Mainteneur
+MATCH (t:Task {status: "pending", assigned_to: "Mainteneur"})
 WHERE t.due_date < datetime()
 RETURN t.title, t.due_date, t.priority
 ORDER BY t.priority DESC
@@ -753,7 +753,7 @@ CREATE TABLE core.tasks (
     status TEXT NOT NULL DEFAULT 'pending',  -- pending, in_progress, completed, cancelled
     priority TEXT NOT NULL DEFAULT 'medium',  -- low, medium, high, urgent
     due_date TIMESTAMPTZ,
-    assigned_to TEXT DEFAULT 'Antonio',
+    assigned_to TEXT DEFAULT 'Mainteneur',
     tags TEXT[] DEFAULT '{}',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -866,7 +866,7 @@ A reconsiderer si extension famille (X3).
 
 **Decision** : Systeme de confiance et tracabilite integre, obligatoire pour chaque module.
 
-**Problematique** : Friday agit au nom d'Antonio en arriere-plan (23 modules). Sans systeme de controle, les erreurs et hallucinations passent inapercues. La confiance utilisateur est une condition de viabilite du projet.
+**Problematique** : Friday agit au nom d'Mainteneur en arriere-plan (23 modules). Sans systeme de controle, les erreurs et hallucinations passent inapercues. La confiance utilisateur est une condition de viabilite du projet.
 
 **3 piliers :**
 
@@ -874,11 +874,11 @@ A reconsiderer si extension famille (X3).
 |--------|-------------|------------|
 | **Observabilite infra** | La salle des machines tourne ? | Healthcheck etendu, monitoring RAM, etat services lourds |
 | **Observabilite metier** | Friday a fait quoi exactement ? | Table `core.action_receipts`, journal, resume quotidien |
-| **Trust & Control** | Antonio garde le controle | Trust levels (auto/propose/bloque), feedback loop, retrogradation auto |
+| **Trust & Control** | Mainteneur garde le controle | Trust levels (auto/propose/bloque), feedback loop, retrogradation auto |
 
 ##### Trust Levels (niveaux de confiance)
 
-Chaque action de Friday a un niveau de confiance configurable par Antonio :
+Chaque action de Friday a un niveau de confiance configurable par Mainteneur :
 
 | Niveau | Comportement | Exemples |
 |--------|-------------|----------|
@@ -892,9 +892,9 @@ Chaque action de Friday a un niveau de confiance configurable par Antonio :
 - Risque eleve (erreur = consequence reelle) → BLOQUE toujours
 
 **Promotion et retrogradation :**
-- PROPOSE → AUTO : accuracy >95% sur 3 semaines consecutives + validation Antonio
-- AUTO → PROPOSE (retrogradation) : accuracy <90% sur 1 semaine → **AUTOMATIQUE** (pas besoin d'intervention Antonio)
-- BLOQUE → PROPOSE : jamais automatique, decision Antonio uniquement
+- PROPOSE → AUTO : accuracy >95% sur 3 semaines consecutives + validation Mainteneur
+- AUTO → PROPOSE (retrogradation) : accuracy <90% sur 1 semaine → **AUTOMATIQUE** (pas besoin d'intervention Mainteneur)
+- BLOQUE → PROPOSE : jamais automatique, decision Mainteneur uniquement
 
 ##### Middleware `@friday_action`
 
@@ -955,16 +955,16 @@ CREATE TABLE core.action_receipts (
 - `/receipt [id]` → affiche le detail d'un receipt
 - `/receipt [id] -v` → affiche les sous-actions techniques
 
-**Confiance parent = MIN des confiances sous-actions.** Antonio voit le maillon faible.
+**Confiance parent = MIN des confiances sous-actions.** Mainteneur voit le maillon faible.
 
 ##### Feedback loop (correction → apprentissage)
 
-Quand Antonio corrige une action :
+Quand Mainteneur corrige une action :
 
 1. La correction est stockee dans `core.action_receipts` (champ `correction`)
 2. Friday detecte les patterns recurrents automatiquement
 3. Apres 2 corrections du meme pattern → Friday propose une regle
-4. Antonio valide la regle → stockee dans `core.correction_rules`
+4. Mainteneur valide la regle → stockee dans `core.correction_rules`
 5. Les regles sont injectees dans les prompts LLM (SELECT + injection, pas de RAG)
 
 ```sql
@@ -982,7 +982,7 @@ CREATE TABLE core.correction_rules (
     active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    created_by TEXT DEFAULT 'Antonio'
+    created_by TEXT DEFAULT 'Mainteneur'
 );
 
 CREATE INDEX idx_correction_rules_lookup ON core.correction_rules(module, action, active);
@@ -1011,13 +1011,13 @@ CREATE TABLE core.trust_metrics (
 
 Deux metriques distinctes :
 - `model_confidence` : ce que le LLM pense (technique, interne au receipt)
-- `historical_accuracy` : taux de reussite reel base sur les corrections (metier, visible par Antonio)
+- `historical_accuracy` : taux de reussite reel base sur les corrections (metier, visible par Mainteneur)
 
 C'est `historical_accuracy` qui determine les promotions/retrogradations.
 
 ##### Commandes Telegram (introspection)
 
-Un seul canal Telegram (pas de fragmentation). Friday communique proactivement (briefing, alertes, validations) et Antonio peut interroger a la demande :
+Un seul canal Telegram (pas de fragmentation). Friday communique proactivement (briefing, alertes, validations) et Mainteneur peut interroger a la demande :
 
 | Commande | Description |
 |----------|-------------|
@@ -1030,11 +1030,11 @@ Un seul canal Telegram (pas de fragmentation). Friday communique proactivement (
 | `/stats` | Statistiques de la semaine (volumes traites par module) |
 
 **Principe UX (progressive disclosure)** :
-- **Niveau 1 (surface)** : Resume soir = "47 actions, 2 doutes, tout OK" → Antonio voit sans rien faire
+- **Niveau 1 (surface)** : Resume soir = "47 actions, 2 doutes, tout OK" → Mainteneur voit sans rien faire
 - **Niveau 2 (detail)** : `/journal` → liste des actions avec statut
 - **Niveau 3 (profondeur)** : `/receipt -v` → raisonnement complet, sources, modele
 
-99% du temps Antonio reste au niveau 1. Le systeme de confiance fonctionne quand Antonio n'a PAS besoin de l'utiliser.
+99% du temps Mainteneur reste au niveau 1. Le systeme de confiance fonctionne quand Mainteneur n'a PAS besoin de l'utiliser.
 
 ##### Resume quotidien (filet de securite)
 
@@ -1098,7 +1098,7 @@ n8n fournit son propre dashboard pour l'administration des workflows. Aucun deve
 
 #### 5c. Backups
 
-**Decision** : Backup automatise quotidien vers le PC d'Antonio
+**Decision** : Backup automatise quotidien vers le PC d'Mainteneur
 
 | Element | Detail |
 |---------|--------|
@@ -1230,7 +1230,7 @@ CREATE TABLE core.correction_rules (
     active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    created_by TEXT DEFAULT 'Antonio'
+    created_by TEXT DEFAULT 'Mainteneur'
 );
 
 CREATE INDEX idx_correction_rules_lookup ON core.correction_rules(module, action, active);
@@ -1319,8 +1319,8 @@ Telephone (photos) → BeeStation Synology (stockage)
 
 **Configuration requise** :
 1. **BeeStation** : Synology Drive Server active
-2. **PC Antonio** : Synology Drive Client installe, sync `Photos/` → `~/Photos/BeeStation/`
-3. **PC Antonio** : Syncthing sync `~/Photos/BeeStation/` → VPS `/data/transit/photos/`
+2. **PC Mainteneur** : Synology Drive Client installe, sync `Photos/` → `~/Photos/BeeStation/`
+3. **PC Mainteneur** : Syncthing sync `~/Photos/BeeStation/` → VPS `/data/transit/photos/`
 4. **VPS** : Agent Photos watch `/data/transit/photos/` → Traitement → Suppression transit apres indexation
 
 **Rationale** : BeeStation (BSM) ne supporte ni Tailscale ni packages tiers. Le PC sert de pont.
@@ -1334,22 +1334,22 @@ Telephone (photos) → BeeStation Synology (stockage)
 1. **Initialisation** : Prompts generiques (ton formel/informel configurable via `core.user_settings.writing_style`)
 
 2. **Apprentissage automatique** :
-   - Chaque brouillon envoye par Antonio → Stocker dans `core.writing_examples` (marqueur `sent_by=Antonio`)
+   - Chaque brouillon envoye par Mainteneur → Stocker dans `core.writing_examples` (marqueur `sent_by=Mainteneur`)
    - Extraire caracteristiques : longueur moyenne, structure, vocabulaire frequent, formules de politesse
    - Top 10 exemples recents → Injection dans prompt few-shot
 
 3. **Correction manuelle** :
-   - Antonio corrige brouillon Friday → Diff stocke dans `core.action_receipts.correction` (Trust Layer)
+   - Mainteneur corrige brouillon Friday → Diff stocke dans `core.action_receipts.correction` (Trust Layer)
    - Pattern detecte (2+ corrections similaires) → Proposition regle explicite : "Toujours utiliser 'Cordialement' au lieu de 'Bien a vous'"
-   - Antonio valide regle → Insert `core.correction_rules`
+   - Mainteneur valide regle → Insert `core.correction_rules`
 
 4. **Injection few-shot** :
 
 ```python
-# Charger exemples style Antonio
+# Charger exemples style Mainteneur
 examples = await db.fetch(
     "SELECT subject, body FROM core.writing_examples "
-    "WHERE sent_by='Antonio' AND email_type=$1 ORDER BY created_at DESC LIMIT 5",
+    "WHERE sent_by='Mainteneur' AND email_type=$1 ORDER BY created_at DESC LIMIT 5",
     email_type
 )
 
@@ -1357,7 +1357,7 @@ examples = await db.fetch(
 prompt = f"""
 Redige une reponse dans le style suivant :
 
-Exemples de style Antonio :
+Exemples de style Mainteneur :
 ---
 {format_examples(examples)}
 ---
@@ -1375,7 +1375,7 @@ CREATE TABLE core.writing_examples (
     email_type TEXT,              -- "professional", "personal", "medical", "academic"
     subject TEXT,
     body TEXT,
-    sent_by TEXT DEFAULT 'Antonio',
+    sent_by TEXT DEFAULT 'Mainteneur',
     created_at TIMESTAMP DEFAULT NOW()
 );
 ```
@@ -2198,10 +2198,10 @@ async def test_presidio_anonymizes_all_pii(pii_samples):
 ```json
 [
   {
-    "input": "Dr. Antonio Lopez, ne le 15/03/1985 a Paris",
+    "input": "Dr. Mainteneur Lopez, ne le 15/03/1985 a Paris",
     "expected_anonymized": "Dr. [PERSON_1], ne le [DATE_1] a [LOCATION_1]",
     "entities": ["PERSON", "DATE", "LOCATION"],
-    "sensitive_values": ["Antonio Lopez", "15/03/1985", "Paris"]
+    "sensitive_values": ["Mainteneur Lopez", "15/03/1985", "Paris"]
   },
   {
     "input": "Carte Vitale: 1 85 03 75 123 456 78",
@@ -2403,7 +2403,7 @@ Total effort : 3h50. RAM impact : 0 Mo supplementaire (VPS-4 48 Go, marge ~32-37
 **✅ Requirements Analysis**
 
 - [x] Projet contextualisé (23 modules, 4 couches techniques, 37 exigences, VPS-4 48 Go, budget 75€/mois max)
-- [x] Scale et complexité évalués (utilisateur unique Antonio, extension famille envisageable X3)
+- [x] Scale et complexité évalués (utilisateur unique Mainteneur, extension famille envisageable X3)
 - [x] Contraintes techniques identifiées (X1-X6 : budget, chiffrement, latence, architecture hybride)
 - [x] Cross-cutting concerns mappés (sécurité Tailscale + age/SOPS + Presidio, évolutibilité via adaptateurs, RGPD)
 
@@ -2456,7 +2456,7 @@ Justification :
 
 5. **Budget maitrise** : ~73€/mois estime (VPS-4 ~25€ TTC + API Claude Sonnet 4.5 ~45€ + divers ~3€). Depasse la contrainte initiale X1 (50€/mois) mais justifie par la qualite superieure (structured output, instruction following, consistance) et la simplification (un seul modele, zero routing). Plan B upgrade VPS-5 (64 Go, ~38€ TTC) si besoin de plus de RAM.
 
-6. **Observability & Trust Layer** : Composant transversal garantissant la confiance utilisateur. Chaque action tracee (receipts), niveaux de confiance configurables (auto/propose/bloque), retrogradation automatique si accuracy baisse, feedback loop par regles explicites. Antonio controle Friday, pas l'inverse.
+6. **Observability & Trust Layer** : Composant transversal garantissant la confiance utilisateur. Chaque action tracee (receipts), niveaux de confiance configurables (auto/propose/bloque), retrogradation automatique si accuracy baisse, feedback loop par regles explicites. Mainteneur controle Friday, pas l'inverse.
 
 **Areas for Future Enhancement (post-MVP):**
 

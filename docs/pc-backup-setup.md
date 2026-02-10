@@ -2,19 +2,19 @@
 
 **Date** : 2026-02-05
 **Version** : 1.0.0
-**Objectif** : Configuration complète du PC Antonio pour recevoir les backups quotidiens via rsync/Tailscale
+**Objectif** : Configuration complète du PC Mainteneur pour recevoir les backups quotidiens via rsync/Tailscale
 
 ---
 
 ## 🎯 Vue d'ensemble
 
-Le workflow n8n `backup-daily.json` effectue un `rsync` quotidien (3h du matin) depuis le VPS vers le PC Antonio :
+Le workflow n8n `backup-daily.json` effectue un `rsync` quotidien (3h du matin) depuis le VPS vers le PC Mainteneur :
 
 ```bash
-rsync -avz --progress /backups/ antonio@${TAILSCALE_PC_HOSTNAME}:/mnt/backups/friday-vps/
+rsync -avz --progress /backups/ mainteneur@${TAILSCALE_PC_HOSTNAME}:/mnt/backups/friday-vps/
 ```
 
-Ce document détaille **TOUTE** la configuration requise sur le PC Antonio.
+Ce document détaille **TOUTE** la configuration requise sur le PC Mainteneur.
 
 ---
 
@@ -26,7 +26,7 @@ Ce document détaille **TOUTE** la configuration requise sur le PC Antonio.
 | **Tailscale** | Installé et connecté (2FA obligatoire) |
 | **SSH server** | Actif et accessible via Tailscale |
 | **Espace disque** | Minimum 50 Go (estimation backups) |
-| **Utilisateur** | Compte `antonio` avec sudo/admin |
+| **Utilisateur** | Compte `mainteneur` avec sudo/admin |
 
 ---
 
@@ -57,15 +57,15 @@ sudo systemctl start ssh
 sudo systemctl status ssh
 ```
 
-#### **1.3 Créer utilisateur `antonio` dans WSL**
+#### **1.3 Créer utilisateur `mainteneur` dans WSL**
 
 ```bash
 # Créer utilisateur (si pas déjà fait)
-sudo useradd -m -s /bin/bash antonio
-sudo usermod -aG sudo antonio
+sudo useradd -m -s /bin/bash mainteneur
+sudo usermod -aG sudo mainteneur
 
 # Définir mot de passe
-sudo passwd antonio
+sudo passwd mainteneur
 ```
 
 #### **1.4 Créer dossier backup**
@@ -73,7 +73,7 @@ sudo passwd antonio
 ```bash
 # Dans WSL
 sudo mkdir -p /mnt/backups/friday-vps
-sudo chown antonio:antonio /mnt/backups/friday-vps
+sudo chown mainteneur:mainteneur /mnt/backups/friday-vps
 sudo chmod 755 /mnt/backups/friday-vps
 ```
 
@@ -130,7 +130,7 @@ sudo systemctl start sshd
 
 ```bash
 sudo mkdir -p /mnt/backups/friday-vps
-sudo chown antonio:antonio /mnt/backups/friday-vps
+sudo chown mainteneur:mainteneur /mnt/backups/friday-vps
 sudo chmod 755 /mnt/backups/friday-vps
 ```
 
@@ -147,12 +147,12 @@ System Preferences → Sharing → Remote Login (cocher)
 #### **3.2 Créer dossier backup**
 
 ```bash
-sudo mkdir -p /Users/antonio/Backups/friday-vps
-sudo chown antonio:staff /Users/antonio/Backups/friday-vps
-chmod 755 /Users/antonio/Backups/friday-vps
+sudo mkdir -p /Users/mainteneur/Backups/friday-vps
+sudo chown mainteneur:staff /Users/mainteneur/Backups/friday-vps
+chmod 755 /Users/mainteneur/Backups/friday-vps
 ```
 
-> **Note** : Sur macOS, utiliser `/Users/antonio/Backups/friday-vps` au lieu de `/mnt/backups/friday-vps`. Ajuster la variable `TAILSCALE_PC_BACKUP_PATH` dans n8n.
+> **Note** : Sur macOS, utiliser `/Users/mainteneur/Backups/friday-vps` au lieu de `/mnt/backups/friday-vps`. Ajuster la variable `TAILSCALE_PC_BACKUP_PATH` dans n8n.
 
 ---
 
@@ -186,21 +186,21 @@ chmod 600 ~/.ssh/authorized_keys
 
 ```bash
 # Sur le VPS
-ssh -i ~/.ssh/friday_backup_key antonio@${TAILSCALE_PC_HOSTNAME}
+ssh -i ~/.ssh/friday_backup_key mainteneur@${TAILSCALE_PC_HOSTNAME}
 
 # Si succès → vous êtes connecté au PC !
 # Tester rsync
-rsync -avz --dry-run /tmp/ antonio@${TAILSCALE_PC_HOSTNAME}:/mnt/backups/friday-vps/test/
+rsync -avz --dry-run /tmp/ mainteneur@${TAILSCALE_PC_HOSTNAME}:/mnt/backups/friday-vps/test/
 ```
 
 ---
 
 ## 🌐 Configuration Tailscale
 
-### **Sur le PC Antonio**
+### **Sur le PC Mainteneur**
 
 1. Installer Tailscale : https://tailscale.com/download
-2. Se connecter avec compte Antonio
+2. Se connecter avec compte Mainteneur
 3. **ACTIVER 2FA** (obligatoire pour sécurité)
 4. **Device authorization** : Settings → Devices → Require device authorization
 
@@ -209,20 +209,20 @@ rsync -avz --dry-run /tmp/ antonio@${TAILSCALE_PC_HOSTNAME}:/mnt/backups/friday-
 Le hostname Tailscale du PC est utilisé dans n8n :
 
 ```env
-TAILSCALE_PC_HOSTNAME=antonio-pc
+TAILSCALE_PC_HOSTNAME=mainteneur-pc
 ```
 
 Pour obtenir le hostname :
 
 ```bash
-# Sur le PC Antonio
+# Sur le PC Mainteneur
 tailscale status
 
 # Exemple output:
-# 100.64.1.2   antonio-pc           antonio@     linux   -
+# 100.64.1.2   mainteneur-pc           mainteneur@     linux   -
 ```
 
-Le hostname est `antonio-pc` (ou `antonio-pc.tailnet-xxx.ts.net` si FQDN requis).
+Le hostname est `mainteneur-pc` (ou `mainteneur-pc.tailnet-xxx.ts.net` si FQDN requis).
 
 ---
 
@@ -292,8 +292,8 @@ rsync -avz ...
 
 - [ ] SSH server actif sur PC (`sudo systemctl status sshd`)
 - [ ] Tailscale connecté sur PC (`tailscale status`)
-- [ ] Hostname Tailscale correct (`antonio-pc`)
-- [ ] Utilisateur `antonio` existe
+- [ ] Hostname Tailscale correct (`mainteneur-pc`)
+- [ ] Utilisateur `mainteneur` existe
 - [ ] Dossier `/mnt/backups/friday-vps/` créé avec bonnes permissions
 - [ ] Clé SSH VPS autorisée (`~/.ssh/authorized_keys`)
 - [ ] Test connexion SSH depuis VPS réussi
@@ -308,7 +308,7 @@ rsync -avz ...
 
 ```bash
 # Sur VPS
-ssh -i ~/.ssh/friday_backup_key antonio@antonio-pc
+ssh -i ~/.ssh/friday_backup_key mainteneur@mainteneur-pc
 
 # Attendu : connexion réussie
 ```
@@ -317,7 +317,7 @@ ssh -i ~/.ssh/friday_backup_key antonio@antonio-pc
 
 ```bash
 # Sur VPS
-rsync -avz --dry-run /tmp/test.txt antonio@antonio-pc:/mnt/backups/friday-vps/
+rsync -avz --dry-run /tmp/test.txt mainteneur@mainteneur-pc:/mnt/backups/friday-vps/
 
 # Attendu : "sent X bytes  received Y bytes"
 ```

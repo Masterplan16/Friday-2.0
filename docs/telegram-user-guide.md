@@ -64,7 +64,7 @@ C'est **votre conversation principale avec Friday**. Utilisez ce topic pour :
 **Heartbeat (toutes les 30min) :**
 Friday initie la conversation :
 ```
-🤖 Friday : "Bonjour Antonio ! J'ai vérifié tes emails : 2 urgents détectés. Veux-tu les résumer ?"
+🤖 Friday : "Bonjour Mainteneur ! J'ai vérifié tes emails : 2 urgents détectés. Veux-tu les résumer ?"
 👤 Toi : "Oui"
 🤖 Friday : "Voici les résumés..."
 ```

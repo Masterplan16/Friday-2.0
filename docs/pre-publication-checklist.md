@@ -53,7 +53,7 @@
 
 ### AC8 : LICENSE ajoutée
 - [x] Fichier `LICENSE` créé (MIT License)
-- [x] Copyright © 2026 Antonio
+- [x] Copyright © 2026 Mainteneur
 - [x] README.md mis à jour (référence MIT License)
 
 ### AC9 : GitHub branch protection activée
@@ -75,7 +75,7 @@
 - [x] Workflow `.github/workflows/ci.yml` opérationnel (Story 1.16)
 - [x] Badge CI visible dans README.md
 - ⚠️ **GitHub Actions spending limit** : Tests ne s'exécutent pas (problème billing)
-  - **Action requise** : Antonio doit augmenter spending limit dans Settings GitHub
+  - **Action requise** : Mainteneur doit augmenter spending limit dans Settings GitHub
   - Workflow configuré correctement, pas de régression code
 
 ---

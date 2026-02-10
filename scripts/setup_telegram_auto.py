@@ -19,7 +19,7 @@ from telegram.ext import Application, ContextTypes, MessageHandler, filters
 
 # ✅ TOKEN et USER ID depuis variables d'environnement (sécurisé)
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-ANTONIO_USER_ID_STR = os.getenv("ANTONIO_USER_ID")
+ANTONIO_USER_ID_STR = os.getenv("OWNER_USER_ID")
 
 # Validation fail-explicit
 if not TOKEN:
@@ -29,14 +29,14 @@ if not TOKEN:
     )
 if not ANTONIO_USER_ID_STR:
     raise ValueError(
-        "ANTONIO_USER_ID environment variable required.\n"
+        "OWNER_USER_ID environment variable required.\n"
         "Déchiffrez les secrets avec: ./scripts/load-secrets.sh"
     )
 
 try:
-    ANTONIO_USER_ID = int(ANTONIO_USER_ID_STR)
+    OWNER_USER_ID = int(ANTONIO_USER_ID_STR)
 except ValueError:
-    raise ValueError(f"ANTONIO_USER_ID must be a valid integer, got: {ANTONIO_USER_ID_STR}")
+    raise ValueError(f"OWNER_USER_ID must be a valid integer, got: {ANTONIO_USER_ID_STR}")
 
 # Stockage des IDs détectés
 detected_topics = {}
@@ -152,7 +152,7 @@ async def generate_env_file():
     new_values = {
         "TELEGRAM_BOT_TOKEN": TOKEN,
         "TELEGRAM_SUPERGROUP_ID": str(supergroup_id),
-        "ANTONIO_USER_ID": str(ANTONIO_USER_ID),
+        "OWNER_USER_ID": str(OWNER_USER_ID),
     }
 
     # Assigner les thread IDs
@@ -173,7 +173,7 @@ async def generate_env_file():
         f.write("# ========================================\n")
         f.write(f"TELEGRAM_BOT_TOKEN={existing_env['TELEGRAM_BOT_TOKEN']}\n")
         f.write(f"TELEGRAM_SUPERGROUP_ID={existing_env['TELEGRAM_SUPERGROUP_ID']}\n")
-        f.write(f"ANTONIO_USER_ID={existing_env['ANTONIO_USER_ID']}\n")
+        f.write(f"OWNER_USER_ID={existing_env['OWNER_USER_ID']}\n")
         f.write("\n")
         f.write("# Topics Thread IDs (vérifier l'ordre ci-dessous!)\n")
 

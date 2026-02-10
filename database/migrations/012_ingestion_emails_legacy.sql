@@ -10,7 +10,7 @@ BEGIN;
 -- Table temporaire pour stocker les emails bruts avant classification
 CREATE TABLE IF NOT EXISTS ingestion.emails_legacy (
     message_id TEXT PRIMARY KEY,
-    account TEXT NOT NULL,  -- Compte source (ex: "antonio@example.com")
+    account TEXT NOT NULL,  -- Compte source (ex: "mainteneur@example.com")
     sender TEXT,
     recipients TEXT[],  -- Array des destinataires
     subject TEXT,
@@ -35,7 +35,7 @@ CREATE INDEX IF NOT EXISTS idx_emails_legacy_has_attachments ON ingestion.emails
 -- Commentaires
 COMMENT ON TABLE ingestion.emails_legacy IS 'Table temporaire pour stocker les 110k emails existants avant migration vers ingestion.emails. Cette table est peuplée via EmailEngine bulk export puis migrée par scripts/migrate_emails.py.';
 COMMENT ON COLUMN ingestion.emails_legacy.message_id IS 'Message-ID unique de l''email (RFC 5322)';
-COMMENT ON COLUMN ingestion.emails_legacy.account IS 'Compte IMAP source (ex: antonio@cabinet.fr, antonio@univ.fr)';
+COMMENT ON COLUMN ingestion.emails_legacy.account IS 'Compte IMAP source (ex: mainteneur@cabinet.fr, mainteneur@univ.fr)';
 COMMENT ON COLUMN ingestion.emails_legacy.import_batch_id IS 'UUID du batch d''import pour traçabilité (optionnel)';
 
 -- Statistiques initiales

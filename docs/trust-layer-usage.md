@@ -235,7 +235,7 @@ modules:
 
 **Promotion** (propose → auto) :
 - Si `accuracy >= 95%` sur 3 semaines
-- ET `validation manuelle Antonio`
+- ET `validation manuelle Mainteneur`
 - → Jamais automatique
 
 **Anti-oscillation** :
@@ -281,7 +281,7 @@ INSERT INTO core.correction_rules (
     ARRAY[]::text[],
     0,
     true,
-    'Antonio'
+    'Mainteneur'
 );
 ```
 
@@ -348,11 +348,11 @@ ORDER BY created_at DESC;
 
 ### Workflow
 
-1. **Antonio détecte une erreur** via Telegram `/journal`
-2. **Antonio corrige manuellement** via `/correct <receipt_id>`
+1. **Mainteneur détecte une erreur** via Telegram `/journal`
+2. **Mainteneur corrige manuellement** via `/correct <receipt_id>`
 3. **Système détecte pattern** (2 occurrences identiques)
 4. **Système propose règle** via Telegram
-5. **Antonio valide** → Règle créée dans `core.correction_rules`
+5. **Mainteneur valide** → Règle créée dans `core.correction_rules`
 6. **Règle appliquée** aux prochaines actions
 
 ### Commandes Telegram Trust

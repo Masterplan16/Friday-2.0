@@ -98,7 +98,7 @@ curl -X POST http://emailengine:3000/v1/settings/webhooks \
 | # | Node | Type | Configuration |
 |---|------|------|---------------|
 | 1 | **Daily Trigger** | Cron | Schedule : `0 7 * * *` (7h00 tous les jours)<br>Timezone : `Europe/Paris` |
-| 2 | **Get Pending Tasks** | Postgres | Query : `SELECT title, priority, due_date FROM core.tasks WHERE status='pending' AND assigned_to='Antonio' ORDER BY priority DESC, due_date ASC LIMIT 10` |
+| 2 | **Get Pending Tasks** | Postgres | Query : `SELECT title, priority, due_date FROM core.tasks WHERE status='pending' AND assigned_to='Mainteneur' ORDER BY priority DESC, due_date ASC LIMIT 10` |
 | 3 | **Get Today Events** | Postgres | Query : `SELECT title, date_start, location FROM core.events WHERE DATE(date_start) = CURRENT_DATE ORDER BY date_start ASC` |
 
 > **Dependance** : Les tables `core.tasks` et `core.events` doivent etre creees dans la migration 002_core_tables.sql (Story 1). Le Briefing Daily (Story 4) ne fonctionnera pleinement qu'apres Story 2+ (donnees reelles).
@@ -171,7 +171,7 @@ Le briefing inclut automatiquement :
 | ~~4~~ | ~~**Backup Qdrant Snapshots**~~ | ~~HTTP Request~~ | **[D19] Supprime.** pgvector integre dans PostgreSQL, sauvegarde via pg_dump (pas de snapshot Qdrant separe). Les embeddings sont inclus dans le dump PostgreSQL du node 2. |
 | ~~5~~ | ~~**Backup Knowledge Schema**~~ | ~~Execute Command~~ | **[D19] Supprime.** Le schema knowledge.* (incluant les tables pgvector) est sauvegarde par le pg_dump global du node 2. Un backup separe du schema knowledge n'est plus necessaire. |
 | ~~6~~ | ~~**Compress Knowledge Backup**~~ | ~~Execute Command~~ | **[D19] Supprime.** Plus de dump knowledge separe a compresser. |
-| 7 | **Sync to PC via Tailscale** | Execute Command | Command : `rsync -avz --progress /backups/ antonio@${TAILSCALE_PC_HOSTNAME}:/mnt/backups/friday-vps/`<br>(Tailscale permet rsync direct VPS vers PC via hostname Tailscale)<br>Timeout : 30 min |
+| 7 | **Sync to PC via Tailscale** | Execute Command | Command : `rsync -avz --progress /backups/ mainteneur@${TAILSCALE_PC_HOSTNAME}:/mnt/backups/friday-vps/`<br>(Tailscale permet rsync direct VPS vers PC via hostname Tailscale)<br>Timeout : 30 min |
 | 8 | **Cleanup Old Backups (VPS)** | Execute Command | Command : `find /backups -name "*.dump.gz" -mtime +7 -delete`<br>(Supprime fichiers >7 jours) [D19] Plus de fichiers .snapshot Qdrant a nettoyer. |
 | 9 | **Verify Backup Size** | Code | Check file sizes :<br>`ls -lh /backups/postgres_latest.dump.gz`<br>If < 10 MB → Warning (backup potentiellement incomplet)<br>[D19] Un seul dump PostgreSQL a verifier (inclut pgvector). |
 | 10 | **Log Success** | Postgres | Insert `core.system_logs` : `{event: 'backup.completed', status: 'success', backup_size_mb, timestamp}` |
@@ -182,7 +182,7 @@ Le briefing inclut automatiquement :
 
 ```env
 POSTGRES_CONN=postgresql://friday:password@postgres:5432/friday
-TAILSCALE_PC_HOSTNAME=antonio-pc
+TAILSCALE_PC_HOSTNAME=mainteneur-pc
 TELEGRAM_BOT_TOKEN=<bot_token>
 TELEGRAM_CHAT_ID=<antonio_chat_id>
 ```
@@ -193,17 +193,17 @@ TELEGRAM_CHAT_ID=<antonio_chat_id>
 >
 > **Note (2026-02-09, D19)** : `QDRANT_URL` retiree. pgvector remplace Qdrant Day 1. Le graphe de connaissances utilise desormais PostgreSQL (+ pgvector D19) pour le schema knowledge.* et les embeddings, via `adapters/memorystore.py`. Reevaluation Qdrant possible post-Day 1 si besoin de recherche vectorielle avancee (filtrage, scoring hybride).
 
-> **Recommandation** : Utiliser le hostname Tailscale (`antonio-pc`) au lieu de l'IP pour eviter les problemes de rotation d'adresse. Ex: `TAILSCALE_PC_HOSTNAME=antonio-pc`
+> **Recommandation** : Utiliser le hostname Tailscale (`mainteneur-pc`) au lieu de l'IP pour eviter les problemes de rotation d'adresse. Ex: `TAILSCALE_PC_HOSTNAME=mainteneur-pc`
 
 ### Configuration SSH/rsync (PC)
 
-Le PC Antonio doit :
+Le PC Mainteneur doit :
 1. Être connecté à Tailscale
-2. Avoir un utilisateur `antonio` avec clé SSH autorisée depuis le VPS
+2. Avoir un utilisateur `mainteneur` avec clé SSH autorisée depuis le VPS
 3. Avoir un dossier `/mnt/backups/friday-vps/` avec permissions write
 
 ```bash
-# Sur le PC Antonio
+# Sur le PC Mainteneur
 mkdir -p /mnt/backups/friday-vps
 chmod 755 /mnt/backups/friday-vps
 

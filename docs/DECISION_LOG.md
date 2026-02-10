@@ -27,7 +27,7 @@
 - `DECISION_LOG.md` : Ajout D22 + marquage D15 SUPERSEDE
 
 **Alternatives considérées** :
-1. **VPS-3 (24 Go) avec Friday 2.0 seul** : Rejetée car vision d'Antonio inclut cohabitation Jarvis
+1. **VPS-3 (24 Go) avec Friday 2.0 seul** : Rejetée car vision d'Mainteneur inclut cohabitation Jarvis
 2. **VPS-4 (48 Go, retenue)** : Marge confortable, budget acceptable, scalabilité future
 3. **VPS-5 (96 Go)** : Over-engineering, coût 2x
 
@@ -134,7 +134,7 @@
 **Raison** :
 - Un seul modèle = zéro routing, zéro complexité multi-provider
 - Claude Sonnet 4.5 surpasse Mistral sur tous les benchmarks pertinents
-- Budget ~45€/mois API (acceptable pour usage Antonio)
+- Budget ~45€/mois API (acceptable pour usage Mainteneur)
 - Suppression Ollama local (D12) libère ~4 Go RAM
 
 **Impact** : 20+ fichiers mis à jour (toutes références Mistral/Gemini/Ollama → Claude Sonnet 4.5)
@@ -150,7 +150,7 @@
 **Problématique identifiée** :
 - Maintenance Friday 2.0 estimée à 2-4h/mois (monitoring, mises à jour, connecteurs cassés)
 - Risque fatigue opérationnelle sur projet long terme (10 ans visés)
-- Question Antonio : *"Est-ce que la maintenance peut s'automatiser ?"*
+- Question Mainteneur : *"Est-ce que la maintenance peut s'automatiser ?"*
 
 **Architecture retenue** :
 
@@ -231,14 +231,14 @@ CONTENU (Manuel obligatoire) :
 **Problématique identifiée** :
 - Architecture initiale : "canal unique Telegram + progressive disclosure"
 - Risque critique : Chaos informationnel si tout mélangé (alertes système + validations trust + heartbeat + métriques + conversations)
-- Question Antonio : *"Si tout arrive sur le même canal que le bot... tout ça risque d'être illisible"*
+- Question Mainteneur : *"Si tout arrive sur le même canal que le bot... tout ça risque d'être illisible"*
 
 **Architecture retenue** :
 
 Supergroup "Friday 2.0 Control" avec **5 topics** :
 
 1. **💬 Chat & Proactive** (DEFAULT, bidirectionnel)
-   - Conversations Antonio ↔ Friday
+   - Conversations Mainteneur ↔ Friday
    - Commandes (`/status`, `/journal`, etc.)
    - Heartbeat proactif (Friday initie)
    - Reminders et suggestions
@@ -264,7 +264,7 @@ Supergroup "Friday 2.0 Control" avec **5 topics** :
    - Logs non-critiques
 
 **Rationale** :
-- **Séparation Signal vs Noise** : Antonio peut muter topics non-urgents selon contexte (Mode Focus, Deep Work, Vacances)
+- **Séparation Signal vs Noise** : Mainteneur peut muter topics non-urgents selon contexte (Mode Focus, Deep Work, Vacances)
 - **Conversation continue** : Topic 1 bidirectionnel préserve contexte (heartbeat → question → réponse dans même fil)
 - **Pas de quiet hours codées** : Utiliser fonctionnalités natives téléphone (DND, Focus modes)
 - **Filtrage granulaire** : Par module (email, finance, thesis) + priorité (critical, warning, info)
@@ -273,7 +273,7 @@ Supergroup "Friday 2.0 Control" avec **5 topics** :
 1. **Canal unique avec filtrage intelligent** : Rejetée car impossibilité de mute sélectif (tout ou rien)
 2. **2-3 canaux séparés** : Rejetée car perte de contexte entre canaux, Mainteneur préfère topics
 3. **6 topics (Chat + Proactive séparés)** : Rejetée car fragmente conversation naturelle
-4. **5 topics avec fusion Chat + Proactive** : Retenue (suggestion Antonio validée par équipe)
+4. **5 topics avec fusion Chat + Proactive** : Retenue (suggestion Mainteneur validée par équipe)
 
 **Routing Logic** :
 ```python
@@ -310,7 +310,7 @@ else → Metrics & Logs
 **Rollback plan** : Si complexité topics trop élevée → Revenir à 2 canaux séparés (Control + Logs)
 
 **Ressources** :
-- Discussion complète : Session Party Mode 2026-02-05 (Antonio + Winston + Mary + Amelia)
+- Discussion complète : Session Party Mode 2026-02-05 (Mainteneur + Winston + Mary + Amelia)
 - Diagramme architecture : Section 11.2 addendum (Mermaid)
 - Configuration technique : Section 11.6 addendum (`config/telegram.yaml`)
 
@@ -321,7 +321,7 @@ else → Metrics & Logs
 **Décision** : Rejeter intégration OpenClaw Day 1, implémenter Heartbeat natif dans Friday
 
 **Raison** :
-- Score décisionnel Antonio : 20/100 points
+- Score décisionnel Mainteneur : 20/100 points
   - Multi-chat (WhatsApp, Discord) : NON → +0
   - Skills identifiées (≥10) : NON → +0
   - Heartbeat critique Day 1 : OUI → +20
@@ -332,7 +332,7 @@ else → Metrics & Logs
 
 **Alternatives considérées** :
 1. **OpenClaw complet Day 1** : Rejetée car coût 70h + risques moyens + ROI -86% pour seul bénéfice heartbeat
-2. **OpenClaw POC avril (Phase 1)** : Rejetée car Antonio n'a pas besoin multi-chat ni skills
+2. **OpenClaw POC avril (Phase 1)** : Rejetée car Mainteneur n'a pas besoin multi-chat ni skills
 3. **Heartbeat natif Friday (retenue)** : Coût 10h, zéro risque, contrôle total, intégration native Trust Layer
 
 **Implémentation retenue** :

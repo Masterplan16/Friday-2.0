@@ -40,7 +40,7 @@ async def verify_token(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    return {"username": "antonio"}
+    return {"username": "mainteneur"}
 
 
 async def get_current_user(

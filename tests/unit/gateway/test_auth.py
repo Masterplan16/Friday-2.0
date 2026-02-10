@@ -26,7 +26,7 @@ class TestBearerTokenAuth:
         response = app.get("/api/v1/protected", headers=auth_headers)
         assert response.status_code == 200
         data = response.json()
-        assert data["username"] == "antonio"
+        assert data["username"] == "mainteneur"
 
     def test_invalid_token_returns_401(
         self, app: TestClient, invalid_auth_headers: dict[str, str]

@@ -123,7 +123,7 @@ tests/fixtures/archiviste_dataset/
 
 **Création** :
 - **Méthode** : Collecter 30 documents existants + anonymiser
-- **Responsable** : Antonio
+- **Responsable** : Mainteneur
 - **Quand** : Avant Story 3 (module Archiviste)
 - **Durée estimée** : 2-3h
 
@@ -202,11 +202,11 @@ tests/fixtures/thesis_extracts/
 
 | Dataset | Priorité | Deadline | Effort | Responsable |
 |---------|----------|----------|--------|-------------|
-| **PII Samples** | P0 | Avant Story 1.5 | 1-2h | Antonio |
-| **Email Classification** | P0 | Avant Story 2 | 2-3h | Antonio |
-| **Document Archiviste** | P1 | Avant Story 3 | 2-3h | Antonio |
-| **Finance Anomalies** | P1 | Avant Story 6 | 1h | Antonio |
-| **Tuteur Thèse** | P2 | Avant Story 7 | 3-4h | Antonio |
+| **PII Samples** | P0 | Avant Story 1.5 | 1-2h | Mainteneur |
+| **Email Classification** | P0 | Avant Story 2 | 2-3h | Mainteneur |
+| **Document Archiviste** | P1 | Avant Story 3 | 2-3h | Mainteneur |
+| **Finance Anomalies** | P1 | Avant Story 6 | 1h | Mainteneur |
+| **Tuteur Thèse** | P2 | Avant Story 7 | 3-4h | Mainteneur |
 
 **Total effort estimé** : 9-13h de travail Mainteneur (collecte + anonymisation + labelling)
 

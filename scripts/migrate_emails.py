@@ -230,7 +230,7 @@ class EmailMigrator:
             await asyncio.sleep(self.rate_limit_delay)
 
             # RGPD: Anonymiser AVANT l'appel LLM cloud
-            _anonymized_content = await self.anonymize_for_classification(email)
+            _anonymized_content = await self.anonymize_for_classification(email)  # noqa: F841
 
             # Appel Claude Sonnet 4.5 (TODO: implémenter avec contenu anonymisé)
             # response = await self.llm_client.complete(

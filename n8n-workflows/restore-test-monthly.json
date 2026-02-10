@@ -1,0 +1,153 @@
+{
+  "name": "Friday Restore Test Monthly",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 4 1 * *"
+            }
+          ]
+        }
+      },
+      "id": "restore-test-cron",
+      "name": "Schedule: 1st of Month 04h00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "command": "bash /tests/e2e/test_backup_restore.sh",
+        "options": {}
+      },
+      "id": "run-restore-test",
+      "name": "Run Restore Test",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE core.backup_metadata SET last_restore_test = NOW(), restore_test_status = 'success' WHERE id = (SELECT id FROM core.backup_metadata ORDER BY backup_date DESC LIMIT 1)",
+        "options": {}
+      },
+      "id": "log-success",
+      "name": "Log Success",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [650, 300],
+      "credentials": {
+        "postgres": {
+          "id": "friday-postgres",
+          "name": "Friday PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "http://friday-bot:8080/api/telegram/send",
+        "method": "POST",
+        "jsonParameters": true,
+        "options": {},
+        "bodyParametersJson": "={ \"topic_id\": \"{{ $env.TOPIC_SYSTEM_ID }}\", \"message\": \"✅ Test restore mensuel réussi\n\nDate: {{ $now }}\nBackup testé: Latest\nRésultat: SUCCESS\" }"
+      },
+      "id": "notify-success",
+      "name": "Notify Success",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE core.backup_metadata SET last_restore_test = NOW(), restore_test_status = 'failed' WHERE id = (SELECT id FROM core.backup_metadata ORDER BY backup_date DESC LIMIT 1)",
+        "options": {}
+      },
+      "id": "log-failure",
+      "name": "Log Failure",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [650, 500],
+      "credentials": {
+        "postgres": {
+          "id": "friday-postgres",
+          "name": "Friday PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "http://friday-bot:8080/api/telegram/send",
+        "method": "POST",
+        "jsonParameters": true,
+        "options": {},
+        "bodyParametersJson": "={ \"topic_id\": \"{{ $env.TOPIC_SYSTEM_ID }}\", \"message\": \"🚨 ÉCHEC Test restore mensuel\n\nDate: {{ $now }}\nErreur: {{ $json.error }}\n\n⚠️ Action requise: Vérifier backups\" }"
+      },
+      "id": "notify-failure",
+      "name": "Notify Failure",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [850, 500]
+    }
+  ],
+  "connections": {
+    "Schedule: 1st of Month 04h00": {
+      "main": [
+        [
+          {
+            "node": "Run Restore Test",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run Restore Test": {
+      "main": [
+        [
+          {
+            "node": "Log Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Success": {
+      "main": [
+        [
+          {
+            "node": "Notify Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "log-failure",
+    "timezone": "Europe/Paris"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "backup",
+      "id": "backup-tag"
+    },
+    {
+      "name": "testing",
+      "id": "testing-tag"
+    }
+  ],
+  "triggerCount": 1,
+  "updatedAt": "2026-02-10T00:00:00.000Z",
+  "versionId": "1"
+}

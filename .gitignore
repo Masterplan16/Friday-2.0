@@ -59,6 +59,12 @@ secrets*.yaml
 .age/
 .sops/
 
+# age encryption keys (Story 1.12)
+age-key.txt
+*age-key*.txt
+friday-backup-key.txt
+AGE-SECRET-KEY-*
+
 # Allow encrypted files explicitly
 !.env.enc
 !.env.*.enc

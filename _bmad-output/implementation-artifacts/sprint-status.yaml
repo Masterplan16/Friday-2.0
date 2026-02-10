@@ -58,7 +58,7 @@ development_status:
   1-9-bot-telegram-core-topics: done  # 2026-02-09: COMPLETE - 22 bugs fixed, bot tested successfully, 7/7 ACs ✅, validation permissions corrected, Redis ACL TODO avant VPS prod
   1-10-bot-telegram-inline-buttons-validation: done  # 2026-02-10: Code review adversariale — 15 issues fixes (3C+5H+5M+2L), 34/34 tests, ActionExecutor C1, race condition C2, whitelist C3, status 'executed' H2, validated_by H4.
   1-11-commandes-telegram-trust-budget: done  # 2026-02-10: Code review adversariale — 15 issues fixes (3C+5H+5M+2L), 52/52 tests, pool asyncpg H1, owner check H5, RAM% C3, progressive disclosure M4
-  1-12-backup-chiffre-sync-pc: backlog  # code existe mais pas de story file ni audit bugs
+  1-12-backup-chiffre-sync-pc: done  # 2026-02-10: Code review adversarial - 15 issues fixés (4C+6H+5M). ImportError fix, /backup handler registered, SSH MITM fix, n8n JSON output, retry 9h, 5 unit tests, curl validation, portable find. 6/6 AC ✅, 28 fichiers.
   1-13-self-healing-tier-1-2: backlog  # code existe mais pas de story file ni audit bugs
   1-14-monitoring-docker-images: backlog
   1-15-cleanup-purge-rgpd: backlog
@@ -88,13 +88,15 @@ development_status:
   3-7-traitement-batch-dossier: backlog
   epic-3-retrospective: optional
 
-  # Epic 4: Intelligence Proactive & Briefings (5 stories | 7 FRs)
+  # Epic 4: Intelligence Proactive & Briefings (7 stories | 8 FRs)
   epic-4: backlog
   4-1-heartbeat-engine-core: backlog
   4-2-briefing-matinal-8h: backlog
   4-3-digest-soir-18h: backlog
   4-4-rapport-hebdomadaire: backlog
   4-5-alertes-immediates-push: backlog
+  4-6-agent-conversationnel-task-dispatcher: ready-for-dev  # 2026-02-10: Story créée - Gap critique identifié. Agent conversationnel pour messages libres Telegram. Intent detection, task creation, Trust Layer integration. 6 AC, 32+ tests unitaires, 6 E2E. Dépend de: 1.5, 1.6, 1.9. Estimation: L (25h).
+  4-7-task-management-commands-daily-briefing-integration: ready-for-dev  # 2026-02-10: Story créée - Gap critique #2. Commandes Telegram consultation/gestion tâches (/taches list/search/complete/delete) + intégration briefing matinal (Story 4.2). 8 AC, 18 tests (15 unit + 3 E2E). Migration 020 due_date. Dépend de: 1.6, 1.9, 4.6. Estimation: M (8h).
   epic-4-retrospective: optional
 
   # Epic 5: Interaction Vocale & Personnalite (4 stories | 4 FRs)

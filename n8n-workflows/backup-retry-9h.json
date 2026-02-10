@@ -1,0 +1,172 @@
+{
+  "name": "Friday Backup Retry 9h",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 * * *"
+            }
+          ]
+        }
+      },
+      "id": "retry-cron-9h",
+      "name": "Schedule: 09h00 Daily",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT filename FROM core.backup_metadata WHERE synced_to_pc = false AND backup_date > NOW() - INTERVAL '24 hours' ORDER BY backup_date DESC LIMIT 1",
+        "options": {}
+      },
+      "id": "check-unsynced",
+      "name": "Check Unsynced Backups",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [450, 300],
+      "credentials": {
+        "postgres": {
+          "id": "friday-postgres",
+          "name": "Friday PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{ $json.count }}",
+              "operation": "larger",
+              "value2": 0
+            }
+          ]
+        }
+      },
+      "id": "if-unsynced-exists",
+      "name": "If Unsynced Exists",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "command": "bash /scripts/rsync-to-pc.sh",
+        "options": {}
+      },
+      "id": "retry-sync",
+      "name": "Retry Sync to PC",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [850, 200]
+    },
+    {
+      "parameters": {
+        "url": "http://friday-bot:8080/api/telegram/send",
+        "method": "POST",
+        "jsonParameters": true,
+        "options": {},
+        "bodyParametersJson": "={ \"topic_id\": \"{{ $env.TOPIC_SYSTEM_ID }}\", \"message\": \"✅ Retry sync 9h réussi\\n\\nBackup non syncé à 3h a été transféré avec succès vers PC.\" }"
+      },
+      "id": "notify-retry-success",
+      "name": "Notify Retry Success",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1050, 200]
+    },
+    {
+      "parameters": {
+        "url": "http://friday-bot:8080/api/telegram/send",
+        "method": "POST",
+        "jsonParameters": true,
+        "options": {},
+        "bodyParametersJson": "={ \"topic_id\": \"{{ $env.TOPIC_SYSTEM_ID }}\", \"message\": \"🚨 CRITIQUE: Retry sync 9h échoué\\n\\nBackup non syncé depuis 6h. PC offline ou problème réseau.\\n\\nAction requise: Vérifier PC Mainteneur.\" }"
+      },
+      "id": "notify-retry-failed",
+      "name": "Notify Retry Failed",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1050, 400]
+    }
+  ],
+  "connections": {
+    "Schedule: 09h00 Daily": {
+      "main": [
+        [
+          {
+            "node": "Check Unsynced Backups",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Unsynced Backups": {
+      "main": [
+        [
+          {
+            "node": "If Unsynced Exists",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Unsynced Exists": {
+      "main": [
+        [
+          {
+            "node": "Retry Sync to PC",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retry Sync to PC": {
+      "main": [
+        [
+          {
+            "node": "Notify Retry Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ],
+      "error": [
+        [
+          {
+            "node": "Notify Retry Failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "timezone": "Europe/Paris"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "backup",
+      "id": "backup-tag"
+    },
+    {
+      "name": "retry",
+      "id": "retry-tag"
+    }
+  ],
+  "triggerCount": 1,
+  "updatedAt": "2026-02-10T00:00:00.000Z",
+  "versionId": "1"
+}

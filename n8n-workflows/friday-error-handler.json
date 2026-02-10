@@ -1,0 +1,154 @@
+{
+  "name": "Friday Error Handler (Global)",
+  "nodes": [
+    {
+      "parameters": {},
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        250,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Extract error details from workflow execution\nconst error = items[0].json.error || {};\nconst execution = items[0].json.execution || {};\n\n// Build error summary\nconst errorSummary = {\n  workflow_name: execution.workflowData?.name || 'Unknown',\n  workflow_id: execution.workflowId || 'Unknown',\n  execution_id: execution.id || 'Unknown',\n  error_message: error.message || 'No error message',\n  error_type: error.name || 'Error',\n  node_name: error.node?.name || 'Unknown node',\n  timestamp: new Date().toISOString(),\n  stack_trace: error.stack?.substring(0, 500) || 'No stack trace'\n};\n\nreturn [\n  {\n    json: errorSummary\n  }\n];"
+      },
+      "name": "Parse Error Details",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        450,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://api.telegram.org/bot{{$env.TELEGRAM_BOT_TOKEN}}/sendMessage",
+        "options": {
+          "timeout": 30000
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "chat_id",
+              "value": "={{$env.TELEGRAM_CHAT_ID}}"
+            },
+            {
+              "name": "message_thread_id",
+              "value": "={{$env.TOPIC_SYSTEM_ID}}"
+            },
+            {
+              "name": "text",
+              "value": "🚨 *n8n Workflow Error*\\n\\n**Workflow**: {{$json[\"workflow_name\"]}}\\n**Node**: {{$json[\"node_name\"]}}\\n**Error**: {{$json[\"error_message\"]}}\\n**Type**: {{$json[\"error_type\"]}}\\n**Timestamp**: {{$json[\"timestamp\"]}}\\n\\n**Execution ID**: `{{$json[\"execution_id\"]}}`\\n\\n**Stack trace** (first 500 chars):\\n```\\n{{$json[\"stack_trace\"]}}\\n```"
+            },
+            {
+              "name": "parse_mode",
+              "value": "Markdown"
+            }
+          ]
+        }
+      },
+      "name": "Alert Error (Telegram System)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [
+        650,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Log error to console for n8n logs\nconst error = items[0].json;\nconsole.error('n8n Workflow Error:', JSON.stringify(error, null, 2));\n\n// Return error details for potential database logging (future)\nreturn items;"
+      },
+      "name": "Log to Console",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        850,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "name": "Error Handled",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1050,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Parse Error Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Error Details": {
+      "main": [
+        [
+          {
+            "node": "Alert Error (Telegram System)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alert Error (Telegram System)": {
+      "main": [
+        [
+          {
+            "node": "Log to Console",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log to Console": {
+      "main": [
+        [
+          {
+            "node": "Error Handled",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "global",
+      "id": "1"
+    },
+    {
+      "name": "error-handling",
+      "id": "2"
+    },
+    {
+      "name": "critical",
+      "id": "3"
+    }
+  ],
+  "meta": {
+    "instanceId": "friday-vps"
+  }
+}

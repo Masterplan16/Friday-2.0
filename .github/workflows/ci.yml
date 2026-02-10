@@ -108,7 +108,47 @@ jobs:
           echo "::notice::Lint job completed. All code quality checks passed."
 
   # ────────────────────────────────────────────────────────────
-  # Job 2: Unit Tests - Fast tests without external services
+  # Job 2: Validate Docker Restart Policies (Story 1.13 - AC1)
+  # ────────────────────────────────────────────────────────────
+  validate-restart-policy:
+    name: Validate Docker Restart Policies
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate docker-compose.yml restart policies
+        run: |
+          echo "{\"timestamp\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"level\":\"INFO\",\"message\":\"Validating restart policies in docker-compose.yml\",\"job\":\"validate-restart-policy\"}"
+          echo "::notice::Validating restart policies in docker-compose.yml..."
+          bash scripts/validate-docker-restart-policy.sh docker-compose.yml || {
+            echo "{\"timestamp\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"level\":\"ERROR\",\"message\":\"docker-compose.yml validation failed - missing restart policies\",\"job\":\"validate-restart-policy\"}"
+            echo "::error::docker-compose.yml validation failed - missing restart policies"
+            exit 1
+          }
+          echo "{\"timestamp\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"level\":\"INFO\",\"message\":\"docker-compose.yml validation passed\",\"job\":\"validate-restart-policy\"}"
+
+      - name: Validate docker-compose.services.yml restart policies
+        run: |
+          echo "{\"timestamp\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"level\":\"INFO\",\"message\":\"Validating restart policies in docker-compose.services.yml\",\"job\":\"validate-restart-policy\"}"
+          echo "::notice::Validating restart policies in docker-compose.services.yml..."
+          bash scripts/validate-docker-restart-policy.sh docker-compose.services.yml || {
+            echo "{\"timestamp\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"level\":\"ERROR\",\"message\":\"docker-compose.services.yml validation failed - missing restart policies\",\"job\":\"validate-restart-policy\"}"
+            echo "::error::docker-compose.services.yml validation failed - missing restart policies"
+            exit 1
+          }
+          echo "{\"timestamp\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"level\":\"INFO\",\"message\":\"docker-compose.services.yml validation passed\",\"job\":\"validate-restart-policy\"}"
+
+      - name: Restart policy validation summary
+        if: always()
+        run: |
+          echo "{\"timestamp\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"level\":\"INFO\",\"message\":\"Restart policy validation completed - all services have restart: unless-stopped\",\"job\":\"validate-restart-policy\"}"
+          echo "::notice::✅ All Docker services have restart: unless-stopped configured"
+
+  # ────────────────────────────────────────────────────────────
+  # Job 3: Unit Tests - Fast tests without external services
   # ────────────────────────────────────────────────────────────
   test-unit:
     name: Unit Tests (Python ${{ matrix.python-version }})
@@ -163,7 +203,7 @@ jobs:
           echo "::notice::Unit tests completed for Python ${{ matrix.python-version }}"
 
   # ────────────────────────────────────────────────────────────
-  # Job 3: Integration Tests - With PostgreSQL + Redis services
+  # Job 4: Integration Tests - With PostgreSQL + Redis services
   # ────────────────────────────────────────────────────────────
   test-integration:
     name: Integration Tests (PostgreSQL + Redis)
@@ -273,7 +313,7 @@ jobs:
           echo "::notice::Integration tests completed"
 
   # ────────────────────────────────────────────────────────────
-  # Job 4: Build Validation - Verify reproducible builds
+  # Job 5: Build Validation - Verify reproducible builds
   # ────────────────────────────────────────────────────────────
   build-validation:
     name: Build Validation (Docker Compose)

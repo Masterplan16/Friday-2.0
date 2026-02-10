@@ -1,0 +1,209 @@
+{
+  "name": "Auto-Recover RAM (Story 1.13)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "*/5 * * * *"
+            }
+          ]
+        }
+      },
+      "name": "Schedule Every 5 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [
+        250,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "command": "bash ${FRIDAY_HOME:-/opt/friday}/scripts/monitor-ram.sh --json"
+      },
+      "name": "Check RAM Usage",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        450,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Parse JSON output from monitor-ram.sh\nconst output = items[0].json.stdout;\nconst metrics = JSON.parse(output);\n\n// Check if RAM > 91% (recovery threshold)\nif (metrics.ram_usage_pct >= 91) {\n  return [\n    {\n      json: {\n        trigger_recovery: true,\n        ram_pct: metrics.ram_usage_pct,\n        ram_used_gb: metrics.ram_used_gb,\n        ram_total_gb: metrics.ram_total_gb\n      }\n    }\n  ];\n}\n\n// RAM OK, no recovery needed\nreturn [];"
+      },
+      "name": "Should Trigger Recovery?",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        650,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "command": "bash ${FRIDAY_HOME:-/opt/friday}/scripts/auto-recover-ram.sh"
+      },
+      "name": "Execute Auto-Recovery",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        850,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{$json[\"exitCode\"]}}",
+              "operation": "notEqual",
+              "value2": 0
+            }
+          ]
+        }
+      },
+      "name": "Recovery Failed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1050,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://api.telegram.org/bot{{$env.TELEGRAM_BOT_TOKEN}}/sendMessage",
+        "options": {
+          "timeout": 30000
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "chat_id",
+              "value": "={{$env.TELEGRAM_CHAT_ID}}"
+            },
+            {
+              "name": "message_thread_id",
+              "value": "={{$env.TOPIC_SYSTEM_ID}}"
+            },
+            {
+              "name": "text",
+              "value": "🚨 *Auto-Recovery RAM FAILED*\\n\\nRAM: {{$json[\"ram_pct\"]}}%\\nRecovery script exit code: {{$json[\"exitCode\"]}}\\n\\nManual intervention required!\\n\\nTimestamp: {{$now.toISO()}}"
+            },
+            {
+              "name": "parse_mode",
+              "value": "Markdown"
+            }
+          ]
+        }
+      },
+      "name": "Alert Failed Recovery (Telegram)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [
+        1250,
+        200
+      ]
+    },
+    {
+      "parameters": {},
+      "name": "Recovery Succeeded - No Action",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1250,
+        400
+      ]
+    }
+  ],
+  "connections": {
+    "Schedule Every 5 Minutes": {
+      "main": [
+        [
+          {
+            "node": "Check RAM Usage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check RAM Usage": {
+      "main": [
+        [
+          {
+            "node": "Should Trigger Recovery?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Should Trigger Recovery?": {
+      "main": [
+        [
+          {
+            "node": "Execute Auto-Recovery",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute Auto-Recovery": {
+      "main": [
+        [
+          {
+            "node": "Recovery Failed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recovery Failed?": {
+      "main": [
+        [
+          {
+            "node": "Alert Failed Recovery (Telegram)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Recovery Succeeded - No Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {},
+  "staticData": null,
+  "tags": [
+    {
+      "name": "story-1-13",
+      "id": "1"
+    },
+    {
+      "name": "self-healing",
+      "id": "2"
+    },
+    {
+      "name": "critical",
+      "id": "3"
+    }
+  ],
+  "meta": {
+    "instanceId": "friday-vps"
+  }
+}

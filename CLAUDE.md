@@ -553,8 +553,16 @@ flake8 agents/                          # Linting
 # Déploiement
 ./scripts/deploy.sh
 
-# Monitoring RAM
-./scripts/monitor-ram.sh                # Alerte si >85%
+# Monitoring RAM (Self-Healing Story 1.13)
+./scripts/monitor-ram.sh                # Alerte si >85% (40.8 Go sur VPS-4)
+./scripts/monitor-ram.sh --json         # Output JSON structuré
+./scripts/auto-recover-ram.sh           # Auto-recovery RAM si >91%
+./scripts/detect-crash-loop.sh          # Détection crash loops (>3 restarts/1h)
+
+# Self-Healing Setup
+sudo ./scripts/setup-unattended-upgrades.sh  # OS updates automatiques
+./scripts/healthcheck-all.sh            # Healthcheck complet tous services
+./scripts/validate-docker-restart-policy.sh docker-compose.yml  # Valide restart policies
 
 # Backup
 ./scripts/backup.sh                     # Backup BDD + volumes

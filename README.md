@@ -95,6 +95,37 @@ Composant transversal garantissant la confiance utilisateur. Chaque action de Fr
 
 ---
 
+## 🛡️ Self-Healing ✅
+
+Friday 2.0 intègre un système de **self-healing automatique** en 4 tiers pour garantir une disponibilité 24/7 sans intervention manuelle.
+
+| Tier | Capacité | RTO | Automatisation |
+|------|----------|-----|----------------|
+| **Tier 1** | Docker restart policies (`unless-stopped`) | < 30s | ✅ 100% auto |
+| **Tier 2** | Auto-recovery RAM (seuil 91%, kill services lourds prioritaires) | < 2min | ✅ 100% auto |
+| **Tier 2** | OS security updates automatiques (unattended-upgrades, reboot 03:30) | N/A | ✅ 100% auto |
+| **Tier 2** | Crash loop detection (>3 restarts/1h → stop service + alerte) | < 30s | ✅ 100% auto |
+| **Tier 3-4** | Monitoring externe + ML patterns (Epic 12 - Sprint 2+) | TBD | 🔜 Roadmap |
+
+**Seuils RAM (VPS-4 48 Go)** :
+- 🟡 **85%** (40.8 Go) → Alerte Telegram System
+- 🔴 **91%** (43.7 Go) → Auto-recovery : kill services lourds (TTS → STT → OCR)
+- 🚨 **95%** (45.6 Go) → Emergency : kill tous services lourds
+
+**Services protégés** : postgres, redis, friday-gateway, friday-bot, n8n, emailengine, presidio
+
+**Commande Telegram :** `/recovery` (liste événements) · `/recovery -v` (détails) · `/recovery stats` (métriques)
+
+**Scripts disponibles** :
+- `scripts/monitor-ram.sh` — Monitoring RAM + alertes (cron */5min)
+- `scripts/auto-recover-ram.sh` — Auto-recovery RAM (n8n workflow)
+- `scripts/detect-crash-loop.sh` — Détection crash loops (n8n workflow */10min)
+- `scripts/setup-unattended-upgrades.sh` — Setup OS updates automatiques
+
+**Documentation complète** : [docs/self-healing-runbook.md](docs/self-healing-runbook.md)
+
+---
+
 ## 🗂️ Structure du projet
 
 ```

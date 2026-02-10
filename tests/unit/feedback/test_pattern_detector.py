@@ -58,9 +58,9 @@ def test_calculate_similarity_completely_different():
 
 
 @pytest.mark.asyncio
-async def test_detect_patterns_empty():
+async def test_detect_patterns_empty(mock_db_pool):
     """Test detect_patterns avec aucune correction."""
-    pool, conn = mock_db_pool()
+    pool, conn = mock_db_pool
     conn.fetch.return_value = []
 
     detector = PatternDetector(db_pool=pool)
@@ -69,9 +69,9 @@ async def test_detect_patterns_empty():
 
 
 @pytest.mark.asyncio
-async def test_detect_patterns_single_correction():
+async def test_detect_patterns_single_correction(mock_db_pool):
     """Test detect_patterns avec 1 seule correction (pas de cluster)."""
-    pool, conn = mock_db_pool()
+    pool, conn = mock_db_pool
     conn.fetch.return_value = [
         {
             "id": uuid4(),
@@ -91,9 +91,9 @@ async def test_detect_patterns_single_correction():
 
 
 @pytest.mark.asyncio
-async def test_detect_patterns_two_similar_corrections():
+async def test_detect_patterns_two_similar_corrections(mock_db_pool):
     """Test detect_patterns avec 2 corrections similaires (cluster valide)."""
-    pool, conn = mock_db_pool()
+    pool, conn = mock_db_pool
     receipt_1 = uuid4()
     receipt_2 = uuid4()
 
@@ -128,9 +128,9 @@ async def test_detect_patterns_two_similar_corrections():
 
 
 @pytest.mark.asyncio
-async def test_detect_patterns_different_modules():
+async def test_detect_patterns_different_modules(mock_db_pool):
     """Test detect_patterns avec corrections de modules différents (pas de cluster)."""
-    pool, conn = mock_db_pool()
+    pool, conn = mock_db_pool
 
     conn.fetch.return_value = [
         {
@@ -161,9 +161,9 @@ async def test_detect_patterns_different_modules():
 
 
 @pytest.mark.asyncio
-async def test_detect_patterns_low_similarity():
+async def test_detect_patterns_low_similarity(mock_db_pool):
     """Test detect_patterns avec 2 corrections différentes (similarité < 0.85)."""
-    pool, conn = mock_db_pool()
+    pool, conn = mock_db_pool
 
     conn.fetch.return_value = [
         {
@@ -221,9 +221,9 @@ def test_extract_common_keywords():
 
 
 @pytest.mark.asyncio
-async def test_get_recent_corrections_days_parameter():
+async def test_get_recent_corrections_days_parameter(mock_db_pool):
     """Test get_recent_corrections avec paramètre days custom."""
-    pool, conn = mock_db_pool()
+    pool, conn = mock_db_pool
     conn.fetch.return_value = []
 
     detector = PatternDetector(db_pool=pool)
@@ -258,9 +258,9 @@ async def test_pattern_detector_connect_disconnect():
 
 
 @pytest.mark.asyncio
-async def test_detect_patterns_real_scenario():
+async def test_detect_patterns_real_scenario(mock_db_pool):
     """Test detect_patterns avec scénario réaliste (3 corrections URSSAF)."""
-    pool, conn = mock_db_pool()
+    pool, conn = mock_db_pool
 
     # Scénario : owner corrige 3x "URSSAF" -> finance
     conn.fetch.return_value = [

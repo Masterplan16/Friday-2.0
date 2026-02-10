@@ -193,18 +193,18 @@ class TestAnonymizeTextFailExplicit:
         mock_client_class.return_value.__aenter__.return_value = mock_client
 
         # Mock analyzer response
-        mock_analyze_response = AsyncMock()
+        mock_analyze_response = MagicMock()
         mock_analyze_response.raise_for_status = MagicMock()
-        mock_analyze_response.json.return_value = [
+        mock_analyze_response.json = MagicMock(return_value=[
             {"entity_type": "PERSON", "start": 0, "end": 4, "score": 0.9}
-        ]
+        ])
 
         # Mock anonymizer response SANS clé "text" (bug)
-        mock_anonymize_response = AsyncMock()
+        mock_anonymize_response = MagicMock()
         mock_anonymize_response.raise_for_status = MagicMock()
-        mock_anonymize_response.json.return_value = {
+        mock_anonymize_response.json = MagicMock(return_value={
             "error": "anonymization failed"
-        }  # Pas de clé "text"
+        })  # Pas de clé "text"
 
         mock_client.post.side_effect = [mock_analyze_response, mock_anonymize_response]
 

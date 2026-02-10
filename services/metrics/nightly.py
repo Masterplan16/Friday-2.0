@@ -161,11 +161,12 @@ class MetricsAggregator:
 
         query = """
             INSERT INTO core.trust_metrics (
-                module, action_type, week_start, total_actions, corrected_actions,
+                module, action_type, week_start, week_end, total_actions, corrected_actions,
                 accuracy, avg_confidence, current_trust_level, recommended_trust_level
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
             ON CONFLICT (module, action_type, week_start)
             DO UPDATE SET
+                week_end = EXCLUDED.week_end,
                 total_actions = EXCLUDED.total_actions,
                 corrected_actions = EXCLUDED.corrected_actions,
                 accuracy = EXCLUDED.accuracy,
@@ -181,6 +182,10 @@ class MetricsAggregator:
                 accuracy = metric["accuracy"]
                 total = metric["total_actions"]
 
+                # Calculer week_end (7 jours après week_start)
+                week_start = metric["week_start"]
+                week_end = week_start + timedelta(days=7)
+
                 # Déterminer trust level actuel
                 current_trust = trust_levels.get(module, {}).get(action_type, "propose")
 
@@ -194,7 +199,8 @@ class MetricsAggregator:
                     query,
                     module,
                     action_type,
-                    metric["week_start"],
+                    week_start,
+                    week_end,
                     total,
                     metric["corrected_actions"],
                     accuracy,
@@ -226,7 +232,7 @@ class MetricsAggregator:
 
             current_trust = trust_levels.get(module, {}).get(action_type, "propose")
 
-            # Règle de rétrogradation : accuracy <90% sur 1 semaine + sample >=10
+            # Règle de rétrogradation auto → propose : accuracy <90% sur 1 semaine + sample >=10
             if total >= 10 and accuracy < 0.90 and current_trust == "auto":
                 retrogradations.append(
                     {
@@ -239,11 +245,109 @@ class MetricsAggregator:
                     }
                 )
 
+            # Règle de rétrogradation propose → blocked : accuracy <70% sur 1 semaine + sample >=5
+            if total >= 5 and accuracy < 0.70 and current_trust == "propose":
+                retrogradations.append(
+                    {
+                        "module": module,
+                        "action": action_type,
+                        "accuracy": accuracy,
+                        "total_actions": total,
+                        "old_level": current_trust,
+                        "new_level": "blocked",
+                    }
+                )
+
         if retrogradations:
             logger.warning("Retrogradations detected", count=len(retrogradations))
+            await self.apply_retrogradations(retrogradations)
             await self.send_retrogradation_alerts(retrogradations)
 
         return retrogradations
+
+    async def apply_retrogradations(self, retrogradations: list[dict[str, Any]]) -> None:
+        """
+        Applique les rétrogradations en modifiant config/trust_levels.yaml.
+
+        Args:
+            retrogradations: Liste des rétrogradations à appliquer
+        """
+        import yaml
+
+        config_path = "config/trust_levels.yaml"
+
+        # Charger config actuelle
+        with open(config_path, "r", encoding="utf-8") as f:
+            config = yaml.safe_load(f)
+
+        # Initialiser modules si n'existe pas
+        if "modules" not in config:
+            config["modules"] = {}
+
+        # Appliquer rétrogradations
+        for retro in retrogradations:
+            module = retro["module"]
+            action = retro["action"]
+            new_level = retro["new_level"]
+
+            # Créer module si n'existe pas
+            if module not in config["modules"]:
+                config["modules"][module] = {}
+
+            # Mettre à jour trust level
+            config["modules"][module][action] = new_level
+
+            logger.warning(
+                "Trust level retrogradé",
+                module=module,
+                action=action,
+                old_level=retro["old_level"],
+                new_level=new_level,
+                accuracy=retro["accuracy"],
+            )
+
+        # Sauvegarder config modifiée
+        with open(config_path, "w", encoding="utf-8") as f:
+            yaml.dump(config, f, allow_unicode=True)
+
+        # Enregistrer timestamp transition dans BDD (AC7 anti-oscillation)
+        if self.db_pool:
+            await self._update_trust_change_timestamps(retrogradations)
+
+        logger.info("Trust levels updated in config file", count=len(retrogradations))
+
+    async def _update_trust_change_timestamps(self, retrogradations: list[dict[str, Any]]) -> None:
+        """
+        Met à jour last_trust_change_at dans core.trust_metrics pour anti-oscillation.
+
+        Args:
+            retrogradations: Liste des rétrogradations appliquées
+        """
+        if not self.db_pool:
+            return
+
+        timestamp = datetime.utcnow()
+
+        query = """
+            UPDATE core.trust_metrics
+            SET last_trust_change_at = $1
+            WHERE module = $2 AND action_type = $3
+        """
+
+        async with self.db_pool.acquire() as conn:
+            for retro in retrogradations:
+                await conn.execute(
+                    query,
+                    timestamp,
+                    retro["module"],
+                    retro["action"],
+                )
+
+        logger.info(
+            "Trust change timestamps updated",
+            count=len(retrogradations),
+            timestamp=timestamp.isoformat(),
+        )
 
     async def send_retrogradation_alerts(self, retrogradations: list[dict[str, Any]]) -> None:
         """
@@ -255,15 +359,25 @@ class MetricsAggregator:
         if not self.redis_client:
             raise RuntimeError("Not connected to Redis")
 
+        # Mapping raisons selon transition
+        reason_map = {
+            ("auto", "propose"): "accuracy < 90% on 1 week with sample >= 10",
+            ("propose", "blocked"): "accuracy < 70% on 1 week with sample >= 5",
+        }
+
         for retro in retrogradations:
+            old_level = retro["old_level"]
+            new_level = retro["new_level"]
+            reason = reason_map.get((old_level, new_level), f"retrogradation {old_level} -> {new_level}")
+
             event_data = {
                 "module": retro["module"],
                 "action": retro["action"],
-                "old_level": retro["old_level"],
-                "new_level": retro["new_level"],
+                "old_level": old_level,
+                "new_level": new_level,
                 "accuracy": retro["accuracy"],
                 "total_actions": retro["total_actions"],
-                "reason": "accuracy < 90% on 1 week with sample >= 10",
+                "reason": reason,
             }
 
             await self.redis_client.xadd(

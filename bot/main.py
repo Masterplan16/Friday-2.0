@@ -9,6 +9,7 @@ Point d'entrée principal du bot :
 """
 
 import asyncio
+import os
 import signal
 import sys
 import time
@@ -25,7 +26,7 @@ from telegram.ext import (
 )
 
 from bot.config import load_bot_config, validate_bot_permissions, ConfigurationError
-from bot.handlers import commands, messages
+from bot.handlers import commands, messages, trust_commands
 
 logger = structlog.get_logger(__name__)
 
@@ -104,6 +105,9 @@ class FridayBot:
         self.application.add_handler(CommandHandler("confiance", commands.confiance_command_stub))
         self.application.add_handler(CommandHandler("stats", commands.stats_command_stub))
         self.application.add_handler(CommandHandler("budget", commands.budget_command_stub))
+
+        # Commandes Story 1.8 - Trust management (AC4, AC5, AC6)
+        self.application.add_handler(CommandHandler("trust", trust_commands.trust_command_router))
 
         # Messages texte libres (Chat & Proactive uniquement)
         self.application.add_handler(

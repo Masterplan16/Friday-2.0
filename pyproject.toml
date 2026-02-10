@@ -31,8 +31,8 @@ dependencies = [
     "presidio-anonymizer>=2.2.0",
     "spacy>=3.8.0",
 
-    # Vectorstore
-    "qdrant-client>=1.12.0",
+    # Vectorstore - pgvector dans PostgreSQL (D19)
+    "pgvector>=0.3.6",
 
     # Telegram
     "python-telegram-bot>=21.0",
@@ -47,6 +47,7 @@ dependencies = [
     "python-dotenv>=1.0.0",
     "tenacity>=9.0.0",
     "croniter>=5.0.0",
+    "schedule>=1.2.0",
 ]
 
 [project.optional-dependencies]
@@ -112,7 +113,7 @@ disallow_incomplete_defs = true
 module = [
     "presidio_analyzer.*",
     "presidio_anonymizer.*",
-    "qdrant_client.*",
+    "pgvector.*",
     "langgraph.*",
     "spacy.*",
     "faster_whisper.*",

@@ -148,7 +148,8 @@ jobs:
         run: |
           echo "{\"timestamp\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"level\":\"INFO\",\"message\":\"Running unit tests (Python ${{ matrix.python-version }})\",\"job\":\"test-unit\"}"
           echo "::notice::Running unit tests (Python ${{ matrix.python-version }})..."
-          pytest tests/unit -m unit -v --tb=short --cov=agents --cov-report=term-missing || {
+          # Pas de filtre -m unit: tous les tests dans tests/unit/ sont unitaires par convention
+          pytest tests/unit -v --tb=short --cov=agents --cov-report=term-missing || {
             echo "{\"timestamp\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"level\":\"ERROR\",\"message\":\"Unit tests failed on Python ${{ matrix.python-version }}\",\"job\":\"test-unit\"}"
             echo "::error::Unit tests failed on Python ${{ matrix.python-version }}"
             exit 1

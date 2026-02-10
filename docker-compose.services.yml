@@ -236,3 +236,34 @@ services:
       timeout: 5s
       retries: 3
       start_period: 30s
+
+  # ============================================
+  # Watchtower - Docker Image Monitoring
+  # RAM: ~100 Mo
+  # Story 1.14 - Monitor-only mode (NO auto-updates)
+  # ============================================
+  watchtower:
+    image: containrrr/watchtower:latest
+    container_name: friday-watchtower
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      - WATCHTOWER_MONITOR_ONLY=true
+      - WATCHTOWER_POLL_INTERVAL=86400
+      - WATCHTOWER_SCHEDULE=0 0 3 * * *
+      - WATCHTOWER_NOTIFICATIONS=shoutrrr
+      - WATCHTOWER_NOTIFICATION_URL=telegram://${TELEGRAM_BOT_TOKEN}@telegram?channels=${TOPIC_SYSTEM_ID}
+      - WATCHTOWER_CLEANUP=false
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"
+    networks:
+      friday-network:
+        # IP fixe pour stabilité logs/monitoring (plage: .30-.40 réservée services infra)
+        ipv4_address: 172.20.0.37
+    deploy:
+      resources:
+        limits:
+          memory: 200M
+        reservations:
+          memory: 100M

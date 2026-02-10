@@ -11,6 +11,10 @@ rate_limit_msg_per_min: 18  # Marge sécurité vs limite groupes (20 msg/min)
 # Message handling
 max_message_length: 4096  # Longueur max Telegram (BUG-1.9.9 fix)
 
+# Validation timeout (Story 1.10, AC6)
+# null = pas de timeout (infini), nombre = heures avant expiration
+validation_timeout_hours: null
+
 # Topics configuration
 # Note: Les thread_ids sont chargés depuis les variables d'environnement
 # Ce fichier contient uniquement les métadonnées des topics

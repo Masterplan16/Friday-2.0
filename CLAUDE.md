@@ -463,10 +463,12 @@ bot/
 ├── config.py            # Configuration telegram.yaml + envvars
 ├── routing.py           # Routage événements → topics
 ├── models.py            # Pydantic models (TelegramEvent, BotConfig)
+├── action_executor.py   # Exécution actions approuvées (Story 1.10)
 ├── handlers/
 │   ├── commands.py      # /help, /start, stubs Story 1.11
 │   ├── messages.py      # Messages texte + onboarding
-│   └── callbacks.py     # Inline buttons (Story 1.10)
+│   ├── callbacks.py     # Inline buttons Approve/Reject (Story 1.10)
+│   └── corrections.py   # Inline button Correct (Story 1.7/1.10)
 └── requirements.txt
 ```
 
@@ -607,7 +609,7 @@ Prérequis à tout. Infrastructure, Trust Layer, sécurité RGPD, Telegram, Self
 | **1.7** | Feedback Loop & Correction Rules | backlog | — |
 | **1.8** | Trust Metrics & Rétrogradation | ready-for-dev | `services/metrics/nightly.py` |
 | **1.9** | Bot Telegram Core & Topics | backlog | — |
-| **1.10** | Inline Buttons & Validation | backlog | — |
+| **1.10** | Inline Buttons & Validation | **review** | `bot/handlers/callbacks.py`, `bot/action_executor.py`, `services/metrics/expire_validations.py`, `database/migrations/017_*.sql` |
 | **1.11** | Commandes Telegram Trust & Budget | backlog | — |
 | **1.12** | Backup Chiffré & Sync PC | ready-for-dev | `tests/e2e/test_backup_restore.sh`, `scripts/monitor-ram.sh` |
 | **1.13** | Self-Healing Tier 1-2 | ready-for-dev | `scripts/monitor-ram.sh` |

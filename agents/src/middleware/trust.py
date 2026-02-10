@@ -10,17 +10,17 @@ Ce module implémente le décorateur @friday_action qui :
 """
 
 import functools
-import logging
 import os
 import time
 from typing import Any, Callable, Optional
 
 import asyncpg
+import structlog
 import yaml
 from agents.src.middleware.models import ActionResult, CorrectionRule
 from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 class TrustManager:
@@ -82,12 +82,12 @@ class TrustManager:
                 config = yaml.safe_load(f)
                 self.trust_levels = config.get("modules", {})
                 self._loaded = True
-                logger.info("Trust levels loaded for %d modules", len(self.trust_levels))
+                logger.info("Trust levels loaded", module_count=len(self.trust_levels))
         except FileNotFoundError:
-            logger.error("Trust levels config not found: %s", config_path)
+            logger.error("Trust levels config not found", config_path=config_path)
             raise
         except yaml.YAMLError as e:
-            logger.error("Failed to parse trust levels YAML: %s", e)
+            logger.error("Failed to parse trust levels YAML", error=str(e))
             raise
 
     def get_trust_level(self, module: str, action: str) -> str:
@@ -161,7 +161,7 @@ class TrustManager:
             for row in rows
         ]
 
-        logger.info("Loaded %d correction rules for %s.%s", len(rules), module, action)
+        logger.info("Loaded correction rules", count=len(rules), module=module, action=action)
         return rules
 
     def format_rules_for_prompt(self, rules: list[CorrectionRule]) -> str:
@@ -219,7 +219,7 @@ class TrustManager:
                 receipt_data["status"],
             )
 
-        logger.info("Receipt created: %s (%s.%s)", receipt_id, result.module, result.action_type)
+        logger.info("Receipt created", receipt_id=str(receipt_id), module=result.module, action=result.action_type)
         return str(receipt_id)
 
     async def send_telegram_validation(self, result: ActionResult) -> str:
@@ -251,23 +251,52 @@ class TrustManager:
             )
             return "PENDING_TELEGRAM"
 
+        # BUG-1.10.7 fix: Valider confidence (0.0-1.0)
+        confidence = max(0.0, min(1.0, result.confidence if result.confidence is not None else 0.0))
+
+        # BUG-1.10.8 fix: Escape markdown special chars dans les champs utilisateur
+        def _escape_md(text: str) -> str:
+            for char in ("*", "_", "`", "[", "]"):
+                text = text.replace(char, f"\\{char}")
+            return text
+
+        input_safe = _escape_md(result.input_summary or "N/A")
+        output_safe = _escape_md(result.output_summary or "N/A")
+
+        # BUG-1.10.6 fix: Tronquer reasoning si >500 chars
+        reasoning = result.reasoning or "N/A"
+        if len(reasoning) > 500:
+            reasoning = reasoning[:497] + "..."
+        reasoning_safe = _escape_md(reasoning)
+
         # Préparer le message de validation
         message_text = (
             f"🤖 **Action en attente de validation**\n\n"
             f"**Module** : `{result.module}`\n"
             f"**Action** : `{result.action_type}`\n"
-            f"**Confidence** : {result.confidence:.2f}\n\n"
-            f"**Input** : {result.input_summary}\n"
-            f"**Output** : {result.output_summary}\n\n"
-            f"**Reasoning** : {result.reasoning[:200]}...\n\n"
+            f"**Confidence** : {confidence:.0%}\n\n"
+            f"**Input** : {input_safe}\n"
+            f"**Output** : {output_safe}\n\n"
+            f"**Reasoning** : {reasoning_safe}\n\n"
             f"Que veux-tu faire ?"
         )
 
+        # BUG-1.10.6 fix: Vérifier longueur totale message (<4096 chars)
+        if len(message_text) > 3900:
+            message_text = message_text[:3900] + "\n\n_(tronqué)_"
+
         # Créer inline buttons [Approve] [Reject] [Correct]
-        receipt_id = result.payload.get("receipt_id", result.action_id)
+        receipt_id = str(result.payload.get("receipt_id", result.action_id))
+
+        # BUG-1.10.1 fix: Valider callback_data <64 bytes (contrainte Telegram API)
+        approve_data = f"approve_{receipt_id}"
+        if len(approve_data.encode("utf-8")) > 64:
+            logger.error("callback_data exceeds 64 bytes", size=len(approve_data.encode("utf-8")))
+            return "PENDING_TELEGRAM"
+
         keyboard = [
             [
-                InlineKeyboardButton("✅ Approve", callback_data=f"approve_{receipt_id}"),
+                InlineKeyboardButton("✅ Approve", callback_data=approve_data),
                 InlineKeyboardButton("❌ Reject", callback_data=f"reject_{receipt_id}"),
                 InlineKeyboardButton("📝 Correct", callback_data=f"correct_{receipt_id}"),
             ]
@@ -285,20 +314,20 @@ class TrustManager:
             )
 
             logger.info(
-                "Telegram validation sent for %s.%s (receipt=%s, message_id=%d)",
-                result.module,
-                result.action_type,
-                receipt_id,
-                message.message_id,
+                "Telegram validation sent",
+                module=result.module,
+                action=result.action_type,
+                receipt_id=receipt_id,
+                message_id=message.message_id,
             )
             return str(message.message_id)
 
         except Exception as e:
             logger.error(
-                "Failed to send Telegram validation for %s.%s: %s",
-                result.module,
-                result.action_type,
-                e,
+                "Failed to send Telegram validation",
+                module=result.module,
+                action=result.action_type,
+                error=str(e),
                 exc_info=True,
             )
             return "PENDING_TELEGRAM"
@@ -381,11 +410,11 @@ def friday_action(
             except (ValueError, RuntimeError) as e:
                 if trust_default:
                     logger.warning(
-                        "Using default trust level '%s' for %s.%s: %s",
-                        trust_default,
-                        module,
-                        action,
-                        e,
+                        "Using default trust level",
+                        trust_default=trust_default,
+                        module=module,
+                        action=action,
+                        error=str(e),
                     )
                     trust_level = trust_default
                 else:
@@ -421,10 +450,10 @@ def friday_action(
                     status="rejected",  # Action failed due to exception
                 )
                 logger.error(
-                    "Action %s.%s failed: %s",
-                    module,
-                    action,
-                    e,
+                    "Action failed",
+                    module=module,
+                    action=action,
+                    error=str(e),
                     exc_info=True,
                 )
                 # On crée quand même un receipt pour traçabilité
@@ -439,36 +468,39 @@ def friday_action(
             # 6. Appliquer le trust level
             if trust_level == "auto":
                 result.status = "auto"
-                # Exécuté automatiquement, notifie après coup
                 logger.info(
-                    "Action %s.%s executed automatically (trust=auto, confidence=%.2f)",
-                    module,
-                    action,
-                    result.confidence,
+                    "Action executed automatically",
+                    module=module,
+                    action=action,
+                    trust="auto",
+                    confidence=result.confidence,
                 )
             elif trust_level == "propose":
                 result.status = "pending"
-                # Attend validation Telegram
                 logger.info(
-                    "Action %s.%s requires validation (trust=propose)",
-                    module,
-                    action,
+                    "Action requires validation",
+                    module=module,
+                    action=action,
+                    trust="propose",
                 )
-                await trust_manager.send_telegram_validation(result)
             elif trust_level == "blocked":
                 result.status = "blocked"
-                # Analyse uniquement, jamais d'action
                 logger.info(
-                    "Action %s.%s blocked (trust=blocked, analysis only)",
-                    module,
-                    action,
+                    "Action blocked (analysis only)",
+                    module=module,
+                    action=action,
+                    trust="blocked",
                 )
             else:
                 raise ValueError(f"Invalid trust level: {trust_level}")
 
-            # 7. Créer receipt dans core.action_receipts
+            # 7. C2 fix: Creer receipt AVANT envoi Telegram (evite race condition)
             receipt_id = await trust_manager.create_receipt(result)
             result.payload["receipt_id"] = receipt_id
+
+            # 8. Envoyer validation Telegram APRES creation receipt
+            if trust_level == "propose":
+                await trust_manager.send_telegram_validation(result)
 
             return result
 

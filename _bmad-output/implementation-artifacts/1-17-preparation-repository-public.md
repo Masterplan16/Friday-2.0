@@ -874,33 +874,67 @@ git filter-branch --force --index-filter \
 
 ### Debug Log References
 
-*À compléter pendant implémentation*
+**Commits Story 1.17** :
+- `84c4f40` - security: configure SOPS/age, encrypt secrets, rotate Telegram token
+- `9cf1334` - feat(security): enhance .gitignore with complete secret patterns
+- `c1f8b75` - docs(security): add comprehensive SECURITY.md
+- `bc66a73` - ci(security): enable GitHub Dependabot for dependency updates
+- `6a85a97` - test(e2e): add comprehensive repository security tests
+- `6e83622` - docs(security): complete Story 1.17 documentation and validation
+- `c3cb968` - Stories 1.16 + 1.17: CI/CD Pipeline & Repository Security (#1) - PR merged
+- `75616e2` - security: replace real Telegram token with fake example
+- `5d6540c` - security(CRITICAL): add .env to .gitignore
+
+**Tests E2E** :
+- `tests/e2e/test_repo_security.sh` - 6 tests sécurité (Git scan, .gitignore, SOPS, branch protection, Dependabot)
+- Tous tests PASS ✅
 
 ### Completion Notes List
 
-*À compléter après implémentation*
+**✅ Story 1.17 COMPLÉTÉE** (2026-02-10)
+
+**Implémentation réussie** :
+- 11/11 AC validés (SOPS/age config, .env chiffré, tokens nettoyés, rotation Telegram, scan Git, SECURITY.md, LICENSE, branch protection, Dependabot, CI/CD validé)
+- 57/57 subtasks complétées
+- 8 fichiers créés (SECURITY.md, LICENSE, .env.enc, .env.example, dependabot.yml, security-audit.md, pre-publication-checklist.md, test_repo_security.sh)
+- 5 fichiers modifiés (.sops.yaml, .gitignore, README.md, setup_telegram_auto.py, secrets-management.md)
+- 1 fichier supprimé (.env en clair)
+- PR #1 mergée (Stories 1.16 + 1.17)
+- 9 commits Story 1.17 dans master
+
+**Corrections code review (2026-02-10)** :
+- ✅ Status corrigé : ready-for-dev → done
+- ✅ LICENSE copyright : "Friday 2.0 Project" → "Mainteneur"
+- ✅ .gitignore duplication `.env` supprimée
+- ✅ README badge licence MIT ajouté
+- ✅ dependabot.yml username "Masterplan16" → "mainteneur" (placeholder générique)
+- ✅ SECURITY.md email placeholder rendu explicite (TODO créer alias)
+- ✅ File List mise à jour avec fichiers réels + tailles
+- ✅ Dev Agent Record complété
+- ✅ Change Log complété
+- ✅ sprint-status.yaml synchronisé (backlog → done)
 
 ### File List
 
-**Fichiers à créer** (9 nouveaux) :
-- `SECURITY.md` (politique sécurité + responsible disclosure)
-- `LICENSE` (MIT, copyright Mainteneur 2026)
-- `.env.enc` (secrets chiffrés via SOPS)
-- `.env.example` (structure secrets, valeurs fictives)
-- `.github/dependabot.yml` (config pip + docker ecosystems)
-- `docs/security-audit.md` (procédure scan Git + audit mensuel)
-- `docs/pre-publication-checklist.md` (validation avant repo public)
-- `tests/e2e/test_repo_security.sh` (6 tests E2E sécurité)
+**Fichiers créés** (8 nouveaux) :
+- `SECURITY.md` - 157 lignes, politique sécurité complète + responsible disclosure
+- `LICENSE` - 22 lignes, MIT License, copyright Mainteneur 2026
+- `.env.enc` - 4862 bytes, secrets chiffrés SOPS (TELEGRAM_BOT_TOKEN, ANTHROPIC_API_KEY, DATABASE_URL, etc.)
+- `.env.example` - 8250 bytes, structure complète avec commentaires, valeurs fictives
+- `.github/dependabot.yml` - 115 lignes, 6 ecosystems (pip agents/services/bot, docker, github-actions)
+- `docs/security-audit.md` - 6910 bytes, procédure scan git-secrets + patterns Friday + audit mensuel
+- `docs/pre-publication-checklist.md` - 6965 bytes, 11 AC validés, checklist complète
+- `tests/e2e/test_repo_security.sh` - 7441 bytes, 6 tests E2E (Git clean, .gitignore, SOPS, branch protection, Dependabot)
 
-**Fichiers à modifier** (5) :
-- `.sops.yaml` (mise à jour clé publique age Mainteneur)
-- `.gitignore` (vérification patterns sensibles)
-- `README.md` (section Sécurité + badge licence + liens docs)
-- `scripts/setup_telegram_auto.py` (supprimer tokens hardcodés → os.getenv())
-- `docs/secrets-management.md` (mise à jour clé publique exemples)
+**Fichiers modifiés** (5) :
+- `.sops.yaml` - Clé publique age Mainteneur ajoutée (age17zcpkgjxdyk6g34anhymukncq49dtf6k4f3vgp5fchsv04a8quzq7rjn8t)
+- `.gitignore` - Duplication `.env` ligne 149 supprimée (ligne 46 conservée)
+- `README.md` - Badge licence MIT ajouté (ligne 329), copyright Mainteneur corrigé (ligne 377)
+- `scripts/setup_telegram_auto.py` - Tokens hardcodés supprimés, os.getenv() + fail-explicit ajouté (lignes 21-34)
+- `docs/secrets-management.md` - Clé publique Mainteneur documentée
 
-**Fichiers à supprimer** (1) :
-- `.env` (après chiffrement → `.env.enc`, jamais committé)
+**Fichiers supprimés** (1) :
+- `.env` - Chiffré vers `.env.enc`, supprimé du working directory (gitignored)
 
 ---
 
@@ -909,6 +943,8 @@ git filter-branch --force --index-filter \
 | Date | Changements |
 |------|-------------|
 | 2026-02-10 | **Story 1.17 créée** — Préparation Repository Public : SOPS/age config, .env chiffré, tokens hardcodés nettoyés, rotation Telegram, scan Git, SECURITY.md, LICENSE, branch protection, Dependabot, tests E2E sécurité (11 AC, 12 tasks, 57 subtasks) |
+| 2026-02-10 | **Implémentation complète** — 8 fichiers créés (SECURITY.md 157L, LICENSE, .env.enc 4.8KB, .env.example 8.2KB, dependabot.yml 115L, security-audit.md 6.9KB, pre-publication-checklist.md 6.9KB, test_repo_security.sh 7.4KB), 5 fichiers modifiés (.sops.yaml clé age, .gitignore, README.md, setup_telegram_auto.py, secrets-management.md), 9 commits, PR #1 mergée |
+| 2026-02-10 | **Code review adversarial** — 13 issues corrigés (4C+4H+3M+2L) : Status done, tasks cochées [x], LICENSE copyright Mainteneur, .gitignore duplication supprimée, README badge licence, dependabot.yml placeholder générique, SECURITY.md email TODO explicite, File List + Dev Agent Record + Change Log complétés, sprint-status.yaml synced done |
 
 ---
 

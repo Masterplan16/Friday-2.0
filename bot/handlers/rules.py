@@ -20,7 +20,11 @@ class RulesHandler:
 
     async def list_rules(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """/rules list : Affiche règles actives triées par priorité (AC5)."""
-        query = "SELECT id, module, action_type, rule_name, priority, hit_count FROM core.correction_rules WHERE active = true ORDER BY priority ASC LIMIT 20"
+        query = (
+            "SELECT id, module, action_type, rule_name, priority, hit_count "
+            "FROM core.correction_rules WHERE active = true "
+            "ORDER BY priority ASC LIMIT 20"
+        )
 
         async with self.db_pool.acquire() as conn:
             rows = await conn.fetch(query)
@@ -31,7 +35,10 @@ class RulesHandler:
 
         text = "📋 **Règles actives**\n\n"
         for row in rows:
-            text += f"• `{row['rule_name']}` (P{row['priority']}, {row['hit_count']}x)\n  {row['module']}.{row['action_type']}\n"
+            text += (
+                f"• `{row['rule_name']}` (P{row['priority']}, {row['hit_count']}x)\n"
+                f"  {row['module']}.{row['action_type']}\n"
+            )
 
         await update.message.reply_text(text, parse_mode="Markdown")
 
@@ -75,7 +82,10 @@ class RulesHandler:
             return
 
         rule_id = context.args[0]
-        query = "UPDATE core.correction_rules SET active = false WHERE id::text LIKE $1 || '%' RETURNING rule_name"
+        query = (
+            "UPDATE core.correction_rules SET active = false "
+            "WHERE id::text LIKE $1 || '%' RETURNING rule_name"
+        )
 
         async with self.db_pool.acquire() as conn:
             row = await conn.fetchrow(query, rule_id[:8])

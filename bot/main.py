@@ -13,12 +13,10 @@ import os
 import signal
 import sys
 import time
-from typing import Any
 
 import structlog
 from bot.config import ConfigurationError, load_bot_config, validate_bot_permissions
 from bot.handlers import commands, messages, trust_commands
-from telegram import Update
 from telegram.ext import (
     Application,
     ApplicationBuilder,

@@ -4,8 +4,7 @@
 
 import asyncio
 import logging
-from datetime import datetime
-from typing import Dict, List
+from typing import Dict
 
 import aiohttp
 

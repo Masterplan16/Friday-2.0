@@ -12,13 +12,13 @@ import sys
 
 import asyncpg
 import structlog
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram import Update
 from telegram.ext import CallbackQueryHandler, ContextTypes
 
 # HIGH-2 fix: Import Presidio pour anonymisation PII
-# Path hack pour import depuis agents/src/tools
+# Path hack pour import depuis agents/src/tools (E402: import après sys.path nécessaire)
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../agents/src"))
-from tools.anonymize import anonymize_text
+from tools.anonymize import anonymize_text  # noqa: E402
 
 logger = structlog.get_logger(__name__)
 

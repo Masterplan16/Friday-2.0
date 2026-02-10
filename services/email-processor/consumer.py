@@ -8,7 +8,6 @@ import logging
 from typing import Any, Dict
 
 import redis.asyncio as redis
-from agents.src.middleware.trust import ActionResult, friday_action
 
 logger = logging.getLogger(__name__)
 

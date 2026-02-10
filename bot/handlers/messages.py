@@ -11,7 +11,7 @@ import asyncpg
 import structlog
 from telegram import ChatMember, Update
 from telegram.constants import MessageLimit
-from telegram.ext import ChatMemberHandler, ContextTypes
+from telegram.ext import ContextTypes
 
 logger = structlog.get_logger(__name__)
 
@@ -192,16 +192,18 @@ Je suis Friday 2.0, ton assistant IA personnel.
         )
 
         # Marquer onboarding_sent = TRUE (idempotence)
+        full_name = f"{new_member.user.first_name or ''} {new_member.user.last_name or ''}".strip()
         await conn.execute(
             """
-            INSERT INTO core.user_settings (user_id, username, full_name, onboarding_sent, onboarding_sent_at)
+            INSERT INTO core.user_settings
+            (user_id, username, full_name, onboarding_sent, onboarding_sent_at)
             VALUES ($1, $2, $3, TRUE, NOW())
             ON CONFLICT (user_id) DO UPDATE
             SET onboarding_sent = TRUE, onboarding_sent_at = NOW(), updated_at = NOW()
             """,
             user_id,
             new_member.user.username,
-            f"{new_member.user.first_name or ''} {new_member.user.last_name or ''}".strip(),
+            full_name,
         )
 
         await conn.close()

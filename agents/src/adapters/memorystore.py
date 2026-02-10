@@ -184,7 +184,8 @@ class MemorystoreAdapter:
         async with self.db_pool.acquire() as conn:
             created_id = await conn.fetchval(
                 """
-                INSERT INTO knowledge.edges (id, from_node_id, to_node_id, relation_type, metadata, created_at)
+                INSERT INTO knowledge.edges
+                (id, from_node_id, to_node_id, relation_type, metadata, created_at)
                 VALUES ($1, $2, $3, $4, $5, $6)
                 RETURNING id
                 """,

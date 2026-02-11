@@ -29,13 +29,15 @@ Usage:
     await populate_email_graph(email_data, memorystore_adapter)
 """
 
-import logging
+import structlog
 from datetime import datetime
 from typing import Any, Optional
 
 from agents.src.adapters.memorystore import MemorystoreAdapter, NodeType, RelationType
+from agents.src.adapters.vectorstore import get_vectorstore_adapter
+from agents.src.tools.anonymize import anonymize_text
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 async def populate_email_graph(
@@ -84,6 +86,45 @@ async def populate_email_graph(
     )
 
     logger.info("Created Email node: %s", email_node_id)
+
+    # Task 6.2 Subtask 2.1 : Générer embedding pour Email (subject + body anonymisé)
+    try:
+        # 1. Préparer texte : subject + body
+        subject = email_data["subject"]
+        body = email_data.get("body", "")
+        text_to_embed = f"{subject} {body}".strip()
+
+        # 2. Anonymiser texte AVANT envoi à Voyage AI (RGPD obligatoire)
+        anonymized_result = await anonymize_text(text_to_embed)
+        anonymized_text = anonymized_result.anonymized_text
+
+        # 3. Générer embedding via Voyage AI
+        vectorstore = await get_vectorstore_adapter()
+        embedding_response = await vectorstore.embed([anonymized_text], anonymize=False)  # Déjà anonymisé
+
+        # 4. Stocker embedding dans knowledge.embeddings
+        embedding = embedding_response.embeddings[0]
+        await vectorstore.store(
+            node_id=email_node_id,
+            embedding=embedding,
+            metadata={"source": "email", "anonymized": True},
+        )
+
+        logger.info(
+            "Embedding generated and stored for email %s (anonymized: %s PII entities)",
+            email_node_id,
+            len(anonymized_result.entities),
+        )
+
+    except Exception as e:
+        # Erreur Voyage AI → Email créé quand même, embedding manquant
+        logger.error(
+            "Failed to generate embedding for email %s: %s. Email node created without embedding.",
+            email_node_id,
+            str(e),
+        )
+        # TODO (Story 6.2 Subtask 2.3): Envoyer alerte Telegram + créer receipt status=failed
+        # Job nightly retentera génération embedding pour nœuds sans embedding
 
     # Task 9.2 : Extraire sender → Créer Person node (get_or_create pour déduplication)
     sender_email = email_data["sender"]

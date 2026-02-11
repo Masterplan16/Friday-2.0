@@ -22,11 +22,11 @@ sys.path.insert(0, str(repo_root))
 
 from agents.src.agents.email.vip_detector import compute_email_hash
 from agents.src.tools.anonymize import anonymize_text
+from bot.handlers.rate_limiter import vip_rate_limiter
 
 logger = structlog.get_logger(__name__)
 
-# Configuration - Database URL
-_DB_URL = os.getenv("DATABASE_URL")  # None si non défini (sera vérifié au runtime)
+# Configuration
 OWNER_USER_ID = os.getenv("OWNER_USER_ID")  # ID Telegram du Mainteneur
 
 
@@ -101,6 +101,17 @@ async def vip_add_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     user_id = update.effective_user.id if update.effective_user else None
     logger.info("/vip add command received", user_id=user_id, args=context.args)
 
+    # Rate limiting (M1 fix: protection DoS)
+    allowed, retry_after = vip_rate_limiter.is_allowed(user_id, "vip_add")
+    if not allowed:
+        await update.message.reply_text(
+            f"⚠️ **Rate limit dépassé**\n\n"
+            f"Vous avez atteint la limite de 10 commandes /vip par minute.\n"
+            f"Veuillez réessayer dans {retry_after} secondes.",
+            parse_mode="Markdown",
+        )
+        return
+
     # Vérifier owner uniquement (commande réservée)
     if OWNER_USER_ID and str(user_id) != OWNER_USER_ID:
         await update.message.reply_text(
@@ -132,17 +143,20 @@ async def vip_add_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         )
         return
 
-    # Vérifier DATABASE_URL configurée
-    if not _DB_URL:
+    # Récupérer pool DB depuis bot_data (H1 fix)
+    db_pool = context.bot_data.get("db_pool")
+    if not db_pool:
         await update.message.reply_text(
-            "❌ **Erreur configuration**\n\n" "DATABASE_URL non configurée.", parse_mode="Markdown"
+            "❌ **Erreur configuration**\n\n"
+            "Pool PostgreSQL non disponible. Le bot doit être redémarré.",
+            parse_mode="Markdown",
         )
-        logger.error("/vip add failed", error="DATABASE_URL not configured")
+        logger.error("/vip add failed", error="DB pool not available")
         return
 
     try:
-        # Connexion PostgreSQL
-        db = await asyncpg.connect(_DB_URL)
+        # Utiliser pool au lieu de connexion directe (H1 fix)
+        async with db_pool.acquire() as db:
 
         # Étape 1: Anonymiser email (RGPD)
         email_anon = await anonymize_text(email)
@@ -169,7 +183,6 @@ async def vip_add_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
                     f"Utilisez `/vip remove` puis `/vip add` pour modifier le label.",
                     parse_mode="Markdown",
                 )
-                await db.close()
                 return
             else:
                 # VIP existe mais inactif → réactiver
@@ -182,7 +195,6 @@ async def vip_add_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
                     label,
                     email_hash,
                 )
-                await db.close()
 
                 await update.message.reply_text(
                     f"✅ **VIP réactivé**\n\n"
@@ -210,8 +222,6 @@ async def vip_add_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             label,
             user_id,
         )
-
-        await db.close()
 
         # Succès
         await update.message.reply_text(
@@ -242,17 +252,20 @@ async def vip_list_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     user_id = update.effective_user.id if update.effective_user else None
     logger.info("/vip list command received", user_id=user_id)
 
-    # Vérifier DATABASE_URL configurée
-    if not _DB_URL:
+    # Récupérer pool DB depuis bot_data (H1 fix)
+    db_pool = context.bot_data.get("db_pool")
+    if not db_pool:
         await update.message.reply_text(
-            "❌ **Erreur configuration**\n\n" "DATABASE_URL non configurée.", parse_mode="Markdown"
+            "❌ **Erreur configuration**\n\n"
+            "Pool PostgreSQL non disponible. Le bot doit être redémarré.",
+            parse_mode="Markdown",
         )
-        logger.error("/vip list failed", error="DATABASE_URL not configured")
+        logger.error("/vip list failed", error="DB pool not available")
         return
 
     try:
-        # Connexion PostgreSQL
-        db = await asyncpg.connect(_DB_URL)
+        # Utiliser pool au lieu de connexion directe (H1 fix)
+        async with db_pool.acquire() as db:
 
         # Récupérer tous les VIPs actifs
         vips = await db.fetch(
@@ -263,8 +276,6 @@ async def vip_list_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             ORDER BY emails_received_count DESC, label ASC
             """
         )
-
-        await db.close()
 
         if not vips:
             await update.message.reply_text(
@@ -320,6 +331,17 @@ async def vip_remove_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
     user_id = update.effective_user.id if update.effective_user else None
     logger.info("/vip remove command received", user_id=user_id, args=context.args)
 
+    # Rate limiting (M1 fix: protection DoS)
+    allowed, retry_after = vip_rate_limiter.is_allowed(user_id, "vip_remove")
+    if not allowed:
+        await update.message.reply_text(
+            f"⚠️ **Rate limit dépassé**\n\n"
+            f"Vous avez atteint la limite de 10 commandes /vip par minute.\n"
+            f"Veuillez réessayer dans {retry_after} secondes.",
+            parse_mode="Markdown",
+        )
+        return
+
     # Vérifier owner uniquement (commande réservée)
     if OWNER_USER_ID and str(user_id) != OWNER_USER_ID:
         await update.message.reply_text(
@@ -350,17 +372,20 @@ async def vip_remove_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
         )
         return
 
-    # Vérifier DATABASE_URL configurée
-    if not _DB_URL:
+    # Récupérer pool DB depuis bot_data (H1 fix)
+    db_pool = context.bot_data.get("db_pool")
+    if not db_pool:
         await update.message.reply_text(
-            "❌ **Erreur configuration**\n\n" "DATABASE_URL non configurée.", parse_mode="Markdown"
+            "❌ **Erreur configuration**\n\n"
+            "Pool PostgreSQL non disponible. Le bot doit être redémarré.",
+            parse_mode="Markdown",
         )
-        logger.error("/vip remove failed", error="DATABASE_URL not configured")
+        logger.error("/vip remove failed", error="DB pool not available")
         return
 
     try:
-        # Connexion PostgreSQL
-        db = await asyncpg.connect(_DB_URL)
+        # Utiliser pool au lieu de connexion directe (H1 fix)
+        async with db_pool.acquire() as db:
 
         # Calculer hash SHA256
         email_hash = compute_email_hash(email)
@@ -382,7 +407,6 @@ async def vip_remove_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
                 f"Utilisez `/vip list` pour voir la liste des VIPs.",
                 parse_mode="Markdown",
             )
-            await db.close()
             return
 
         if not existing_vip["active"]:
@@ -393,7 +417,6 @@ async def vip_remove_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
                 f"Ce VIP est déjà désactivé.",
                 parse_mode="Markdown",
             )
-            await db.close()
             return
 
         # Soft delete : active = FALSE
@@ -405,8 +428,6 @@ async def vip_remove_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
             """,
             email_hash,
         )
-
-        await db.close()
 
         # Succès
         await update.message.reply_text(

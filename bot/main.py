@@ -14,6 +14,7 @@ import signal
 import sys
 import time
 
+import asyncpg
 import structlog
 from bot.config import ConfigurationError, load_bot_config, validate_bot_permissions
 from bot.handlers import (
@@ -42,6 +43,7 @@ class FridayBot:
     def __init__(self):
         self.config = None
         self.application: Application | None = None
+        self.db_pool: asyncpg.Pool | None = None
         self.is_running = False
         self.heartbeat_task = None
         self.last_heartbeat_success = time.time()
@@ -79,6 +81,26 @@ class FridayBot:
 
                 # Valider permissions admin (BUG-1.9.7 fix + CRIT-3 fix: async)
                 await validate_bot_permissions(self.application.bot, self.config.supergroup_id)
+
+                # Créer pool PostgreSQL (H1 fix: DB pool pour /vip commands)
+                database_url = os.getenv("DATABASE_URL")
+                if database_url:
+                    try:
+                        self.db_pool = await asyncpg.create_pool(
+                            database_url,
+                            min_size=2,
+                            max_size=10,
+                        )
+                        logger.info("PostgreSQL pool créé", min_size=2, max_size=10)
+                    except Exception as db_err:
+                        logger.warning(
+                            "Impossible de créer le pool DB, commandes /vip désactivées",
+                            error=str(db_err),
+                        )
+                        self.db_pool = None
+                else:
+                    logger.warning("DATABASE_URL non configurée, commandes /vip désactivées")
+                    self.db_pool = None
 
                 return  # Succès
 
@@ -221,6 +243,11 @@ class FridayBot:
         self.heartbeat_task = asyncio.create_task(self.heartbeat_loop())
         logger.info("Heartbeat démarré", interval_sec=self.config.heartbeat_interval_sec)
 
+        # Passer db_pool via bot_data pour handlers (H1 fix)
+        if self.db_pool:
+            self.application.bot_data["db_pool"] = self.db_pool
+            logger.info("DB pool disponible pour handlers via bot_data")
+
         # Démarrer polling Telegram
         logger.info("Démarrage polling Telegram...")
         await self.application.initialize()
@@ -241,6 +268,11 @@ class FridayBot:
                 await self.heartbeat_task
             except asyncio.CancelledError:
                 pass
+
+        # Fermer pool DB (H1 fix)
+        if self.db_pool:
+            await self.db_pool.close()
+            logger.info("PostgreSQL pool fermé")
 
         # Arrêter application
         if self.application:

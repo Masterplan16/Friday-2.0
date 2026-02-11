@@ -140,6 +140,51 @@ EmailEngine → Gateway → Presidio (RGPD) → Redis Stream → Consumer
 
 ---
 
+### 🌟 Détection VIP & Urgence (Story 2.3) ✅
+
+**Système automatique de détection des emails prioritaires avec notifications push**
+
+| Feature | Description |
+|---------|-------------|
+| **VIP Detection** | Lookup hash SHA256 rapide (<100ms) sans accès PII |
+| **Urgence Multi-facteurs** | VIP (0.5) + Keywords (0.3) + Deadline (0.2) → Seuil 0.6 |
+| **RGPD** | Emails VIP anonymisés via Presidio avant stockage |
+| **Latence VIP** | <5s réception → notification (avant classification ~10s) |
+| **Accuracy** | 100% recall emails urgents (0% faux négatifs AC5) |
+| **Faux positifs** | <10% (précision >= 90%) |
+| **Keywords** | 10 keywords français seed + apprentissage futur |
+| **Notifications** | VIP → Topic Email, URGENT → Topic Actions (push) |
+| **Priority** | urgent/high/normal dans DB + CHECK constraint |
+
+**Algorithme urgence** :
+```
+urgency_score = 0.5*is_vip + 0.3*keywords_matched + 0.2*has_deadline
+is_urgent = urgency_score >= 0.6
+
+Exemples:
+- VIP seul (0.5) → PAS urgent
+- VIP + keyword "deadline" (0.8) → URGENT
+- Non-VIP + "URGENT" + "avant demain" (0.8) → URGENT
+```
+
+**Commandes Telegram** :
+```
+/vip add <email> <label>    Ajouter expéditeur VIP
+/vip list                    Lister tous les VIPs actifs
+/vip remove <email>          Retirer un VIP (soft delete)
+```
+
+**Tests E2E** :
+- Dataset 31 emails (12 VIP, 5 urgents, 6 edge cases)
+- 100% recall VIP (12/12 détectés)
+- 100% recall urgence (5/5 détectés)
+- Précision >= 90% (faux positifs <10%)
+- Latence <1s par email (AC5 validé)
+
+**Documentation** : [docs/vip-urgency-detection.md](docs/vip-urgency-detection.md) | [docs/telegram-user-guide.md](docs/telegram-user-guide.md#commandes-vip--urgence-story-23)
+
+---
+
 ## 🛡️ Self-Healing ✅
 
 Friday 2.0 intègre un système de **self-healing automatique** en 4 tiers pour garantir une disponibilité 24/7 sans intervention manuelle.

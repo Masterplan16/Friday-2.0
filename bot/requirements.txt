@@ -10,7 +10,7 @@ structlog==24.1.0  # Structured logging
 python-dotenv==1.2.1  # Environment variables
 
 # Database
-asyncpg==0.31.0  # PostgreSQL async driver
+asyncpg==0.29.0  # PostgreSQL async driver
 
 # Redis
 redis==5.0.1  # Redis client

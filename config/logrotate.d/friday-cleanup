@@ -1,0 +1,33 @@
+# Logrotate configuration for Friday 2.0 cleanup-disk.sh
+# Story 1.15 - Cleanup automatisé + purge RGPD
+#
+# Rotation logs cleanup script : 30 jours retention
+
+/var/log/friday/cleanup-disk.log {
+    # Rotation quotidienne
+    daily
+
+    # Conserver 30 jours (30 fichiers)
+    rotate 30
+
+    # Compresser anciens logs
+    compress
+    delaycompress
+
+    # Ne pas générer erreur si log absent
+    missingok
+
+    # Ne pas rotater si fichier vide
+    notifempty
+
+    # Créer nouveau fichier si absent
+    create 0644 friday friday
+
+    # Rotation après écriture (post-rotate)
+    sharedscripts
+
+    postrotate
+        # Recharger service si nécessaire (optionnel)
+        # systemctl reload friday-cleanup 2> /dev/null || true
+    endscript
+}

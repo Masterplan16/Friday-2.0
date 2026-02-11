@@ -124,3 +124,138 @@ class TestMigrationsSyntax:
         # Vérifier que tous les CREATE TABLE ont un point-virgule final
         create_tables = re.findall(r'CREATE TABLE.*?;', content, re.DOTALL)
         assert len(create_tables) >= 2, "Expected at least 2 CREATE TABLE in migration 025"
+
+    # Story 2.3 - Tests migrations VIP & Urgence
+
+    def test_migration_027_exists(self, migrations_dir):
+        """Migration 027 doit exister"""
+        migration_file = migrations_dir / "027_vip_senders.sql"
+        assert migration_file.exists(), f"Migration 027 not found at {migration_file}"
+
+    def test_migration_028_exists(self, migrations_dir):
+        """Migration 028 doit exister"""
+        migration_file = migrations_dir / "028_urgency_keywords.sql"
+        assert migration_file.exists(), f"Migration 028 not found at {migration_file}"
+
+    def test_migration_027_has_begin_commit(self, migrations_dir):
+        """Migration 027 doit avoir BEGIN et COMMIT"""
+        migration_file = migrations_dir / "027_vip_senders.sql"
+        content = migration_file.read_text(encoding='utf-8')
+
+        assert 'BEGIN;' in content, "Migration 027 missing BEGIN;"
+        assert 'COMMIT;' in content, "Migration 027 missing COMMIT;"
+
+    def test_migration_028_has_begin_commit(self, migrations_dir):
+        """Migration 028 doit avoir BEGIN et COMMIT"""
+        migration_file = migrations_dir / "028_urgency_keywords.sql"
+        content = migration_file.read_text(encoding='utf-8')
+
+        assert 'BEGIN;' in content, "Migration 028 missing BEGIN;"
+        assert 'COMMIT;' in content, "Migration 028 missing COMMIT;"
+
+    def test_migration_027_creates_vip_senders_table(self, migrations_dir):
+        """Migration 027 doit créer table core.vip_senders"""
+        migration_file = migrations_dir / "027_vip_senders.sql"
+        content = migration_file.read_text(encoding='utf-8')
+
+        assert 'CREATE TABLE' in content, "Migration 027 missing CREATE TABLE"
+        assert 'core.vip_senders' in content, "Migration 027 missing core.vip_senders"
+
+    def test_migration_028_creates_urgency_keywords_table(self, migrations_dir):
+        """Migration 028 doit créer table core.urgency_keywords"""
+        migration_file = migrations_dir / "028_urgency_keywords.sql"
+        content = migration_file.read_text(encoding='utf-8')
+
+        assert 'CREATE TABLE' in content, "Migration 028 missing CREATE TABLE"
+        assert 'core.urgency_keywords' in content, "Migration 028 missing core.urgency_keywords"
+
+    def test_migration_027_has_unique_constraints(self, migrations_dir):
+        """Migration 027 doit avoir contraintes UNIQUE sur email_anon et email_hash"""
+        migration_file = migrations_dir / "027_vip_senders.sql"
+        content = migration_file.read_text(encoding='utf-8')
+
+        assert 'email_anon TEXT NOT NULL UNIQUE' in content, "Migration 027 missing UNIQUE on email_anon"
+        assert 'email_hash TEXT NOT NULL UNIQUE' in content, "Migration 027 missing UNIQUE on email_hash"
+
+    def test_migration_028_has_unique_constraint_keyword(self, migrations_dir):
+        """Migration 028 doit avoir contrainte UNIQUE sur keyword"""
+        migration_file = migrations_dir / "028_urgency_keywords.sql"
+        content = migration_file.read_text(encoding='utf-8')
+
+        assert 'keyword TEXT NOT NULL UNIQUE' in content, "Migration 028 missing UNIQUE on keyword"
+
+    def test_migration_027_has_indexes(self, migrations_dir):
+        """Migration 027 doit créer des indexes (email_hash, active, source)"""
+        migration_file = migrations_dir / "027_vip_senders.sql"
+        content = migration_file.read_text(encoding='utf-8')
+
+        assert 'CREATE INDEX' in content, "Migration 027 missing CREATE INDEX"
+        assert 'idx_vip_senders_hash' in content, "Migration 027 missing idx_vip_senders_hash"
+
+    def test_migration_028_has_indexes(self, migrations_dir):
+        """Migration 028 doit créer des indexes (active, language, source)"""
+        migration_file = migrations_dir / "028_urgency_keywords.sql"
+        content = migration_file.read_text(encoding='utf-8')
+
+        assert 'CREATE INDEX' in content, "Migration 028 missing CREATE INDEX"
+        assert 'idx_urgency_keywords_active' in content, "Migration 028 missing idx_urgency_keywords_active"
+
+    def test_migration_027_has_comments(self, migrations_dir):
+        """Migration 027 doit avoir des COMMENT ON pour documentation"""
+        migration_file = migrations_dir / "027_vip_senders.sql"
+        content = migration_file.read_text(encoding='utf-8')
+
+        assert 'COMMENT ON TABLE' in content, "Migration 027 missing table comments"
+        assert 'COMMENT ON COLUMN' in content, "Migration 027 missing column comments"
+
+    def test_migration_028_has_comments(self, migrations_dir):
+        """Migration 028 doit avoir des COMMENT ON pour documentation"""
+        migration_file = migrations_dir / "028_urgency_keywords.sql"
+        content = migration_file.read_text(encoding='utf-8')
+
+        assert 'COMMENT ON TABLE' in content, "Migration 028 missing table comments"
+        assert 'COMMENT ON COLUMN' in content, "Migration 028 missing column comments"
+
+    def test_migration_027_has_check_constraints(self, migrations_dir):
+        """Migration 027 doit avoir contraintes CHECK (priority_override, emails_received_count)"""
+        migration_file = migrations_dir / "027_vip_senders.sql"
+        content = migration_file.read_text(encoding='utf-8')
+
+        assert 'CHECK' in content, "Migration 027 missing CHECK constraints"
+        assert "priority_override IN ('high', 'urgent')" in content, "Migration 027 missing priority_override CHECK"
+        assert 'emails_received_count >= 0' in content, "Migration 027 missing emails_received_count CHECK"
+
+    def test_migration_028_has_check_constraints(self, migrations_dir):
+        """Migration 028 doit avoir contraintes CHECK (weight, hit_count)"""
+        migration_file = migrations_dir / "028_urgency_keywords.sql"
+        content = migration_file.read_text(encoding='utf-8')
+
+        assert 'CHECK' in content, "Migration 028 missing CHECK constraints"
+        assert 'weight >= 0.0 AND weight <= 1.0' in content, "Migration 028 missing weight CHECK"
+        assert 'hit_count >= 0' in content, "Migration 028 missing hit_count CHECK"
+
+    def test_migration_027_has_trigger_updated_at(self, migrations_dir):
+        """Migration 027 doit avoir trigger pour updated_at"""
+        migration_file = migrations_dir / "027_vip_senders.sql"
+        content = migration_file.read_text(encoding='utf-8')
+
+        assert 'CREATE TRIGGER' in content, "Migration 027 missing trigger"
+        assert 'updated_at' in content, "Migration 027 missing updated_at trigger"
+
+    def test_migration_028_has_trigger_updated_at(self, migrations_dir):
+        """Migration 028 doit avoir trigger pour updated_at"""
+        migration_file = migrations_dir / "028_urgency_keywords.sql"
+        content = migration_file.read_text(encoding='utf-8')
+
+        assert 'CREATE TRIGGER' in content, "Migration 028 missing trigger"
+        assert 'updated_at' in content, "Migration 028 missing updated_at trigger"
+
+    def test_migration_028_has_seed_data(self, migrations_dir):
+        """Migration 028 doit avoir seed initial avec keywords urgence français"""
+        migration_file = migrations_dir / "028_urgency_keywords.sql"
+        content = migration_file.read_text(encoding='utf-8')
+
+        assert 'INSERT INTO' in content, "Migration 028 missing seed data"
+        assert 'URGENT' in content, "Migration 028 missing 'URGENT' seed"
+        assert 'deadline' in content, "Migration 028 missing 'deadline' seed"
+        assert 'ON CONFLICT' in content, "Migration 028 missing ON CONFLICT clause"

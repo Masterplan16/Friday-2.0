@@ -1,0 +1,315 @@
+{
+  "emails": [
+    {
+      "id": "vip_non_urgent_1",
+      "from": "doyen@univ-med.fr",
+      "subject": "Reunion pedagogique",
+      "body": "Bonjour, je souhaiterais organiser une reunion pedagogique la semaine prochaine.",
+      "expected_vip": true,
+      "expected_urgent": false,
+      "vip_label": "Doyen Faculte Medecine"
+    },
+    {
+      "id": "vip_non_urgent_2",
+      "from": "comptable@scm.fr",
+      "subject": "Factures janvier",
+      "body": "Merci de bien vouloir consulter les factures de janvier jointes.",
+      "expected_vip": true,
+      "expected_urgent": false,
+      "vip_label": "Comptable SCM"
+    },
+    {
+      "id": "vip_non_urgent_3",
+      "from": "directeur@sci-gestion.fr",
+      "subject": "Point trimestriel",
+      "body": "Je vous propose de faire un point sur la gestion du trimestre.",
+      "expected_vip": true,
+      "expected_urgent": false,
+      "vip_label": "Directeur SCI"
+    },
+    {
+      "id": "vip_non_urgent_4",
+      "from": "assistante@selarl.fr",
+      "subject": "Planning consultations",
+      "body": "Voici le nouveau planning des consultations pour le mois prochain.",
+      "expected_vip": true,
+      "expected_urgent": false,
+      "vip_label": "Assistante SELARL"
+    },
+    {
+      "id": "vip_non_urgent_5",
+      "from": "secretaire@hopital.fr",
+      "subject": "Congres annuel",
+      "body": "Les inscriptions pour le congres annuel sont ouvertes.",
+      "expected_vip": true,
+      "expected_urgent": false,
+      "vip_label": "Secretaire Hopital"
+    },
+    {
+      "id": "vip_urgent_1",
+      "from": "doyen@univ-med.fr",
+      "subject": "URGENT - Validation diplomes",
+      "body": "URGENT: Je dois valider les diplomes avant demain 17h pour la ceremonie.",
+      "expected_vip": true,
+      "expected_urgent": true,
+      "vip_label": "Doyen Faculte Medecine",
+      "urgency_factors": ["vip", "keyword_urgent", "deadline"]
+    },
+    {
+      "id": "vip_urgent_2",
+      "from": "comptable@scm.fr",
+      "subject": "Deadline declaration fiscale",
+      "body": "La deadline pour la declaration fiscale est ce soir minuit. Merci de valider.",
+      "expected_vip": true,
+      "expected_urgent": true,
+      "vip_label": "Comptable SCM",
+      "urgency_factors": ["vip", "keyword_deadline", "deadline"]
+    },
+    {
+      "id": "vip_urgent_3",
+      "from": "directeur@sci-gestion.fr",
+      "subject": "Signature urgente bail",
+      "body": "Le bail doit etre signe avant demain matin, le notaire attend.",
+      "expected_vip": true,
+      "expected_urgent": true,
+      "vip_label": "Directeur SCI",
+      "urgency_factors": ["vip", "deadline"]
+    },
+    {
+      "id": "vip_urgent_4",
+      "from": "assistante@selarl.fr",
+      "subject": "Patient urgent ce soir",
+      "body": "URGENT: Patient avec douleurs aigues demande consultation ce soir.",
+      "expected_vip": true,
+      "expected_urgent": true,
+      "vip_label": "Assistante SELARL",
+      "urgency_factors": ["vip", "keyword_urgent", "deadline"]
+    },
+    {
+      "id": "vip_urgent_5",
+      "from": "secretaire@hopital.fr",
+      "subject": "URGENT - Rapport medical",
+      "body": "Le rapport medical doit etre transmis d'ici 2 heures pour l'intervention.",
+      "expected_vip": true,
+      "expected_urgent": true,
+      "vip_label": "Secretaire Hopital",
+      "urgency_factors": ["vip", "keyword_urgent", "deadline"]
+    },
+    {
+      "id": "non_vip_urgent_1",
+      "from": "banque@credit-fr.fr",
+      "subject": "URGENT - Verification compte",
+      "body": "URGENT: Activite suspecte detectee, merci de verifier avant ce soir.",
+      "expected_vip": false,
+      "expected_urgent": false,
+      "vip_label": null,
+      "urgency_factors": ["keyword_urgent", "deadline"],
+      "note": "Score 0.5 < seuil 0.6 - non urgent"
+    },
+    {
+      "id": "non_vip_urgent_2",
+      "from": "editeur@revue-med.fr",
+      "subject": "Deadline article",
+      "body": "La deadline pour votre article de revue est fixee a demain midi.",
+      "expected_vip": false,
+      "expected_urgent": false,
+      "vip_label": null,
+      "urgency_factors": ["keyword_deadline", "deadline"],
+      "note": "Score 0.5 < seuil 0.6 - non urgent"
+    },
+    {
+      "id": "non_vip_urgent_3",
+      "from": "assurance@mutuelle.fr",
+      "subject": "Renouvellement urgent contrat",
+      "body": "Votre contrat arrive a echeance, merci de renouveler avant la fin du mois.",
+      "expected_vip": false,
+      "expected_urgent": false,
+      "vip_label": null,
+      "urgency_factors": ["keyword_urgent"],
+      "note": "Score 0.3 < seuil 0.6 - non urgent"
+    },
+    {
+      "id": "non_vip_urgent_4",
+      "from": "conference@medical-event.fr",
+      "subject": "URGENT - Confirmation participation",
+      "body": "URGENT: Merci de confirmer votre participation avant demain pour la conference.",
+      "expected_vip": false,
+      "expected_urgent": false,
+      "vip_label": null,
+      "urgency_factors": ["keyword_urgent", "deadline"],
+      "note": "Score 0.5 < seuil 0.6 - non urgent"
+    },
+    {
+      "id": "non_vip_urgent_5",
+      "from": "newsletter@medscape.com",
+      "subject": "Derniere chance - Inscription gratuite",
+      "body": "Derniere chance pour profiter de l'inscription gratuite, offre valable jusqu'a ce soir.",
+      "expected_vip": false,
+      "expected_urgent": false,
+      "vip_label": null,
+      "urgency_factors": ["deadline"],
+      "note": "Score 0.2 < seuil 0.6 - non urgent"
+    },
+    {
+      "id": "normal_1",
+      "from": "collegue@hopital.fr",
+      "subject": "Pause cafe demain",
+      "body": "Salut, on se fait une pause cafe demain midi ?",
+      "expected_vip": false,
+      "expected_urgent": false,
+      "vip_label": null
+    },
+    {
+      "id": "normal_2",
+      "from": "libraire@amazon.fr",
+      "subject": "Votre colis est arrive",
+      "body": "Bonjour, votre colis est disponible en point relais.",
+      "expected_vip": false,
+      "expected_urgent": false,
+      "vip_label": null
+    },
+    {
+      "id": "normal_3",
+      "from": "formation@elearning.fr",
+      "subject": "Nouvelle formation disponible",
+      "body": "Decouvrez notre nouvelle formation sur la cardiologie moderne.",
+      "expected_vip": false,
+      "expected_urgent": false,
+      "vip_label": null
+    },
+    {
+      "id": "normal_4",
+      "from": "ami@gmail.com",
+      "subject": "Diner ce weekend",
+      "body": "Ca te dit un diner ce weekend ? Dis-moi quand tu es dispo.",
+      "expected_vip": false,
+      "expected_urgent": false,
+      "vip_label": null
+    },
+    {
+      "id": "normal_5",
+      "from": "promotions@supermarche.fr",
+      "subject": "Offres de la semaine",
+      "body": "Decouvrez nos offres exceptionnelles de la semaine.",
+      "expected_vip": false,
+      "expected_urgent": false,
+      "vip_label": null
+    },
+    {
+      "id": "normal_6",
+      "from": "journal@le-monde.fr",
+      "subject": "Newsletter quotidienne",
+      "body": "Voici les actualites du jour selectionnees pour vous.",
+      "expected_vip": false,
+      "expected_urgent": false,
+      "vip_label": null
+    },
+    {
+      "id": "normal_7",
+      "from": "recruteur@cabinet-rh.fr",
+      "subject": "Opportunite professionnelle",
+      "body": "Nous avons identifie une opportunite professionnelle qui pourrait vous interesser.",
+      "expected_vip": false,
+      "expected_urgent": false,
+      "vip_label": null
+    },
+    {
+      "id": "normal_8",
+      "from": "service-client@telecom.fr",
+      "subject": "Votre facture du mois",
+      "body": "Votre facture mensuelle est disponible dans votre espace client.",
+      "expected_vip": false,
+      "expected_urgent": false,
+      "vip_label": null
+    },
+    {
+      "id": "normal_9",
+      "from": "sport@fitness-club.fr",
+      "subject": "Nouveaux cours disponibles",
+      "body": "Decouvrez nos nouveaux cours de yoga et pilates.",
+      "expected_vip": false,
+      "expected_urgent": false,
+      "vip_label": null
+    },
+    {
+      "id": "normal_10",
+      "from": "blog@medecine-blog.fr",
+      "subject": "Article de la semaine",
+      "body": "Lisez notre dernier article sur les avancees en immunologie.",
+      "expected_vip": false,
+      "expected_urgent": false,
+      "vip_label": null
+    },
+    {
+      "id": "edge_vip_spam",
+      "from": "doyen@univ-med.fr",
+      "subject": "GAGNEZ 10000 EUROS !!!",
+      "body": "Cliquez ici pour gagner 10000 euros, offre limitee !!!",
+      "expected_vip": true,
+      "expected_urgent": false,
+      "vip_label": "Doyen Faculte Medecine",
+      "note": "Edge case: VIP mais contenu spam - probablement compte compromis"
+    },
+    {
+      "id": "edge_urgence_ambigue_1",
+      "from": "partenaire@labo.fr",
+      "subject": "Important - Resultats analyses",
+      "body": "Les resultats des analyses sont disponibles, merci de les consulter.",
+      "expected_vip": false,
+      "expected_urgent": false,
+      "vip_label": null,
+      "note": "Edge case: 'Important' mais pas vraiment urgent"
+    },
+    {
+      "id": "edge_urgence_ambigue_2",
+      "from": "etudiant@univ.fr",
+      "subject": "Question urgente these",
+      "body": "J'ai une question urgente sur ma these, pouvez-vous m'aider ?",
+      "expected_vip": false,
+      "expected_urgent": false,
+      "vip_label": null,
+      "note": "Edge case: 'urgente' subjectif etudiant, pas vraiment critique"
+    },
+    {
+      "id": "edge_faux_vip",
+      "from": "doyen-fake@univ-med.fr",
+      "subject": "Message important",
+      "body": "Merci de me transmettre vos identifiants pour verification.",
+      "expected_vip": false,
+      "expected_urgent": false,
+      "vip_label": null,
+      "note": "Edge case: Email similaire a VIP mais faux (phishing)"
+    },
+    {
+      "id": "edge_multi_keywords",
+      "from": "organisateur@congres.fr",
+      "subject": "URGENT URGENT URGENT deadline",
+      "body": "URGENT URGENT deadline ce soir minuit pour inscription congres.",
+      "expected_vip": false,
+      "expected_urgent": false,
+      "vip_label": null,
+      "urgency_factors": ["keyword_urgent", "keyword_deadline", "deadline"],
+      "note": "Edge case: Multi keywords mais spam-like, score 0.5 < 0.6"
+    },
+    {
+      "id": "edge_vip_casual",
+      "from": "comptable@scm.fr",
+      "subject": "Re: Dejeuner",
+      "body": "Ok pour dejeuner ensemble demain !",
+      "expected_vip": true,
+      "expected_urgent": false,
+      "vip_label": "Comptable SCM",
+      "note": "Edge case: VIP mais message casual personnel"
+    }
+  ],
+  "metadata": {
+    "total_count": 31,
+    "vip_non_urgent": 5,
+    "vip_urgent": 5,
+    "non_vip_urgent": 5,
+    "normal": 10,
+    "edge_cases": 6,
+    "expected_urgent_count": 5,
+    "expected_vip_count": 12
+  }
+}

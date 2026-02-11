@@ -249,12 +249,21 @@ class VoyageAIAdapter:
         # Import voyageai client (lazy import pour tests mocks)
         try:
             import voyageai
+            import httpx
 
-            self.client = voyageai.Client(api_key=self.api_key)
-        except ImportError:
-            raise ImportError(
-                "voyageai package manquant. Installer avec: pip install voyageai"
-            )
+            # Configure timeout 30s (specs Story 6.2 Subtask 1.3)
+            timeout = httpx.Timeout(30.0, connect=5.0)
+            self.client = voyageai.Client(api_key=self.api_key, timeout=timeout)
+        except ImportError as e:
+            if "voyageai" in str(e):
+                raise ImportError(
+                    "voyageai package manquant. Installer avec: pip install voyageai"
+                )
+            elif "httpx" in str(e):
+                raise ImportError(
+                    "httpx package manquant. Installer avec: pip install httpx"
+                )
+            raise
 
         logger.info(
             "voyage_adapter_initialized",

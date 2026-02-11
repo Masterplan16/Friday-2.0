@@ -95,6 +95,50 @@ Composant transversal garantissant la confiance utilisateur. Chaque action de Fr
 
 ---
 
+## ✨ Features Implémentées
+
+### 📧 Classification Email Automatique (Story 2.2) ✅
+
+**Claude Sonnet 4.5 classifie automatiquement les emails entrants en 8 catégories**
+
+| Feature | Description |
+|---------|-------------|
+| **Modèle** | Claude Sonnet 4.5 (temperature 0.1, déterministe) |
+| **Catégories** | 🏥 medical · 💰 finance · 🎓 faculty · 🔬 research · 👤 personnel · 🚨 urgent · 🗑️ spam · ❓ unknown |
+| **Correction rules** | Injection max 50 règles prioritaires dans prompt (feedback loop) |
+| **Cold start** | Calibrage sur 10-20 premiers emails (validation obligatoire) |
+| **Accuracy** | >= 85% global, >= 80% par catégorie (testé sur dataset 100 emails) |
+| **Latence** | <8s moyenne (Presidio 2s + Claude 5s + BDD 1s) |
+| **Trust Layer** | Mode propose par défaut, auto après 90% accuracy |
+| **Interface** | Telegram inline buttons pour corrections (8 catégories) |
+| **Pattern detection** | Détection automatique ≥2 corrections similaires → proposition règle |
+
+**Workflow** :
+
+```
+EmailEngine → Gateway → Presidio (RGPD) → Redis Stream → Consumer
+  ↓
+  Fetch correction rules (max 50)
+  ↓
+  Build prompt (contexte médecin + règles + 8 catégories)
+  ↓
+  Claude API (temperature 0.1, 300 tokens max)
+  ↓
+  Parse JSON → EmailClassification (Pydantic)
+  ↓
+  UPDATE ingestion.emails (category, confidence)
+  ↓
+  Trust Layer (@friday_action) → Telegram notification
+```
+
+**Commandes Telegram** :
+- `/correct email-123 finance` — Corriger classification via commande
+- Bouton `[Correct]` sur notification → Inline keyboard 8 catégories
+
+**Documentation** : [docs/email-classification.md](docs/email-classification.md)
+
+---
+
 ## 🛡️ Self-Healing ✅
 
 Friday 2.0 intègre un système de **self-healing automatique** en 4 tiers pour garantir une disponibilité 24/7 sans intervention manuelle.

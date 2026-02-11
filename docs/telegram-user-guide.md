@@ -114,13 +114,36 @@ Notifications automatiques liées à vos emails et communications.
 
 ### Ce que vous verrez ici
 
-**Classifications automatiques :**
+**Classifications automatiques (Story 2.2) :**
+
+Friday classifie automatiquement vos emails en 8 catégories grâce à Claude Sonnet 4.5 :
+
 ```
-📧 Email classifié : medical
-De : Dr. Martin
-Sujet : Résultats analyses
-Confiance : 95%
+📧 Email classifié
+
+De : compta@urssaf.fr
+Sujet : Cotisations SELARL Q4 2025
+Catégorie : 💰 finance (92%)
+
+📋 Reasoning : Expéditeur @urssaf.fr, mots-clés cotisations
+
+#email #finance
 ```
+
+**8 catégories disponibles :**
+
+| Emoji | Catégorie | Description |
+|-------|-----------|-------------|
+| 🏥 | `medical` | Cabinet médical SELARL (patients, CPAM, planning) |
+| 💰 | `finance` | Comptabilité, banques, impôts (5 périmètres) |
+| 🎓 | `faculty` | Enseignement universitaire (étudiants, examens) |
+| 🔬 | `research` | Recherche académique (thèses, publications) |
+| 👤 | `personnel` | Vie personnelle (amis, achats, loisirs) |
+| 🚨 | `urgent` | Action immédiate requise (VIP, deadline <24h) |
+| 🗑️ | `spam` | Publicités commerciales, newsletters |
+| ❓ | `unknown` | Emails inclassables ou ambigus |
+
+**Cold start mode** : Les 10-20 premiers emails nécessitent **systématiquement** votre validation (mode calibrage). Ensuite, si accuracy >= 90%, Friday passe en mode automatique.
 
 **Pièces jointes détectées :**
 ```
@@ -136,6 +159,27 @@ Fichier : facture_202602.pdf
 De : Université Paris
 Sujet : Deadline mémoire M2
 Échéance : 2026-02-15
+```
+
+### Corriger une classification erronée
+
+Si Friday se trompe de catégorie, 2 méthodes :
+
+**Méthode 1 : Via bouton [Correct]** (si trust=propose)
+
+1. Cliquer `[Correct]` sur notification
+2. Sélectionner bonne catégorie parmi 8 boutons
+3. Friday enregistre la correction + détecte patterns automatiquement
+
+**Méthode 2 : Commande `/correct`**
+
+```
+/correct email-abc123 finance
+
+✅ Correction enregistrée
+Email abc123 : medical → finance
+
+Si ≥2 corrections similaires détectées, Friday proposera une règle automatique.
 ```
 
 ### Quand muter ce topic ?
@@ -177,12 +221,48 @@ Seul le Mainteneur (OWNER_USER_ID) peut interagir avec les boutons. Un clic sur 
 **Timeout configurable :**
 Si `validation_timeout_hours` est défini dans `config/telegram.yaml`, les actions non traitées expirent automatiquement après le délai configuré.
 
-**Corrections appliquées :**
+**Corrections email classification (Story 2.2) :**
+
+Lorsque vous cliquez `[Correct]` sur une classification email, Friday affiche un clavier inline avec les 8 catégories :
+
 ```
-Correction enregistrée
-Tu as corrigé : "Email URSSAF → finance (était: professional)"
-→ Pattern détecté (2 occurrences similaires)
-→ Règle proposée : SI email contient "URSSAF" ALORS finance
+📝 Correction classification email
+
+Receipt : `abc12345`
+Classification actuelle : → medical (0.92)
+
+**Quelle est la bonne catégorie ?**
+
+[🏥 Medical] [💰 Finance]
+[🎓 Faculty] [🔬 Research]
+[👤 Personnel] [🚨 Urgent]
+[🗑️ Spam] [❓ Unknown]
+```
+
+Après sélection :
+
+```
+✅ Correction enregistrée
+
+Receipt : `abc12345`
+Catégorie originale : medical
+Nouvelle catégorie : 💰 finance
+
+Friday apprendra de cette correction lors du pattern detection nightly.
+```
+
+**Pattern detection automatique :**
+
+Si ≥2 corrections identiques sont détectées, Friday propose une règle :
+
+```
+🤖 Règle proposée (pattern détecté)
+
+Module : email.classify
+Conditions : from @urssaf.fr
+Output : category = finance
+Occurrences : 3 corrections similaires
+
 [Approve] [Reject]
 ```
 

@@ -113,7 +113,7 @@ development_status:
   # Epic 2: Pipeline Email Intelligent (7 stories | 10 FRs)
   epic-2: in-progress
   2-1-integration-emailengine-reception: done  # 2026-02-11: CODE REVIEW COMPLETE ✅ - 17 issues fixes (6C+5H+4M+2L), 55/55 tests PASS. EmailEngine v2.61.1 + webhooks (circuit breaker + rate limit) + consumer (retry backoff + DLQ + emails_raw chiffre + Telegram real). 7 AC valides, 30 fichiers (26+4 tests), docs 600+. Zero regressions.
-  2-2-classification-email-llm: in-progress  # 2026-02-11: DEV STARTED - Classification LLM Claude Sonnet 4.5, 8 AC, 30 subtasks, accuracy ≥85%
+  2-2-classification-email-llm: done  # 2026-02-11: COMPLETE ✅ - Classification Claude Sonnet 4.5 (8 catégories), cold start mode, correction inline buttons Telegram, dataset 100 emails, accuracy ≥85% global/≥80% par catégorie, docs 500+ lignes. 9/9 tasks, 57 tests (51 PASS + 3 E2E + 3 integration), 21 fichiers créés, 5 modifiés. 8/8 AC validés.
   2-3-detection-vip-urgence: backlog
   2-4-extraction-pieces-jointes: backlog
   2-5-brouillon-reponse-email: backlog

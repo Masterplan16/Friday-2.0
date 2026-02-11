@@ -231,19 +231,22 @@ class TestTelegramNotification:
     @pytest.mark.asyncio
     async def test_send_notification_success(self, consumer):
         """Notification Telegram réussie"""
-        with patch('httpx.AsyncClient') as mock_client:
-            mock_response = MagicMock(status_code=200)
-            mock_client.return_value.__aenter__.return_value.post = AsyncMock(return_value=mock_response)
+        with patch('services.email_processor.consumer.TELEGRAM_BOT_TOKEN', 'test-token'):
+            with patch('services.email_processor.consumer.TELEGRAM_SUPERGROUP_ID', '-123456'):
+                with patch('services.email_processor.consumer.TOPIC_EMAIL_ID', '1'):
+                    with patch('httpx.AsyncClient') as mock_client:
+                        mock_response = MagicMock(status_code=200)
+                        mock_client.return_value.__aenter__.return_value.post = AsyncMock(return_value=mock_response)
 
-            await consumer.send_telegram_notification(
-                account_id='account-test',
-                from_anon='[EMAIL_1]',
-                subject_anon='Rdv [PERSON_1]',
-                category='medical'
-            )
+                        await consumer.send_telegram_notification(
+                            account_id='account-test',
+                            from_anon='[EMAIL_1]',
+                            subject_anon='Rdv [PERSON_1]',
+                            category='medical'
+                        )
 
-            # Vérifier que POST Telegram API appelé
-            mock_client.return_value.__aenter__.return_value.post.assert_called_once()
+                        # Vérifier que POST Telegram API appelé
+                        mock_client.return_value.__aenter__.return_value.post.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_send_notification_skips_if_not_configured(self, consumer):
@@ -260,25 +263,28 @@ class TestTelegramNotification:
     @pytest.mark.asyncio
     async def test_send_notification_no_emojis(self, consumer):
         """Notification NE DOIT PAS contenir d'emojis"""
-        with patch('httpx.AsyncClient') as mock_client:
-            mock_response = MagicMock(status_code=200)
-            mock_client.return_value.__aenter__.return_value.post = AsyncMock(return_value=mock_response)
+        with patch('services.email_processor.consumer.TELEGRAM_BOT_TOKEN', 'test-token'):
+            with patch('services.email_processor.consumer.TELEGRAM_SUPERGROUP_ID', '-123456'):
+                with patch('services.email_processor.consumer.TOPIC_EMAIL_ID', '1'):
+                    with patch('httpx.AsyncClient') as mock_client:
+                        mock_response = MagicMock(status_code=200)
+                        mock_client.return_value.__aenter__.return_value.post = AsyncMock(return_value=mock_response)
 
-            await consumer.send_telegram_notification(
-                account_id='account-test',
-                from_anon='[EMAIL_1]',
-                subject_anon='Rdv [PERSON_1]',
-                category='medical'
-            )
+                        await consumer.send_telegram_notification(
+                            account_id='account-test',
+                            from_anon='[EMAIL_1]',
+                            subject_anon='Rdv [PERSON_1]',
+                            category='medical'
+                        )
 
-            # Vérifier que le texte ne contient PAS d'emojis
-            call_args = mock_client.return_value.__aenter__.return_value.post.call_args
-            notification_text = call_args[1]['json']['text']
+                        # Vérifier que le texte ne contient PAS d'emojis
+                        call_args = mock_client.return_value.__aenter__.return_value.post.call_args
+                        notification_text = call_args[1]['json']['text']
 
-            # Vérifier pas d'emojis courants
-            assert '📬' not in notification_text
-            assert '✅' not in notification_text
-            assert '❌' not in notification_text
+                        # Vérifier pas d'emojis courants
+                        assert '📬' not in notification_text
+                        assert '✅' not in notification_text
+                        assert '❌' not in notification_text
 
 
 class TestProcessEmailEvent:

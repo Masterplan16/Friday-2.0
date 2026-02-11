@@ -443,7 +443,7 @@ So que je n'aie plus a trier manuellement.
 
 **Given** un email est recu et anonymise via Presidio
 **When** Claude Sonnet 4.5 classifie l'email
-**Then** une categorie est assignee (medical, finance, faculty, personnel, urgent, spam, etc.)
+**Then** une categorie est assignee (pro, finance, universite, recherche, perso, urgent, spam, inconnu)
 **And** les correction_rules actives du module email sont injectees dans le prompt
 **And** un receipt est cree avec la confidence de classification
 
@@ -595,8 +595,9 @@ So que tout soit range sans effort.
 
 **Given** un document est renomme (Story 3.1)
 **When** Claude Sonnet 4.5 determine la destination
-**Then** le document est deplace dans le bon sous-dossier (Cabinet/Faculte/Finances/Personnel/Garanties — D8)
-**And** les factures sont classees par perimetre/annee/mois (ex: Finances/SELARL/2026/02-Fevrier/)
+**Then** le document est deplace dans le bon sous-dossier (pro/finance/universite/recherche/perso — D24)
+**And** les factures finance sont classees par perimetre/annee/mois (ex: finance/selarl/2026/02-Fevrier/)
+**And** les autres documents par categorie (ex: recherche/theses/, universite/cours/)
 
 **Given** le classement est incertain (confidence < 0.80)
 **When** le receipt est cree

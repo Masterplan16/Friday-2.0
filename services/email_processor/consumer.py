@@ -39,6 +39,7 @@ from agents.src.agents.email.vip_detector import (
     update_vip_email_stats,
 )
 from agents.src.agents.email.urgency_detector import detect_urgency
+from agents.src.agents.email.attachment_extractor import extract_attachments
 from agents.src.middleware.trust import init_trust_manager
 
 # ============================================
@@ -85,6 +86,91 @@ CONSUMER_NAME = f'consumer-{os.getpid()}'
 
 
 # ============================================
+# EmailEngine Client Wrapper (Story 2.4)
+# ============================================
+
+class EmailEngineClient:
+    """
+    Wrapper simple pour EmailEngine API (Story 2.4).
+
+    Expose méthodes requises par extract_attachments():
+    - get_message(email_id)
+    - download_attachment(email_id, attachment_id)
+    """
+
+    def __init__(self, http_client: httpx.AsyncClient, base_url: str, secret: str):
+        self.http_client = http_client
+        self.base_url = base_url
+        self.secret = secret
+
+    async def get_message(self, message_id: str) -> Dict:
+        """
+        Récupère email complet via EmailEngine API.
+
+        Args:
+            message_id: ID message EmailEngine
+
+        Returns:
+            Dict avec email data + attachments list
+
+        Raises:
+            Exception si fetch échoue
+        """
+        # Extract account_id from message_id format (account_id/message_id)
+        # NOTE: En production, passer account_id explicitement
+        # Pour MVP, assume format "account/message"
+        if '/' in message_id:
+            account_id, msg_id = message_id.split('/', 1)
+        else:
+            # Fallback: utiliser env var ou premier compte
+            account_id = "main"  # TODO: Config
+            msg_id = message_id
+
+        response = await self.http_client.get(
+            f'{self.base_url}/v1/account/{account_id}/message/{msg_id}',
+            headers={'Authorization': f'Bearer {self.secret}'},
+            timeout=30.0
+        )
+
+        if response.status_code != 200:
+            raise Exception(f"EmailEngine get_message failed: {response.status_code} - {response.text[:200]}")
+
+        return response.json()
+
+    async def download_attachment(self, email_id: str, attachment_id: str) -> bytes:
+        """
+        Télécharge pièce jointe via EmailEngine API.
+
+        Args:
+            email_id: ID email source
+            attachment_id: ID attachment
+
+        Returns:
+            Bytes du fichier
+
+        Raises:
+            Exception si download échoue
+        """
+        # Extract account_id (voir get_message())
+        if '/' in email_id:
+            account_id, msg_id = email_id.split('/', 1)
+        else:
+            account_id = "main"  # TODO: Config
+            msg_id = email_id
+
+        response = await self.http_client.get(
+            f'{self.base_url}/v1/account/{account_id}/attachment/{attachment_id}',
+            headers={'Authorization': f'Bearer {self.secret}'},
+            timeout=60.0  # Timeout plus long pour download
+        )
+
+        if response.status_code != 200:
+            raise Exception(f"EmailEngine download_attachment failed: {response.status_code}")
+
+        return response.content
+
+
+# ============================================
 # EmailProcessorConsumer Class
 # ============================================
 
@@ -107,6 +193,7 @@ class EmailProcessorConsumer:
         self.redis: Optional[redis.Redis] = None
         self.db_pool: Optional[asyncpg.Pool] = None
         self.http_client: Optional[httpx.AsyncClient] = None
+        self.emailengine_client: Optional[EmailEngineClient] = None
 
     async def connect(self):
         """Connect to Redis and PostgreSQL"""
@@ -130,6 +217,14 @@ class EmailProcessorConsumer:
         # HTTP client
         self.http_client = httpx.AsyncClient(timeout=30.0)
         logger.info("http_client_created")
+
+        # EmailEngine client wrapper (Story 2.4)
+        self.emailengine_client = EmailEngineClient(
+            http_client=self.http_client,
+            base_url=EMAILENGINE_URL,
+            secret=EMAILENGINE_SECRET
+        )
+        logger.info("emailengine_client_initialized")
 
         # Create consumer group if not exists
         try:
@@ -275,12 +370,12 @@ class EmailProcessorConsumer:
                 priority=priority
             )
 
-            # Étape 3: Classification stub (Day 1)
+            # Étape 4: Classification stub (Day 1)
             # TODO Story 2.2: Remplacer par classification LLM réelle
             category = "inbox"
             confidence = 0.5
 
-            # Étape 4: Stocker dans PostgreSQL (email anonymisé + email raw chiffré)
+            # Étape 5: Stocker dans PostgreSQL (email anonymisé + email raw chiffré)
             email_id = await self.store_email_in_database(
                 account_id=account_id,
                 message_id=message_id,
@@ -299,7 +394,38 @@ class EmailProcessorConsumer:
                 body_raw=body_text_raw
             )
 
-            # Étape 4.5: Mettre à jour stats VIP si applicable
+            # Étape 5.3: Extraction pièces jointes (Story 2.4 - Phase 4)
+            # NOTE: Extraction APRÈS stockage DB pour avoir UUID email correct
+            attachment_result = None
+            if has_attachments:
+                try:
+                    # Extraire pièces jointes via EmailEngine
+                    attachment_result = await extract_attachments(
+                        email_id=str(email_id),  # UUID email depuis DB
+                        db_pool=self.db_pool,
+                        emailengine_client=self.emailengine_client,
+                        redis_client=self.redis,
+                    )
+
+                    logger.info(
+                        "attachments_extracted",
+                        email_id=str(email_id),
+                        message_id=message_id,
+                        extracted_count=attachment_result.extracted_count,
+                        failed_count=attachment_result.failed_count,
+                        total_size_mb=attachment_result.total_size_mb
+                    )
+
+                except Exception as e:
+                    logger.error(
+                        "attachment_extraction_failed",
+                        email_id=str(email_id),
+                        message_id=message_id,
+                        error=str(e)
+                    )
+                    # Continue quand même (email sans PJ)
+
+            # Étape 5.5: Mettre à jour stats VIP si applicable
             if is_vip and vip_data:
                 await update_vip_email_stats(
                     vip_id=vip_data["id"],
@@ -307,7 +433,7 @@ class EmailProcessorConsumer:
                 )
                 logger.info("vip_stats_updated", vip_id=vip_data["id"])
 
-            # Étape 5: Notification Telegram
+            # Étape 6: Notification Telegram email
             await self.send_telegram_notification(
                 account_id=account_id,
                 from_anon=from_anon,
@@ -316,6 +442,22 @@ class EmailProcessorConsumer:
                 is_urgent=is_urgent,
                 urgency_reasoning=urgency_result.reasoning if is_urgent else None
             )
+
+            # Étape 6.5: Notification Telegram pièces jointes (Story 2.4)
+            if attachment_result and attachment_result.extracted_count > 0:
+                try:
+                    await self.send_telegram_notification_attachments(
+                        message_id=message_id,
+                        from_anon=from_anon,
+                        subject_anon=subject_anon,
+                        attachment_result=attachment_result
+                    )
+                except Exception as e:
+                    logger.error(
+                        "telegram_attachment_notification_failed",
+                        message_id=message_id,
+                        error=str(e)
+                    )
 
             # XACK: Marquer comme traité
             await self.redis.xack(STREAM_NAME, CONSUMER_GROUP, event_id)
@@ -654,6 +796,88 @@ class EmailProcessorConsumer:
 
         except Exception as e:
             logger.error("telegram_notification_error", error=str(e))
+
+    async def send_telegram_notification_attachments(
+        self,
+        message_id: str,
+        from_anon: str,
+        subject_anon: str,
+        attachment_result: Any
+    ):
+        """
+        Envoyer notification Telegram pour pièces jointes extraites (Story 2.4).
+
+        Topic: TOPIC_EMAIL_ID (Email & Communications)
+
+        Args:
+            message_id: ID message email
+            from_anon: Sender anonymisé
+            subject_anon: Sujet anonymisé
+            attachment_result: AttachmentExtractResult avec stats extraction
+        """
+        if not TELEGRAM_BOT_TOKEN or not TELEGRAM_SUPERGROUP_ID or not TOPIC_EMAIL_ID:
+            logger.warning("telegram_not_configured_skip_attachment_notification")
+            return
+
+        try:
+            # Format notification pièces jointes (AC6 Story 2.4)
+            notification_text = (
+                f"Pieces jointes extraites : {attachment_result.extracted_count}\n\n"
+                f"Email : {subject_anon}\n"
+                f"De : {from_anon}\n"
+                f"Taille totale : {attachment_result.total_size_mb:.2f} Mo\n"
+            )
+
+            # Ajouter liste fichiers (max 5)
+            if attachment_result.filepaths:
+                fichiers = attachment_result.filepaths[:5]
+                fichiers_text = "\n".join([f"- {Path(fp).name}" for fp in fichiers])
+                notification_text += f"\nFichiers :\n{fichiers_text}"
+
+                if len(attachment_result.filepaths) > 5:
+                    remaining = len(attachment_result.filepaths) - 5
+                    notification_text += f"\n... et {remaining} autre(s)"
+
+            # Ajouter inline button [View Email] (AC6)
+            keyboard = {
+                "inline_keyboard": [[
+                    {
+                        "text": "View Email",
+                        "url": f"https://mail.google.com/mail/u/0/#inbox/{message_id}"
+                    }
+                ]]
+            }
+
+            # Envoyer au topic Email
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    f'https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage',
+                    json={
+                        'chat_id': TELEGRAM_SUPERGROUP_ID,
+                        'message_thread_id': TOPIC_EMAIL_ID,
+                        'text': notification_text,
+                        'parse_mode': 'HTML',
+                        'reply_markup': keyboard
+                    },
+                    timeout=10.0
+                )
+
+                if response.status_code == 200:
+                    logger.info(
+                        "telegram_attachment_notification_sent",
+                        message_id=message_id,
+                        extracted_count=attachment_result.extracted_count,
+                        topic="Email"
+                    )
+                else:
+                    logger.error(
+                        "telegram_attachment_notification_failed",
+                        status_code=response.status_code,
+                        response=response.text[:200]
+                    )
+
+        except Exception as e:
+            logger.error("telegram_attachment_notification_error", error=str(e))
 
 
 # ============================================

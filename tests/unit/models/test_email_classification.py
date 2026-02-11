@@ -15,10 +15,10 @@ from agents.src.models.email_classification import EmailClassification
 # ==========================================
 
 
-def test_email_classification_valid_medical():
-    """Test création avec données valides pour category medical."""
+def test_email_classification_valid_pro():
+    """Test création avec données valides pour category pro."""
     data = {
-        "category": "medical",
+        "category": "pro",
         "confidence": 0.92,
         "reasoning": "Expéditeur URSSAF, mentions cotisations SELARL",
         "keywords": ["SELARL", "cotisations", "URSSAF"],
@@ -27,7 +27,7 @@ def test_email_classification_valid_medical():
 
     classification = EmailClassification(**data)
 
-    assert classification.category == "medical"
+    assert classification.category == "pro"
     assert classification.confidence == 0.92
     assert classification.reasoning == "Expéditeur URSSAF, mentions cotisations SELARL"
     assert classification.keywords == ["SELARL", "cotisations", "URSSAF"]
@@ -37,14 +37,14 @@ def test_email_classification_valid_medical():
 def test_email_classification_valid_all_categories():
     """Test que toutes les catégories valides sont acceptées."""
     valid_categories = [
-        "medical",
+        "pro",
         "finance",
-        "faculty",
-        "research",
-        "personnel",
+        "universite",
+        "recherche",
+        "perso",
         "urgent",
         "spam",
-        "unknown",
+        "inconnu",
     ]
 
     for category in valid_categories:
@@ -64,7 +64,7 @@ def test_email_classification_valid_all_priorities():
 
     for priority in valid_priorities:
         classification = EmailClassification(
-            category="medical",
+            category="pro",
             confidence=0.85,
             reasoning="Test reasoning",
             suggested_priority=priority,
@@ -76,7 +76,7 @@ def test_email_classification_default_values():
     """Test valeurs par défaut (keywords vide, priority normal)."""
     # Sans keywords ni priority
     classification = EmailClassification(
-        category="medical",
+        category="pro",
         confidence=0.85,
         reasoning="Test reasoning minimum fields",
     )
@@ -89,7 +89,7 @@ def test_email_classification_confidence_boundaries():
     """Test valeurs limites de confidence (0.0 et 1.0)."""
     # Confidence 0.0
     low_conf = EmailClassification(
-        category="unknown",
+        category="inconnu",
         confidence=0.0,
         reasoning="No confidence at all",
     )
@@ -97,7 +97,7 @@ def test_email_classification_confidence_boundaries():
 
     # Confidence 1.0
     high_conf = EmailClassification(
-        category="medical",
+        category="pro",
         confidence=1.0,
         reasoning="Absolutely certain",
     )
@@ -128,7 +128,7 @@ def test_email_classification_confidence_out_of_range_low():
     """Test que confidence < 0.0 est rejetée."""
     with pytest.raises(ValidationError) as exc_info:
         EmailClassification(
-            category="medical",
+            category="pro",
             confidence=-0.1,
             reasoning="Valid reasoning text here",
         )
@@ -143,7 +143,7 @@ def test_email_classification_confidence_out_of_range_high():
     """Test que confidence > 1.0 est rejetée."""
     with pytest.raises(ValidationError) as exc_info:
         EmailClassification(
-            category="medical",
+            category="pro",
             confidence=1.5,
             reasoning="Valid reasoning text here",
         )
@@ -158,7 +158,7 @@ def test_email_classification_reasoning_too_short():
     """Test que reasoning < 10 caractères est rejeté."""
     with pytest.raises(ValidationError) as exc_info:
         EmailClassification(
-            category="medical",
+            category="pro",
             confidence=0.85,
             reasoning="Short",  # Seulement 5 caractères
         )
@@ -173,7 +173,7 @@ def test_email_classification_invalid_priority():
     """Test que priorité invalide est rejetée."""
     with pytest.raises(ValidationError) as exc_info:
         EmailClassification(
-            category="medical",
+            category="pro",
             confidence=0.85,
             reasoning="Test reasoning",
             suggested_priority="invalid_priority",
@@ -207,7 +207,7 @@ def test_email_classification_missing_required_fields():
 def test_email_classification_to_dict():
     """Test sérialisation en dict."""
     classification = EmailClassification(
-        category="medical",
+        category="pro",
         confidence=0.92,
         reasoning="Test reasoning",
         keywords=["test"],
@@ -216,7 +216,7 @@ def test_email_classification_to_dict():
 
     data = classification.model_dump()
 
-    assert data["category"] == "medical"
+    assert data["category"] == "pro"
     assert data["confidence"] == 0.92
     assert data["reasoning"] == "Test reasoning"
     assert data["keywords"] == ["test"]
@@ -244,7 +244,7 @@ def test_email_classification_from_json():
     """Test désérialisation depuis JSON."""
     json_data = """
     {
-        "category": "research",
+        "category": "recherche",
         "confidence": 0.95,
         "reasoning": "Thesis defense invitation",
         "keywords": ["thesis", "defense", "PhD"],
@@ -254,6 +254,6 @@ def test_email_classification_from_json():
 
     classification = EmailClassification.model_validate_json(json_data)
 
-    assert classification.category == "research"
+    assert classification.category == "recherche"
     assert classification.confidence == 0.95
     assert "thesis" in classification.keywords

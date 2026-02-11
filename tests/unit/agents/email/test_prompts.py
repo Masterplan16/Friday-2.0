@@ -70,7 +70,7 @@ def test_build_classification_prompt_with_correction_rules():
             action_type="classify",
             priority=20,
             conditions={"subject": "thèse"},
-            output={"category": "research"},
+            output={"category": "recherche"},
             scope="classification",
         ),
     ]
@@ -99,7 +99,7 @@ def test_build_classification_prompt_max_50_rules():
             action_type="classify",
             priority=i,
             conditions={"test": f"condition-{i}"},
-            output={"category": "medical"},
+            output={"category": "pro"},
             scope="classification",
         )
         for i in range(1, 61)
@@ -142,14 +142,14 @@ def test_build_classification_prompt_all_categories_present():
     )
 
     expected_categories = [
-        "medical",
+        "pro",
         "finance",
-        "faculty",
-        "research",
-        "personnel",
+        "universite",
+        "recherche",
+        "perso",
         "urgent",
         "spam",
-        "unknown",
+        "inconnu",
     ]
 
     for category in expected_categories:
@@ -171,7 +171,7 @@ def test_build_classification_prompt_format_instructions():
     assert "SEULEMENT le JSON" in system_prompt
 
     # Règles strictes
-    assert "doute → category='unknown'" in system_prompt
+    assert "doute → category='inconnu'" in system_prompt
     assert "Reasoning doit expliquer" in system_prompt
     assert "JAMAIS de commentaires hors JSON" in system_prompt
 
@@ -200,7 +200,7 @@ def test_validate_classification_response_valid_json():
     """Test validation JSON de classification valide."""
     valid_json = """
     {
-        "category": "medical",
+        "category": "pro",
         "confidence": 0.92,
         "reasoning": "Email from URSSAF about SELARL contributions",
         "keywords": ["SELARL", "cotisations"],
@@ -216,7 +216,7 @@ def test_validate_classification_response_missing_keys():
     # Manque "reasoning"
     invalid_json = """
     {
-        "category": "medical",
+        "category": "pro",
         "confidence": 0.92
     }
     """
@@ -236,7 +236,7 @@ def test_validate_classification_response_with_markdown():
     markdown_json = """
     ```json
     {
-        "category": "medical",
+        "category": "pro",
         "confidence": 0.92,
         "reasoning": "Test",
         "keywords": []

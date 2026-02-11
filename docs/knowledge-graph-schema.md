@@ -273,7 +273,7 @@ entity_id = await memorystore.create_node(
 - `metadata.currency` : Devise (EUR, USD)
 - `metadata.date` : Date transaction
 - `metadata.category` : Catégorie (travaux, fournitures, salaire)
-- `metadata.account` : Compte (SELARL, SCM, SCI-1, SCI-2, Perso)
+- `metadata.account` : Compte (SELARL, SCM, SCI Ravas, SCI Malbosc, Perso)
 - `metadata.vendor` : Vendeur/fournisseur
 - `metadata.invoice_ref` : Référence facture
 

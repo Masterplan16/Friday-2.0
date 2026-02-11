@@ -40,7 +40,7 @@ async def test_classify_email_success(
     # Setup mocks
     mock_rules.return_value = []
     mock_claude.return_value = EmailClassification(
-        category="medical",
+        category="pro",
         confidence=0.92,
         reasoning="Email from SELARL cabinet",
         keywords=["SELARL", "patients"],
@@ -54,14 +54,14 @@ async def test_classify_email_success(
     # Test
     result = await classify_email(
         email_id="test-email-123",
-        email_text="Email from cabinet medical SELARL",
+        email_text="Email from cabinet pro SELARL",
         db_pool=mock_pool,
     )
 
     # Assertions
     assert result.confidence == 0.92
-    assert "medical" in result.output_summary
-    assert result.payload["category"] == "medical"
+    assert "pro" in result.output_summary
+    assert result.payload["category"] == "pro"
     assert result.payload["model"] == "claude-sonnet-4-5-20250929"
     assert "latency_ms" in result.payload
 
@@ -88,7 +88,7 @@ async def test_classify_email_error_fallback(mock_claude, mock_rules):
     # Assertions - doit retourner fallback
     assert result.confidence == 0.0
     assert "ERREUR" in result.output_summary
-    assert result.payload["category"] == "unknown"
+    assert result.payload["category"] == "inconnu"
     assert "error" in result.payload
 
 
@@ -182,7 +182,7 @@ async def test_call_claude_retry_on_json_error(mock_sleep, mock_get_adapter):
     mock_response_1.content = "Invalid JSON response"
     mock_response_2 = AsyncMock()
     mock_response_2.content = json.dumps({
-        "category": "medical",
+        "category": "pro",
         "confidence": 0.90,
         "reasoning": "Valid response on retry",
         "keywords": ["test"],
@@ -199,7 +199,7 @@ async def test_call_claude_retry_on_json_error(mock_sleep, mock_get_adapter):
     )
 
     # Assertions
-    assert classification.category == "medical"
+    assert classification.category == "pro"
     assert mock_adapter.complete_with_anonymization.call_count == 2
     mock_sleep.assert_called_once_with(1)  # Backoff 1s
 
@@ -253,7 +253,7 @@ async def test_update_email_category_success():
     await _update_email_category(
         db_pool=mock_pool,
         email_id="test-email-123",
-        category="medical",
+        category="pro",
         confidence=0.92,
     )
 
@@ -261,7 +261,7 @@ async def test_update_email_category_success():
     mock_conn.execute.assert_called_once()
     call_args = mock_conn.execute.call_args[0]
     assert "UPDATE ingestion.emails" in call_args[0]
-    assert call_args[1] == "medical"
+    assert call_args[1] == "pro"
     assert call_args[2] == 0.92
 
 
@@ -284,7 +284,7 @@ async def test_update_email_category_not_found():
         await _update_email_category(
             db_pool=mock_pool,
             email_id="nonexistent-email",
-            category="medical",
+            category="pro",
             confidence=0.92,
         )
 

@@ -597,7 +597,7 @@ class TestSQLConsistency:
     def test_account_type_matches_perimeters(self, migration_contents: dict[str, str]) -> None:
         """Migration 010: account_type doit correspondre aux 5 perimetres."""
         content = migration_contents["010_knowledge_finance"]
-        expected_types = {"selarl", "scm", "sci_1", "sci_2", "personal"}
+        expected_types = {"selarl", "scm", "sci_ravas", "sci_malbosc", "personal"}
         # Extraire les types du CHECK constraint
         match = re.search(
             r"account_type\s+IN\s*\(([^)]+)\)", content, re.IGNORECASE

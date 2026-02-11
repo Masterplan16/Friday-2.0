@@ -7,7 +7,7 @@ BEGIN;
 CREATE TABLE IF NOT EXISTS knowledge.financial_accounts (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     account_name VARCHAR(255) NOT NULL,
-    account_type VARCHAR(50) NOT NULL CHECK (account_type IN ('selarl', 'scm', 'sci_1', 'sci_2', 'personal')),
+    account_type VARCHAR(50) NOT NULL CHECK (account_type IN ('selarl', 'scm', 'sci_ravas', 'sci_malbosc', 'personal')),
     institution VARCHAR(255),
     account_number VARCHAR(100),
     currency VARCHAR(3) DEFAULT 'EUR',
@@ -25,7 +25,7 @@ CREATE TRIGGER accounts_updated_at
     FOR EACH ROW
     EXECUTE FUNCTION core.update_updated_at();
 
-COMMENT ON TABLE knowledge.financial_accounts IS 'Comptes financiers (5 périmètres: SELARL, SCM, SCI-1, SCI-2, Perso)';
+COMMENT ON TABLE knowledge.financial_accounts IS 'Comptes financiers (5 périmètres: SELARL, SCM, SCI Ravas, SCI Malbosc, Perso)';
 
 -- Table transactions
 CREATE TABLE IF NOT EXISTS knowledge.financial_transactions (

@@ -185,6 +185,84 @@ Exemples:
 
 ---
 
+### 📎 Extraction Pièces Jointes (Story 2.4) ✅
+
+**Extraction automatique et sécurisée des pièces jointes emails avec pipeline Event-Driven**
+
+| Feature | Description |
+|---------|-------------|
+| **Extraction automatique** | Via EmailEngine API (liste + download attachments) |
+| **Validation MIME** | Whitelist 18 types autorisés / Blacklist 25+ types bloqués (sécurité) |
+| **Validation taille** | Limite 25 Mo par fichier (limite EmailEngine API) |
+| **Sanitization** | Protection path traversal + command injection (8 étapes) |
+| **Zone transit** | `/var/friday/transit/attachments/YYYY-MM-DD/` (rétention 24h) |
+| **Base de données** | Table `ingestion.attachments` (métadonnées complètes) |
+| **Event-Driven** | Redis Streams `documents:received` → Consumer Archiviste |
+| **Retry logic** | Tenacity : 3 tentatives, backoff 1s/2s |
+| **Cleanup automatique** | Cron 03:05 quotidien (fichiers archived >24h) |
+| **Notifications** | Telegram topic Email (count + size + filenames) |
+
+**Workflow Pipeline** :
+```
+EmailEngine → Consumer Email → Extraction PJ
+  ↓
+  Validation MIME type (whitelist/blacklist)
+  ↓
+  Validation taille (<= 25 Mo)
+  ↓
+  Download via EmailEngine API
+  ↓
+  Sanitization nom fichier (sécurité)
+  ↓
+  Stockage zone transit VPS
+  ↓
+  INSERT métadonnées DB (ingestion.attachments)
+  ↓
+  Redis Streams documents:received → Consumer Archiviste
+  ↓
+  UPDATE status='processed' (MVP stub)
+  ↓
+  Telegram notification topic Email
+```
+
+**Sécurité** :
+- ✅ **MIME Types bloqués** : `.exe`, `.sh`, `.zip`, `.rar`, `.js`, `.py`, vidéos
+- ✅ **Sanitization** : `../../etc/passwd` → `etc_passwd`
+- ✅ **Unicode** : Normalisation NFD + ASCII only
+- ✅ **Limite** : 200 chars filename, 25 Mo size
+
+**Tests** :
+- 105 tests total (17% E2E, 6% Integration, 77% Unit)
+- Dataset 15 emails réalistes (nominal + sécurité + validation + edge cases)
+- Coverage AC1-AC6 : 8 tests acceptance
+
+**Commandes Telegram** :
+```
+Notification automatique si PJ extraites :
+
+Pieces jointes extraites : 3
+
+Email : Facture Orange janvier 2026
+De : comptabilite@orange.fr
+Taille totale : 1.42 Mo
+
+Fichiers :
+- Facture.pdf
+- Justificatif.jpg
+- Releve.xlsx
+
+[View Email] ← Inline button
+```
+
+**Limitations MVP** :
+- ⏳ OCR & Renommage intelligent → Epic 3 (Archiviste)
+- ⏳ Localisation finale (BeeStation/NAS) → Epic 3
+- ⏳ Recherche documentaire → Epic 3
+
+**Documentation** : [docs/attachment-extraction.md](docs/attachment-extraction.md)
+
+---
+
 ## 🛡️ Self-Healing ✅
 
 Friday 2.0 intègre un système de **self-healing automatique** en 4 tiers pour garantir une disponibilité 24/7 sans intervention manuelle.

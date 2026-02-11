@@ -4,6 +4,7 @@ Module email pour Friday 2.0 - Classification intelligente d'emails.
 Agents et outils pour traiter et classifier les emails entrants.
 """
 
+from agents.src.agents.email.attachment_extractor import extract_attachments
 from agents.src.agents.email.urgency_detector import (
     check_urgency_keywords,
     detect_urgency,
@@ -16,6 +17,7 @@ from agents.src.agents.email.vip_detector import (
 )
 
 __all__ = [
+    "extract_attachments",
     "compute_email_hash",
     "detect_vip_sender",
     "update_vip_email_stats",

@@ -25,7 +25,7 @@ class EmailClassification(BaseModel):
 
     category: str = Field(
         ...,
-        pattern=r"^(medical|finance|faculty|research|personnel|urgent|spam|unknown)$",
+        pattern=r"^(pro|finance|universite|recherche|perso|urgent|spam|inconnu)$",
         description="Catégorie de l'email",
     )
     confidence: float = Field(
@@ -53,10 +53,10 @@ class EmailClassification(BaseModel):
         "json_schema_extra": {
             "examples": [
                 {
-                    "category": "medical",
+                    "category": "pro",
                     "confidence": 0.92,
-                    "reasoning": "Email du cabinet SELARL, contient mentions patients et CPAM",
-                    "keywords": ["SELARL", "patients", "CPAM", "consultation"],
+                    "reasoning": "Email du cabinet SELARL, contient mentions CPAM et planning",
+                    "keywords": ["SELARL", "CPAM", "consultation", "planning"],
                     "suggested_priority": "high",
                 },
                 {
@@ -67,7 +67,7 @@ class EmailClassification(BaseModel):
                     "suggested_priority": "normal",
                 },
                 {
-                    "category": "research",
+                    "category": "recherche",
                     "confidence": 0.95,
                     "reasoning": "Invitation soutenance thèse, mention doctorat",
                     "keywords": ["thèse", "soutenance", "doctorat", "jury"],

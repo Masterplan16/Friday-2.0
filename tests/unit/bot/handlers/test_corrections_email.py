@@ -29,7 +29,7 @@ async def test_handle_correct_button_email_shows_category_buttons(mock_anonymize
         "module": "email",
         "action_type": "classify",
         "input_summary": "Email from @urssaf.fr",
-        "output_summary": "→ medical (0.92)",
+        "output_summary": "→ pro (0.92)",
     }
 
     mock_pool_ctx = AsyncMock()
@@ -68,7 +68,7 @@ async def test_handle_correct_button_email_shows_category_buttons(mock_anonymize
     assert len(buttons_flat) == 8
 
     # Vérifier que les callbacks sont corrects
-    categories = ["medical", "finance", "faculty", "research", "personnel", "urgent", "spam", "unknown"]
+    categories = ["pro", "finance", "universite", "recherche", "perso", "urgent", "spam", "inconnu"]
     for idx, btn in enumerate(buttons_flat):
         assert btn.callback_data == f"correct_email_cat_{categories[idx]}_receipt-email-123"
 
@@ -169,7 +169,7 @@ async def test_handle_category_correction_success():
         "id": "receipt-email-789",
         "module": "email",
         "action_type": "classify",
-        "output_summary": "→ medical (0.92)",  # Catégorie originale
+        "output_summary": "→ pro (0.92)",  # Catégorie originale
     }
     mock_conn.execute.return_value = "UPDATE 1"
 
@@ -204,7 +204,7 @@ async def test_handle_category_correction_success():
     # Vérifier JSON correction
     correction_json = call_args[1]
     assert '"correct_category": "finance"' in correction_json
-    assert '"original_category": "medical"' in correction_json
+    assert '"original_category": "pro"' in correction_json
 
     # Vérifier message confirmation
     update.callback_query.message.edit_text.assert_called_once()
@@ -263,9 +263,9 @@ async def test_handle_category_correction_parses_category_from_output():
 
     # Différents formats output_summary possibles
     test_cases = [
-        ("→ medical (0.92)", "medical"),
+        ("→ pro (0.92)", "pro"),
         ("→ finance (confidence=0.85)", "finance"),
-        ("→ unknown (0.50)", "unknown"),
+        ("→ inconnu (0.50)", "inconnu"),
     ]
 
     for output_summary, expected_category in test_cases:

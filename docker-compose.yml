@@ -385,3 +385,37 @@ services:
       timeout: 10s
       start_period: 30s
       retries: 3
+
+  # ============================================
+  # Document Processor Stub - Consumer Redis Streams
+  # Story 2.4 - Task 5 (MVP Epic 2)
+  # ============================================
+  document-processor-stub:
+    build:
+      context: ./services/document_processor
+      dockerfile: Dockerfile
+    container_name: friday-document-processor-stub
+    restart: unless-stopped
+    environment:
+      # Database
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-friday}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-friday}
+
+      # Redis (ACL document_processor user)
+      - REDIS_URL=redis://document_processor:${REDIS_DOCUMENT_PROCESSOR_PASSWORD:-REDACTED_DOC_PASSWORD}@redis:6379/0
+
+      # Config optionnelle
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    networks:
+      friday-network:
+        ipv4_address: 172.20.0.25
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "python.*consumer_stub.py"]
+      interval: 60s
+      timeout: 10s
+      start_period: 30s
+      retries: 3

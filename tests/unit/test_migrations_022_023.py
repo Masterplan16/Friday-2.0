@@ -19,6 +19,7 @@ async def db_pool():
 
 
 @pytest.mark.asyncio
+@pytest.mark.integration
 async def test_migration_022_creates_purged_at_column(db_pool):
     """Test migration 022 crée colonne purged_at.
 
@@ -71,6 +72,7 @@ async def test_migration_022_creates_purged_at_column(db_pool):
 
 
 @pytest.mark.asyncio
+@pytest.mark.integration
 async def test_migration_023_creates_deleted_at_column(db_pool):
     """Test migration 023 crée colonne deleted_at.
 
@@ -123,6 +125,7 @@ async def test_migration_023_creates_deleted_at_column(db_pool):
 
 
 @pytest.mark.asyncio
+@pytest.mark.integration
 async def test_purged_at_allows_null_and_timestamp(db_pool):
     """Test purged_at accepte NULL et TIMESTAMPTZ.
 
@@ -165,6 +168,7 @@ async def test_purged_at_allows_null_and_timestamp(db_pool):
 
 
 @pytest.mark.asyncio
+@pytest.mark.integration
 async def test_deleted_at_allows_null_and_timestamp(db_pool):
     """Test deleted_at accepte NULL et TIMESTAMPTZ.
 

@@ -100,12 +100,12 @@ class TestAnonymizeTextBasicFunctionality:
         assert result.anonymized_text == "   \n  \t  "
         assert result.entities_found == []
 
-    @patch("agents.src.tools.anonymize.httpx.AsyncClient")
-    async def test_anonymize_no_pii_detected(self, mock_client_class):
+    @patch("agents.src.tools.anonymize._get_http_client")
+    async def test_anonymize_no_pii_detected(self, mock_get_client):
         """Texte sans PII retourne texte identique"""
         # Mock httpx.AsyncClient
         mock_client = AsyncMock()
-        mock_client_class.return_value.__aenter__.return_value = mock_client
+        mock_get_client.return_value = mock_client
 
         # Mock response analyzer: aucune entité détectée
         mock_analyze_response = MagicMock()
@@ -121,12 +121,12 @@ class TestAnonymizeTextBasicFunctionality:
         assert result.mapping == {}
         assert result.confidence_min == 1.0
 
-    @patch("agents.src.tools.anonymize.httpx.AsyncClient")
+    @patch("agents.src.tools.anonymize._get_http_client")
     async def test_anonymize_with_person_entity(self, mock_client_class):
         """Test anonymisation basique avec entité PERSON"""
         # Mock httpx.AsyncClient
         mock_client = AsyncMock()
-        mock_client_class.return_value.__aenter__.return_value = mock_client
+        mock_client_class.return_value = mock_client
 
         # Mock analyzer response
         mock_analyze_response = MagicMock()
@@ -162,11 +162,11 @@ class TestAnonymizeTextBasicFunctionality:
 class TestAnonymizeTextFailExplicit:
     """Tests fail-explicit behavior (Bug B2, AC2)"""
 
-    @patch("agents.src.tools.anonymize.httpx.AsyncClient")
+    @patch("agents.src.tools.anonymize._get_http_client")
     async def test_presidio_analyzer_unavailable_raises_error(self, mock_client_class):
         """Fail-explicit: Si analyzer unavailable → lever AnonymizationError"""
         mock_client = AsyncMock()
-        mock_client_class.return_value.__aenter__.return_value = mock_client
+        mock_client_class.return_value = mock_client
         mock_client.post.side_effect = httpx.ConnectError("Connection refused")
 
         with pytest.raises(AnonymizationError) as exc_info:
@@ -174,11 +174,11 @@ class TestAnonymizeTextFailExplicit:
 
         assert "Presidio unavailable" in str(exc_info.value)
 
-    @patch("agents.src.tools.anonymize.httpx.AsyncClient")
+    @patch("agents.src.tools.anonymize._get_http_client")
     async def test_presidio_timeout_raises_error(self, mock_client_class):
         """Fail-explicit: Si timeout Presidio → lever AnonymizationError"""
         mock_client = AsyncMock()
-        mock_client_class.return_value.__aenter__.return_value = mock_client
+        mock_client_class.return_value = mock_client
         mock_client.post.side_effect = httpx.TimeoutException("Request timeout")
 
         with pytest.raises(AnonymizationError) as exc_info:
@@ -186,11 +186,11 @@ class TestAnonymizeTextFailExplicit:
 
         assert "Presidio unavailable" in str(exc_info.value)
 
-    @patch("agents.src.tools.anonymize.httpx.AsyncClient")
+    @patch("agents.src.tools.anonymize._get_http_client")
     async def test_missing_text_key_in_response_raises_error(self, mock_client_class):
         """B2: Validation JSON - KeyError si 'text' absent → AnonymizationError"""
         mock_client = AsyncMock()
-        mock_client_class.return_value.__aenter__.return_value = mock_client
+        mock_client_class.return_value = mock_client
 
         # Mock analyzer response
         mock_analyze_response = MagicMock()
@@ -270,7 +270,7 @@ class TestHttpClientReuse:
 class TestMappingLifecycle:
     """Tests lifecycle mapping éphémère (AC3)"""
 
-    @patch("agents.src.tools.anonymize.httpx.AsyncClient")
+    @patch("agents.src.tools.anonymize._get_http_client")
     async def test_mapping_is_ephemeral_in_memory_only(self, mock_client_class):
         """
         AC3: Le mapping doit être éphémère (mémoire uniquement).
@@ -279,7 +279,7 @@ class TestMappingLifecycle:
         et peut être utilisé pour deanonymization, mais n'est jamais persisté.
         """
         mock_client = AsyncMock()
-        mock_client_class.return_value.__aenter__.return_value = mock_client
+        mock_client_class.return_value = mock_client
 
         # Mock responses
         mock_analyze_response = MagicMock()

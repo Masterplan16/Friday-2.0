@@ -190,7 +190,7 @@ class TestEnvExampleSecurity:
     def env_content(self):
         env_file = PROJECT_ROOT / ".env.example"
         assert env_file.exists(), ".env.example must exist"
-        return env_file.read_text()
+        return env_file.read_text(encoding="utf-8")
 
     def test_no_real_api_keys(self, env_content):
         """Pas de vraies cles API (patterns connus)."""

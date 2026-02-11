@@ -5,24 +5,35 @@ Exécute l'envoi email via EmailEngine après validation Approve.
 Stocke writing_example pour apprentissage few-shot.
 
 Story: 2.5 Brouillon Réponse Email - Task 5 Subtask 5.3
+Story: 2.6 Envoi Emails Approuvés - Task 1.2 (notifications)
 """
 
 # TODO(M4 - Story future): Migrer vers structlog pour logs structurés JSON
+import html
 import logging
 from typing import Dict, Optional
+from datetime import datetime
 import asyncpg
 import httpx
+from telegram import Bot
 
-# Import EmailEngine client
-# TODO(Story future): Refactor imports avec proper PYTHONPATH setup au lieu de sys.path.insert
-import sys
-from pathlib import Path
-repo_root = Path(__file__).parent.parent  # bot/ -> repo root (FIX: était .parent seul)
-sys.path.insert(0, str(repo_root))
-
+# Import EmailEngine client (PYTHONPATH géré par bot/main.py startup)
 from services.email_processor.emailengine_client import EmailEngineClient, EmailEngineError
+from bot.handlers.draft_reply_notifications import (
+    send_email_confirmation_notification,
+    send_email_failure_notification
+)
+from agents.src.tools.anonymize import anonymize_text
 
 logger = logging.getLogger(__name__)
+
+# Account name mapping for notifications (Story 2.6 AC3)
+ACCOUNT_NAME_MAPPING = {
+    "account_professional": "professional",
+    "account_medical": "medical",
+    "account_academic": "academic",
+    "account_personal": "personal"
+}
 
 
 async def send_email_via_emailengine(
@@ -30,20 +41,22 @@ async def send_email_via_emailengine(
     db_pool: asyncpg.Pool,
     http_client: httpx.AsyncClient,
     emailengine_url: str,
-    emailengine_secret: str
+    emailengine_secret: str,
+    bot: Optional[Bot] = None
 ) -> Dict:
     """
     Envoyer email via EmailEngine après validation Approve (Story 2.5 AC5)
 
-    Workflow:
+    Workflow (Story 2.6 modifié):
         1. Load receipt depuis core.action_receipts
         2. Vérifier status='approved'
         3. Extract draft_body + email_original_id depuis receipt.payload
         4. Fetch email original depuis ingestion.emails
         5. Determine account_id (compte IMAP source)
         6. Send via EmailEngine (avec threading correct)
-        7. UPDATE receipt status='executed'
-        8. INSERT writing_example (apprentissage few-shot)
+        7. [Story 2.6] Notification confirmation topic Email (AC3)
+        8. UPDATE receipt status='executed'
+        9. INSERT writing_example (apprentissage few-shot)
 
     Args:
         receipt_id: UUID du receipt (core.action_receipts)
@@ -51,6 +64,7 @@ async def send_email_via_emailengine(
         http_client: HTTP client pour EmailEngine
         emailengine_url: URL base EmailEngine
         emailengine_secret: Bearer token EmailEngine
+        bot: Instance Telegram Bot (optionnel, pour notifications Story 2.6)
 
     Returns:
         Dict avec résultat EmailEngine:
@@ -68,7 +82,8 @@ async def send_email_via_emailengine(
         ...     db_pool=pool,
         ...     http_client=client,
         ...     emailengine_url="http://localhost:3000",
-        ...     emailengine_secret="secret"
+        ...     emailengine_secret="secret",
+        ...     bot=telegram_bot
         ... )
         >>> print(result['messageId'])
         "<sent-456@example.com>"
@@ -136,8 +151,8 @@ async def send_email_via_emailengine(
 
     account_id = emailengine_client.determine_account_id(dict(email_original))
 
-    # Convert plain text to simple HTML
-    body_html = f"<p>{draft_body.replace(chr(10), '<br>')}</p>"
+    # Convert plain text to simple HTML (escape HTML + convert newlines)
+    body_html = f"<p>{html.escape(draft_body).replace('\n', '<br>')}</p>"
 
     try:
         result = await emailengine_client.send_message(
@@ -157,6 +172,40 @@ async def send_email_via_emailengine(
             recipient=recipient_email
         )
 
+        # ========================================================================
+        # AJOUT Story 2.6 : Notification confirmation (AC3)
+        # ========================================================================
+
+        if bot:
+            # Anonymiser recipient + subject pour notification
+            try:
+                recipient_anon_result = await anonymize_text(recipient_email)
+                recipient_anon = recipient_anon_result.anonymized_text
+
+                subject_anon_result = await anonymize_text(subject)
+                subject_anon = subject_anon_result.anonymized_text
+
+                # Déterminer nom compte (professional/medical/academic/personal)
+                account_name = ACCOUNT_NAME_MAPPING.get(account_id, account_id)
+
+                # Envoyer notification topic Email
+                await send_email_confirmation_notification(
+                    bot=bot,
+                    receipt_id=receipt_id,
+                    recipient_anon=recipient_anon,
+                    subject_anon=subject_anon,
+                    account_name=account_name,
+                    sent_at=datetime.now()
+                )
+
+            except Exception as notif_error:
+                # Échec notification ne bloque pas workflow (AC3)
+                logger.warning(
+                    "email_confirmation_notification_failed",
+                    receipt_id=receipt_id,
+                    error=str(notif_error)
+                )
+
     except EmailEngineError as e:
         logger.error(
             "emailengine_send_failed",
@@ -174,6 +223,33 @@ async def send_email_via_emailengine(
                 """,
                 receipt_id
             )
+
+        # ========================================================================
+        # AJOUT Story 2.6 : Notification échec (AC5)
+        # ========================================================================
+
+        if bot:
+            # Anonymiser recipient pour notification
+            try:
+                recipient_anon_result = await anonymize_text(recipient_email)
+                recipient_anon = recipient_anon_result.anonymized_text
+
+                # Envoyer notification topic System
+                await send_email_failure_notification(
+                    bot=bot,
+                    receipt_id=receipt_id,
+                    error_message=str(e),
+                    recipient_anon=recipient_anon
+                )
+
+            except Exception as notif_error:
+                # Log error mais ne raise pas (notification = best effort)
+                logger.error(
+                    "email_failure_notification_failed",
+                    receipt_id=receipt_id,
+                    error=str(notif_error)
+                )
+
         raise
 
     # =======================================================================

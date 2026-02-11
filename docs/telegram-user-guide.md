@@ -768,6 +768,238 @@ Brouillon Friday:
 
 **Latence** : <10s (génération brouillon + notification Telegram)
 
+---
+
+## ✉️ Envoi Emails Approuvés (Story 2.6)
+
+Friday envoie automatiquement les emails que vous avez approuvés via inline buttons Telegram, avec notifications complètes et historique consultable.
+
+### Workflow Complet : Brouillon → Validation → Envoi
+
+**Étape 1 : Brouillon prêt** (Story 2.5)
+- Email reçu → Classification → Brouillon généré
+- Notification topic **Actions & Validations** avec inline buttons
+
+**Étape 2 : Validation Mainteneur** (Story 2.6)
+- Clic sur bouton **[✅ Approve]**
+- Receipt status : `pending` → `approved`
+
+**Étape 3 : Envoi EmailEngine** (Story 2.6)
+- Friday envoie email via EmailEngine
+- Compte IMAP automatiquement sélectionné (professional/medical/academic/personal)
+- Threading correct : `inReplyTo` + `references` (conversation cohérente)
+- **Retry automatique** : 3 tentatives si échec (backoff exponentiel 1s, 2s)
+- Latence : **<5s** entre clic Approve → confirmation
+
+**Étape 4 : Confirmation** (Story 2.6)
+- Receipt status : `approved` → `executed`
+- **Notification topic Email & Communications** :
+
+```
+✅ Email envoyé avec succès
+
+Destinataire: [NAME_42]@[DOMAIN_13]
+Sujet: Re: [SUBJECT_88]
+
+📨 Compte: professional
+⏱️  Envoyé le: 2026-02-11 14:30:00
+
+[📋 Voir dans /journal]
+```
+
+- Writing example stocké automatiquement (amélioration future few-shot)
+
+**Étape 5 : Historique** (Story 2.6)
+- Consultable via `/journal` et `/receipt [id]`
+
+### Notifications Telegram
+
+#### ✅ Confirmation Envoi (Topic Email)
+
+**Quand** : Email envoyé avec succès via EmailEngine
+
+**Contenu** :
+- Destinataire anonymisé (via Presidio, RGPD)
+- Sujet anonymisé
+- Compte IMAP utilisé
+- Timestamp envoi
+- Inline button `[📋 Voir dans /journal]` → détail complet
+
+**Anonymisation** : Aucune PII en clair dans notification (protection RGPD même si historique Telegram fuite)
+
+#### ⚠️ Échec Envoi (Topic System)
+
+**Quand** : EmailEngine échoue après 3 tentatives
+
+**Contenu** :
+
+```
+⚠️ Échec envoi email
+
+Destinataire: [NAME_1]@[DOMAIN_1]
+Erreur: EmailEngine send failed: 500 - Internal Server Error
+
+Action requise: Vérifier EmailEngine + compte IMAP
+Receipt ID: uuid-123
+```
+
+**Actions** :
+1. Vérifier EmailEngine opérationnel : `docker compose ps | grep emailengine`
+2. Consulter logs : `docker compose logs emailengine`
+3. Vérifier compte IMAP configuré dans EmailEngine dashboard
+
+### Commandes Consultation Historique
+
+#### `/journal` — 20 dernières actions
+
+**Usage** :
+```
+/journal              # Toutes actions (emails, classification, archiviste, etc.)
+/journal email        # Filtrer uniquement emails
+/journal -v           # Mode verbose (affiche input_summary)
+```
+
+**Exemple sortie** :
+
+```
+**Journal** (20 dernières actions)
+
+`2026-02-11 14:30` ✅ Email envoyé → [NAME_42]@[DOMAIN_13] 95.0%
+`2026-02-11 14:25` ⏳ email.classify ⏳ 92.0%
+`2026-02-11 14:20` ✅ Email envoyé → [NAME_7]@[DOMAIN_2] 94.0%
+```
+
+**Format emails** : Affichage spécial avec recipient anonymisé (pour lisibilité vs format générique `module.action`)
+
+#### `/journal email` — Filtrer emails uniquement
+
+**Usage** : `/journal email` → Affiche uniquement actions `module='email'`
+
+**Utile pour** : Consulter rapidement historique envois sans autres actions (classification, archiviste, etc.)
+
+#### `/receipt [id]` — Détail complet action
+
+**Usage** :
+```
+/receipt <receipt_id>         # Détail complet receipt
+/receipt <receipt_id> -v      # Mode verbose (payload JSON complet)
+```
+
+**Exemple sortie emails envoyés** :
+
+```
+**Receipt** `uuid-123...`
+
+Module: `email.draft_reply`
+Trust: propose
+Status: ✅ executed
+Confidence: 94.0%
+Input: Email de john@example.com...
+Output: [NAME_42]@[DOMAIN_13]
+Reasoning: Réponse générée par Claude Sonnet 4.5...
+Created: 2026-02-11 14:25:00
+
+**Email Details**
+Compte IMAP: `account_professional`
+Type: professional
+Message ID: `<sent-456@example.com>...`
+
+Brouillon (extrait):
+---
+Bonjour,
+
+Voici ma réponse à votre question...
+
+Cordialement,
+Dr. Lopez
+---
+```
+
+**Mode verbose (`-v`)** : Affiche JSON payload complet (draft_body, account_id, email_type, message_id, timestamps)
+
+### Troubleshooting Envoi Emails
+
+#### ❌ Email non envoyé après clic [Approve]
+
+**Checklist** :
+
+1. **Vérifier EmailEngine opérationnel** :
+   ```bash
+   docker compose ps | grep emailengine
+   # Doit afficher "Up" (healthy)
+   ```
+
+2. **Consulter logs EmailEngine** :
+   ```bash
+   docker compose logs emailengine --tail=50
+   # Chercher erreurs 500, timeout, auth failed
+   ```
+
+3. **Vérifier compte IMAP configuré** :
+   - Dashboard EmailEngine : `http://localhost:3000`
+   - Vérifier compte listé et authenticated
+
+4. **Consulter receipt status** :
+   ```
+   /receipt <receipt_id>
+   # Si status='failed' → Voir erreur dans logs
+   ```
+
+5. **Vérifier notification System** :
+   - Topic **System & Alerts** doit contenir alerte échec avec détails erreur
+
+#### ⚠️ Notification "Échec envoi email" reçue
+
+**Causes fréquentes** :
+
+| Erreur | Cause | Solution |
+|--------|-------|----------|
+| `500 - Internal Server Error` | EmailEngine down ou bug | Relancer EmailEngine : `docker compose restart emailengine` |
+| `Account not found` | Compte IMAP non configuré | Ajouter compte dans EmailEngine dashboard |
+| `Authentication failed` | Credentials IMAP invalides | Vérifier credentials dans EmailEngine |
+| `Connection timeout` | Réseau SMTP inaccessible | Vérifier firewall + DNS |
+
+**Retry** : Friday retente automatiquement 3 fois (1s, 2s backoff). Si échec persiste après 3 tentatives → alerte System.
+
+#### 📋 Historique `/journal` vide ou incomplet
+
+**Causes** :
+- Aucun email envoyé récemment → Normal si pas d'activité
+- Receipt non créé → Vérifier Trust Layer fonctionnel (Story 1.6)
+
+**Vérification** :
+```sql
+-- Via psql (administrateur uniquement)
+SELECT id, module, action_type, status, created_at
+FROM core.action_receipts
+WHERE module='email'
+ORDER BY created_at DESC LIMIT 20;
+```
+
+### Sécurité & RGPD
+
+**Anonymisation systématique** :
+- ✅ Recipient et Subject **toujours anonymisés** dans notifications Telegram
+- ✅ Mapping Presidio éphémère (mémoire uniquement, jamais persisté)
+- ✅ Payload receipt chiffré pgcrypto (colonnes sensibles)
+
+**Protection données** :
+- Historique Telegram cloud → Notifications anonymisées (protection si fuite)
+- Logs structurés JSON → Pas de PII en clair
+- Database PostgreSQL → Chiffrement pgcrypto colonnes sensibles
+
+### Métriques Story 2.6
+
+**Latence** : <5s (clic Approve → confirmation envoi)
+
+**Fiabilité** :
+- Retry 3 tentatives automatiques
+- Taux de succès cible : >99% (si EmailEngine healthy)
+
+**Coût** : $0 (pas d'appel LLM, seulement envoi EmailEngine)
+
+**Budget mensuel total** (avec Story 2.5 brouillons) : ~$2-3/mois (50 emails)
+
 **Commande** : `/budget` pour voir consommation API temps réel (Story 1.11)
 
 ---

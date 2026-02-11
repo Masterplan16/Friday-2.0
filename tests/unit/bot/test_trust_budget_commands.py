@@ -656,3 +656,171 @@ class TestStatsCommand:
 
             text = mock_update.message.reply_text.call_args[0][0]
             assert "Aucune action enregistree" in text
+
+
+# ────────────────────────────────────────────────────────────
+# Story 2.6 - Tests améliorations /journal et /receipt pour emails
+# ────────────────────────────────────────────────────────────
+
+
+class TestJournalEmailStory26:
+    """Tests Story 2.6 AC4 - Améliorations /journal pour emails envoyés."""
+
+    @pytest.mark.asyncio
+    async def test_journal_email_filter(self, mock_update, mock_context, mock_pool, mock_db_conn):
+        """Story 2.6 AC4: /journal email filtre uniquement actions email."""
+        from bot.handlers.trust_budget_commands import journal_command
+
+        mock_context.args = ["email"]
+        mock_db_conn.fetch.return_value = [
+            {
+                "id": "aaa",
+                "module": "email",
+                "action_type": "draft_reply",
+                "status": "executed",
+                "confidence": 0.92,
+                "input_summary": "Email de test",
+                "output_summary": "[NAME_1]@[DOMAIN_1]",
+                "created_at": datetime(2026, 2, 11, 14, 30, 0),
+            },
+        ]
+
+        with patch("bot.handlers.trust_budget_commands._get_pool", new_callable=AsyncMock, return_value=mock_pool):
+            with patch("bot.handlers.trust_budget_commands.send_message_with_split", new_callable=AsyncMock) as mock_send:
+                await journal_command(mock_update, mock_context)
+
+                # Vérifier que fetch a été appelé avec filtre module='email'
+                fetch_call = mock_db_conn.fetch.call_args
+                assert "WHERE module = $1" in fetch_call[0][0]
+                assert fetch_call[0][1] == "email"
+
+                # Vérifier message contient label filtre
+                text = mock_send.call_args[0][1]
+                assert "(filtre: email)" in text
+
+    @pytest.mark.asyncio
+    async def test_journal_email_special_format(self, mock_update, mock_context, mock_pool, mock_db_conn):
+        """Story 2.6 AC4: Format spécial pour emails envoyés avec recipient_anon."""
+        from bot.handlers.trust_budget_commands import journal_command
+
+        mock_db_conn.fetch.return_value = [
+            {
+                "id": "email-receipt-1",
+                "module": "email",
+                "action_type": "draft_reply",
+                "status": "executed",
+                "confidence": 0.95,
+                "input_summary": "Email de john@example.com",
+                "output_summary": "[NAME_42]@[DOMAIN_13]",  # Recipient anonymisé
+                "created_at": datetime(2026, 2, 11, 15, 45, 0),
+            },
+            {
+                "id": "other-receipt-1",
+                "module": "archiviste",
+                "action_type": "rename",
+                "status": "auto",
+                "confidence": 0.88,
+                "input_summary": "Document test",
+                "output_summary": "Renamed to facture.pdf",
+                "created_at": datetime(2026, 2, 11, 15, 40, 0),
+            },
+        ]
+
+        with patch("bot.handlers.trust_budget_commands._get_pool", new_callable=AsyncMock, return_value=mock_pool):
+            with patch("bot.handlers.trust_budget_commands.send_message_with_split", new_callable=AsyncMock) as mock_send:
+                await journal_command(mock_update, mock_context)
+
+                text = mock_send.call_args[0][1]
+
+                # Vérifier format spécial pour email
+                assert "Email envoyé → [NAME_42]@[DOMAIN_13]" in text
+
+                # Vérifier format générique pour archiviste
+                assert "archiviste.rename" in text
+
+    @pytest.mark.asyncio
+    async def test_receipt_email_details_section(self, mock_update, mock_context, mock_pool, mock_db_conn):
+        """Story 2.6 AC4: /receipt affiche section Email Details pour emails."""
+        from bot.handlers.trust_budget_commands import receipt_command
+
+        mock_context.args = ["test-email-receipt"]
+        mock_db_conn.fetchrow.return_value = {
+            "id": "test-email-receipt-uuid-123",
+            "module": "email",
+            "action_type": "draft_reply",
+            "trust_level": "auto",
+            "status": "executed",
+            "confidence": 0.94,
+            "input_summary": "Email de test",
+            "output_summary": "[NAME_1]@[DOMAIN_1]",
+            "reasoning": "Réponse générée par Claude",
+            "created_at": datetime(2026, 2, 11, 14, 30, 0),
+            "updated_at": datetime(2026, 2, 11, 14, 31, 0),
+            "payload": {
+                "account_id": "account_professional",
+                "email_type": "professional",
+                "message_id": "<sent-456@example.com>",
+                "draft_body": "Bonjour,\n\nVoici ma réponse.\n\nCordialement,\nDr. Lopez",
+            },
+        }
+
+        with patch("bot.handlers.trust_budget_commands._get_pool", new_callable=AsyncMock, return_value=mock_pool):
+            with patch("bot.handlers.trust_budget_commands.send_message_with_split", new_callable=AsyncMock) as mock_send:
+                await receipt_command(mock_update, mock_context)
+
+                text = mock_send.call_args[0][1]
+
+                # Vérifier section Email Details
+                assert "**Email Details**" in text
+                assert "Compte IMAP: `account_professional`" in text
+                assert "Type: professional" in text
+                assert "Message ID:" in text
+                assert "Brouillon (extrait):" in text
+                assert "Bonjour" in text
+
+    @pytest.mark.asyncio
+    async def test_receipt_verbose_shows_payload_json(self, mock_update, mock_context, mock_pool, mock_db_conn):
+        """Story 2.6 AC4: /receipt -v affiche payload JSON complet."""
+        from bot.handlers.trust_budget_commands import receipt_command
+
+        mock_context.args = ["test-receipt", "-v"]
+        mock_db_conn.fetchrow.return_value = {
+            "id": "test-receipt-uuid",
+            "module": "email",
+            "action_type": "draft_reply",
+            "trust_level": "propose",
+            "status": "executed",
+            "confidence": 0.91,
+            "input_summary": "Input test",
+            "output_summary": "Output test",
+            "reasoning": "Reasoning test",
+            "created_at": datetime(2026, 2, 11, 14, 0, 0),
+            "updated_at": datetime(2026, 2, 11, 14, 5, 0),
+            "validated_at": datetime(2026, 2, 11, 14, 3, 0),
+            "executed_at": datetime(2026, 2, 11, 14, 4, 0),
+            "duration_ms": 1250,
+            "validated_by": 12345,
+            "payload": {
+                "draft_body": "Test body",
+                "account_id": "account_medical",
+                "email_type": "medical",
+            },
+        }
+
+        with patch("bot.handlers.trust_budget_commands._get_pool", new_callable=AsyncMock, return_value=mock_pool):
+            with patch("bot.handlers.trust_budget_commands.send_message_with_split", new_callable=AsyncMock) as mock_send:
+                await receipt_command(mock_update, mock_context)
+
+                text = mock_send.call_args[0][1]
+
+                # Vérifier section Details (-v)
+                assert "**Details** (`-v`)" in text
+                assert "Duration: 1250ms" in text
+                assert "Validated by: user 12345" in text
+                assert "Validated at:" in text
+                assert "Executed at:" in text
+
+                # Vérifier payload JSON complet affiché
+                assert "Payload (JSON complet):" in text
+                assert "```json" in text
+                assert '"draft_body":' in text or '"account_id":' in text

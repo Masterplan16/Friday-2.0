@@ -15,7 +15,7 @@ from pathlib import Path
 from datetime import datetime
 import os
 
-from agents.src.adapters.memorystore import MemorystoreAdapter
+from agents.src.adapters.memorystore import PostgreSQLMemorystore
 from agents.src.agents.email.graph_populator import populate_email_graph
 
 
@@ -78,8 +78,8 @@ async def e2e_db_pool():
 
 @pytest.fixture
 async def memorystore_e2e(e2e_db_pool):
-    """Fixture MemorystoreAdapter pour E2E."""
-    adapter = MemorystoreAdapter(e2e_db_pool)
+    """Fixture PostgreSQLMemorystore pour E2E."""
+    adapter = PostgreSQLMemorystore(e2e_db_pool)
     await adapter.init_pgvector()
     return adapter
 

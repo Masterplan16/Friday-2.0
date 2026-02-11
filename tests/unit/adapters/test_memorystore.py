@@ -14,7 +14,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 from agents.src.adapters.memorystore import (
-    MemorystoreAdapter,
+    PostgreSQLMemorystore,
     NodeType,
     RelationType,
 )
@@ -46,8 +46,8 @@ def mock_db_pool(mock_conn):
 
 @pytest.fixture
 async def memorystore(mock_db_pool):
-    """Fixture MemorystoreAdapter avec mock pool."""
-    adapter = MemorystoreAdapter(mock_db_pool)
+    """Fixture PostgreSQLMemorystore avec mock pool."""
+    adapter = PostgreSQLMemorystore(mock_db_pool)
     adapter._pgvector_initialized = True  # Simuler pgvector disponible
     return adapter
 

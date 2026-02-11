@@ -54,6 +54,48 @@ BEFORE UPDATE ON core.cold_start_tracking
 FOR EACH ROW
 EXECUTE FUNCTION core.update_cold_start_tracking_updated_at();
 
+-- H5 fix: Trigger pour valider les transitions de phase
+-- Transitions valides: cold_start → calibrated → production (sens unique)
+CREATE OR REPLACE FUNCTION core.validate_cold_start_phase_transition()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Autoriser cold_start → cold_start (update emails_processed)
+    IF OLD.phase = 'cold_start' AND NEW.phase = 'cold_start' THEN
+        RETURN NEW;
+    END IF;
+
+    -- Autoriser cold_start → calibrated
+    IF OLD.phase = 'cold_start' AND NEW.phase = 'calibrated' THEN
+        RETURN NEW;
+    END IF;
+
+    -- Autoriser calibrated → calibrated (update accuracy)
+    IF OLD.phase = 'calibrated' AND NEW.phase = 'calibrated' THEN
+        RETURN NEW;
+    END IF;
+
+    -- Autoriser calibrated → production
+    IF OLD.phase = 'calibrated' AND NEW.phase = 'production' THEN
+        RETURN NEW;
+    END IF;
+
+    -- Autoriser production → production (no-op)
+    IF OLD.phase = 'production' AND NEW.phase = 'production' THEN
+        RETURN NEW;
+    END IF;
+
+    -- Toute autre transition est INTERDITE
+    RAISE EXCEPTION 'Invalid phase transition: % → % (allowed: cold_start→calibrated→production, one-way only)',
+        OLD.phase, NEW.phase;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_validate_phase_transition
+BEFORE UPDATE ON core.cold_start_tracking
+FOR EACH ROW
+WHEN (OLD.phase IS DISTINCT FROM NEW.phase)  -- Déclencher seulement si phase change
+EXECUTE FUNCTION core.validate_cold_start_phase_transition();
+
 -- Seed initial pour email.classify (Story 2.2)
 INSERT INTO core.cold_start_tracking
     (module, action_type, phase, emails_processed, accuracy)

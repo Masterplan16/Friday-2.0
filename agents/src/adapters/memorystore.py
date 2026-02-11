@@ -1,71 +1,43 @@
 """
-Adaptateur memorystore pour Friday 2.0 - Abstraction graphe de connaissances.
+Implémentation PostgreSQL du MemoryStore pour Friday 2.0.
 
-Day 1 : PostgreSQL (tables knowledge.*) + pgvector (embeddings)
+Backend Day 1 : PostgreSQL (tables knowledge.*) + pgvector (embeddings)
   Decision D19 : pgvector remplace Qdrant Day 1 (100k vecteurs, 1 utilisateur)
   Réévaluation Qdrant si >300k vecteurs ou latence >100ms
-Futur possible (6+ mois) : Migration vers Graphiti (si mature) ou Neo4j
 
-Ce module fournit une interface unifiée pour :
-- Créer/récupérer des nœuds (entités : personnes, docs, topics)
-- Créer des relations (edges) entre nœuds
-- Recherche sémantique via pgvector (embeddings dans PostgreSQL)
-- Requêtes sur le graphe PostgreSQL
+Implémente l'interface MemoryStore avec PostgreSQL comme backend.
 
-Philosophie : Start simple (PostgreSQL relationnel + pgvector),
-migrer uniquement si douleur réelle (>300k vecteurs, latence, filtres complexes).
+Pour swap vers Graphiti/Neo4j/Qdrant : créer nouvelle classe XxxMemorystore(MemoryStore)
+et modifier MEMORYSTORE_PROVIDER env var.
+
+Date: 2026-02-11
+Version: 2.0.0 (Story 6.3 - Interface abstraite)
 """
 
 import logging
+import os
 import uuid
 from datetime import datetime
-from enum import Enum
 from typing import Any, Optional
 
 import asyncpg
 
+from .memorystore_interface import MemoryStore, NodeType, RelationType
+
 logger = logging.getLogger(__name__)
 
 
-class NodeType(str, Enum):
-    """Types de nœuds dans le graphe de connaissances (10 types)."""
-
-    PERSON = "person"
-    EMAIL = "email"
-    DOCUMENT = "document"
-    EVENT = "event"
-    TASK = "task"
-    ENTITY = "entity"
-    CONVERSATION = "conversation"
-    TRANSACTION = "transaction"
-    FILE = "file"
-    REMINDER = "reminder"
-
-
-class RelationType(str, Enum):
-    """Types de relations entre nœuds (14 types)."""
-
-    SENT_BY = "sent_by"
-    RECEIVED_BY = "received_by"
-    ATTACHED_TO = "attached_to"
-    MENTIONS = "mentions"
-    RELATED_TO = "related_to"
-    ASSIGNED_TO = "assigned_to"
-    CREATED_FROM = "created_from"
-    SCHEDULED = "scheduled"
-    REFERENCES = "references"
-    PART_OF = "part_of"
-    PAID_WITH = "paid_with"
-    BELONGS_TO = "belongs_to"
-    REMINDS_ABOUT = "reminds_about"
-    SUPERSEDES = "supersedes"
-
-
-class MemorystoreAdapter:
+class PostgreSQLMemorystore(MemoryStore):
     """
-    Adaptateur pour le graphe de connaissances Friday 2.0.
+    Implémentation PostgreSQL de l'interface MemoryStore.
 
-    Backend Day 1 : PostgreSQL (knowledge.* tables) + pgvector (embeddings)
+    Backend : PostgreSQL (knowledge.* tables) + pgvector (embeddings)
+
+    Features:
+        - Nœuds stockés dans knowledge.nodes
+        - Relations stockées dans knowledge.edges
+        - Embeddings stockés dans knowledge.embeddings (pgvector)
+        - Recherche sémantique via cosine distance (<=>)
     """
 
     def __init__(self, db_pool: asyncpg.Pool):
@@ -202,6 +174,111 @@ class MemorystoreAdapter:
             return str(existing_id)
 
         return await self.create_node(node_type, name, metadata, embedding)
+
+    async def get_node_by_id(self, node_id: str) -> Optional[dict[str, Any]]:
+        """
+        Récupère un nœud par son ID.
+
+        Args:
+            node_id: UUID du nœud
+
+        Returns:
+            Dictionnaire {id, type, name, metadata, created_at} ou None si introuvable
+        """
+        row = await self.db_pool.fetchrow(
+            """
+            SELECT id, type, name, metadata, created_at, updated_at
+            FROM knowledge.nodes
+            WHERE id = $1
+            """,
+            node_id,
+        )
+
+        if not row:
+            return None
+
+        return {
+            "id": str(row["id"]),
+            "type": row["type"],
+            "name": row["name"],
+            "metadata": row["metadata"],
+            "created_at": row["created_at"],
+            "updated_at": row.get("updated_at"),
+        }
+
+    async def get_nodes_by_type(
+        self, node_type: str, limit: int = 100
+    ) -> list[dict[str, Any]]:
+        """
+        Récupère tous les nœuds d'un type donné.
+
+        Args:
+            node_type: Type de nœud (valeurs: NodeType enum)
+            limit: Nombre maximal de résultats (default: 100)
+
+        Returns:
+            Liste de nœuds [{id, type, name, metadata, created_at}, ...]
+        """
+        rows = await self.db_pool.fetch(
+            """
+            SELECT id, type, name, metadata, created_at, updated_at
+            FROM knowledge.nodes
+            WHERE type = $1
+            ORDER BY created_at DESC
+            LIMIT $2
+            """,
+            node_type,
+            limit,
+        )
+
+        return [
+            {
+                "id": str(row["id"]),
+                "type": row["type"],
+                "name": row["name"],
+                "metadata": row["metadata"],
+                "created_at": row["created_at"],
+                "updated_at": row.get("updated_at"),
+            }
+            for row in rows
+        ]
+
+    async def get_edges_by_type(
+        self, relation_type: str, limit: int = 100
+    ) -> list[dict[str, Any]]:
+        """
+        Récupère toutes les relations d'un type donné.
+
+        Args:
+            relation_type: Type de relation (valeurs: RelationType enum)
+            limit: Nombre maximal de résultats (default: 100)
+
+        Returns:
+            Liste d'edges [{id, from_node_id, to_node_id, relation_type, metadata}, ...]
+        """
+        rows = await self.db_pool.fetch(
+            """
+            SELECT id, from_node_id, to_node_id, relation_type, metadata, created_at
+            FROM knowledge.edges
+            WHERE relation_type = $1
+            ORDER BY created_at DESC
+            LIMIT $2
+            """,
+            relation_type,
+            limit,
+        )
+
+        return [
+            {
+                "id": str(row["id"]),
+                "from_node_id": str(row["from_node_id"]),
+                "to_node_id": str(row["to_node_id"]),
+                "relation_type": row["relation_type"],
+                "metadata": row["metadata"] or {},
+                "created_at": row["created_at"],
+            }
+            for row in rows
+        ]
 
     async def create_edge(
         self,
@@ -623,19 +700,83 @@ class MemorystoreAdapter:
         return []  # Aucun chemin trouvé
 
 
-# Factory function pour initialiser l'adaptateur
+# ============================================================
+# Factory Pattern
+# ============================================================
+
+
 async def get_memorystore_adapter(
-    db_pool: asyncpg.Pool,
-) -> MemorystoreAdapter:
+    pool: Optional[asyncpg.Pool] = None,
+    provider: Optional[str] = None,
+) -> MemoryStore:
     """
-    Factory pour créer et initialiser un MemorystoreAdapter.
+    Factory pour créer adaptateur memorystore (graphe de connaissances).
 
     Args:
-        db_pool: Pool PostgreSQL (avec extension pgvector installée)
+        pool: Pool asyncpg existant (si None, créé depuis DATABASE_URL)
+        provider: Provider memorystore ("postgresql", "graphiti", "neo4j", "qdrant")
+                  Si None, lit depuis env MEMORYSTORE_PROVIDER (default: "postgresql")
 
     Returns:
-        Instance MemorystoreAdapter initialisée
+        Instance MemoryStore prête à l'usage (interface abstraite)
+
+    Raises:
+        ValueError: Si provider inconnu
+
+    Example:
+        adapter = await get_memorystore_adapter()  # PostgreSQL par défaut
+        node_id = await adapter.create_node("person", "Antonio", {...})
     """
-    adapter = MemorystoreAdapter(db_pool)
-    await adapter.init_pgvector()
-    return adapter
+    provider = provider or os.getenv("MEMORYSTORE_PROVIDER", "postgresql")
+
+    if provider == "postgresql":
+        # PostgreSQL Day 1 (Decision D19)
+        if pool is None:
+            database_url = os.getenv("DATABASE_URL")
+            if not database_url:
+                raise ValueError("DATABASE_URL manquante")
+
+            pool = await asyncpg.create_pool(database_url, min_size=2, max_size=10)
+            logger.info("memorystore_pool_created", provider="postgresql")
+
+        adapter = PostgreSQLMemorystore(pool)
+        await adapter.init_pgvector()
+
+        logger.info(
+            "memorystore_factory_created",
+            provider="postgresql",
+            backend="PostgreSQL + pgvector",
+        )
+
+        return adapter
+
+    # Extensible: Ajouter d'autres providers
+    elif provider == "graphiti":
+        # Réévaluation août 2026 (Decision D3, Addendum §10)
+        raise NotImplementedError(
+            "Graphiti backend pas encore implémenté. "
+            "Day 1 = PostgreSQL + pgvector. "
+            "Réévaluation si maturité Graphiti atteinte (~août 2026)."
+        )
+
+    elif provider == "neo4j":
+        # Swap futur si besoin requêtes graphe complexes
+        raise NotImplementedError(
+            "Neo4j backend pas encore implémenté. "
+            "Day 1 = PostgreSQL. "
+            "Swap vers Neo4j si besoin requêtes graphe complexes (Cypher, shortest path, etc.)."
+        )
+
+    elif provider == "qdrant":
+        # Decision D19 : Qdrant si >300k vecteurs ou latence pgvector >100ms
+        raise NotImplementedError(
+            "Qdrant backend pas encore implémenté. "
+            "Day 1 = pgvector dans PostgreSQL. "
+            "Swap vers Qdrant si >300k vecteurs ou latence >100ms (réévaluation)."
+        )
+
+    else:
+        raise ValueError(
+            f"Unknown provider: {provider}. "
+            "Supportés: postgresql, graphiti (futur), neo4j (futur), qdrant (futur)"
+        )

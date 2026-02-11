@@ -22,6 +22,7 @@ from agents.src.middleware.trust import (
     get_trust_manager,
     init_trust_manager,
 )
+from tests.conftest import create_mock_pool_with_conn
 
 
 # ==========================================
@@ -32,10 +33,8 @@ from agents.src.middleware.trust import (
 @pytest.fixture
 def mock_db_pool():
     """Mock asyncpg.Pool pour tests unitaires."""
-    pool = MagicMock()
     conn = AsyncMock()
-    pool.acquire.return_value.__aenter__.return_value = conn
-    pool.acquire.return_value.__aexit__.return_value = AsyncMock(return_value=None)
+    pool = create_mock_pool_with_conn(conn)
     return pool
 
 

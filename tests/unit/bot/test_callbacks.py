@@ -12,6 +12,7 @@ from telegram import CallbackQuery, Chat, Message, Update, User
 from telegram.ext import ContextTypes
 
 from bot.handlers.callbacks import CallbacksHandler, _cleanup_stale_attempts
+from tests.conftest import create_mock_pool_with_conn
 
 
 @pytest.fixture
@@ -21,12 +22,7 @@ def mock_db_pool():
     Pattern: pool.acquire() -> async context manager -> conn
              conn.transaction() -> async context manager
     """
-    pool = MagicMock()
     conn = MagicMock()
-
-    # acquire() returns sync, but __aenter__/__aexit__ are async
-    pool.acquire.return_value.__aenter__ = AsyncMock(return_value=conn)
-    pool.acquire.return_value.__aexit__ = AsyncMock(return_value=False)
 
     # transaction() returns sync, __aenter__/__aexit__ are async
     conn.transaction.return_value.__aenter__ = AsyncMock(return_value=None)
@@ -43,6 +39,7 @@ def mock_db_pool():
             "output_summary": "medical (0.92)",
         }
     )
+    pool = create_mock_pool_with_conn(conn)
     return pool
 
 

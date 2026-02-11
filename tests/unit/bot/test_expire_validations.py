@@ -13,16 +13,15 @@ from services.metrics.expire_validations import (
     load_timeout_config,
     notify_expiration_telegram,
 )
+from tests.conftest import create_mock_pool_with_conn
 
 
 @pytest.fixture
 def mock_db_pool():
     """Mock asyncpg Pool."""
-    pool = MagicMock()
     conn = MagicMock()
-    pool.acquire.return_value.__aenter__ = AsyncMock(return_value=conn)
-    pool.acquire.return_value.__aexit__ = AsyncMock(return_value=False)
     conn.fetch = AsyncMock(return_value=[])
+    pool = create_mock_pool_with_conn(conn)
     return pool
 
 

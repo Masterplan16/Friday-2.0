@@ -7,7 +7,7 @@ import asyncpg
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from .formatters import parse_verbose_flag, format_timestamp
+from .formatters import format_timestamp, parse_verbose_flag
 from .messages import send_message_with_split
 
 

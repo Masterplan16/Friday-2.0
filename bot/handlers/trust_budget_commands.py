@@ -16,9 +16,6 @@ import asyncpg
 import redis.asyncio as aioredis
 import structlog
 import yaml
-from telegram import Update
-from telegram.ext import ContextTypes
-
 from bot.handlers.formatters import (
     format_confidence,
     format_eur,
@@ -28,6 +25,8 @@ from bot.handlers.formatters import (
     truncate_text,
 )
 from bot.handlers.messages import send_message_with_split
+from telegram import Update
+from telegram.ext import ContextTypes
 
 logger = structlog.get_logger(__name__)
 

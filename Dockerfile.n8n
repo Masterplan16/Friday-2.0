@@ -2,22 +2,23 @@
 # Story 1.12 - Task 1.1: Installer age CLI pour backups chiffrés
 # Base: n8nio/n8n:2.2.4
 
+# Stage 1: Download age binaries
+FROM alpine:latest AS age-builder
+RUN apk add --no-cache wget tar && \
+    wget https://github.com/FiloSottile/age/releases/download/v1.3.0/age-v1.3.0-linux-amd64.tar.gz -O /tmp/age.tar.gz && \
+    tar -xzf /tmp/age.tar.gz -C /tmp
+
+# Stage 2: Final n8n image
 FROM n8nio/n8n:2.2.4
 
-# Install dependencies for age CLI
 USER root
 
-# Install age v1.3.0+ from GitHub releases
-# Source: https://github.com/FiloSottile/age
-# Version: v1.3.0 (support post-quantum keys)
-RUN apt-get update && apt-get install -y wget tar && \
-    wget https://github.com/FiloSottile/age/releases/download/v1.3.0/age-v1.3.0-linux-amd64.tar.gz -O /tmp/age.tar.gz && \
-    tar -xzf /tmp/age.tar.gz -C /tmp && \
-    mv /tmp/age/age /usr/local/bin/age && \
-    mv /tmp/age/age-keygen /usr/local/bin/age-keygen && \
-    chmod +x /usr/local/bin/age /usr/local/bin/age-keygen && \
-    rm -rf /tmp/age* && \
-    apt-get remove -y wget tar && apt-get clean && rm -rf /var/lib/apt/lists/*
+# Copy age binaries from builder stage
+COPY --from=age-builder /tmp/age/age /usr/local/bin/age
+COPY --from=age-builder /tmp/age/age-keygen /usr/local/bin/age-keygen
+
+# Set permissions
+RUN chmod +x /usr/local/bin/age /usr/local/bin/age-keygen
 
 # Verify installation
 RUN age --version && age-keygen --help

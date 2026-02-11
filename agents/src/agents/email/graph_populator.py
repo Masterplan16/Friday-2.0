@@ -30,8 +30,8 @@ Usage:
 """
 
 import logging
-from typing import Any, Optional
 from datetime import datetime
+from typing import Any, Optional
 
 from agents.src.adapters.memorystore import MemorystoreAdapter, NodeType, RelationType
 

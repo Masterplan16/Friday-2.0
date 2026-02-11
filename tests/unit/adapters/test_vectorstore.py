@@ -381,7 +381,7 @@ async def test_pgvector_delete_success():
 # ============================================================
 
 
-# Total tests dans ce fichier: 18
+# Total tests dans ce fichier: 17 tests PASS
 # Coverage ciblée: VoyageAIAdapter, PgvectorStore, Factory, Anonymisation
 
 # Tests implémentés (Task 7):
@@ -398,6 +398,6 @@ async def test_pgvector_delete_success():
 # ⏸️ Subtask 7.7: Chunking documents → Testé dans test_embedding_generator.py (archiviste)
 # ⏸️ Subtask 7.9: Budget compteur → Nécessite migration core.api_usage (Story 6.2 Task 6)
 
-# TOTAL: 18 tests unitaires PASS dans ce fichier
-# NOTE: Story revendique "17 vectorstore + 3 email + 4 archiviste" = 24 tests
-#       Réalité: 18 vectorstore + 3 email + 4 archiviste = 25 tests (correction)
+# TOTAL: 17 tests unitaires PASS dans ce fichier
+# NOTE: pytest reports 17 passed (verified 2026-02-11)
+#       Total coverage: 17 vectorstore + 3 email (SKIPPED) + 4 archiviste = 21 PASS + 3 SKIPPED

@@ -21,6 +21,7 @@ logger = structlog.get_logger(__name__)
 ALLOWED_MODULES = {
     "email.classify",
     "email.draft",
+    "email.draft_reply",  # Story 2.5 - Envoi email après approve
     "email.send",
     "archiviste.rename",
     "archiviste.classify",

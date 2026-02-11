@@ -1,0 +1,203 @@
+{
+  "description": "Dataset test cases pour Story 2.5 - Email Draft Reply avec Few-Shot Learning",
+  "version": "1.0",
+  "created": "2026-02-11",
+  "test_cases": [
+    {
+      "id": "professional_appointment_simple",
+      "email_type": "professional",
+      "from": "patient@example.com",
+      "subject": "Question about appointment",
+      "body": "Bonjour Dr. Lopez,\n\nPouvez-vous me confirmer mon rendez-vous du 15 février à 14h30?\n\nCordialement,\nJean Dupont",
+      "expected_draft_contains": ["confirme", "rendez-vous", "15 février", "14h30"],
+      "expected_style": "formal",
+      "expected_min_length": 50
+    },
+    {
+      "id": "professional_reschedule",
+      "email_type": "professional",
+      "from": "patient2@example.com",
+      "subject": "Reprogrammer RDV",
+      "body": "Bonjour,\n\nJe ne pourrai malheureusement pas venir à mon rendez-vous de demain. Pouvons-nous reprogrammer?\n\nMerci,\nMarie Martin",
+      "expected_draft_contains": ["reprogrammer", "disponibilités"],
+      "expected_style": "formal",
+      "expected_min_length": 50
+    },
+    {
+      "id": "academic_thesis_discussion",
+      "email_type": "academic",
+      "from": "student@univ.fr",
+      "subject": "Discussion thesis progress",
+      "body": "Dear Professor Lopez,\n\nI would like to schedule a meeting to discuss my thesis progress. Are you available this week?\n\nBest regards,\nSarah Chen",
+      "expected_draft_contains": ["available", "meeting", "thesis"],
+      "expected_style": "formal",
+      "expected_min_length": 50
+    },
+    {
+      "id": "academic_exam_question",
+      "email_type": "academic",
+      "from": "student2@univ.fr",
+      "subject": "Question about exam",
+      "body": "Bonjour Professeur Lopez,\n\nJ'ai une question concernant l'examen de la semaine prochaine. Le chapitre 5 est-il inclus?\n\nCordialement,\nPierre Dubois",
+      "expected_draft_contains": ["examen", "chapitre"],
+      "expected_style": "formal",
+      "expected_min_length": 40
+    },
+    {
+      "id": "medical_results_inquiry",
+      "email_type": "medical",
+      "from": "patient3@example.com",
+      "subject": "Résultats analyses",
+      "body": "Bonjour Docteur,\n\nMes résultats d'analyses sont-ils disponibles? Quand puis-je passer les récupérer?\n\nMerci,\nLuc Bernard",
+      "expected_draft_contains": ["résultats", "disponibles"],
+      "expected_style": "formal",
+      "expected_min_length": 40
+    },
+    {
+      "id": "medical_prescription_renewal",
+      "email_type": "medical",
+      "from": "patient4@example.com",
+      "subject": "Renouvellement ordonnance",
+      "body": "Bonjour,\n\nJe souhaiterais renouveler mon ordonnance pour mon traitement habituel. Est-ce possible sans consultation?\n\nCordialement,\nAnne Petit",
+      "expected_draft_contains": ["ordonnance", "renouvellement"],
+      "expected_style": "formal",
+      "expected_min_length": 50
+    },
+    {
+      "id": "personal_family_event",
+      "email_type": "personal",
+      "from": "cousin@gmail.com",
+      "subject": "Réunion de famille",
+      "body": "Salut Antonio,\n\nOn organise une réunion de famille le mois prochain. Tu seras dispo?\n\nBises,\nClaude",
+      "expected_draft_contains": ["famille", "disponible"],
+      "expected_style": "informal",
+      "expected_min_length": 30
+    },
+    {
+      "id": "personal_friend_invitation",
+      "email_type": "personal",
+      "from": "friend@gmail.com",
+      "subject": "Dîner samedi",
+      "body": "Coucou,\n\nÇa te dit un dîner samedi soir?\n\nBisous,\nSophie",
+      "expected_draft_contains": ["samedi", "dîner"],
+      "expected_style": "informal",
+      "expected_min_length": 20
+    },
+    {
+      "id": "professional_complex_question",
+      "email_type": "professional",
+      "from": "patient5@example.com",
+      "subject": "Questions multiples",
+      "body": "Bonjour Dr. Lopez,\n\nJ'ai plusieurs questions:\n1. Mon RDV du 20/02 est-il confirmé?\n2. Dois-je être à jeun pour les analyses?\n3. Faut-il apporter mes anciennes radios?\n\nMerci d'avance,\nRobert Durand",
+      "expected_draft_contains": ["confirmé", "jeun", "radios"],
+      "expected_style": "formal",
+      "expected_min_length": 100
+    },
+    {
+      "id": "academic_recommendation_request",
+      "email_type": "academic",
+      "from": "student3@univ.fr",
+      "subject": "Lettre de recommandation",
+      "body": "Cher Professeur Lopez,\n\nJe postule pour un stage de recherche. Accepteriez-vous de rédiger une lettre de recommandation?\n\nMerci pour votre considération,\nThomas Leroux",
+      "expected_draft_contains": ["recommandation", "lettre"],
+      "expected_style": "formal",
+      "expected_min_length": 50
+    },
+    {
+      "id": "medical_urgent_symptom",
+      "email_type": "medical",
+      "from": "patient6@example.com",
+      "subject": "URGENT - Symptômes",
+      "body": "Bonjour Docteur,\n\nDepuis hier soir, j'ai de fortes douleurs abdominales. Dois-je consulter en urgence?\n\nAnne Rousseau",
+      "expected_draft_contains": ["urgence", "consulter", "douleurs"],
+      "expected_style": "formal",
+      "expected_min_length": 50,
+      "expected_urgency": true
+    },
+    {
+      "id": "professional_certificate_request",
+      "email_type": "professional",
+      "from": "patient7@example.com",
+      "subject": "Certificat médical",
+      "body": "Bonjour,\n\nJ'aurais besoin d'un certificat médical pour mon employeur. Quand puis-je passer?\n\nCordialement,\nJacques Martin",
+      "expected_draft_contains": ["certificat", "passer"],
+      "expected_style": "formal",
+      "expected_min_length": 40
+    },
+    {
+      "id": "academic_course_material",
+      "email_type": "academic",
+      "from": "student4@univ.fr",
+      "subject": "Support de cours",
+      "body": "Bonjour Professeur,\n\nLe support de cours du chapitre 8 est-il disponible sur la plateforme?\n\nMerci,\nEmilie Blanc",
+      "expected_draft_contains": ["support", "disponible", "plateforme"],
+      "expected_style": "formal",
+      "expected_min_length": 30
+    },
+    {
+      "id": "personal_casual_question",
+      "email_type": "personal",
+      "from": "neighbor@gmail.com",
+      "subject": "Question rapide",
+      "body": "Salut,\n\nT'as toujours la tondeuse que tu m'avais prêtée? J'en aurais besoin ce week-end.\n\nMerci!\nPaul",
+      "expected_draft_contains": ["tondeuse", "week-end"],
+      "expected_style": "informal",
+      "expected_min_length": 20
+    },
+    {
+      "id": "professional_pii_heavy",
+      "email_type": "professional",
+      "from": "patient8@example.com",
+      "subject": "Dossier médical",
+      "body": "Bonjour Dr. Lopez,\n\nJe m'appelle Marie Dupont, née le 15/03/1985, numéro sécu 2 85 03 75 123 456 78.\n\nJe souhaite récupérer mon dossier médical pour le transférer à mon nouveau médecin.\n\nMerci,\nMarie Dupont",
+      "expected_draft_contains": ["dossier", "transférer"],
+      "expected_style": "formal",
+      "expected_min_length": 50,
+      "expected_presidio_anonymization": true,
+      "pii_entities": ["PERSON", "DATE_TIME", "NRP"]
+    }
+  ],
+  "writing_examples_seed": [
+    {
+      "email_type": "professional",
+      "subject": "Re: Confirmation RDV",
+      "body": "Bonjour,\n\nJe confirme votre rendez-vous du 20 février à 15h00.\n\nCordialement,\nDr. Antonio Lopez"
+    },
+    {
+      "email_type": "professional",
+      "subject": "Re: Résultats analyses",
+      "body": "Bonjour,\n\nVos résultats sont disponibles. Vous pouvez passer les récupérer à votre convenance.\n\nCordialement,\nDr. Antonio Lopez"
+    },
+    {
+      "email_type": "academic",
+      "subject": "Re: Thesis meeting",
+      "body": "Dear Sarah,\n\nI am available this Thursday at 3pm in my office.\n\nBest regards,\nProf. Antonio Lopez"
+    },
+    {
+      "email_type": "academic",
+      "subject": "Re: Examen chapitre 5",
+      "body": "Bonjour,\n\nOui, le chapitre 5 est inclus dans l'examen. Bon courage pour vos révisions.\n\nCordialement,\nProf. Antonio Lopez"
+    },
+    {
+      "email_type": "medical",
+      "subject": "Re: Ordonnance",
+      "body": "Bonjour,\n\nJe prépare votre ordonnance. Vous pouvez la récupérer dès demain.\n\nCordialement,\nDr. Antonio Lopez"
+    }
+  ],
+  "correction_rules_seed": [
+    {
+      "module": "email",
+      "scope": "draft_reply",
+      "conditions": "Toujours utiliser 'Cordialement' pour emails professionnels",
+      "output": "Terminer par 'Cordialement,\\nDr. Antonio Lopez'",
+      "priority": 1
+    },
+    {
+      "module": "email",
+      "scope": "draft_reply",
+      "conditions": "Ne jamais utiliser 'Bien à vous'",
+      "output": "Remplacer par 'Cordialement'",
+      "priority": 2
+    }
+  ]
+}

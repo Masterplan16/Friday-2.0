@@ -40,6 +40,7 @@ from agents.src.agents.email.vip_detector import (
 )
 from agents.src.agents.email.urgency_detector import detect_urgency
 from agents.src.agents.email.attachment_extractor import extract_attachments
+from agents.src.agents.email.draft_reply import draft_email_reply
 from agents.src.middleware.trust import init_trust_manager
 
 # ============================================
@@ -458,6 +459,59 @@ class EmailProcessorConsumer:
                         message_id=message_id,
                         error=str(e)
                     )
+
+            # Étape 7: Génération brouillon réponse optionnel (Story 2.5 - Phase 7)
+            # Conditions déclenchement :
+            # 1. Email classifié professional/medical/academic (pas spam, pas perso urgent)
+            # 2. Email pas de Mainteneur lui-même (éviter boucle)
+            # 3. Optionnel Day 1 : peut être déclenché manuellement via /draft
+            should_draft = (
+                category in ('professional', 'medical', 'academic') and
+                not self._is_from_mainteneur(from_raw)
+            )
+
+            if should_draft:
+                try:
+                    # Construire email_data pour draft_email_reply
+                    email_data = {
+                        'from': from_raw,
+                        'from_anon': from_anon,
+                        'to': to_raw,
+                        'subject': subject_raw,
+                        'subject_anon': subject_anon,
+                        'body': body_text_raw,
+                        'body_anon': body_anon,
+                        'category': category,
+                        'message_id': message_id,
+                        'sender_email': from_raw,
+                        'recipient_email': to_raw
+                    }
+
+                    # Appel draft_email_reply (async, avec @friday_action)
+                    # Notification Telegram envoyée automatiquement via middleware
+                    draft_result = await draft_email_reply(
+                        email_id=str(email_id),
+                        email_data=email_data,
+                        db_pool=self.db_pool
+                    )
+
+                    logger.info(
+                        "draft_reply_generated",
+                        email_id=str(email_id),
+                        message_id=message_id,
+                        confidence=draft_result.confidence,
+                        examples_used=draft_result.payload.get('style_examples_used', 0)
+                    )
+
+                except Exception as e:
+                    logger.error(
+                        "draft_reply_failed",
+                        email_id=str(email_id),
+                        message_id=message_id,
+                        error=str(e),
+                        exc_info=True
+                    )
+                    # Continue quand même (draft optionnel, échec ne bloque pas pipeline)
 
             # XACK: Marquer comme traité
             await self.redis.xack(STREAM_NAME, CONSUMER_GROUP, event_id)
@@ -878,6 +932,40 @@ class EmailProcessorConsumer:
 
         except Exception as e:
             logger.error("telegram_attachment_notification_error", error=str(e))
+
+    def _is_from_mainteneur(self, from_email: str) -> bool:
+        """
+        Vérifier si l'email provient du Mainteneur lui-même (Story 2.5)
+
+        Évite boucle infinie draft → envoi → reçu → draft → ...
+
+        Args:
+            from_email: Email expéditeur brut (peut inclure nom)
+
+        Returns:
+            True si email de Mainteneur, False sinon
+
+        Example:
+            >>> _is_from_mainteneur("antonio.lopez@example.com")
+            True
+            >>> _is_from_mainteneur("Dr. Antonio Lopez <antonio.lopez@example.com>")
+            True
+            >>> _is_from_mainteneur("john.doe@example.com")
+            False
+        """
+        # Liste emails du Mainteneur (hardcodé Day 1, TODO: migration DB config)
+        mainteneur_emails = [
+            "antonio.lopez@example.com",
+            "dr.lopez@hospital.fr",
+            "lopez@university.fr",
+            "personal@gmail.com"
+        ]
+
+        # Normaliser from_email (extraire email si format "Name <email>")
+        email_lower = from_email.lower()
+
+        # Check si un des emails Mainteneur est dans from_email
+        return any(mainteneur_email in email_lower for mainteneur_email in mainteneur_emails)
 
 
 # ============================================

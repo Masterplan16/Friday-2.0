@@ -20,7 +20,8 @@ Friday 2.0 est un système d'IA personnel qui agit comme un **second cerveau** p
 | **Budget** | ~73€/mois (VPS OVH VPS-4 ~25€ + Claude API ~45€ + veille ~3€) |
 | **Philosophie** | KISS Day 1, évolutibilité by design (5 adaptateurs) |
 | **Hébergement** | VPS-4 OVH France — 48 Go RAM / 12 vCores / 300 Go SSD |
-| **Stockage** | Hybride : VPS (cerveau, index, métadonnées) + PC (fichiers) |
+| **Stockage** | Hybride : VPS (cerveau, index, métadonnées) + PC (fichiers) + NAS (Phase 2 - PostgreSQL local + documents) |
+| **Agent local** | Claude Code CLI (Phase 1: PC, Phase 2: NAS QNAP TS-264-8G) [D23] |
 | **Sécurité** | Tailscale (zéro exposition Internet) + Presidio (RGPD) + age/SOPS |
 | **Interface** | Telegram (canal unique, 100% Day 1) |
 | **Contrôle** | Observability & Trust Layer (receipts, trust levels, feedback loop) |
@@ -202,6 +203,73 @@ docker stats watchtower
 ```
 
 **Documentation complète** : [docs/watchtower-monitoring.md](docs/watchtower-monitoring.md)
+
+---
+
+## 🤖 Agent Local Desktop Search (Claude CLI) [D23]
+
+Friday 2.0 utilise **Claude Code CLI** comme agent local pour la recherche sémantique dans les documents locaux (PDF, Docx, articles, thèses).
+
+| Aspect | Configuration |
+|--------|--------------|
+| **Phase 1 (actuel)** | Claude CLI sur PC Mainteneur (PC allumé requis) |
+| **Phase 2 (roadmap)** | Migration Claude CLI vers NAS QNAP TS-264-8G (disponibilité 24/7) |
+| **Communication** | Telegram → VPS → Redis Streams → Claude CLI PC/NAS → Résultat |
+| **Wrapper** | Python léger (~120 lignes) vs agent custom (~1250 lignes) = **−40% dev time** |
+| **Interface** | Telegram `/search <requête>` (quotidien) + SSH (admin/debug) |
+| **Simplification** | Story 3.3 réduite : L (20-30h) → M (12-18h) économie 8-12h dev |
+
+### Architecture
+
+```
+Utilisateur → Telegram (/search "contrat bail 2024")
+    ↓
+☁️ VPS Gateway (FastAPI)
+    ↓
+Redis Stream (desktop.search.request)
+    ↓
+🏠 PC/NAS Claude CLI (via wrapper Python)
+    ↓
+PostgreSQL pgvector (recherche sémantique)
+    ↓
+Redis Stream (desktop.search.result)
+    ↓
+📱 Telegram (topic Email & Communications)
+    "✅ Trouvé : Bail_Cabinet_2024-06-15.pdf (page 3, clause résiliation)"
+```
+
+### NAS recommandé (Phase 2)
+
+| Modèle | Prix total | CPU | RAM | M.2 NVMe | Verdict |
+|--------|------------|-----|-----|----------|---------|
+| **QNAP TS-264-8G** | **721€** | Intel N5105 (6 800 Passmark) | 8 Go DDR4 | 2× | **Recommandé** |
+| UGREEN DXP2800 | 683€ | Intel N100 (5 500 Passmark) | 8 Go DDR5 | 2× | Budget optimal |
+| ASUSTOR AS5402T | 708€ | Intel N5105 (6 800 Passmark) | 4 Go DDR4 (+upgrade) | 4× | Alternative |
+
+**QNAP TS-264-8G choisi** :
+- ✅ 8 Go DDR4 natif (zéro upgrade nécessaire)
+- ✅ Intel Celeron N5105 (bon pour pgvector calculs vectoriels)
+- ✅ QTS mature + Docker natif + Tailscale facile
+- ✅ 2× M.2 NVMe slots (PostgreSQL sur SSD)
+- ✅ Prix total 721€ (NAS 403€ + 2× IronWolf 4To 318€)
+
+**Bénéfices vs BeeStation (retiré MVP)** :
+- ✅ CPU x86_64 compatible Docker (vs ARM incompatible)
+- ✅ Tailscale natif (vs limitations BeeStation)
+- ✅ 24/7 disponibilité sans PC allumé
+
+### Commandes Telegram
+
+```bash
+# Recherche documents locaux
+/search contrat bail cabinet 2024
+
+# Recherche avec filtres
+/search thèse doctorant Julie méthodologie
+
+# Statut agent local
+/agent status
+```
 
 ---
 
@@ -550,5 +618,10 @@ Copyright (c) 2026 Friday 2.0 Project
 
 ---
 
-**Version** : 1.4.0 (2026-02-05)
-**Dernière mise à jour** : Code review adversarial complet (22 issues fixes) + Fichiers critiques créés (migrations, docs, scripts)
+**Version** : 1.5.0 (2026-02-10)
+
+**Dernières mises à jour** :
+- ✅ D23 : Claude Code CLI comme agent local Desktop Search (Phase 1: PC, Phase 2: NAS QNAP TS-264-8G)
+- ✅ BeeStation retiré du scope MVP (ARM incompatible, limitations Tailscale)
+- ✅ Story 3.3 réduite : L (20-30h) → M (12-18h) = économie 8-12h dev (~40%)
+- ✅ Comparaison NAS factuelle (QNAP TS-264-8G 721€ recommandé vs alternatives)

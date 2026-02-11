@@ -1,7 +1,7 @@
 # Bot Telegram Friday 2.0 - Dependencies
 
 # Telegram (CRIT-2 fix: Story 1.7 requires 21.0+)
-python-telegram-bot==21.0  # Telegram Bot API wrapper
+python-telegram-bot==22.6  # Telegram Bot API wrapper
 python-telegram-bot[job-queue]==21.0  # Job queue for scheduled tasks
 
 # Core

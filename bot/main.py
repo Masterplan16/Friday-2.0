@@ -110,9 +110,15 @@ class FridayBot:
 
         # Commandes Story 1.11 - Trust & Budget (AC1-AC7)
         self.application.add_handler(CommandHandler("status", trust_budget_commands.status_command))
-        self.application.add_handler(CommandHandler("journal", trust_budget_commands.journal_command))
-        self.application.add_handler(CommandHandler("receipt", trust_budget_commands.receipt_command))
-        self.application.add_handler(CommandHandler("confiance", trust_budget_commands.confiance_command))
+        self.application.add_handler(
+            CommandHandler("journal", trust_budget_commands.journal_command)
+        )
+        self.application.add_handler(
+            CommandHandler("receipt", trust_budget_commands.receipt_command)
+        )
+        self.application.add_handler(
+            CommandHandler("confiance", trust_budget_commands.confiance_command)
+        )
         self.application.add_handler(CommandHandler("stats", trust_budget_commands.stats_command))
         self.application.add_handler(CommandHandler("budget", trust_budget_commands.budget_command))
 

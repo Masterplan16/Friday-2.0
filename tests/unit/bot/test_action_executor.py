@@ -10,15 +10,13 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from bot.action_executor import ALLOWED_MODULES, ActionExecutor
+from tests.conftest import create_mock_pool_with_conn
 
 
 @pytest.fixture
 def mock_db_pool():
     """Mock asyncpg Pool."""
-    pool = MagicMock()
     conn = MagicMock()
-    pool.acquire.return_value.__aenter__ = AsyncMock(return_value=conn)
-    pool.acquire.return_value.__aexit__ = AsyncMock(return_value=False)
     conn.transaction.return_value.__aenter__ = AsyncMock(return_value=None)
     conn.transaction.return_value.__aexit__ = AsyncMock(return_value=False)
     conn.execute = AsyncMock(return_value="UPDATE 1")
@@ -31,6 +29,7 @@ def mock_db_pool():
             "payload": '{"action_func": "email.classify", "args": {}}',
         }
     )
+    pool = create_mock_pool_with_conn(conn)
     return pool
 
 

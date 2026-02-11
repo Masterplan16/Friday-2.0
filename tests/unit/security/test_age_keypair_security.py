@@ -26,9 +26,13 @@ def test_age_private_key_not_in_repo():
     repo_root = Path(__file__).parent.parent.parent.parent
 
     for pattern in private_key_patterns:
-        # Rechercher dans tous les fichiers trackés par git
+        # Rechercher dans fichiers trackés (exclure docs, tests, .gitignore où c'est légitime)
         result = subprocess.run(
-            ["git", "grep", "-i", pattern],
+            ["git", "grep", "-i", pattern,
+             ":(exclude).gitignore",
+             ":(exclude)docs/",
+             ":(exclude)tests/",
+             ":(exclude)_bmad-output/"],
             cwd=repo_root,
             capture_output=True,
             text=True

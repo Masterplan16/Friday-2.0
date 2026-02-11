@@ -55,7 +55,7 @@ from apply_migrations import (  # noqa: E402
 # Test 3.1 / AC#1+8: Les 12 migrations existent et sont bien formees
 # ============================================================================
 class TestMigrationFilesExist:
-    """Verifie que les 18 migrations existent et sont ordonnees."""
+    """Verifie que les 23 migrations existent et sont ordonnees."""
 
     EXPECTED_MIGRATIONS = [
         "001_init_schemas",
@@ -65,6 +65,7 @@ class TestMigrationFilesExist:
         "005_ingestion_documents",
         "006_ingestion_media",
         "007_knowledge_entities",
+        "007_knowledge_nodes_edges",
         "008_knowledge_embeddings",
         "009_knowledge_thesis",
         "010_knowledge_finance",
@@ -76,12 +77,16 @@ class TestMigrationFilesExist:
         "016_trust_metrics_anti_oscillation",
         "017_action_receipts_extended_status",
         "018_trust_metrics_missing_columns",
+        "019_backup_metadata",
+        "020_recovery_events",
+        "022_add_purged_at_to_action_receipts",
+        "023_add_deleted_at_to_backup_metadata",
     ]
 
     def test_migration_files_exist(self, migration_files: list[Path]) -> None:
-        """AC#1: 18 migrations disponibles."""
-        assert len(migration_files) == 18, (
-            f"Expected 18 migration files, found {len(migration_files)}: "
+        """AC#1: 23 migrations disponibles."""
+        assert len(migration_files) == 23, (
+            f"Expected 23 migration files, found {len(migration_files)}: "
             f"{[f.name for f in migration_files]}"
         )
 
@@ -175,9 +180,9 @@ class TestMigrationsTracking:
     def test_migrations_would_produce_tracking_records(
         self, migration_files: list[Path]
     ) -> None:
-        """Les 18 fichiers de migration produiraient 18 enregistrements dans schema_migrations."""
-        assert len(migration_files) == 18, (
-            f"Expected 18 migration files to produce 18 tracking records, "
+        """Les 23 fichiers de migration produiraient 23 enregistrements dans schema_migrations."""
+        assert len(migration_files) == 23, (
+            f"Expected 23 migration files to produce 23 tracking records, "
             f"found {len(migration_files)}"
         )
 
@@ -564,6 +569,9 @@ class TestSQLConsistency:
                 if not line.strip().startswith("--")
             ]
             for line in lines:
+                # Skip CREATE INDEX lines (column names may contain "timestamp")
+                if re.match(r"CREATE\s+INDEX", line, re.IGNORECASE):
+                    continue
                 if re.search(r"\bTIMESTAMP\b", line, re.IGNORECASE):
                     # TIMESTAMP WITH TIME ZONE est equivalent a TIMESTAMPTZ
                     if "TIMESTAMP WITH TIME ZONE" in line.upper():

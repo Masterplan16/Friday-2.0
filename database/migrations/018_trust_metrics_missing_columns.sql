@@ -17,15 +17,25 @@ ALTER TABLE core.trust_metrics
     ADD COLUMN IF NOT EXISTS last_trust_change_at TIMESTAMPTZ;
 
 COMMENT ON COLUMN core.trust_metrics.last_trust_change_at IS
-    'Timestamp derniere transition trust level pour anti-oscillation (Story 1.11, BUG-1.11.2)';
+    'TIMESTAMPTZ derniere transition trust level pour anti-oscillation (Story 1.11, BUG-1.11.2)';
 
 -- Colonne recommended_trust_level ecrite par nightly.py mais absente du schema
 ALTER TABLE core.trust_metrics
     ADD COLUMN IF NOT EXISTS recommended_trust_level VARCHAR(20);
 
-ALTER TABLE core.trust_metrics
-    ADD CONSTRAINT IF NOT EXISTS valid_recommended_trust_level
-    CHECK (recommended_trust_level IS NULL OR recommended_trust_level IN ('auto', 'propose', 'blocked'));
+-- Add constraint only if it doesn't exist
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'valid_recommended_trust_level'
+        AND conrelid = 'core.trust_metrics'::regclass
+    ) THEN
+        ALTER TABLE core.trust_metrics
+            ADD CONSTRAINT valid_recommended_trust_level
+            CHECK (recommended_trust_level IS NULL OR recommended_trust_level IN ('auto', 'propose', 'blocked'));
+    END IF;
+END $$;
 
 COMMENT ON COLUMN core.trust_metrics.recommended_trust_level IS
     'Trust level recommande apres analyse accuracy (retrogradation auto si <90%)';

@@ -16,9 +16,6 @@ import asyncpg
 import redis.asyncio as aioredis
 import structlog
 import yaml
-from telegram import Update
-from telegram.ext import ContextTypes
-
 from bot.handlers.formatters import (
     format_confidence,
     format_eur,
@@ -28,6 +25,8 @@ from bot.handlers.formatters import (
     truncate_text,
 )
 from bot.handlers.messages import send_message_with_split
+from telegram import Update
+from telegram.ext import ContextTypes
 
 logger = structlog.get_logger(__name__)
 
@@ -68,9 +67,7 @@ async def _get_pool() -> asyncpg.Pool:
     db_url = os.getenv("DATABASE_URL")
     if not db_url:
         raise ValueError("DATABASE_URL non defini")
-    _pool = await asyncpg.create_pool(
-        db_url, min_size=1, max_size=3, command_timeout=10.0
-    )
+    _pool = await asyncpg.create_pool(db_url, min_size=1, max_size=3, command_timeout=10.0)
     return _pool
 
 
@@ -163,16 +160,14 @@ async def confiance_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     try:
         pool = await _get_pool()
         async with pool.acquire() as conn:
-            rows = await conn.fetch(
-                """
+            rows = await conn.fetch("""
                 SELECT module, action_type, week_start, total_actions,
                        corrected_actions, accuracy, current_trust_level,
                        trust_changed
                 FROM core.trust_metrics
                 WHERE week_start >= (CURRENT_DATE - INTERVAL '28 days')
                 ORDER BY module, action_type, week_start DESC
-                """
-            )
+                """)
 
         if not rows:
             await update.message.reply_text(
@@ -257,8 +252,7 @@ async def receipt_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     args = [a for a in (context.args or []) if not a.startswith("-")]
     if not args:
         await update.message.reply_text(
-            "Usage: `/receipt <uuid>` (`-v` pour details)\n"
-            "Exemple: `/receipt a1b2c3d4`",
+            "Usage: `/receipt <uuid>` (`-v` pour details)\n" "Exemple: `/receipt a1b2c3d4`",
             parse_mode="Markdown",
         )
         return
@@ -324,10 +318,8 @@ async def receipt_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
                             f"{format_status_emoji(r['status'])} "
                             f"{format_timestamp(r['created_at'])}"
                         )
-                    lines.append(f"\nPrecisez avec `/receipt <uuid_complet>`")
-                    await update.message.reply_text(
-                        "\n".join(lines), parse_mode="Markdown"
-                    )
+                    lines.append("\nPrecisez avec `/receipt <uuid_complet>`")
+                    await update.message.reply_text("\n".join(lines), parse_mode="Markdown")
                     return
 
                 row = rows[0]
@@ -350,7 +342,7 @@ async def receipt_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             lines.append(f"Correction: {row['correction']}")
 
         if verbose:
-            lines.append(f"\n**Details** (`-v`)")
+            lines.append("\n**Details** (`-v`)")
             if row.get("duration_ms"):
                 lines.append(f"Duration: {row['duration_ms']}ms")
             if row.get("validated_by"):
@@ -396,19 +388,15 @@ async def journal_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     try:
         pool = await _get_pool()
         async with pool.acquire() as conn:
-            rows = await conn.fetch(
-                """
+            rows = await conn.fetch("""
                 SELECT id, module, action_type, status, confidence,
                        input_summary, created_at
                 FROM core.action_receipts
                 ORDER BY created_at DESC LIMIT 20
-                """
-            )
+                """)
 
         if not rows:
-            await update.message.reply_text(
-                "Aucune action enregistree", parse_mode="Markdown"
-            )
+            await update.message.reply_text("Aucune action enregistree", parse_mode="Markdown")
             return
 
         lines = ["**Journal** (20 dernieres actions)\n"]
@@ -416,10 +404,7 @@ async def journal_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             ts = format_timestamp(row["created_at"])
             emoji = format_status_emoji(row["status"])
             conf = format_confidence(row["confidence"])
-            lines.append(
-                f"`{ts}` {row['module']}.{row['action_type']} "
-                f"{emoji} {conf}"
-            )
+            lines.append(f"`{ts}` {row['module']}.{row['action_type']} " f"{emoji} {conf}")
             if verbose and row.get("input_summary"):
                 lines.append(f"  Input: {truncate_text(row['input_summary'], 150)}")
 
@@ -469,22 +454,18 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             db_ok = True
             lines.append("\u2705 PostgreSQL: OK")
 
-            today_rows = await conn.fetch(
-                """
+            today_rows = await conn.fetch("""
                 SELECT status, COUNT(*) as cnt
                 FROM core.action_receipts
                 WHERE created_at >= CURRENT_DATE
                 GROUP BY status
-                """
-            )
+                """)
 
-            pending_row = await conn.fetchrow(
-                """
+            pending_row = await conn.fetchrow("""
                 SELECT COUNT(*) as pending_count,
                        MIN(created_at) as oldest_pending
                 FROM core.action_receipts WHERE status = 'pending'
-                """
-            )
+                """)
     except ValueError as e:
         lines.append(f"\u274c PostgreSQL: {e}")
     except Exception as e:
@@ -526,21 +507,16 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         lines.append(f"\n**Actions aujourd'hui:** {total_today}")
 
         if verbose and today_rows:
-            status_breakdown = ", ".join(
-                f"{r['status']}={r['cnt']}" for r in today_rows
-            )
+            status_breakdown = ", ".join(f"{r['status']}={r['cnt']}" for r in today_rows)
             lines.append(f"  {status_breakdown}")
 
         pending_count = pending_row["pending_count"] if pending_row else 0
         if pending_count > 0:
             oldest = pending_row["oldest_pending"]
             oldest_str = format_timestamp(oldest) if oldest else "?"
-            lines.append(
-                f"\n\u23f3 **Pending:** {pending_count} "
-                f"(plus ancien: {oldest_str})"
-            )
+            lines.append(f"\n\u23f3 **Pending:** {pending_count} " f"(plus ancien: {oldest_str})")
         else:
-            lines.append(f"\n\u2705 Aucune action pending")
+            lines.append("\n\u2705 Aucune action pending")
     else:
         lines.append("\nActions: indisponible (DB down)")
 
@@ -570,8 +546,7 @@ async def budget_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     try:
         pool = await _get_pool()
         async with pool.acquire() as conn:
-            rows = await conn.fetch(
-                """
+            rows = await conn.fetch("""
                 SELECT
                     module,
                     COUNT(*) as action_count,
@@ -581,8 +556,7 @@ async def budget_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 WHERE created_at >= DATE_TRUNC('month', CURRENT_DATE)
                   AND payload ? 'llm_tokens_input'
                 GROUP BY module ORDER BY tokens_in + tokens_out DESC
-                """
-            )
+                """)
 
         # Verifier si tracking tokens actif
         total_tokens_in = sum(r["tokens_in"] for r in rows) if rows else 0
@@ -626,8 +600,7 @@ async def budget_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         # Alerte si >80% budget
         if pct_budget > 80:
             lines.append(
-                f"\n\u26a0\ufe0f **ALERTE**: Budget consomme a {pct_budget:.1f}% "
-                f"(seuil 80%)"
+                f"\n\u26a0\ufe0f **ALERTE**: Budget consomme a {pct_budget:.1f}% " f"(seuil 80%)"
             )
 
         # Detail par module (M4 fix: verbose only)
@@ -676,54 +649,46 @@ async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     try:
         pool = await _get_pool()
         async with pool.acquire() as conn:
-            stats_24h = await conn.fetchrow(
-                """
+            stats_24h = await conn.fetchrow("""
                 SELECT COUNT(*) as total,
                        ROUND(AVG(confidence)::numeric, 3) as avg_confidence
                 FROM core.action_receipts
                 WHERE created_at >= NOW() - INTERVAL '24 hours'
-                """
-            )
+                """)
 
-            stats_7d = await conn.fetchrow(
-                """
+            stats_7d = await conn.fetchrow("""
                 SELECT
                     COUNT(*) as total,
-                    COUNT(*) FILTER (WHERE status IN ('auto', 'approved', 'executed')) as success_cnt,
+                    COUNT(*) FILTER (
+                        WHERE status IN ('auto', 'approved', 'executed')
+                    ) as success_cnt,
                     COUNT(*) FILTER (WHERE status = 'error') as error_cnt,
                     ROUND(AVG(confidence)::numeric, 3) as avg_confidence
                 FROM core.action_receipts
                 WHERE created_at >= NOW() - INTERVAL '7 days'
-                """
-            )
+                """)
 
-            stats_30d = await conn.fetchrow(
-                """
+            stats_30d = await conn.fetchrow("""
                 SELECT COUNT(*) as total
                 FROM core.action_receipts
                 WHERE created_at >= NOW() - INTERVAL '30 days'
-                """
-            )
+                """)
 
             # Top 5 modules (7 jours)
-            top_modules = await conn.fetch(
-                """
+            top_modules = await conn.fetch("""
                 SELECT module, COUNT(*) as cnt
                 FROM core.action_receipts
                 WHERE created_at >= NOW() - INTERVAL '7 days'
                 GROUP BY module ORDER BY cnt DESC LIMIT 5
-                """
-            )
+                """)
 
             # Repartition status (7 jours)
-            status_breakdown = await conn.fetch(
-                """
+            status_breakdown = await conn.fetch("""
                 SELECT status, COUNT(*) as cnt
                 FROM core.action_receipts
                 WHERE created_at >= NOW() - INTERVAL '7 days'
                 GROUP BY status ORDER BY cnt DESC
-                """
-            )
+                """)
 
         total_24h = stats_24h["total"] if stats_24h else 0
         total_7d = stats_7d["total"] if stats_7d else 0

@@ -175,9 +175,12 @@ def test_routing_invalid_event_type(router):
     Test: Event avec type invalide → Fallback Metrics & Logs.
 
     BUG-1.9.12 fix: Validation event.type, fallback silencieux avec warning log.
+
+    Note: Utilise model_construct() pour bypasser la validation Pydantic
+    et tester la logique de validation dans route_event().
     """
-    event = TelegramEvent(
-        type="",  # Type vide (invalide)
+    event = TelegramEvent.model_construct(
+        type="",  # Type vide (invalide) - bypasse validation Pydantic
         message="Event avec type invalide",
     )
 

@@ -23,6 +23,7 @@ from bot.handlers import (
     recovery_commands,
     trust_budget_commands,
     trust_commands,
+    vip_commands,
 )
 from telegram.ext import (
     Application,
@@ -130,6 +131,9 @@ class FridayBot:
 
         # Commandes Story 1.8 - Trust management (AC4, AC5, AC6)
         self.application.add_handler(CommandHandler("trust", trust_commands.trust_command_router))
+
+        # Commandes Story 2.3 - VIP Management (Task 5)
+        self.application.add_handler(CommandHandler("vip", vip_commands.vip_command_router))
 
         # Story 1.10 - Inline buttons callbacks (Approve/Reject/Correct)
         from bot.action_executor import ActionExecutor

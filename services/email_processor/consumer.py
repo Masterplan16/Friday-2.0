@@ -33,6 +33,13 @@ repo_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(repo_root))
 
 from agents.src.tools.anonymize import anonymize_text
+from agents.src.agents.email.vip_detector import (
+    compute_email_hash,
+    detect_vip_sender,
+    update_vip_email_stats,
+)
+from agents.src.agents.email.urgency_detector import detect_urgency
+from agents.src.middleware.trust import init_trust_manager
 
 # ============================================
 # Logging Setup
@@ -68,6 +75,7 @@ EMAILENGINE_SECRET = os.getenv('EMAILENGINE_SECRET')
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 TELEGRAM_SUPERGROUP_ID = os.getenv('TELEGRAM_SUPERGROUP_ID')
 TOPIC_EMAIL_ID = os.getenv('TOPIC_EMAIL_ID')
+TOPIC_ACTIONS_ID = os.getenv('TOPIC_ACTIONS_ID')
 EMAILENGINE_ENCRYPTION_KEY = os.getenv('EMAILENGINE_ENCRYPTION_KEY')
 
 STREAM_NAME = 'emails:received'
@@ -97,7 +105,7 @@ class EmailProcessorConsumer:
 
     def __init__(self):
         self.redis: Optional[redis.Redis] = None
-        self.db: Optional[asyncpg.Connection] = None
+        self.db_pool: Optional[asyncpg.Pool] = None
         self.http_client: Optional[httpx.AsyncClient] = None
 
     async def connect(self):
@@ -107,9 +115,17 @@ class EmailProcessorConsumer:
         await self.redis.ping()
         logger.info("redis_connected")
 
-        # PostgreSQL
-        self.db = await asyncpg.connect(DATABASE_URL)
-        logger.info("postgresql_connected")
+        # PostgreSQL Pool (pour @friday_action + detect_vip/urgency)
+        self.db_pool = await asyncpg.create_pool(
+            DATABASE_URL,
+            min_size=5,
+            max_size=20
+        )
+        logger.info("postgresql_pool_created", min_size=5, max_size=20)
+
+        # Initialiser TrustManager avec le pool (requis pour @friday_action)
+        init_trust_manager(db_pool=self.db_pool)
+        logger.info("trust_manager_initialized")
 
         # HTTP client
         self.http_client = httpx.AsyncClient(timeout=30.0)
@@ -134,8 +150,8 @@ class EmailProcessorConsumer:
         """Close all connections"""
         if self.http_client:
             await self.http_client.aclose()
-        if self.db:
-            await self.db.close()
+        if self.db_pool:
+            await self.db_pool.close()
         if self.redis:
             await self.redis.close()
         logger.info("connections_closed")
@@ -219,6 +235,46 @@ class EmailProcessorConsumer:
 
             logger.info("email_anonymized", message_id=message_id, body_length=len(body_anon))
 
+            # Étape 2.5: Detection VIP + Urgence (Story 2.3)
+            # Calcul hash email original (AVANT anonymisation)
+            email_hash = compute_email_hash(from_raw)
+
+            # Detection VIP via hash lookup
+            vip_result = await detect_vip_sender(
+                email_anon=from_anon,
+                email_hash=email_hash,
+                db_pool=self.db_pool,
+            )
+            is_vip = vip_result.payload["is_vip"]
+            vip_data = vip_result.payload.get("vip")
+
+            # Detection urgence multi-facteurs
+            email_text = f"{subject_anon} {body_anon}"
+            urgency_result = await detect_urgency(
+                email_text=email_text,
+                vip_status=is_vip,
+                db_pool=self.db_pool,
+            )
+            is_urgent = urgency_result.payload["is_urgent"]
+            urgency_score = urgency_result.confidence
+
+            # Déterminer priority
+            if is_urgent:
+                priority = "urgent"
+            elif is_vip:
+                priority = "high"
+            else:
+                priority = "normal"
+
+            logger.info(
+                "vip_urgency_detected",
+                message_id=message_id,
+                is_vip=is_vip,
+                is_urgent=is_urgent,
+                urgency_score=urgency_score,
+                priority=priority
+            )
+
             # Étape 3: Classification stub (Day 1)
             # TODO Story 2.2: Remplacer par classification LLM réelle
             category = "inbox"
@@ -233,6 +289,7 @@ class EmailProcessorConsumer:
                 body_anon=body_anon,
                 category=category,
                 confidence=confidence,
+                priority=priority,
                 received_at=date_str,
                 has_attachments=has_attachments,
                 # Données raw pour stockage chiffré
@@ -242,12 +299,22 @@ class EmailProcessorConsumer:
                 body_raw=body_text_raw
             )
 
+            # Étape 4.5: Mettre à jour stats VIP si applicable
+            if is_vip and vip_data:
+                await update_vip_email_stats(
+                    vip_id=vip_data["id"],
+                    db_pool=self.db_pool
+                )
+                logger.info("vip_stats_updated", vip_id=vip_data["id"])
+
             # Étape 5: Notification Telegram
             await self.send_telegram_notification(
                 account_id=account_id,
                 from_anon=from_anon,
                 subject_anon=subject_anon,
-                category=category
+                category=category,
+                is_urgent=is_urgent,
+                urgency_reasoning=urgency_result.reasoning if is_urgent else None
             )
 
             # XACK: Marquer comme traité
@@ -430,6 +497,7 @@ class EmailProcessorConsumer:
         body_anon: str,
         category: str,
         confidence: float,
+        priority: str,
         received_at: str,
         has_attachments: bool,
         # Données raw pour stockage chiffré
@@ -444,63 +512,66 @@ class EmailProcessorConsumer:
         Returns:
             email_id (UUID) de l'email inséré
         """
-        # Étape 1: Insérer email anonymisé dans ingestion.emails
-        email_id = await self.db.fetchval(
-            """
-            INSERT INTO ingestion.emails (
-                account_id, message_id, from_anon, subject_anon, body_anon,
-                category, confidence, received_at, has_attachments
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-            ON CONFLICT (account_id, message_id) DO UPDATE SET
-                from_anon = EXCLUDED.from_anon,
-                subject_anon = EXCLUDED.subject_anon,
-                body_anon = EXCLUDED.body_anon,
-                category = EXCLUDED.category,
-                confidence = EXCLUDED.confidence,
-                processed_at = CURRENT_TIMESTAMP
-            RETURNING id
-            """,
-            account_id,
-            message_id,
-            from_anon,
-            subject_anon,
-            body_anon,
-            category,
-            confidence,
-            datetime.fromisoformat(received_at.replace('Z', '+00:00')),
-            has_attachments
-        )
-
-        logger.info("email_stored_database", message_id=message_id, email_id=str(email_id))
-
-        # Étape 2: Insérer email raw chiffré dans ingestion.emails_raw
-        # Chiffrement pgcrypto avec EMAILENGINE_ENCRYPTION_KEY
-        await self.db.execute(
-            """
-            INSERT INTO ingestion.emails_raw (
-                email_id, from_encrypted, to_encrypted, subject_encrypted, body_encrypted
-            ) VALUES (
-                $1,
-                pgp_sym_encrypt($2, $3),
-                pgp_sym_encrypt($4, $3),
-                pgp_sym_encrypt($5, $3),
-                pgp_sym_encrypt($6, $3)
+        async with self.db_pool.acquire() as conn:
+            # Étape 1: Insérer email anonymisé dans ingestion.emails
+            email_id = await conn.fetchval(
+                """
+                INSERT INTO ingestion.emails (
+                    account_id, message_id, from_anon, subject_anon, body_anon,
+                    category, confidence, priority, received_at, has_attachments
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                ON CONFLICT (account_id, message_id) DO UPDATE SET
+                    from_anon = EXCLUDED.from_anon,
+                    subject_anon = EXCLUDED.subject_anon,
+                    body_anon = EXCLUDED.body_anon,
+                    category = EXCLUDED.category,
+                    confidence = EXCLUDED.confidence,
+                    priority = EXCLUDED.priority,
+                    processed_at = CURRENT_TIMESTAMP
+                RETURNING id
+                """,
+                account_id,
+                message_id,
+                from_anon,
+                subject_anon,
+                body_anon,
+                category,
+                confidence,
+                priority,
+                datetime.fromisoformat(received_at.replace('Z', '+00:00')),
+                has_attachments
             )
-            ON CONFLICT (email_id) DO UPDATE SET
-                from_encrypted = EXCLUDED.from_encrypted,
-                to_encrypted = EXCLUDED.to_encrypted,
-                subject_encrypted = EXCLUDED.subject_encrypted,
-                body_encrypted = EXCLUDED.body_encrypted
-            """,
-            email_id,
-            from_raw,
-            EMAILENGINE_ENCRYPTION_KEY,
-            to_raw,
-            subject_raw,
-            body_raw
-        )
 
-        logger.info("email_raw_stored_encrypted", message_id=message_id, email_id=str(email_id))
+            logger.info("email_stored_database", message_id=message_id, email_id=str(email_id), priority=priority)
+
+            # Étape 2: Insérer email raw chiffré dans ingestion.emails_raw
+            # Chiffrement pgcrypto avec EMAILENGINE_ENCRYPTION_KEY
+            await conn.execute(
+                """
+                INSERT INTO ingestion.emails_raw (
+                    email_id, from_encrypted, to_encrypted, subject_encrypted, body_encrypted
+                ) VALUES (
+                    $1,
+                    pgp_sym_encrypt($2, $3),
+                    pgp_sym_encrypt($4, $3),
+                    pgp_sym_encrypt($5, $3),
+                    pgp_sym_encrypt($6, $3)
+                )
+                ON CONFLICT (email_id) DO UPDATE SET
+                    from_encrypted = EXCLUDED.from_encrypted,
+                    to_encrypted = EXCLUDED.to_encrypted,
+                    subject_encrypted = EXCLUDED.subject_encrypted,
+                    body_encrypted = EXCLUDED.body_encrypted
+                """,
+                email_id,
+                from_raw,
+                EMAILENGINE_ENCRYPTION_KEY,
+                to_raw,
+                subject_raw,
+                body_raw
+            )
+
+            logger.info("email_raw_stored_encrypted", message_id=message_id, email_id=str(email_id))
 
         return str(email_id)
 
@@ -509,29 +580,57 @@ class EmailProcessorConsumer:
         account_id: str,
         from_anon: str,
         subject_anon: str,
-        category: str
+        category: str,
+        is_urgent: bool = False,
+        urgency_reasoning: Optional[str] = None
     ):
-        """Envoyer notification Telegram topic Email"""
-        if not TELEGRAM_BOT_TOKEN or not TELEGRAM_SUPERGROUP_ID or not TOPIC_EMAIL_ID:
+        """Envoyer notification Telegram topic Email ou Actions si urgent"""
+        if not TELEGRAM_BOT_TOKEN or not TELEGRAM_SUPERGROUP_ID:
             logger.warning("telegram_not_configured_skip_notification")
             return
 
+        # Si urgent, envoyer au topic Actions, sinon Email
+        if is_urgent:
+            if not TOPIC_ACTIONS_ID:
+                logger.warning("topic_actions_not_configured_fallback_email")
+                topic_id = TOPIC_EMAIL_ID
+                topic_name = "Email"
+            else:
+                topic_id = TOPIC_ACTIONS_ID
+                topic_name = "Actions"
+        else:
+            if not TOPIC_EMAIL_ID:
+                logger.warning("topic_email_not_configured_skip_notification")
+                return
+            topic_id = TOPIC_EMAIL_ID
+            topic_name = "Email"
+
         try:
             # Format message notification (sans emojis)
-            notification_text = (
-                f"Nouvel email : {subject_anon}\n"
-                f"De : {from_anon}\n"
-                f"Categorie : {category}\n"
-                f"Compte : {account_id}"
-            )
+            if is_urgent:
+                notification_text = (
+                    f"EMAIL URGENT detecte\n\n"
+                    f"Sujet : {subject_anon}\n"
+                    f"De : {from_anon}\n"
+                    f"Categorie : {category}\n"
+                    f"Compte : {account_id}\n\n"
+                    f"Raison urgence : {urgency_reasoning}"
+                )
+            else:
+                notification_text = (
+                    f"Nouvel email : {subject_anon}\n"
+                    f"De : {from_anon}\n"
+                    f"Categorie : {category}\n"
+                    f"Compte : {account_id}"
+                )
 
-            # Envoyer vers topic Email
+            # Envoyer vers topic approprié
             async with httpx.AsyncClient() as client:
                 response = await client.post(
                     f'https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage',
                     json={
                         'chat_id': TELEGRAM_SUPERGROUP_ID,
-                        'message_thread_id': TOPIC_EMAIL_ID,
+                        'message_thread_id': topic_id,
                         'text': notification_text,
                         'parse_mode': 'HTML'
                     },
@@ -542,7 +641,9 @@ class EmailProcessorConsumer:
                     logger.info(
                         "telegram_notification_sent",
                         account_id=account_id,
-                        category=category
+                        category=category,
+                        is_urgent=is_urgent,
+                        topic=topic_name
                     )
                 else:
                     logger.error(

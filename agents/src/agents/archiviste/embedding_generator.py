@@ -20,13 +20,13 @@ Date: 2026-02-11
 Story: 6.2 - Task 3 (stub)
 """
 
-import logging
+import structlog
 from typing import Optional
 
 from agents.src.adapters.vectorstore import VectorStoreAdapter
 from agents.src.tools.anonymize import anonymize_text
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 # Chunking parameters (Story 6.2 specs)
 CHUNK_SIZE = 2000  # chars

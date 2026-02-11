@@ -129,3 +129,4 @@ websockets==16.0
 wrapt==2.1.1
 xxhash==3.6.0
 zstandard==0.25.0
+voyageai>=1.0.0  # Story 6.2 - Voyage AI embeddings provider

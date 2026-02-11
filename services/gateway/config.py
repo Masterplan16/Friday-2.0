@@ -33,6 +33,9 @@ class GatewaySettings(BaseSettings):
     # CORS
     cors_origins: list[str] = ["http://localhost:3000"]
 
+    # Webhooks (Story 2.1)
+    webhook_secret: str = ""  # HMAC-SHA256 secret for EmailEngine webhooks
+
     model_config = {"env_prefix": "", "case_sensitive": False}
 
 

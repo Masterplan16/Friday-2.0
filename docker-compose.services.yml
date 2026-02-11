@@ -204,6 +204,7 @@ services:
   # ============================================
   # EmailEngine - Interface IMAP/SMTP
   # RAM: ~500 Mo
+  # Story 2.1 - AC1: EmailEngine configuré avec 4 comptes IMAP
   # ============================================
   emailengine:
     image: postalsys/emailengine:latest
@@ -216,6 +217,9 @@ services:
       - EENGINE_SECRET=${EMAILENGINE_SECRET}
       - EENGINE_ENCRYPTION_KEY=${EMAILENGINE_ENCRYPTION_KEY}
       - EENGINE_LOG_LEVEL=${LOG_LEVEL:-info}
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+    volumes:
+      - emailengine-data:/app/data
     ports:
       - "127.0.0.1:3000:3000"
     networks:
@@ -223,6 +227,8 @@ services:
         ipv4_address: 172.20.0.36
     depends_on:
       redis:
+        condition: service_healthy
+      postgres:
         condition: service_healthy
     deploy:
       resources:
@@ -267,3 +273,11 @@ services:
           memory: 200M
         reservations:
           memory: 100M
+
+# ============================================
+# Volumes - Persistance données services
+# ============================================
+volumes:
+  emailengine-data:
+    driver: local
+    name: friday-emailengine-data

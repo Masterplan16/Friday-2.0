@@ -221,6 +221,46 @@ Email reçu → Classification → Brouillon → [Approve] → Envoi EmailEngine
 
 ---
 
+### 📋 Extraction Automatique Tâches depuis Emails (Story 2.7) ✅
+
+**Friday détecte automatiquement les tâches mentionnées dans vos emails et les propose pour création**
+
+| Feature | Description |
+|---------|-------------|
+| **Détection IA** | Claude Sonnet 4.5 extrait tâches explicites + implicites |
+| **Types détectés** | Demandes ("Peux-tu..."), Engagements ("Je vais..."), Rappels ("N'oublie pas...") |
+| **Dates relatives** | Conversion automatique : "demain" → date absolue ISO 8601 |
+| **Priorisation** | High/Normal/Low depuis mots-clés ("urgent", "ASAP", "quand tu peux") |
+| **Confidence seuil** | ≥0.7 pour proposition (filtre faux positifs) |
+| **RGPD** | Anonymisation Presidio AVANT appel Claude |
+| **Trust level** | `propose` Day 1 → validation Telegram requise |
+| **Promotion auto** | → `auto` après 2 semaines si accuracy ≥95% |
+| **Référence** | Bidirectionnelle email ↔ task_ids (traçabilité complète) |
+
+**Workflow** :
+
+```
+Email reçu → Classification → Extraction tâches ─┬─> Confidence <0.7 → Log DEBUG
+                                                  │
+                                                  └─> Confidence ≥0.7 → Création tâche
+                                                      ├─ core.tasks (type=email_task, status=pending)
+                                                      ├─ Receipt (status=pending, module=email, action=extract_task)
+                                                      └─ Notifications Telegram (2 topics)
+                                                          ├─ Topic Actions : [✅ Créer] [✏️ Modifier] [❌ Ignorer]
+                                                          └─ Topic Email : Résumé + /receipt link
+```
+
+**Exemples détection** :
+
+- 📧 **Explicite** : *"Peux-tu m'envoyer le rapport avant jeudi ?"* → `Envoyer le rapport` (due: jeudi, priority: high)
+- 📧 **Implicite** : *"Je te recontacte demain pour le dossier"* → `Recontacter pour le dossier` (due: demain, priority: normal)
+- 📧 **Rappel** : *"N'oublie pas de valider la facture"* → `Valider la facture` (priority: normal)
+- 📧 **Sans tâche** : *"Merci, bien reçu !"* → Aucune tâche (confidence 0.15)
+
+**Documentation** : [docs/email-task-extraction.md](docs/email-task-extraction.md) — Spec complète (470 lignes)
+
+---
+
 ### 🌟 Détection VIP & Urgence (Story 2.3) ✅
 
 **Système automatique de détection des emails prioritaires avec notifications push**

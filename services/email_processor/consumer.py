@@ -27,6 +27,7 @@ import asyncpg
 import httpx
 import redis.asyncio as redis
 import structlog
+from telegram import Bot  # M5 fix: Bot pour notifications Story 2.7
 
 # Ajouter repo root au path
 repo_root = Path(__file__).parent.parent.parent
@@ -195,6 +196,7 @@ class EmailProcessorConsumer:
         self.db_pool: Optional[asyncpg.Pool] = None
         self.http_client: Optional[httpx.AsyncClient] = None
         self.emailengine_client: Optional[EmailEngineClient] = None
+        self.bot: Optional[Bot] = None  # M5 fix: Bot Telegram pour notifications
 
     async def connect(self):
         """Connect to Redis and PostgreSQL"""
@@ -226,6 +228,14 @@ class EmailProcessorConsumer:
             secret=EMAILENGINE_SECRET
         )
         logger.info("emailengine_client_initialized")
+
+        # M5 fix: Bot Telegram pour notifications Story 2.7 (AC3 + AC4)
+        telegram_token = os.environ.get("TELEGRAM_BOT_TOKEN")
+        if telegram_token:
+            self.bot = Bot(token=telegram_token)
+            logger.info("telegram_bot_initialized")
+        else:
+            logger.warning("TELEGRAM_BOT_TOKEN not set, task notifications disabled")
 
         # Create consumer group if not exists
         try:
@@ -459,6 +469,70 @@ class EmailProcessorConsumer:
                         message_id=message_id,
                         error=str(e)
                     )
+
+            # Étape 6.7: Extraction tâches depuis email (Story 2.7 - Phase 5)
+            # Conditions:
+            # 1. Email classifié (category != spam)
+            # 2. Tâches détectées avec confidence >=0.7
+            # 3. Trust level = propose → Validation Telegram requise
+            if category != "spam":
+                try:
+                    from agents.src.agents.email.task_extractor import extract_tasks_from_email
+                    from agents.src.agents.email.task_creator import create_tasks_with_validation
+
+                    # Extraire tâches via Claude Sonnet 4.5
+                    extraction_result = await extract_tasks_from_email(
+                        email_text=body_text_raw,
+                        email_metadata={
+                            'email_id': str(email_id),
+                            'sender': from_raw,
+                            'subject': subject_raw,
+                            'category': category
+                        }
+                    )
+
+                    # Filtrer par confidence >=0.7
+                    valid_tasks = [
+                        task for task in extraction_result.tasks_detected
+                        if task.confidence >= 0.7
+                    ]
+
+                    if valid_tasks:
+                        logger.info(
+                            "tasks_detected_in_email",
+                            email_id=str(email_id),
+                            message_id=message_id,
+                            tasks_count=len(valid_tasks),
+                            confidence_overall=extraction_result.confidence_overall
+                        )
+
+                        # Créer tâches via @friday_action (trust=propose)
+                        # M5 fix: Passer bot pour notifications dual-topic (AC3 + AC4)
+                        bot = getattr(self, 'bot', None)  # Bot Telegram si disponible
+                        await create_tasks_with_validation(
+                            tasks=valid_tasks,
+                            email_id=str(email_id),
+                            email_subject=subject_raw,
+                            db_pool=self.db_pool,
+                            bot=bot  # M5 fix: Notifications Telegram Story 2.7
+                        )
+                    else:
+                        logger.debug(
+                            "email_no_task_detected",
+                            email_id=str(email_id),
+                            message_id=message_id,
+                            confidence_overall=extraction_result.confidence_overall
+                        )
+
+                except Exception as e:
+                    logger.error(
+                        "task_extraction_failed",
+                        email_id=str(email_id),
+                        message_id=message_id,
+                        error=str(e),
+                        exc_info=True
+                    )
+                    # Ne pas bloquer le traitement email si extraction échoue
 
             # Étape 7: Génération brouillon réponse optionnel (Story 2.5 - Phase 7)
             # Conditions déclenchement :

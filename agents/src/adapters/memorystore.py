@@ -19,11 +19,46 @@ migrer uniquement si douleur réelle (>300k vecteurs, latence, filtres complexes
 import logging
 import uuid
 from datetime import datetime
+from enum import Enum
 from typing import Any, Optional
 
 import asyncpg
 
 logger = logging.getLogger(__name__)
+
+
+class NodeType(str, Enum):
+    """Types de nœuds dans le graphe de connaissances (10 types)."""
+
+    PERSON = "person"
+    EMAIL = "email"
+    DOCUMENT = "document"
+    EVENT = "event"
+    TASK = "task"
+    ENTITY = "entity"
+    CONVERSATION = "conversation"
+    TRANSACTION = "transaction"
+    FILE = "file"
+    REMINDER = "reminder"
+
+
+class RelationType(str, Enum):
+    """Types de relations entre nœuds (14 types)."""
+
+    SENT_BY = "sent_by"
+    RECEIVED_BY = "received_by"
+    ATTACHED_TO = "attached_to"
+    MENTIONS = "mentions"
+    RELATED_TO = "related_to"
+    ASSIGNED_TO = "assigned_to"
+    CREATED_FROM = "created_from"
+    SCHEDULED = "scheduled"
+    REFERENCES = "references"
+    PART_OF = "part_of"
+    PAID_WITH = "paid_with"
+    BELONGS_TO = "belongs_to"
+    REMINDS_ABOUT = "reminds_about"
+    SUPERSEDES = "supersedes"
 
 
 class MemorystoreAdapter:

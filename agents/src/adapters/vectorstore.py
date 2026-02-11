@@ -69,6 +69,10 @@ PGVECTOR_SEARCH_TOP_K_DEFAULT = 10
 CHUNK_SIZE_CHARS = 2000  # Taille chunk pour documents >10k
 CHUNK_OVERLAP_CHARS = 200  # Overlap entre chunks
 
+# API cost tracking constants (AC6)
+VOYAGE_COST_PER_TOKEN_EUR = 0.000055  # ~0.06 USD/1M tokens batch, converti EUR (rate 1.1)
+VOYAGE_COST_PER_TOKEN_CENTS = VOYAGE_COST_PER_TOKEN_EUR * 100  # En centimes EUR
+
 
 # ============================================================
 # Pydantic Models
@@ -332,6 +336,13 @@ class VoyageAIAdapter:
                 model=self.model,
             )
 
+            # AC6: Track API usage pour budget monitoring
+            await self._track_api_usage(
+                tokens_input=tokens_used,
+                operation="embed",
+                metadata={"model": self.model, "batch_size": len(texts), "anonymized": anonymization_applied}
+            )
+
             return EmbeddingResponse(
                 embeddings=embeddings,
                 dimensions=self.dimensions,
@@ -371,11 +382,79 @@ class VoyageAIAdapter:
                 texts=[query_text], model=self.model, input_type="query"
             )
 
+            tokens_used = getattr(response, "total_tokens", 100)  # Estimation
+
+            # AC6: Track API usage
+            await self._track_api_usage(
+                tokens_input=tokens_used,
+                operation="embed_query",
+                metadata={"model": self.model, "anonymized": anonymize}
+            )
+
             return response.embeddings[0]
 
         except Exception as e:
             logger.error("voyage_query_embed_error", error=str(e))
             raise EmbeddingProviderError(f"Voyage query embed error: {e}") from e
+
+    async def _track_api_usage(
+        self,
+        tokens_input: int,
+        operation: str,
+        metadata: dict[str, Any],
+    ) -> None:
+        """
+        Track API usage pour budget monitoring (AC6).
+
+        Args:
+            tokens_input: Nombre de tokens consommés
+            operation: Type d'opération ('embed', 'embed_query')
+            metadata: Métadonnées additionnelles (model, batch_size, etc.)
+        """
+        try:
+            # Calculer coût en centimes EUR
+            cost_cents = round(tokens_input * VOYAGE_COST_PER_TOKEN_CENTS, 4)
+
+            # Connexion PostgreSQL (utiliser pool existant ou créer si nécessaire)
+            db_url = os.getenv("DATABASE_URL")
+            if not db_url:
+                logger.warning("DATABASE_URL manquante, skip API tracking")
+                return
+
+            conn = await asyncpg.connect(db_url)
+
+            try:
+                # Appeler fonction SQL core.log_api_usage()
+                await conn.execute(
+                    "SELECT core.log_api_usage($1, $2, $3, $4, $5, $6, $7, $8)",
+                    "voyage-ai",  # service
+                    operation,  # operation
+                    tokens_input,  # tokens_input
+                    0,  # tokens_output (N/A pour embeddings)
+                    cost_cents,  # cost_input_cents
+                    0,  # cost_output_cents
+                    metadata.get("module"),  # module (optionnel)
+                    metadata,  # metadata JSON
+                )
+
+                logger.debug(
+                    "api_usage_tracked",
+                    service="voyage-ai",
+                    operation=operation,
+                    tokens=tokens_input,
+                    cost_cents=cost_cents,
+                )
+
+            finally:
+                await conn.close()
+
+        except Exception as e:
+            # Ne pas bloquer le flow si tracking échoue
+            logger.error(
+                "api_usage_tracking_failed",
+                error=str(e),
+                operation=operation,
+            )
 
 
 # ============================================================

@@ -6,8 +6,6 @@ Commande: /backup [-v]
 """
 
 import os
-from datetime import datetime, timezone
-from typing import Optional
 
 import asyncpg
 from telegram import Update
@@ -93,7 +91,7 @@ async def backup_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         # Verbose details (si -v flag)
         if verbose:
-            response += f"   🔒 Chiffré: age (clé publique VPS)\n"
+            response += "   🔒 Chiffré: age (clé publique VPS)\n"
             response += f"   📅 Rétention: {b['retention_policy']}\n"
 
             if b["synced_to_pc"]:

@@ -318,7 +318,7 @@ async def receipt_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
                             f"{format_status_emoji(r['status'])} "
                             f"{format_timestamp(r['created_at'])}"
                         )
-                    lines.append(f"\nPrecisez avec `/receipt <uuid_complet>`")
+                    lines.append("\nPrecisez avec `/receipt <uuid_complet>`")
                     await update.message.reply_text("\n".join(lines), parse_mode="Markdown")
                     return
 
@@ -342,7 +342,7 @@ async def receipt_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             lines.append(f"Correction: {row['correction']}")
 
         if verbose:
-            lines.append(f"\n**Details** (`-v`)")
+            lines.append("\n**Details** (`-v`)")
             if row.get("duration_ms"):
                 lines.append(f"Duration: {row['duration_ms']}ms")
             if row.get("validated_by"):
@@ -516,7 +516,7 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             oldest_str = format_timestamp(oldest) if oldest else "?"
             lines.append(f"\n\u23f3 **Pending:** {pending_count} " f"(plus ancien: {oldest_str})")
         else:
-            lines.append(f"\n\u2705 Aucune action pending")
+            lines.append("\n\u2705 Aucune action pending")
     else:
         lines.append("\nActions: indisponible (DB down)")
 
@@ -659,7 +659,9 @@ async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
             stats_7d = await conn.fetchrow("""
                 SELECT
                     COUNT(*) as total,
-                    COUNT(*) FILTER (WHERE status IN ('auto', 'approved', 'executed')) as success_cnt,
+                    COUNT(*) FILTER (
+                        WHERE status IN ('auto', 'approved', 'executed')
+                    ) as success_cnt,
                     COUNT(*) FILTER (WHERE status = 'error') as error_cnt,
                     ROUND(AVG(confidence)::numeric, 3) as avg_confidence
                 FROM core.action_receipts

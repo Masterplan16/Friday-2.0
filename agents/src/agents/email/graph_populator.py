@@ -47,7 +47,8 @@ async def populate_email_graph(
     Peuple le graphe de connaissances à partir d'un email classifié.
 
     Args:
-        email_data: Données email (message_id, subject, sender, recipients, body, date, category, priority)
+        email_data: Données email (message_id, subject, sender, recipients,
+                    body, date, category, priority)
         memorystore: Adaptateur memorystore
         attachments: Liste optionnelle de PJ [{doc_id, filename, mime_type}, ...]
 

@@ -26,7 +26,8 @@ def format_confidence(value: float) -> str:
         value: Confidence 0.0-1.0
 
     Returns:
-        Barre emoji + pourcentage (ex: "\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2591 95.2%")
+        Barre emoji + pourcentage
+        (ex: "\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2591 95.2%")
     """
     pct = value * 100
     filled = int(value * 10)

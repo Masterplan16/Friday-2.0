@@ -104,7 +104,7 @@ Ce document fournit le decoupage complet en epics et stories pour Friday 2.0, de
 
 - FR8 : Friday peut effectuer l'OCR sur images et PDF
 - FR9 : Friday peut renommer les documents avec une convention standardisee
-- FR10 : Friday peut classer les documents dans une arborescence configurable et evolutive (Cabinet/Faculte/Finances/Personnel/Garanties)
+- FR10 : Friday peut classer les documents dans une arborescence configurable et évolutive (pro/finance/universite/recherche/perso — D24)
 - FR11 : Mainteneur peut rechercher des documents par requete semantique
 - FR12 : Friday peut suivre les dates d'expiration de garanties et notifier proactivement
 - FR13 : Mainteneur peut rechercher des documents par requete vocale
@@ -143,7 +143,7 @@ Ce document fournit le decoupage complet en epics et stories pour Friday 2.0, de
 - FR34 : Tout texte est anonymise via Presidio avant tout appel LLM cloud
 - FR35 : Friday stoppe le traitement si le service d'anonymisation est indisponible (fail-explicit)
 - FR36 : Les backups sont chiffres et synchronises vers le PC d'Mainteneur quotidiennement
-- FR37 : Les donnees financieres sont classees dans le bon perimetre (SELARL/SCM/SCI-1/SCI-2/Perso) sans contamination croisee
+- FR37 : Les donnees financieres sont classees dans le bon perimetre (SELARL/SCM/SCI Ravas/SCI Malbosc/Perso) sans contamination croisee
 
 **Graphe de connaissances & Memoire (FR38-FR40)**
 

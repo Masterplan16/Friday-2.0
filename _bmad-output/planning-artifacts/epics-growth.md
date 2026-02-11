@@ -20,7 +20,7 @@ Classification 5 perimetres, import CSV, detection anomalies, audit abonnements,
 
 **FRs** : FR37, FR59, FR123, FR137
 
-**Description** : Importer les releves CSV bancaires et classifier sur 5 perimetres (SELARL, SCM, SCI-1, SCI-2, Perso).
+**Description** : Importer les releves CSV bancaires et classifier sur 5 perimetres (SELARL, SCM, SCI Ravas, SCI Malbosc, Perso).
 
 **Acceptance Criteria** :
 - Import CSV via dossier surveille ou workflow n8n dedie (FR59, FR123)

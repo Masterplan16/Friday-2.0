@@ -123,14 +123,14 @@ async def classify_email(
             error_type=type(e).__name__,
         )
 
-        # Fallback: category=unknown, confidence=0.0
+        # Fallback: category=inconnu, confidence=0.0
         return ActionResult(
             input_summary=f"Email {email_id[:8]}...",
             output_summary="→ ERREUR: classification failed",
             confidence=0.0,
             reasoning=f"Erreur de classification: {type(e).__name__}: {str(e)}",
             payload={
-                "category": "unknown",
+                "category": "inconnu",
                 "error": str(e),
                 "error_type": type(e).__name__,
             },

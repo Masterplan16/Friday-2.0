@@ -142,13 +142,13 @@ async def test_email_embedding_anonymizes_pii():
 
             # Email avec PII
             email_data = {
-                "message_id": "<medical@example.com>",
+                "message_id": "<pro@example.com>",
                 "subject": "Consultation Dr. Martin",
                 "sender": "secretaire@cabinet.fr",
                 "recipients": ["dr.martin@cabinet.fr"],
                 "body": "Dr. Martin consulte patient Jean Dupont demain 15h.",
                 "date": "2026-02-11T16:00:00Z",
-                "category": "medical",
+                "category": "pro",
                 "priority": "high",
             }
 

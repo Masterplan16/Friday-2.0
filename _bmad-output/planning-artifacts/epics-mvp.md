@@ -407,7 +407,7 @@ Le besoin #1 d'Mainteneur. Pipeline complet : reception → anonymisation → cl
 
 **Acceptance Criteria** :
 - Email → Presidio anonymise → Claude Sonnet 4.5 classifie (FR1)
-- Categories : medical, finance, faculty, personnel, urgent, spam, etc.
+- Categories : pro, finance, universite, recherche, perso, urgent, spam, inconnu
 - Correction_rules du module email injectees dans le prompt (FR29)
 - Notification classification dans topic Email Telegram
 - Mainteneur peut corriger via inline buttons (FR2)
@@ -537,7 +537,8 @@ OCR, renommage intelligent, classement arborescence, recherche semantique, suivi
 **Description** : Classer les documents dans l'arborescence configurable.
 
 **Acceptance Criteria** :
-- Arborescence initiale : Cabinet/Faculte/Finances/Personnel/Garanties (D8)
+- Arborescence initiale : pro/finance/universite/recherche/perso (D24)
+- Finance subdivisée : finance/{selarl|scm|sci_ravas|sci_malbosc|personal}/YYYY/MM-Mois/
 - Classification par LLM (trust=propose les premieres semaines, puis auto)
 - Mainteneur peut modifier l'arborescence via commande Telegram (FR108)
 - Sous-dossiers : Finances/SELARL/YYYY/MM-Mois/, etc.

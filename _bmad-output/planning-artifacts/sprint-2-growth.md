@@ -20,7 +20,7 @@ So que mes 5 structures financieres soient suivies separement.
 
 **Given** un fichier CSV bancaire est depose dans le dossier surveille ou importe via n8n
 **When** le pipeline de classification s'execute
-**Then** chaque transaction est classee dans le bon perimetre (SELARL, SCM, SCI-1, SCI-2, Perso) (FR59)
+**Then** chaque transaction est classee dans le bon perimetre (SELARL, SCM, SCI Ravas, SCI Malbosc, Perso) (FR59)
 **And** aucune contamination croisee entre perimetres (FR37)
 **And** le trust level est "propose" pour les premieres semaines
 

@@ -206,15 +206,15 @@ n8n (admin, rare)
 ```
 Entree via Telegram (photo, document)
   → VPS recoit, traite (OCR, classification, renommage)
-  → Zone de transit VPS
-  → Syncthing/Tailscale → PC (fichier final dans /Archives/...)
-  → VPS conserve : index, metadonnees, embeddings
+  → Zone de transit VPS (/var/friday/transit/attachments/, ephemere 5-15 min)
+  → Syncthing/Tailscale → PC (C:\Users\lopez\BeeStation\Friday\Archives\{categorie}\)
+  → VPS conserve : index, metadonnees, embeddings (PostgreSQL + pgvector)
 
 Entree via scanner / dossier surveille
-  → PC detecte le nouveau fichier
-  → Envoi au VPS via Tailscale
+  → PC detecte le nouveau fichier (C:\Users\lopez\BeeStation\Friday\Transit\)
+  → Envoi au VPS via Tailscale (/var/friday/transit/uploads/)
   → VPS traite (OCR, classification, renommage)
-  → Retour vers PC dans le bon dossier
+  → Retour vers PC dans C:\Users\lopez\BeeStation\Friday\Archives\{categorie}\
 
 Recherche
   → "Friday, retrouve la facture du plombier"

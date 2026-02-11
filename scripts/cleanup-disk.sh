@@ -461,6 +461,21 @@ main() {
         log_error "❌ Transit cleanup : ERREUR"
     fi
 
+    # Cleanup Attachments Transit (Story 2.4)
+    local attachments_freed=0
+    if [ -x "$(dirname "${BASH_SOURCE[0]}")/cleanup-attachments-transit.sh" ]; then
+        log_info "Exécution cleanup-attachments-transit.sh (Story 2.4)..."
+        if "$(dirname "${BASH_SOURCE[0]}")/cleanup-attachments-transit.sh" 2>&1 | tee -a "$LOG_FILE"; then
+            log_info "✅ Attachments transit cleanup : OK"
+        else
+            status="partial"
+            errors+=("Attachments")
+            log_error "❌ Attachments transit cleanup : ERREUR"
+        fi
+    else
+        log_warn "cleanup-attachments-transit.sh non trouvé ou non exécutable (Story 2.4 skip)"
+    fi
+
     # Calculate duration
     local end_time
     end_time=$(date +%s)

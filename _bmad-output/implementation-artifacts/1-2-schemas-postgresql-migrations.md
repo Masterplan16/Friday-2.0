@@ -29,7 +29,7 @@ Afin que **la base de donnees PostgreSQL soit entierement structuree avec les 3 
   - [x] 1.3 Migration 011 : remplacer `gen_random_uuid()` par `uuid_generate_v4()` (coherence avec 001-010)
   - [x] 1.4 Migration 011 : remplacer `TIMESTAMP` par `TIMESTAMPTZ` (coherence avec toutes les autres migrations)
   - [x] 1.5 Migration 012 : ajouter `BEGIN;` / `COMMIT;` manquants
-  - [x] 1.6 Migration 010 : corriger `account_type` CHECK (`'sas','eurl'` → `'selarl','scm','sci_1','sci_2','personal'`) pour correspondre aux 5 perimetres financiers (architecture FR37)
+  - [x] 1.6 Migration 010 : corriger `account_type` CHECK (`'sas','eurl'` → `'selarl','scm','sci_ravas','sci_malbosc','personal'`) pour correspondre aux 5 perimetres financiers (architecture FR37)
 
 - [x] Task 2 : Fiabiliser apply_migrations.py (AC: #3, #4, #8, #9)
   - [x] 2.1 Corriger le bootstrap : creer schema `core` AVANT `core.schema_migrations` si migration 001 pas encore appliquee
@@ -78,7 +78,7 @@ Afin que **la base de donnees PostgreSQL soit entierement structuree avec les 3 
 
 **Migration 010 (`010_knowledge_finance.sql`) — 1 bug :**
 
-6. **account_type incorrect** : Le CHECK constraint utilise `('bank', 'sas', 'eurl', 'sci', 'personal')` mais l'architecture FR37 specifie 5 perimetres : **SELARL, SCM, SCI-1, SCI-2, Perso**. Les types `sas` et `eurl` n'existent pas dans le contexte d'Mainteneur.
+6. **account_type incorrect** : Le CHECK constraint utilise `('bank', 'sas', 'eurl', 'sci', 'personal')` mais l'architecture FR37 specifie 5 perimetres : **SELARL, SCM, SCI Ravas, SCI Malbosc, Perso**. Les types `sas` et `eurl` n'existent pas dans le contexte d'Mainteneur.
 
 **apply_migrations.py — 3 bugs :**
 
@@ -290,7 +290,7 @@ Claude Opus 4.6 via BMAD dev-story workflow
 **Task 1 — Corrections SQL:**
 - Migration 011: ajout BEGIN/COMMIT, suppression de la fonction update_updated_at_column() en faveur de core.update_updated_at(), remplacement gen_random_uuid() par uuid_generate_v4(), TIMESTAMP par TIMESTAMPTZ
 - Migration 012: ajout BEGIN/COMMIT
-- Migration 010: correction account_type CHECK (selarl/scm/sci_1/sci_2/personal)
+- Migration 010: correction account_type CHECK (selarl/scm/sci_ravas/sci_malbosc/personal)
 
 **Task 2 — Refonte apply_migrations.py:**
 - Reecriture complete du script avec structlog JSON, FridayError hierarchy, backup reel via pg_dump

@@ -191,11 +191,11 @@ class CorrectionRule(BaseModel):
         output = {"category": "finance"}
 
     Classification avec keywords:
-        conditions = {"category": "medical", "keywords": ["CPAM"]}
+        conditions = {"category": "pro", "keywords": ["CPAM"]}
         output = {"category": "finance", "subcategory": "CPAM"}
 
     Drafting réponse:
-        conditions = {"category": "medical", "keywords": ["rendez-vous"]}
+        conditions = {"category": "pro", "keywords": ["rendez-vous"]}
         output = {"tone": "formal", "template": "confirmation_rdv"}
 
     Détection VIP:

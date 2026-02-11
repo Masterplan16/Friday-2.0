@@ -1,0 +1,6 @@
+# Document Processor Service - Dependencies
+# Story 2.4 - Task 5
+
+asyncpg==0.30.0
+redis==5.2.1
+structlog==25.1.0

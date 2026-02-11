@@ -25,14 +25,14 @@ CLASSIFICATION_CONFIG = {
 
 # Catégories supportées avec descriptions détaillées
 CATEGORY_DESCRIPTIONS = {
-    "medical": "Emails du cabinet médical SELARL : patients, CPAM, URSSAF santé, planning consultations, admin médicale",
-    "finance": "Comptabilité, banques, impôts, factures (5 périmètres : SELARL, SCM, SCI-1, SCI-2, personnel)",
-    "faculty": "Enseignement universitaire : étudiants, plannings cours, examens, réunions faculté",
-    "research": "Recherche académique : thèses encadrées, publications, colloques, revues scientifiques",
-    "personnel": "Vie personnelle : amis, famille, loisirs, achats personnels, voyage",
+    "pro": "Emails professionnels cabinet SELARL : CPAM, URSSAF santé, planning consultations, admin médicale (PAS de données patient)",
+    "finance": "Comptabilité, banques, impôts, factures (5 périmètres : SELARL, SCM, SCI Ravas, SCI Malbosc, personnel)",
+    "universite": "Enseignement universitaire : étudiants, plannings cours, examens, réunions faculté",
+    "recherche": "Recherche académique : thèses encadrées, publications, colloques, revues scientifiques",
+    "perso": "Vie personnelle : amis, famille, loisirs, achats personnels, voyage",
     "urgent": "Emails nécessitant action immédiate : VIP, deadline <24h, urgence explicite",
     "spam": "Publicités commerciales, newsletters non sollicitées, emails promotionnels",
-    "unknown": "Impossible à classifier avec confiance suffisante (fallback de sécurité)",
+    "inconnu": "Impossible à classifier avec confiance suffisante (fallback de sécurité)",
 }
 
 

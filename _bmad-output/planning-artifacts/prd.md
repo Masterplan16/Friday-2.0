@@ -87,7 +87,7 @@ decisions:
   - id: D7
     description: "VIP email = commande Telegram /vip + apprentissage Trust Layer (pas YAML statique)"
   - id: D8
-    description: "Arborescence documents validee (Cabinet/Faculte/Finances/Personnel/Garanties), evolutive"
+    description: "Arborescence documents validée (pro/finance/universite/recherche/perso), évolutive (D24 update)"
   - id: D9
     description: "Design push-first : Friday pousse tout proactivement, commandes manuelles en fallback"
   - id: D10
@@ -284,29 +284,33 @@ Rien a signaler → Friday ne notifie PAS (80%+ du temps = silence = comportemen
 ### Arborescence de classement documents
 
 ```
-Documents/
-├── Cabinet/
-│   ├── Factures/YYYY/MM-Mois/
-│   ├── Contrats/
-│   └── Admin/
-├── Faculte/
-│   ├── Theses/Prenom_Nom/
-│   ├── Cours/
-│   └── Admin/
-├── Finances/
-│   ├── SELARL/YYYY/MM-Mois/
-│   ├── SCM/YYYY/MM-Mois/
-│   ├── SCI-1/YYYY/MM-Mois/
-│   ├── SCI-2/YYYY/MM-Mois/
-│   └── Perso/YYYY/MM-Mois/
-├── Personnel/
-│   ├── Assurances/
-│   ├── Vehicule/
-│   ├── Maison/
-│   └── Divers/
-└── Garanties/
-    ├── Actives/
-    └── Expirees/
+C:\Users\lopez\BeeStation\Friday\Archives\
+├── pro/                          # Cabinet médical SELARL
+│   ├── factures/YYYY/MM-Mois/
+│   ├── contrats/
+│   └── admin/
+├── universite/                   # Faculté médecine
+│   ├── theses/Prenom_Nom/
+│   ├── cours/
+│   └── admin/
+├── recherche/                    # Recherche académique
+│   ├── publications/
+│   ├── colloques/
+│   └── revues/
+├── finance/                      # 5 périmètres financiers
+│   ├── selarl/YYYY/MM-Mois/
+│   ├── scm/YYYY/MM-Mois/
+│   ├── sci_ravas/YYYY/MM-Mois/   # SCI Ravas
+│   ├── sci_malbosc/YYYY/MM-Mois/ # SCI Malbosc
+│   └── personal/YYYY/MM-Mois/
+└── perso/                        # Vie personnelle
+    ├── assurances/
+    ├── vehicule/
+    ├── maison/
+    ├── garanties/
+    │   ├── actives/
+    │   └── expirees/
+    └── divers/
 ```
 
 Classement par LLM (trust=propose les premieres semaines, puis auto apres stabilisation). Arborescence evolutive.
@@ -565,7 +569,7 @@ Aide consultation, Menus & Courses, Coach, Entretien cyclique, Generateur TCS/EC
 
 - **FR8** : Friday peut effectuer l'OCR sur images et PDF
 - **FR9** : Friday peut renommer les documents avec une convention standardisee
-- **FR10** : Friday peut classer les documents dans une arborescence configurable et evolutive (initiale : Cabinet/Faculte/Finances/Personnel/Garanties)
+- **FR10** : Friday peut classer les documents dans une arborescence configurable et évolutive (initiale : pro/finance/universite/recherche/perso — D24)
 - **FR11** : Mainteneur peut rechercher des documents par requete semantique
 - **FR12** : Friday peut suivre les dates d'expiration de garanties et notifier proactivement
 - **FR13** : Mainteneur peut rechercher des documents par requete vocale
@@ -604,7 +608,7 @@ Aide consultation, Menus & Courses, Coach, Entretien cyclique, Generateur TCS/EC
 - **FR34** : Tout texte est anonymise via Presidio avant tout appel LLM cloud
 - **FR35** : Friday stoppe le traitement si le service d'anonymisation est indisponible (fail-explicit)
 - **FR36** : Les backups sont chiffres et synchronises vers le PC d'Mainteneur quotidiennement
-- **FR37** : Les donnees financieres sont classees dans le bon perimetre (SELARL/SCM/SCI-1/SCI-2/Perso) sans contamination croisee
+- **FR37** : Les donnees financieres sont classees dans le bon perimetre (SELARL/SCM/SCI Ravas/SCI Malbosc/Perso) sans contamination croisee
 
 ### Graphe de connaissances & Memoire
 

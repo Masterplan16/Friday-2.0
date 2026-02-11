@@ -1,0 +1,442 @@
+{
+  "dataset_name": "Email Attachments Extraction - Story 2.4",
+  "version": "1.0.0",
+  "created_at": "2026-02-11",
+  "description": "Dataset 15 emails réalistes avec attachments variés pour tests E2E extraction PJ",
+  "test_cases": [
+    {
+      "id": "email_001",
+      "description": "Email facture PDF simple (cas nominal)",
+      "email": {
+        "account_id": "main",
+        "message_id": "msg_001_facture",
+        "from": {
+          "address": "comptabilite@orange.fr",
+          "name": "Orange Comptabilité"
+        },
+        "to": [{"address": "antonio@example.com"}],
+        "subject": "Votre facture Orange janvier 2026",
+        "text": "Bonjour, veuillez trouver ci-joint votre facture du mois de janvier 2026.",
+        "has_attachments": true,
+        "attachments": [
+          {
+            "id": "att_001_pdf",
+            "filename": "Facture_Orange_Janvier_2026.pdf",
+            "content_type": "application/pdf",
+            "size": 125000
+          }
+        ]
+      },
+      "expected": {
+        "extracted_count": 1,
+        "failed_count": 0,
+        "mime_type_accepted": true,
+        "size_valid": true,
+        "status_db": "pending"
+      }
+    },
+    {
+      "id": "email_002",
+      "description": "Email avec 3 PJ (PDF + 2 images)",
+      "email": {
+        "account_id": "main",
+        "message_id": "msg_002_multiple",
+        "from": {"address": "notaire@notaires-paris.fr", "name": "Maître Dupont"},
+        "to": [{"address": "antonio@example.com"}],
+        "subject": "Documents acte notarié - SCI Immobilière",
+        "text": "Bonjour Maître, veuillez trouver ci-joint les documents signés.",
+        "has_attachments": true,
+        "attachments": [
+          {
+            "id": "att_002_pdf",
+            "filename": "Acte_Notarie_SCI.pdf",
+            "content_type": "application/pdf",
+            "size": 850000
+          },
+          {
+            "id": "att_002_img1",
+            "filename": "Signature_Page1.jpg",
+            "content_type": "image/jpeg",
+            "size": 320000
+          },
+          {
+            "id": "att_002_img2",
+            "filename": "Signature_Page2.jpg",
+            "content_type": "image/jpeg",
+            "size": 310000
+          }
+        ]
+      },
+      "expected": {
+        "extracted_count": 3,
+        "failed_count": 0,
+        "total_size_mb": 1.42
+      }
+    },
+    {
+      "id": "email_003",
+      "description": "PJ bloquée (fichier .exe)",
+      "email": {
+        "account_id": "main",
+        "message_id": "msg_003_exe_blocked",
+        "from": {"address": "spam@malicious.com", "name": "Spammer"},
+        "to": [{"address": "antonio@example.com"}],
+        "subject": "URGENT: Mise à jour requise",
+        "text": "Cliquez sur la pièce jointe pour mettre à jour votre système.",
+        "has_attachments": true,
+        "attachments": [
+          {
+            "id": "att_003_exe",
+            "filename": "UpdateSystem.exe",
+            "content_type": "application/x-msdownload",
+            "size": 2500000
+          }
+        ]
+      },
+      "expected": {
+        "extracted_count": 0,
+        "failed_count": 1,
+        "mime_type_rejected": true,
+        "rejection_reason": "MIME type blocked (executable)"
+      }
+    },
+    {
+      "id": "email_004",
+      "description": "PJ trop grosse (>25 Mo)",
+      "email": {
+        "account_id": "main",
+        "message_id": "msg_004_too_large",
+        "from": {"address": "client@videoproduction.com"},
+        "to": [{"address": "antonio@example.com"}],
+        "subject": "Vidéo projet promotional",
+        "text": "Bonjour, voici la vidéo HD du projet.",
+        "has_attachments": true,
+        "attachments": [
+          {
+            "id": "att_004_video",
+            "filename": "Promo_Video_HD.mp4",
+            "content_type": "video/mp4",
+            "size": 35000000
+          }
+        ]
+      },
+      "expected": {
+        "extracted_count": 0,
+        "failed_count": 1,
+        "size_rejected": true,
+        "rejection_reason": "Size exceeds 25 Mo limit"
+      }
+    },
+    {
+      "id": "email_005",
+      "description": "Nom fichier dangereux (path traversal)",
+      "email": {
+        "account_id": "main",
+        "message_id": "msg_005_path_traversal",
+        "from": {"address": "attacker@evil.com"},
+        "to": [{"address": "antonio@example.com"}],
+        "subject": "Document important",
+        "text": "Fichier ci-joint",
+        "has_attachments": true,
+        "attachments": [
+          {
+            "id": "att_005_traversal",
+            "filename": "../../etc/passwd",
+            "content_type": "text/plain",
+            "size": 5000
+          }
+        ]
+      },
+      "expected": {
+        "extracted_count": 1,
+        "failed_count": 0,
+        "filename_sanitized": "etc_passwd",
+        "security_check": "PASS"
+      }
+    },
+    {
+      "id": "email_006",
+      "description": "Email sans PJ",
+      "email": {
+        "account_id": "main",
+        "message_id": "msg_006_no_attachments",
+        "from": {"address": "colleague@company.com", "name": "Jean Martin"},
+        "to": [{"address": "antonio@example.com"}],
+        "subject": "Réunion demain 10h",
+        "text": "Bonjour, confirmes-tu ta présence à la réunion de demain ?",
+        "has_attachments": false,
+        "attachments": []
+      },
+      "expected": {
+        "extracted_count": 0,
+        "failed_count": 0,
+        "extraction_skipped": true
+      }
+    },
+    {
+      "id": "email_007",
+      "description": "Document Word (.docx)",
+      "email": {
+        "account_id": "main",
+        "message_id": "msg_007_word",
+        "from": {"address": "rh@company.fr", "name": "Service RH"},
+        "to": [{"address": "antonio@example.com"}],
+        "subject": "Contrat travail - signature requise",
+        "text": "Bonjour, veuillez signer le contrat ci-joint.",
+        "has_attachments": true,
+        "attachments": [
+          {
+            "id": "att_007_docx",
+            "filename": "Contrat_Travail_2026.docx",
+            "content_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            "size": 450000
+          }
+        ]
+      },
+      "expected": {
+        "extracted_count": 1,
+        "failed_count": 0,
+        "mime_type": "docx"
+      }
+    },
+    {
+      "id": "email_008",
+      "description": "Feuille Excel (.xlsx)",
+      "email": {
+        "account_id": "main",
+        "message_id": "msg_008_excel",
+        "from": {"address": "compta@comptable.fr", "name": "Expert-Comptable"},
+        "to": [{"address": "antonio@example.com"}],
+        "subject": "Bilan comptable T1 2026",
+        "text": "Bonjour, veuillez trouver le bilan trimestriel.",
+        "has_attachments": true,
+        "attachments": [
+          {
+            "id": "att_008_xlsx",
+            "filename": "Bilan_T1_2026.xlsx",
+            "content_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.document",
+            "size": 680000
+          }
+        ]
+      },
+      "expected": {
+        "extracted_count": 1,
+        "failed_count": 0,
+        "mime_type": "xlsx"
+      }
+    },
+    {
+      "id": "email_009",
+      "description": "Archive ZIP bloquée",
+      "email": {
+        "account_id": "main",
+        "message_id": "msg_009_zip_blocked",
+        "from": {"address": "sender@example.com"},
+        "to": [{"address": "antonio@example.com"}],
+        "subject": "Documents projet (archive)",
+        "text": "Bonjour, documents compressés ci-joints.",
+        "has_attachments": true,
+        "attachments": [
+          {
+            "id": "att_009_zip",
+            "filename": "Documents_Projet.zip",
+            "content_type": "application/zip",
+            "size": 15000000
+          }
+        ]
+      },
+      "expected": {
+        "extracted_count": 0,
+        "failed_count": 1,
+        "mime_type_rejected": true,
+        "rejection_reason": "Archive files blocked (security policy)"
+      }
+    },
+    {
+      "id": "email_010",
+      "description": "Image PNG (photo)",
+      "email": {
+        "account_id": "main",
+        "message_id": "msg_010_image_png",
+        "from": {"address": "friend@gmail.com", "name": "Marie Durand"},
+        "to": [{"address": "antonio@example.com"}],
+        "subject": "Photo soirée hier",
+        "text": "Coucou ! Voici la photo de groupe d'hier soir :)",
+        "has_attachments": true,
+        "attachments": [
+          {
+            "id": "att_010_png",
+            "filename": "Soiree_Groupe.png",
+            "content_type": "image/png",
+            "size": 2400000
+          }
+        ]
+      },
+      "expected": {
+        "extracted_count": 1,
+        "failed_count": 0,
+        "mime_type": "image"
+      }
+    },
+    {
+      "id": "email_011",
+      "description": "Mix PJ valides + bloquées",
+      "email": {
+        "account_id": "main",
+        "message_id": "msg_011_mixed",
+        "from": {"address": "sender@company.com"},
+        "to": [{"address": "antonio@example.com"}],
+        "subject": "Documents projet + code source",
+        "text": "Documents + code ci-joints.",
+        "has_attachments": true,
+        "attachments": [
+          {
+            "id": "att_011_pdf",
+            "filename": "Specifications.pdf",
+            "content_type": "application/pdf",
+            "size": 500000
+          },
+          {
+            "id": "att_011_zip",
+            "filename": "SourceCode.zip",
+            "content_type": "application/zip",
+            "size": 8000000
+          },
+          {
+            "id": "att_011_jpg",
+            "filename": "Mockup.jpg",
+            "content_type": "image/jpeg",
+            "size": 1200000
+          }
+        ]
+      },
+      "expected": {
+        "extracted_count": 2,
+        "failed_count": 1,
+        "accepted_files": ["Specifications.pdf", "Mockup.jpg"],
+        "rejected_files": ["SourceCode.zip"]
+      }
+    },
+    {
+      "id": "email_012",
+      "description": "Nom fichier Unicode (accents)",
+      "email": {
+        "account_id": "main",
+        "message_id": "msg_012_unicode",
+        "from": {"address": "fr@example.fr"},
+        "to": [{"address": "antonio@example.com"}],
+        "subject": "Résumé été 2025",
+        "text": "Document ci-joint.",
+        "has_attachments": true,
+        "attachments": [
+          {
+            "id": "att_012_unicode",
+            "filename": "Résumé été 2025.pdf",
+            "content_type": "application/pdf",
+            "size": 300000
+          }
+        ]
+      },
+      "expected": {
+        "extracted_count": 1,
+        "failed_count": 0,
+        "filename_sanitized": "Resume_ete_2025.pdf",
+        "unicode_normalized": true
+      }
+    },
+    {
+      "id": "email_013",
+      "description": "Fichier texte (.txt)",
+      "email": {
+        "account_id": "main",
+        "message_id": "msg_013_txt",
+        "from": {"address": "dev@tech.com"},
+        "to": [{"address": "antonio@example.com"}],
+        "subject": "Notes réunion technique",
+        "text": "Notes ci-jointes.",
+        "has_attachments": true,
+        "attachments": [
+          {
+            "id": "att_013_txt",
+            "filename": "Notes_Reunion_2026-02-11.txt",
+            "content_type": "text/plain",
+            "size": 15000
+          }
+        ]
+      },
+      "expected": {
+        "extracted_count": 1,
+        "failed_count": 0,
+        "mime_type": "text"
+      }
+    },
+    {
+      "id": "email_014",
+      "description": "PJ exactement 25 Mo (limite)",
+      "email": {
+        "account_id": "main",
+        "message_id": "msg_014_limit",
+        "from": {"address": "designer@studio.com"},
+        "to": [{"address": "antonio@example.com"}],
+        "subject": "Maquette haute résolution",
+        "text": "Maquette HD ci-jointe (taille limite).",
+        "has_attachments": true,
+        "attachments": [
+          {
+            "id": "att_014_limit",
+            "filename": "Maquette_HD_Final.psd",
+            "content_type": "image/vnd.adobe.photoshop",
+            "size": 26214400
+          }
+        ]
+      },
+      "expected": {
+        "extracted_count": 1,
+        "failed_count": 0,
+        "size_at_limit": true,
+        "comment": "Exactly 25 Mo (MAX_ATTACHMENT_SIZE_BYTES)"
+      }
+    },
+    {
+      "id": "email_015",
+      "description": "Nom fichier très long (>200 chars)",
+      "email": {
+        "account_id": "main",
+        "message_id": "msg_015_long_filename",
+        "from": {"address": "sender@example.com"},
+        "to": [{"address": "antonio@example.com"}],
+        "subject": "Document avec nom très long",
+        "text": "Fichier ci-joint.",
+        "has_attachments": true,
+        "attachments": [
+          {
+            "id": "att_015_long",
+            "filename": "Ce_fichier_a_un_nom_extremement_long_qui_depasse_largement_la_limite_de_200_caracteres_autorisee_par_le_systeme_de_fichiers_et_devrait_etre_tronque_automatiquement_par_la_fonction_sanitize_filename_pour_respecter_la_contrainte_MAX_FILENAME_LENGTH_definie_dans_attachment.py_ligne_15.pdf",
+            "content_type": "application/pdf",
+            "size": 100000
+          }
+        ]
+      },
+      "expected": {
+        "extracted_count": 1,
+        "failed_count": 0,
+        "filename_truncated": true,
+        "max_length": 200
+      }
+    }
+  ],
+  "summary": {
+    "total_test_cases": 15,
+    "categories": {
+      "nominal": 5,
+      "security": 3,
+      "validation": 4,
+      "edge_cases": 3
+    },
+    "expected_total": {
+      "extracted": 18,
+      "failed": 6,
+      "skipped": 1
+    }
+  }
+}

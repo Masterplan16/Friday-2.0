@@ -78,7 +78,7 @@ async def populate_email_graph(
             "sender": email_data["sender"],
             "recipients": email_data.get("recipients", []),
             "date": email_data["date"],
-            "category": email_data.get("category", "unknown"),
+            "category": email_data.get("category", "inconnu"),
             "priority": email_data.get("priority", "normal"),
             "thread_id": email_data.get("thread_id"),
         },

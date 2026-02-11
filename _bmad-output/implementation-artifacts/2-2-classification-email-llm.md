@@ -28,7 +28,7 @@ Afin que **je puisse rapidement identifier les emails importants et prioriser me
 - Max tokens : 300 (catégorie + confidence + reasoning)
 - Catégories supportées :
   - `medical` : Emails cabinet SELARL (patients, admin médicale, CPAM, URSSAF santé)
-  - `finance` : Comptabilité, banques, impôts, factures (5 périmètres : SELARL, SCM, SCI-1, SCI-2, perso)
+  - `finance` : Comptabilité, banques, impôts, factures (5 périmètres : SELARL, SCM, SCI Ravas, SCI Malbosc, perso)
   - `faculty` : Enseignement, étudiants, université, planning cours
   - `research` : Thèses, publications, colloques, revues scientifiques
   - `personnel` : Amis, famille, loisirs, achats personnels
@@ -47,7 +47,7 @@ Afin que **je puisse rapidement identifier les emails importants et prioriser me
   ```
 - Validation Pydantic du JSON retourné (schema `EmailClassification`)
 - Stockage catégorie dans `ingestion.emails` (colonne `category`, `confidence`)
-- Test : 20 emails variés (5 medical, 5 finance, 3 faculty, 3 research, 2 personnel, 2 spam) → accuracy ≥85%
+- Test : 20 emails variés (5 pro, 5 finance, 3 universite, 3 recherche, 2 perso, 2 spam) → accuracy ≥85%
 
 ### AC2 : Injection correction_rules dans le prompt Claude
 
@@ -62,7 +62,7 @@ Afin que **je puisse rapidement identifier les emails importants et prioriser me
   - Règle 2 (priority=20) : Si subject contient "soutenance" OU "thèse" → category="research"
   ...
 
-  Catégories disponibles : medical, finance, faculty, research, personnel, urgent, spam, unknown.
+  Catégories disponibles : pro, finance, universite, recherche, perso, urgent, spam, inconnu.
   ...
   ```
 - Règles injectées AVANT les instructions génériques de classification
@@ -166,10 +166,10 @@ Afin que **je puisse rapidement identifier les emails importants et prioriser me
 ### AC7 : Accuracy ≥85% sur 4 comptes IMAP (US1)
 
 - Dataset test : 100 emails variés (25 par compte)
-  - Compte médical : 15 medical, 5 finance, 3 faculty, 2 spam
-  - Compte faculté : 18 faculty, 5 research, 2 personnel
-  - Compte recherche : 20 research, 3 faculty, 2 spam
-  - Compte personnel : 15 personnel, 5 spam, 5 finance
+  - Compte médical : 15 pro, 5 finance, 3 universite, 2 spam
+  - Compte faculté : 18 universite, 5 recherche, 2 perso
+  - Compte recherche : 20 recherche, 3 universite, 2 spam
+  - Compte personnel : 15 perso, 5 spam, 5 finance
 - Classification batch → vérification ground truth
 - Accuracy globale ≥85% (85/100 correct minimum)
 - Accuracy par catégorie ≥80% (ex: medical ≥80% sur emails medical)
@@ -218,7 +218,7 @@ Afin que **je puisse rapidement identifier les emails importants et prioriser me
   - Schema `EmailClassification` :
     ```python
     class EmailClassification(BaseModel):
-        category: str = Field(..., pattern="^(medical|finance|faculty|research|personnel|urgent|spam|unknown)$")
+        category: str = Field(..., pattern="^(pro|finance|universite|recherche|perso|urgent|spam|inconnu)$")
         confidence: float = Field(..., ge=0.0, le=1.0)
         reasoning: str = Field(..., min_length=10)
         keywords: list[str] = Field(default_factory=list)
@@ -647,7 +647,7 @@ Claude Sonnet 4.5 (claude-sonnet-4-5-20250929)
 
 #### ✅ Task 8 : Dataset & Tests Accuracy (COMPLETE)
 - Créé dataset 100 emails tests/fixtures/emails_classification_dataset.json
-  - Breakdown : 13 medical, 13 finance, 13 faculty, 13 research, 13 personnel, 7 urgent, 7 spam, 5 unknown
+  - Breakdown : 13 pro, 13 finance, 13 universite, 13 recherche, 13 perso, 7 urgent, 7 spam, 5 inconnu
   - Ground truth validé manuellement
   - expected_confidence_min par email
 - Test E2E accuracy : test_classification_accuracy.py (3 tests E2E)

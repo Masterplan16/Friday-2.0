@@ -60,7 +60,7 @@ class TestParseClassification:
         """JSON valide standard"""
         response = json.dumps(
             {
-                "category": "medical",
+                "category": "pro",
                 "priority": "high",
                 "confidence": 0.95,
                 "keywords": ["rdv", "docteur"],
@@ -69,7 +69,7 @@ class TestParseClassification:
 
         result = mock_migrator._parse_classification(response)
 
-        assert result["category"] == "medical"
+        assert result["category"] == "pro"
         assert result["priority"] == "high"
         assert result["confidence"] == 0.95
         assert result["keywords"] == ["rdv", "docteur"]
@@ -261,7 +261,7 @@ class TestClassifyEmail:
         mock_migrator.llm_client.complete_raw.return_value = LLMResponse(
             content=json.dumps(
                 {
-                    "category": "medical",
+                    "category": "pro",
                     "priority": "urgent",
                     "confidence": 0.92,
                     "keywords": ["rdv", "urgence"],
@@ -282,7 +282,7 @@ class TestClassifyEmail:
         result = await mock_migrator.classify_email(email)
 
         # Vérifier classification
-        assert result["category"] == "medical"
+        assert result["category"] == "pro"
         assert result["priority"] == "urgent"
         assert result["confidence"] == 0.92
         assert "rdv" in result["keywords"]

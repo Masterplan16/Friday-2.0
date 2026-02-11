@@ -32,14 +32,14 @@ class CorrectionsHandler:
 
     # Story 2.2 AC5: Catégories email avec emojis
     EMAIL_CATEGORIES = {
-        "medical": "🏥 Medical",
+        "pro": "🏥 Pro",
         "finance": "💰 Finance",
-        "faculty": "🎓 Faculty",
-        "research": "🔬 Research",
-        "personnel": "👤 Personnel",
+        "universite": "🎓 Université",
+        "recherche": "🔬 Recherche",
+        "perso": "👤 Perso",
         "urgent": "🚨 Urgent",
         "spam": "🗑️ Spam",
-        "unknown": "❓ Unknown",
+        "inconnu": "❓ Inconnu",
     }
 
     def __init__(self, db_pool: asyncpg.Pool):
@@ -107,7 +107,7 @@ class CorrectionsHandler:
                 await query.message.reply_text(
                     f"📝 **Correction action `{receipt_id[:8]}`**\n\n"
                     "Quelle est la correction à appliquer ?\n"
-                    "Exemple : `URSSAF → finance` ou `category: medical`\n\n"
+                    "Exemple : `URSSAF → finance` ou `category: pro`\n\n"
                     "Envoie ton message de correction :",
                     parse_mode="Markdown",
                 )
@@ -213,7 +213,7 @@ class CorrectionsHandler:
                     return
 
                 # Extraire catégorie originale depuis output_summary
-                # Format attendu: "→ medical (0.92)" ou "→ medical (confidence=0.92)"
+                # Format attendu: "→ pro (0.92)" ou "→ pro (confidence=0.92)"
                 original_category = self._extract_category_from_output(row["output_summary"])
 
                 # Construire correction JSON (AC5)
@@ -277,15 +277,15 @@ class CorrectionsHandler:
         Extrait la catégorie depuis output_summary.
 
         Formats supportés:
-        - "→ medical (0.92)"
-        - "→ medical (confidence=0.92)"
-        - "→ medical"
+        - "→ pro (0.92)"
+        - "→ pro (confidence=0.92)"
+        - "→ pro"
 
         Args:
             output_summary: Output summary du receipt
 
         Returns:
-            Nom de la catégorie (medical, finance, etc.) ou "unknown"
+            Nom de la catégorie (pro, finance, etc.) ou "inconnu"
         """
         # Regex pour extraire catégorie après "→"
         match = re.search(r"→\s*([a-z_]+)", output_summary)
@@ -297,7 +297,7 @@ class CorrectionsHandler:
             "Failed to extract category from output_summary",
             output_summary=output_summary,
         )
-        return "unknown"
+        return "inconnu"
 
     async def handle_correction_text(
         self, update: Update, context: ContextTypes.DEFAULT_TYPE

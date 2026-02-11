@@ -217,13 +217,60 @@ Catégorie : 💰 finance (92%)
 
 **Cold start mode** : Les 10-20 premiers emails nécessitent **systématiquement** votre validation (mode calibrage). Ensuite, si accuracy >= 90%, Friday passe en mode automatique.
 
-**Pièces jointes détectées :**
+**Pièces jointes extraites (Story 2.4) :**
+
+Friday extrait automatiquement les pièces jointes de vos emails et vous notifie dans ce topic. Chaque notification inclut un bouton pour consulter l'email original.
+
+**Exemple avec 3 fichiers :**
 ```
-📎 Pièce jointe extraite
-Email : Carrefour Drive
-Fichier : facture_202602.pdf
-→ Envoyé à l'Archiviste
+📎 3 pièces jointes extraites
+
+Email : Carrefour Drive - Facture commande
+Taille totale : 2.45 Mo
+
+Fichiers :
+  • facture_202602.pdf (1.2 Mo)
+  • bon_livraison.pdf (0.8 Mo)
+  • photo_produit.jpg (0.45 Mo)
+
+→ Stockées en zone transit (24h)
+
+[View Email 📧]
 ```
+
+**Exemple avec plus de 5 fichiers :**
+```
+📎 8 pièces jointes extraites
+
+Email : URSSAF - Documents cotisations Q4
+Taille totale : 12.3 Mo
+
+Fichiers :
+  • declaration_trimestre.pdf (2.1 Mo)
+  • bordereau_paiement.pdf (1.8 Mo)
+  • recapitulatif_charges.xlsx (3.2 Mo)
+  • justificatifs_2025.zip (4.5 Mo)
+  • notice_explicative.pdf (0.5 Mo)
+  ... et 3 autre(s)
+
+→ Stockées en zone transit (24h)
+
+[View Email 📧]
+```
+
+**Sécurité & Validation :**
+- ✅ **MIME types autorisés** : 18 types (PDF, Office, images, archives, texte)
+- ✅ **Types bloqués** : 25+ types dangereux (exe, dll, bat, scripts...)
+- ✅ **Taille max** : 25 Mo par fichier
+- ✅ **Sanitization** : Noms de fichiers nettoyés (path traversal, command injection)
+
+**Zone transit :**
+Les fichiers sont stockés temporairement dans `/var/friday/transit/attachments/` pendant 24h. Après traitement par l'Archiviste (Epic 3), ils sont déplacés vers leur localisation finale (BeeStation/NAS) et la zone transit est automatiquement nettoyée (cleanup quotidien 03:05).
+
+**Cas particuliers :**
+- Si **0 fichiers** extraits (tous bloqués ou échec) → **Pas de notification**
+- Si **échec extraction** → Logged dans Topic System & Alerts
+- Si **fichier bloqué** (MIME/taille) → Visible uniquement dans logs détaillés
 
 **Emails urgents :**
 ```

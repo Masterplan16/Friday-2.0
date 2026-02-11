@@ -103,7 +103,7 @@ Mail arrive (IMAP) → EmailEngine (VPS)
                          ↓
             PJ traitée (OCR, renommage)
                          ↓
-            Syncthing sync → PC (~/Documents/Archives/...)
+            Syncthing sync → PC (C:\Users\lopez\BeeStation\Friday\Archives\{categorie}\)
                          ↓
             Suppression PJ du transit VPS
 ```
@@ -111,7 +111,11 @@ Mail arrive (IMAP) → EmailEngine (VPS)
 **Stockage final** :
 - Email brut : PostgreSQL VPS (ingestion.emails_raw)
 - Métadonnées : PostgreSQL VPS (ingestion.emails + knowledge.*)
-- PJ traitée : PC (~/Documents/Archives/...)
+- PJ traitée : PC (`C:\Users\lopez\BeeStation\Friday\Archives\{categorie}\`)
+  - Catégories : pro, finance, universite, recherche, perso, urgent, spam, inconnu
+  - Finance subdivisé : `Archives\finance\{selarl|scm|sci_ravas|sci_malbosc|personal}\`
+- Zone transit PC : `C:\Users\lopez\BeeStation\Friday\Transit\` (24h, cleanup 03:05)
+- Zone transit VPS : `/var/friday/transit/attachments/` (éphémère 5-15 min)
 - Index PJ : pgvector VPS (D19)
 
 #### 2.2.2 Scanner physique
@@ -134,7 +138,7 @@ Scan → PC (~/Documents/Uploads/)
          ↓
    Fichier renommé/classé
          ↓
-   Syncthing sync → PC (~/Documents/Archives/[catégorie]/[nom_intelligent].pdf)
+   Syncthing sync → PC (C:\Users\lopez\BeeStation\Friday\Archives\{categorie}\[nom_intelligent].pdf)
          ↓
    Suppression du transit VPS
 ```
@@ -739,9 +743,9 @@ Friday envoie automatiquement :
   ⏸️ 1 en attente (contrat SCI, je propose Veilleur Droit ?)
 
 📁 Documents archivés : 3
-  - Planning_Q1.pdf → ~/Documents/Cabinet/Planning/
-  - Facture_EDF_SELARL.pdf → ~/Documents/Finance/SELARL/2026/02/
-  - Chapitre3_Julie_v2.docx → ~/Documents/Theses/Julie/
+  - Planning_Q1.pdf → C:\Users\lopez\BeeStation\Friday\Archives\pro\Planning\
+  - Facture_EDF_SELARL.pdf → C:\Users\lopez\BeeStation\Friday\Archives\finance\selarl\2026\02\
+  - Chapitre3_Julie_v2.docx → C:\Users\lopez\BeeStation\Friday\Archives\recherche\theses\Julie\
 
 ✅ Tâches créées : 2
   - URSSAF cotisations (échéance 28/02)
@@ -1102,8 +1106,8 @@ je crois qu'il arrive à échéance bientôt"
 Friday (réponse Telegram)
 🔍 Contrat trouvé
 
-📄 2021-03-01_Bail_Commercial_Cabinet_RueVoltaire.pdf
-Emplacement : ~/Documents/Contrats/Cabinet/
+📄 2021-03-01_Bail_Commercial_SELARL_RueVoltaire.pdf
+Emplacement : C:\Users\lopez\BeeStation\Friday\Archives\pro\contrats\
 Date signature : 01/03/2021
 Durée : 3+3+3 ans
 

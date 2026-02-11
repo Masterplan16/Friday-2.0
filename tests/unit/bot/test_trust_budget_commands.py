@@ -29,6 +29,13 @@ def mock_update():
     return update
 
 
+@pytest.fixture(autouse=True)
+def patch_owner_user_id(mock_update):
+    """Patch _OWNER_USER_ID pour tous les tests (sauf ceux qui le patchent explicitement)."""
+    with patch("bot.handlers.trust_budget_commands._OWNER_USER_ID", mock_update.effective_user.id):
+        yield
+
+
 @pytest.fixture
 def mock_context():
     """Fixture : Mock Telegram Context."""

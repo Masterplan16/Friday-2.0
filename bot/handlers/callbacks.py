@@ -33,8 +33,7 @@ def _cleanup_stale_attempts() -> None:
     """Nettoie les entrees perimees du dict _unauthorized_attempts (H3 fix)."""
     now = time.monotonic()
     stale = [
-        uid for uid, (_, ts) in _unauthorized_attempts.items()
-        if now - ts > _ATTEMPTS_TTL_SECONDS
+        uid for uid, (_, ts) in _unauthorized_attempts.items() if now - ts > _ATTEMPTS_TTL_SECONDS
     ]
     for uid in stale:
         del _unauthorized_attempts[uid]
@@ -130,9 +129,7 @@ class CallbacksHandler:
             receipt_id,
         )
 
-    async def _notify_metrics_topic(
-        self, context: ContextTypes.DEFAULT_TYPE, text: str
-    ) -> None:
+    async def _notify_metrics_topic(self, context: ContextTypes.DEFAULT_TYPE, text: str) -> None:
         """Envoie une notification dans le topic Metrics & Logs."""
         if not self._metrics_topic_id or not self._supergroup_id:
             return
@@ -261,9 +258,7 @@ class CallbacksHandler:
                 exc_info=True,
             )
             try:
-                await query.edit_message_text(
-                    f"Erreur lors de l'approbation: {str(e)[:200]}"
-                )
+                await query.edit_message_text(f"Erreur lors de l'approbation: {str(e)[:200]}")
             except Exception:
                 pass
 
@@ -355,9 +350,7 @@ class CallbacksHandler:
                 exc_info=True,
             )
             try:
-                await query.edit_message_text(
-                    f"Erreur lors du rejet: {str(e)[:200]}"
-                )
+                await query.edit_message_text(f"Erreur lors du rejet: {str(e)[:200]}")
             except Exception:
                 pass
 
@@ -380,16 +373,12 @@ def register_callbacks_handlers(
 
     # Handler [Approve] button
     application.add_handler(
-        CallbackQueryHandler(
-            handler.handle_approve_callback, pattern=r"^approve_[a-f0-9\-]+$"
-        )
+        CallbackQueryHandler(handler.handle_approve_callback, pattern=r"^approve_[a-f0-9\-]+$")
     )
 
     # Handler [Reject] button
     application.add_handler(
-        CallbackQueryHandler(
-            handler.handle_reject_callback, pattern=r"^reject_[a-f0-9\-]+$"
-        )
+        CallbackQueryHandler(handler.handle_reject_callback, pattern=r"^reject_[a-f0-9\-]+$")
     )
 
     logger.info("Callbacks handlers registered (approve/reject)")

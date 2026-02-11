@@ -63,9 +63,11 @@ class TestDockerImageVersions:
         services = main_config.get("services", {})
         assert "qdrant" not in services, "Qdrant should be removed (Decision D19 - pgvector in PostgreSQL)"
 
-    def test_n8n_version(self, main_config):
-        image = main_config["services"]["n8n"]["image"]
-        assert image == "n8nio/n8n:2.2.4"
+    def test_n8n_uses_custom_build(self, main_config):
+        """n8n utilise un build custom (Dockerfile.n8n) au lieu d'une image publique."""
+        n8n_config = main_config["services"]["n8n"]
+        assert "build" in n8n_config, "n8n should use custom Dockerfile build"
+        assert n8n_config["build"]["dockerfile"] == "Dockerfile.n8n"
 
     def test_caddy_version(self, main_config):
         image = main_config["services"]["caddy"]["image"]

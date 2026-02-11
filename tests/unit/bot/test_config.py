@@ -6,7 +6,7 @@ Story 1.9 - Tests configuration bot (chargement variables, validation).
 
 import os
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, AsyncMock
 from bot.config import load_bot_config, ConfigurationError
 
 
@@ -131,7 +131,8 @@ def test_config_validation_invalid_token():
 # ═══════════════════════════════════════════════════════════
 
 
-def test_validate_bot_permissions_not_admin():
+@pytest.mark.asyncio
+async def test_validate_bot_permissions_not_admin():
     """
     Test: Bot n'est pas admin → ConfigurationError.
 
@@ -143,15 +144,16 @@ def test_validate_bot_permissions_not_admin():
     mock_bot = MagicMock()
     mock_member = MagicMock()
     mock_member.status = "member"  # PAS "administrator"
-    mock_bot.get_chat_member.return_value = mock_member
+    mock_bot.get_chat_member = AsyncMock(return_value=mock_member)
 
     with pytest.raises(ConfigurationError) as exc_info:
-        validate_bot_permissions(mock_bot, -1001234567890)
+        await validate_bot_permissions(mock_bot, -1001234567890)
 
     assert "admin" in str(exc_info.value).lower()
 
 
-def test_validate_bot_permissions_missing_post_messages():
+@pytest.mark.asyncio
+async def test_validate_bot_permissions_missing_post_messages():
     """
     Test: Bot admin mais sans permission Post Messages → ConfigurationError.
 
@@ -165,9 +167,9 @@ def test_validate_bot_permissions_missing_post_messages():
     mock_member.status = "administrator"
     mock_member.can_post_messages = False  # MANQUE permission
     mock_member.can_manage_topics = True
-    mock_bot.get_chat_member.return_value = mock_member
+    mock_bot.get_chat_member = AsyncMock(return_value=mock_member)
 
     with pytest.raises(ConfigurationError) as exc_info:
-        validate_bot_permissions(mock_bot, -1001234567890)
+        await validate_bot_permissions(mock_bot, -1001234567890)
 
     assert "can_post_messages" in str(exc_info.value)

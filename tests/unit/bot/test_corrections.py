@@ -10,15 +10,15 @@ from telegram import Update, CallbackQuery, Message, User, Chat
 from telegram.ext import ContextTypes
 
 from bot.handlers.corrections import CorrectionsHandler
+from tests.conftest import create_mock_pool_with_conn
 
 
 @pytest.fixture
 def mock_db_pool():
     """Mock asyncpg Pool pour tests."""
-    pool = AsyncMock()
     conn = AsyncMock()
-    pool.acquire.return_value.__aenter__.return_value = conn
     conn.execute = AsyncMock(return_value="UPDATE 1")  # Success
+    pool = create_mock_pool_with_conn(conn)
     return pool
 
 

@@ -6,16 +6,15 @@ Story 1.11: Helpers de formatage reutilisables pour commandes Telegram.
 
 from datetime import datetime, timezone
 
-
 # Mapping status -> emoji (AC3)
 STATUS_EMOJIS: dict[str, str] = {
-    "auto": "\u2705",        # check mark
-    "pending": "\u23f3",     # hourglass
+    "auto": "\u2705",  # check mark
+    "pending": "\u23f3",  # hourglass
     "approved": "\u2714\ufe0f",  # check
-    "rejected": "\u274c",    # cross
+    "rejected": "\u274c",  # cross
     "corrected": "\u270f\ufe0f",  # pencil
-    "expired": "\u26a0\ufe0f",   # warning
-    "error": "\U0001f534",   # red circle
+    "expired": "\u26a0\ufe0f",  # warning
+    "error": "\U0001f534",  # red circle
     "executed": "\u2699\ufe0f",  # gear
 }
 
@@ -27,7 +26,8 @@ def format_confidence(value: float) -> str:
         value: Confidence 0.0-1.0
 
     Returns:
-        Barre emoji + pourcentage (ex: "\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2591 95.2%")
+        Barre emoji + pourcentage
+        (ex: "\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2591 95.2%")
     """
     pct = value * 100
     filled = int(value * 10)

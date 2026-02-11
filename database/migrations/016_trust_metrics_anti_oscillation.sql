@@ -17,7 +17,7 @@ WHERE last_trust_change_at IS NULL AND calculated_at IS NOT NULL;
 
 -- Commentaire explicatif
 COMMENT ON COLUMN core.trust_metrics.last_trust_change_at IS
-'Timestamp dernière transition trust level. Utilisé pour anti-oscillation :
+'TIMESTAMPTZ dernière transition trust level. Utilisé pour anti-oscillation :
 - Après rétrogradation → 14 jours min avant promotion
 - Après promotion → 7 jours min avant rétrogradation
 - Lignes existantes initialisées à calculated_at pour cohérence';

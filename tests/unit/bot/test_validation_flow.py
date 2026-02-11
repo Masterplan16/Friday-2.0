@@ -14,15 +14,13 @@ from telegram.ext import ContextTypes
 from bot.action_executor import ActionExecutor
 from bot.handlers.callbacks import CallbacksHandler
 from services.metrics.expire_validations import expire_pending_validations
+from tests.conftest import create_mock_pool_with_conn
 
 
 @pytest.fixture
 def mock_db_pool():
     """Mock asyncpg Pool pour tests."""
-    pool = MagicMock()
     conn = MagicMock()
-    pool.acquire.return_value.__aenter__ = AsyncMock(return_value=conn)
-    pool.acquire.return_value.__aexit__ = AsyncMock(return_value=False)
     conn.transaction.return_value.__aenter__ = AsyncMock(return_value=None)
     conn.transaction.return_value.__aexit__ = AsyncMock(return_value=False)
     conn.execute = AsyncMock(return_value="UPDATE 1")
@@ -38,6 +36,7 @@ def mock_db_pool():
             "payload": '{"action_func": "email.classify", "args": {}}',
         }
     )
+    pool = create_mock_pool_with_conn(conn)
     return pool
 
 

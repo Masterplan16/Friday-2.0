@@ -34,7 +34,7 @@ def mock_context():
 @pytest.fixture
 def mock_pool_with_events():
     """Mock asyncpg pool avec événements recovery fictifs"""
-    mock_pool = AsyncMock()
+    mock_pool = MagicMock()
     mock_conn = AsyncMock()
 
     # Mock 2 événements recovery
@@ -61,24 +61,32 @@ def mock_pool_with_events():
         },
     ]
 
-    mock_pool.acquire.return_value.__aenter__.return_value = mock_conn
+    # Setup proper async context manager
+    acquire_ctx = AsyncMock()
+    acquire_ctx.__aenter__ = AsyncMock(return_value=mock_conn)
+    acquire_ctx.__aexit__ = AsyncMock(return_value=None)
+    mock_pool.acquire = MagicMock(return_value=acquire_ctx)
     return mock_pool
 
 
 @pytest.fixture
 def mock_pool_empty():
     """Mock asyncpg pool sans événements"""
-    mock_pool = AsyncMock()
+    mock_pool = MagicMock()
     mock_conn = AsyncMock()
     mock_conn.fetch.return_value = []
-    mock_pool.acquire.return_value.__aenter__.return_value = mock_conn
+    # Setup proper async context manager
+    acquire_ctx = AsyncMock()
+    acquire_ctx.__aenter__ = AsyncMock(return_value=mock_conn)
+    acquire_ctx.__aexit__ = AsyncMock(return_value=None)
+    mock_pool.acquire = MagicMock(return_value=acquire_ctx)
     return mock_pool
 
 
 @pytest.fixture
 def mock_pool_with_stats():
     """Mock asyncpg pool avec statistiques"""
-    mock_pool = AsyncMock()
+    mock_pool = MagicMock()
     mock_conn = AsyncMock()
 
     # Mock fetchval pour statistiques
@@ -95,7 +103,11 @@ def mock_pool_with_stats():
 
     mock_conn.fetchval = mock_fetchval
 
-    mock_pool.acquire.return_value.__aenter__.return_value = mock_conn
+    # Setup proper async context manager
+    acquire_ctx = AsyncMock()
+    acquire_ctx.__aenter__ = AsyncMock(return_value=mock_conn)
+    acquire_ctx.__aexit__ = AsyncMock(return_value=None)
+    mock_pool.acquire = MagicMock(return_value=acquire_ctx)
     return mock_pool
 
 

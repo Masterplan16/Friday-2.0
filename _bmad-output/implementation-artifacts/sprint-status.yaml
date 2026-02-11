@@ -44,9 +44,53 @@ development_status:
   # ────────────────────────────────────────────────────────────
   # SPRINT 1 — MVP Day 1 (Epics 1-7 | 45 stories | 82 FRs)
   # ────────────────────────────────────────────────────────────
+  #
+  # GRAPHE DE DÉPENDANCES:
+  # ═══════════════════════
+  # Epic 1 (DONE) ────┬─────> Epic 2 ──────┬────> Epic 3 ────┬────> Epic 4
+  #                   │                     │                 │
+  #                   │                     └────> Epic 7      │
+  #                   │                                        │
+  #                   └─────> Epic 6                           │
+  #                   │                                        │
+  #                   └──────────────────> (Epic 3) ──> Epic 5 ┘
+  #
+  # PHASES DE PARALLÉLISME:
+  # ═══════════════════════
+  #
+  # PHASE 1 - MAINTENANT (Épics indépendants):
+  #   Epic 2 (Email)   ═══════════════ } EN PARALLÈLE
+  #   Epic 6 (Mémoire) ═══════════════ }
+  #   Durée estimée: 2-3 semaines (Epic 2=L, Epic 6=L, 6.1 déjà done)
+  #
+  # PHASE 2 - Après Epic 2 terminé (Dépendants de Epic 2):
+  #   Epic 3 (Archiviste) ════════════ } EN PARALLÈLE (possible)
+  #   Epic 7 (Agenda)     ════════════ }
+  #   Durée estimée: 2-3 semaines (Epic 3=L, Epic 7=M)
+  #
+  # PHASE 3 - Après Epic 3 terminé (Dépendant de Epic 3):
+  #   Epic 5 (Vocal) ═════════════════
+  #   Durée estimée: 1-2 semaines (Epic 5=M)
+  #
+  # PHASE 4 - Finale (Dépendant de Epic 2 + Epic 3):
+  #   Epic 4 (Proactivité) ═══════════
+  #   Durée estimée: 2-3 semaines (Epic 4=L)
+  #
+  # DÉPENDANCES DÉTAILLÉES:
+  # ═══════════════════════
+  # Epic 1: Aucune (DONE ✅)
+  # Epic 2: Epic 1 uniquement ✅
+  # Epic 3: Epic 1 + Epic 2 (PJ emails)
+  # Epic 4: Epic 1 + Epic 2 + Epic 3 (briefing nécessite tous modules)
+  # Epic 5: Epic 1 + Epic 3 (recherche documentaire FR13)
+  # Epic 6: Epic 1 uniquement ✅
+  # Epic 7: Epic 1 + Epic 2 (détection événements emails)
+  #
+  # RECOMMANDATION: Prioriser Epic 2 (besoin #1 Mainteneur) + continuer Epic 6
+  # ────────────────────────────────────────────────────────────
 
   # Epic 1: Socle Operationnel & Controle (15 stories | 28 FRs)
-  epic-1: in-progress
+  epic-1: done
   1-1-infrastructure-docker-compose: done
   1-2-schemas-postgresql-migrations: done  # 2026-02-09: Code review #2 (Opus 4.6) — 11 issues corriges, 111/111 tests, zero regression.
   1-3-fastapi-gateway-healthcheck: done  # 2026-02-09: Code review — 9 issues (3H, 4M, 2L) corrigees. 143/143 tests, flake8+mypy clean.
@@ -61,10 +105,10 @@ development_status:
   1-12-backup-chiffre-sync-pc: done  # 2026-02-10: Code review adversarial - 15 issues fixés (4C+6H+5M). ImportError fix, /backup handler registered, SSH MITM fix, n8n JSON output, retry 9h, 5 unit tests, curl validation, portable find. 6/6 AC ✅, 28 fichiers.
   1-13-self-healing-tier-1-2: done  # 2026-02-10: CODE REVIEW COMPLETE ✅ - 8 issues fixés (1C+4M+3L), 6/6 AC ✅, 13/13 tasks, 28 tests (24 unit + 4 integration), 20 fichiers créés, 11 modifiés. Self-healing Tier 1-2: Docker restart, auto-recovery RAM (91%), OS updates, crash loop detection, error handler global. DB logging activé, tests telegram-notify ajoutés, paths configurables n8n.
   1-14-monitoring-docker-images: done  # 2026-02-10: CODE REVIEW ADVERSARIAL COMPLETE ✅ - 15 issues fixés (3C+5H+5M+2L), 4/4 AC ✅, 11 tests unit (10 PASS + 1 skip), 5 tests integration (mock+real), 1 test E2E étendu. Watchtower monitor-only, notifications Telegram, validation env vars, smoke tests CI. 5 fichiers créés, 4 modifiés. MONITOR_ONLY=true CRITIQUE verrouillé + tests notification mock ajoutés.
-  1-15-cleanup-purge-rgpd: backlog
+  1-15-cleanup-purge-rgpd: done  # 2026-02-10: CODE REVIEW ADVERSARIAL COMPLETE ✅ - 15 issues fixés (3C+5H+4M+3L), 6/6 AC ✅, cleanup automatisé RGPD (purge Presidio 30j, logs 7j, backups VPS 30j, transit 24h). Cron 03:05 quotidien, notifications Telegram System. Scripts portables (macOS/Linux), dry-run mode, error handling partial. 18 fichiers créés (migrations 022-023, scripts cleanup+deploy, tests unit+integration, docs spec 470 lignes). Timing coordination : 03:00 backup → 03:05 cleanup → 03:30 OS updates.
   1-16-ci-cd-pipeline-github-actions: done  # 2026-02-10: Code review completee - 17 issues fixees (3C+4H+6M+4L), AC8 logs JSON ajoutes, rollback intelligent, git pull safe, validation Telegram, subtasks 5.2-5.4 demarquees
   1-17-preparation-repository-public: done  # 2026-02-10: Code review adversarial - 13 issues fixes (4C+4H+3M+2L), 11/11 AC valides, 57/57 subtasks, PR #1 merged
-  epic-1-retrospective: optional
+  epic-1-retrospective: done  # 2026-02-11: Retrospective Epic 1 completee - 431 lignes, 17 stories analysees, learnings documentes
 
   # Epic 2: Pipeline Email Intelligent (7 stories | 10 FRs)
   epic-2: backlog
@@ -95,8 +139,8 @@ development_status:
   4-3-digest-soir-18h: backlog
   4-4-rapport-hebdomadaire: backlog
   4-5-alertes-immediates-push: backlog
-  4-6-agent-conversationnel-task-dispatcher: ready-for-dev  # 2026-02-10: Story créée - Gap critique identifié. Agent conversationnel pour messages libres Telegram. Intent detection, task creation, Trust Layer integration. 6 AC, 32+ tests unitaires, 6 E2E. Dépend de: 1.5, 1.6, 1.9. Estimation: L (25h).
-  4-7-task-management-commands-daily-briefing-integration: ready-for-dev  # 2026-02-10: Story créée - Gap critique #2. Commandes Telegram consultation/gestion tâches (/taches list/search/complete/delete) + intégration briefing matinal (Story 4.2). 8 AC, 18 tests (15 unit + 3 E2E). Migration 020 due_date. Dépend de: 1.6, 1.9, 4.6. Estimation: M (8h).
+  4-6-agent-conversationnel-task-dispatcher: backlog  # 2026-02-11: Retour backlog (prématuré, Epic 1 prioritaire)
+  4-7-task-management-commands-daily-briefing-integration: backlog  # 2026-02-11: Retour backlog (prématuré, Epic 1 prioritaire)
   epic-4-retrospective: optional
 
   # Epic 5: Interaction Vocale & Personnalite (4 stories | 4 FRs)
@@ -109,7 +153,7 @@ development_status:
 
   # Epic 6: Memoire Eternelle & Migration (4 stories | 4 FRs)
   epic-6: backlog
-  6-1-graphe-connaissances-postgresql: backlog
+  6-1-graphe-connaissances-postgresql: done  # 2026-02-11: CODE REVIEW COMPLETE ✅ - PostgreSQL knowledge graph avec pgvector (D19). Migration 007-008, schema knowledge.*, embeddings vector(1024) + HNSW index, memorystore.py adaptateur complet, graph_populator.py, 10 NodeType + 14 RelationType enums validés. Tests unitaires 19/19 PASS. Decision D19: pgvector Day 1 (pas Qdrant), réévaluation si >300k vecteurs. 12 fichiers créés/modifiés.
   6-2-embeddings-pgvector: backlog  # [D19] Qdrant remplace par pgvector Day 1
   6-3-adaptateur-memorystore: backlog
   6-4-migration-emails-historiques: backlog

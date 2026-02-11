@@ -161,6 +161,66 @@ docker stats watchtower
 
 ---
 
+## 🧹 Cleanup & RGPD ✅
+
+Friday 2.0 implémente un système de **cleanup automatisé** pour gérer l'espace disque et garantir la **compliance RGPD** (droit à l'oubli).
+
+| Opération | Retention | Schedule |
+|-----------|-----------|----------|
+| **Purge mappings Presidio** | 30 jours | Quotidien 03:05 |
+| **Rotation logs Docker** | 7 jours | Quotidien 03:05 |
+| **Rotation logs journald** | 7 jours | Quotidien 03:05 |
+| **Rotation backups VPS** | 30 jours (keep_7_days policy) | Quotidien 03:05 |
+| **Cleanup zone transit** | 24 heures | Quotidien 03:05 |
+
+**RGPD Compliance** :
+- ✅ Mappings Presidio (`core.action_receipts.encrypted_mapping`) purgés après 30 jours (droit à l'oubli)
+- ✅ Audit trail via colonnes `purged_at`, `deleted_at` (traçabilité suppressions)
+- ✅ Texte anonymisé conservé pour analyse Trust Layer (sans PII)
+
+**Timeline nuit** :
+- 03:00 — Backup PostgreSQL + Watchtower check images
+- **03:05** — **Cleanup disk** (5 min après backup pour éviter conflit fichiers)
+- 03:30 — OS unattended-upgrades (reboot si kernel update)
+
+**Notification Telegram (topic System)** :
+```
+🧹 Cleanup Quotidien - 2026-02-10 03:05
+
+✅ Status: Success
+
+📊 Espace libéré:
+  • Presidio mappings: 125 enregistrements purgés
+  • Logs Docker: 1.2 GB
+  • Logs journald: 450 MB
+  • Backups VPS: 3.8 GB (2 fichiers)
+  • Zone transit: 85 MB
+
+💾 Total libéré: 5.5 GB
+⏱️  Durée: 42s
+```
+
+**Scripts disponibles** :
+```bash
+# Test dry-run (preview sans suppression)
+bash scripts/cleanup-disk.sh --dry-run
+
+# Validation finale VPS (6 vérifications)
+bash scripts/validate-cleanup.sh
+
+# Voir logs cleanup
+tail -f /var/log/friday/cleanup-disk.log
+```
+
+**Déploiement VPS** :
+- [DEPLOY_CLEANUP_VPS.md](DEPLOY_CLEANUP_VPS.md) — Guide déploiement complet (5 étapes)
+- `scripts/deploy-cleanup-to-vps.sh` — Déploiement automatisé via SSH
+- `scripts/install-cron-cleanup.sh` — Installation cron VPS
+
+**Documentation complète** : [docs/cleanup-rgpd-spec.md](docs/cleanup-rgpd-spec.md)
+
+---
+
 ## 🗂️ Structure du projet
 
 ```

@@ -219,7 +219,12 @@ class TrustManager:
                 receipt_data["status"],
             )
 
-        logger.info("Receipt created", receipt_id=str(receipt_id), module=result.module, action=result.action_type)
+        logger.info(
+            "Receipt created",
+            receipt_id=str(receipt_id),
+            module=result.module,
+            action=result.action_type,
+        )
         return str(receipt_id)
 
     async def send_telegram_validation(self, result: ActionResult) -> str:

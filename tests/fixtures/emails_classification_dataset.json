@@ -1,0 +1,902 @@
+[
+  {
+    "id": "email-001",
+    "account": "medical",
+    "from": "secretariat@cpam-paris.fr",
+    "subject": "Remboursement acte n°2025-001234",
+    "body": "Bonjour Docteur,\n\nVotre demande de remboursement pour l'acte 2025-001234 a été validée par la CPAM. Le montant de 150€ sera versé sous 5 jours ouvrés.\n\nCordialement,\nService Remboursement CPAM Paris",
+    "ground_truth": "medical",
+    "expected_confidence_min": 0.85
+  },
+  {
+    "id": "email-002",
+    "account": "finance",
+    "from": "urssaf.cotisations@urssaf.fr",
+    "subject": "Cotisations SELARL - Q4 2025",
+    "body": "Madame, Monsieur,\n\nVeuillez trouver ci-joint l'échéancier des cotisations SELARL pour le 4ème trimestre 2025. Montant total : 12 500€.\n\nDate limite de paiement : 15/12/2025.\n\nCordialement,\nURSSAF Île-de-France",
+    "ground_truth": "finance",
+    "expected_confidence_min": 0.90
+  },
+  {
+    "id": "email-003",
+    "account": "faculty",
+    "from": "scolarite@medecine.univ-paris.fr",
+    "subject": "Planning examens DCEM3 - Session janvier 2026",
+    "body": "Cher collègue,\n\nLe planning des examens DCEM3 session janvier 2026 est disponible. Vous êtes convoqué pour surveiller l'épreuve de cardiologie le 15/01/2026 de 14h à 17h en amphi Charcot.\n\nMerci de confirmer votre présence.\n\nCordialement,\nService Scolarité Médecine",
+    "ground_truth": "faculty",
+    "expected_confidence_min": 0.85
+  },
+  {
+    "id": "email-004",
+    "account": "research",
+    "from": "marie.dupont@doctorant.univ-paris.fr",
+    "subject": "Relecture article - Deadline 20/02",
+    "body": "Bonjour Professeur,\n\nJ'ai terminé la version 3 de notre article sur l'analyse des biomarqueurs. Pourriez-vous relire la section Discussion avant le 20/02 ? C'est la deadline de soumission pour la revue Lancet.\n\nMerci beaucoup,\nMarie Dupont (Doctorante)",
+    "ground_truth": "research",
+    "expected_confidence_min": 0.85
+  },
+  {
+    "id": "email-005",
+    "account": "personnel",
+    "from": "julie.martin@gmail.com",
+    "subject": "Dîner samedi 8pm ?",
+    "body": "Salut,\n\nÇa te dit un resto samedi soir vers 20h ? J'ai repéré un nouveau japonais sympa près de chez toi.\n\nBisous,\nJulie",
+    "ground_truth": "personnel",
+    "expected_confidence_min": 0.90
+  },
+  {
+    "id": "email-006",
+    "account": "urgent",
+    "from": "directeur@chu-paris.fr",
+    "subject": "URGENT - Réunion conseil médical 16h aujourd'hui",
+    "body": "Cher confrère,\n\nRéunion extraordinaire du conseil médical AUJOURD'HUI à 16h. Votre présence est IMPÉRATIVE pour vote statuts.\n\nSalle de réunion 3ème étage.\n\nDr. Lefèvre\nDirecteur Médical",
+    "ground_truth": "urgent",
+    "expected_confidence_min": 0.95
+  },
+  {
+    "id": "email-007",
+    "account": "spam",
+    "from": "promo@formation-continue.com",
+    "subject": "🎓 Formation DPC : -50% jusqu'à vendredi !",
+    "body": "OFFRE EXCLUSIVE ! Formation DPC validante à -50% jusqu'à vendredi minuit !\n\n✅ Certifiante HAS\n✅ 100% en ligne\n✅ Paiement en 3x sans frais\n\nCliquez ici : www.formation-continue-spam.com/promo",
+    "ground_truth": "spam",
+    "expected_confidence_min": 0.90
+  },
+  {
+    "id": "email-008",
+    "account": "unknown",
+    "from": "no-reply@automated-system.com",
+    "subject": "RE: FWD: RE: ",
+    "body": "[This message was forwarded 5 times]\n\n[Original message corrupted]\n\n---\nSent from automated system",
+    "ground_truth": "unknown",
+    "expected_confidence_min": 0.50
+  },
+  {
+    "id": "email-009",
+    "account": "medical",
+    "from": "pharma.centrale@chu-paris.fr",
+    "subject": "Rupture stock Doliprane",
+    "body": "Cher Docteur,\n\nNous vous informons d'une rupture de stock temporaire du Doliprane 1000mg. Merci d'utiliser les alternatives suivantes pour vos prescriptions : Paracétamol générique ou Efferalgan.\n\nPharmac ie Centrale CHU",
+    "ground_truth": "medical",
+    "expected_confidence_min": 0.80
+  },
+  {
+    "id": "email-010",
+    "account": "finance",
+    "from": "comptable@selarl-cabinet.fr",
+    "subject": "Bilan comptable 2025 - Signature requise",
+    "body": "Bonjour,\n\nLe bilan comptable 2025 de la SELARL est prêt. Merci de signer les documents ci-joints avant le 28/02.\n\nRésultat net : +45 000€ (+12% vs 2024).\n\nCordialement,\nJean Dubois, Expert-Comptable",
+    "ground_truth": "finance",
+    "expected_confidence_min": 0.85
+  },
+  {
+    "id": "email-011",
+    "account": "faculty",
+    "from": "etudiant.m2@etu.univ-paris.fr",
+    "subject": "Question cours immunologie",
+    "body": "Bonjour Professeur,\n\nJ'ai une question sur le cours d'immunologie de la semaine dernière concernant les lymphocytes T régulateurs. Pourriez-vous m'expliquer la différence avec les T helpers ?\n\nMerci d'avance,\nPierre Legrand (M2)",
+    "ground_truth": "faculty",
+    "expected_confidence_min": 0.80
+  },
+  {
+    "id": "email-012",
+    "account": "research",
+    "from": "editor@nature-medicine.com",
+    "subject": "Manuscript NM-2025-12345 - Revision requested",
+    "body": "Dear Dr.,\n\nYour manuscript NM-2025-12345 'Biomarkers in cardiovascular diseases' has been reviewed. The reviewers request minor revisions before acceptance.\n\nDeadline for revised submission: March 15, 2026.\n\nBest regards,\nNature Medicine Editorial Team",
+    "ground_truth": "research",
+    "expected_confidence_min": 0.90
+  },
+  {
+    "id": "email-013",
+    "account": "personnel",
+    "from": "amazon-fr@amazon.fr",
+    "subject": "Votre colis arrive demain",
+    "body": "Bonjour,\n\nVotre commande #FR-2025-987654 (Livre 'Sapiens' de Yuval Noah Harari) sera livrée demain entre 10h et 14h.\n\nSuivi : https://amazon.fr/track/...\n\nL'équipe Amazon",
+    "ground_truth": "personnel",
+    "expected_confidence_min": 0.85
+  },
+  {
+    "id": "email-014",
+    "account": "urgent",
+    "from": "patient.vip@gmail.com",
+    "subject": "URGENT - Douleurs thoraciques depuis 2h",
+    "body": "Docteur,\n\nJ'ai des douleurs thoraciques intenses depuis 2h. Impossible de vous joindre par téléphone. Que dois-je faire ? Dois-je aller aux urgences ?\n\nMerci de me répondre vite.\n\nPatient : M. Bernard (Votre patient depuis 2015)",
+    "ground_truth": "urgent",
+    "expected_confidence_min": 0.95
+  },
+  {
+    "id": "email-015",
+    "account": "spam",
+    "from": "gagnant@loto-super-chance.com",
+    "subject": "🎉 VOUS AVEZ GAGNÉ 50 000€ AU LOTO ! 🎉",
+    "body": "FÉLICITATIONS !\n\nVous avez gagné 50 000€ au tirage exceptionnel !\n\nPour récupérer vos gains, cliquez ici et renseignez vos coordonnées bancaires.\n\nLOTO SUPER CHANCE",
+    "ground_truth": "spam",
+    "expected_confidence_min": 0.95
+  },
+  {
+    "id": "email-016",
+    "account": "medical",
+    "from": "coordination@reseau-sante.fr",
+    "subject": "Formation gestes d'urgence - Obligation DPC",
+    "body": "Cher confrère,\n\nRappel : La formation gestes d'urgence est obligatoire dans le cadre du DPC 2026. Inscription avant le 31/03.\n\nSession disponible : 15-16 avril 2026 au CHU.\n\nRéseau Santé Île-de-France",
+    "ground_truth": "medical",
+    "expected_confidence_min": 0.75
+  },
+  {
+    "id": "email-017",
+    "account": "finance",
+    "from": "banque-pro@bnp-paribas.fr",
+    "subject": "Relevé compte professionnel décembre 2025",
+    "body": "Bonjour,\n\nVotre relevé de compte professionnel SELARL pour décembre 2025 est disponible.\n\nSolde au 31/12 : 125 450€\nOpérations du mois : 87\n\nConsultez votre espace en ligne.\n\nBNP Paribas Entreprises",
+    "ground_truth": "finance",
+    "expected_confidence_min": 0.85
+  },
+  {
+    "id": "email-018",
+    "account": "faculty",
+    "from": "doyen@medecine.univ-paris.fr",
+    "subject": "Réunion pédagogique - Réforme 2ème cycle",
+    "body": "Chère collègue, Cher collègue,\n\nRéunion de l'équipe pédagogique jeudi 20/02 à 14h pour discuter de la réforme du 2ème cycle médecine.\n\nOrdre du jour : nouveaux modules, évaluation par compétences.\n\nProf. Durand, Doyen",
+    "ground_truth": "faculty",
+    "expected_confidence_min": 0.80
+  },
+  {
+    "id": "email-019",
+    "account": "research",
+    "from": "thomas.petit@these.univ-paris.fr",
+    "subject": "Avancement thèse - Demande RDV",
+    "body": "Bonjour Professeur,\n\nJ'ai terminé l'analyse statistique des données de ma thèse. Pourriez-vous me recevoir la semaine prochaine pour discuter des résultats ?\n\nJ'ai des questions sur l'interprétation de la courbe ROC.\n\nThomas Petit (Thèse épidémiologie)",
+    "ground_truth": "research",
+    "expected_confidence_min": 0.85
+  },
+  {
+    "id": "email-020",
+    "account": "personnel",
+    "from": "sncf-connect@sncf.fr",
+    "subject": "Confirmation réservation TGV Paris-Marseille",
+    "body": "Votre réservation est confirmée :\n\nTGV 6123 - 18/03/2026\nParis Gare de Lyon 09:15 → Marseille St-Charles 12:30\nPlace 42, voiture 12\n\nBon voyage !\nSNCF Connect",
+    "ground_truth": "personnel",
+    "expected_confidence_min": 0.90
+  },
+  {
+    "id": "email-021",
+    "account": "medical",
+    "from": "secretariat@ordre-medecins.fr",
+    "subject": "Renouvellement inscription Ordre 2026",
+    "body": "Cher confrère,\n\nVotre inscription à l'Ordre des Médecins arrive à échéance le 31/03/2026. Merci de renouveler votre inscription avant cette date.\n\nCotisation annuelle : 385€.\n\nOrdre des Médecins - Conseil Départemental",
+    "ground_truth": "medical",
+    "expected_confidence_min": 0.80
+  },
+  {
+    "id": "email-022",
+    "account": "finance",
+    "from": "impots-entreprises@dgfip.gouv.fr",
+    "subject": "Avis d'imposition SELARL 2025",
+    "body": "Madame, Monsieur,\n\nVotre avis d'imposition SELARL pour l'année 2025 est disponible.\n\nImpôt sur les sociétés : 15 240€\nÉchéance : 15/03/2026\n\nDirection Générale des Finances Publiques",
+    "ground_truth": "finance",
+    "expected_confidence_min": 0.90
+  },
+  {
+    "id": "email-023",
+    "account": "faculty",
+    "from": "responsable-stage@chu-paris.fr",
+    "subject": "Évaluation stagiaire externes - Semestre 1",
+    "body": "Bonjour,\n\nMerci de compléter les évaluations des externes de votre service pour le semestre 1 avant le 28/02.\n\nLien formulaire : https://chu-evaluations.fr/...\n\nService Pédagogie CHU Paris",
+    "ground_truth": "faculty",
+    "expected_confidence_min": 0.75
+  },
+  {
+    "id": "email-024",
+    "account": "research",
+    "from": "conference@cardio-world.org",
+    "subject": "Abstract accepted - ESC Congress 2026",
+    "body": "Dear Colleague,\n\nCongratulations! Your abstract 'Novel biomarkers in heart failure' has been accepted for oral presentation at ESC Congress 2026 (Amsterdam, August 30 - September 2).\n\nRegistration deadline: June 1st, 2026.\n\nBest regards,\nESC Scientific Committee",
+    "ground_truth": "research",
+    "expected_confidence_min": 0.90
+  },
+  {
+    "id": "email-025",
+    "account": "personnel",
+    "from": "notif@leboncoin.fr",
+    "subject": "Nouvelle offre pour votre recherche 'Vélo route'",
+    "body": "Bonjour,\n\nUne nouvelle annonce correspond à votre recherche 'Vélo route' :\n\nVélo route Decathlon - 350€ - Paris 15ème\nÉtat excellent, taille M, année 2023.\n\nVoir l'annonce : leboncoin.fr/...\n\nLeboncoin",
+    "ground_truth": "personnel",
+    "expected_confidence_min": 0.85
+  },
+  {
+    "id": "email-026",
+    "account": "urgent",
+    "from": "chef-service@chu-paris.fr",
+    "subject": "URGENT - Remplacement garde ce soir",
+    "body": "URGENT\n\nLe Dr. Moreau est malade. Pouvez-vous assurer sa garde aux urgences CE SOIR 20h-8h ?\n\nMerci de répondre dans l'heure.\n\nDr. Lambert\nChef de Service Urgences",
+    "ground_truth": "urgent",
+    "expected_confidence_min": 0.90
+  },
+  {
+    "id": "email-027",
+    "account": "spam",
+    "from": "marketing@formation-bidon.net",
+    "subject": "Gagnez 5000€/mois avec notre méthode MIRACLE",
+    "body": "Devenez riche en 3 mois avec notre méthode EXCLUSIVE !\n\n✅ Aucun diplôme requis\n✅ Travail de chez vous\n✅ Résultats GARANTIS\n\nFormation à 997€ au lieu de 5000€ !\n\nwww.arnaque-formation.com",
+    "ground_truth": "spam",
+    "expected_confidence_min": 0.95
+  },
+  {
+    "id": "email-028",
+    "account": "unknown",
+    "from": "weird-sender@xyzbzabc.tk",
+    "subject": "##%^&*( encrypted message )",
+    "body": "ZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXowMTIzNDU2Nzg5YWJjZGU=\n\n[Binary data corrupted]\n\n---\nThis message appears to be encrypted or corrupted.",
+    "ground_truth": "unknown",
+    "expected_confidence_min": 0.40
+  },
+  {
+    "id": "email-029",
+    "account": "medical",
+    "from": "assurance-maladie@ameli.fr",
+    "subject": "Tiers payant intégral - Mise à jour",
+    "body": "Bonjour,\n\nVotre logiciel de tiers payant doit être mis à jour pour intégrer les nouveaux tarifs 2026.\n\nMise à jour disponible sur ameli.fr/professionnels\n\nAssurance Maladie",
+    "ground_truth": "medical",
+    "expected_confidence_min": 0.75
+  },
+  {
+    "id": "email-030",
+    "account": "finance",
+    "from": "notaire@etude-paris.fr",
+    "subject": "SCI Immo-1 - Assemblée générale 15/03",
+    "body": "Mesdames, Messieurs les associés,\n\nVous êtes convoqués à l'assemblée générale de la SCI Immo-1 le 15/03/2026 à 18h en notre étude.\n\nOrdre du jour : approbation comptes 2025, travaux immeuble.\n\nMaître Dubois, Notaire",
+    "ground_truth": "finance",
+    "expected_confidence_min": 0.80
+  },
+  {
+    "id": "email-031",
+    "account": "faculty",
+    "from": "webmaster@univ-medecine.fr",
+    "subject": "Accès plateforme Moodle réinitialisé",
+    "body": "Bonjour,\n\nSuite à votre demande, votre accès à la plateforme Moodle a été réinitialisé.\n\nIdentifiant : dr.martin\nMot de passe temporaire : Univ2026!\n\nMerci de changer votre mot de passe à la première connexion.\n\nService Informatique Faculté",
+    "ground_truth": "faculty",
+    "expected_confidence_min": 0.70
+  },
+  {
+    "id": "email-032",
+    "account": "research",
+    "from": "coauteur@inserm.fr",
+    "subject": "Co-auteur article - Validation section Méthodes",
+    "body": "Bonjour,\n\nPeux-tu valider la section Méthodes de notre article avant soumission à JAMA ? J'ai ajouté les détails sur le protocole statistique.\n\nDeadline submission : 25/02.\n\nMerci,\nDr. Sophie Leroy, INSERM U1234",
+    "ground_truth": "research",
+    "expected_confidence_min": 0.85
+  },
+  {
+    "id": "email-033",
+    "account": "personnel",
+    "from": "thermostat@netatmo.com",
+    "subject": "Anomalie détectée - Chauffage",
+    "body": "Bonjour,\n\nVotre thermostat Netatmo a détecté une anomalie : température ambiante 14°C au lieu de 20°C.\n\nPossible panne chaudière. Vérifiez votre installation.\n\nNetatmo Monitoring",
+    "ground_truth": "personnel",
+    "expected_confidence_min": 0.80
+  },
+  {
+    "id": "email-034",
+    "account": "urgent",
+    "from": "it-security@chu-paris.fr",
+    "subject": "ALERTE SÉCURITÉ - Changement mot de passe obligatoire",
+    "body": "ALERTE SÉCURITÉ\n\nTentative d'intrusion détectée sur votre compte. Changement de mot de passe OBLIGATOIRE dans les 2 heures.\n\nLien sécurisé : https://chu-paris.fr/reset-password\n\nService Sécurité Informatique CHU",
+    "ground_truth": "urgent",
+    "expected_confidence_min": 0.85
+  },
+  {
+    "id": "email-035",
+    "account": "spam",
+    "from": "newsletter@pharmabusiness.com",
+    "subject": "NOUVELLE GAMME COMPLÉMENTS ALIMENTAIRES - Remise 30%",
+    "body": "Découvrez notre NOUVELLE GAMME de compléments alimentaires pour vos patients !\n\n✅ Certifiés bio\n✅ Fabriqués en France\n✅ -30% pour les professionnels de santé\n\nCatalogue : www.pharmaspam.com\n\nPHARMA BUSINESS",
+    "ground_truth": "spam",
+    "expected_confidence_min": 0.85
+  },
+  {
+    "id": "email-036",
+    "account": "medical",
+    "from": "vigilance@ansm.sante.fr",
+    "subject": "Alerte médicament - Rappel lot Valsartan",
+    "body": "ANSM - Agence Nationale Sécurité du Médicament\n\nRappel de lot Valsartan 80mg (lot #VL2025-456) suite détection impureté.\n\nMerci de vérifier vos stocks et ne plus prescrire ce lot.\n\nLot de remplacement disponible.\n\nANSM Pharmacovigilance",
+    "ground_truth": "medical",
+    "expected_confidence_min": 0.90
+  },
+  {
+    "id": "email-037",
+    "account": "finance",
+    "from": "gestionnaire@scm-medical.fr",
+    "subject": "SCM Cabinet - Quote-part charges janvier 2026",
+    "body": "Bonjour,\n\nVoici la répartition des charges SCM pour janvier 2026 :\n\nLoyer : 2 500€\nÉlectricité : 180€\nAssurance : 420€\n\nTotal quote-part : 1 550€\n\nPaiement avant le 15/02.\n\nSCM Cabinet Médical",
+    "ground_truth": "finance",
+    "expected_confidence_min": 0.85
+  },
+  {
+    "id": "email-038",
+    "account": "faculty",
+    "from": "jury-these@univ-paris.fr",
+    "subject": "Invitation jury thèse - 25 mars 2026",
+    "body": "Cher Professeur,\n\nNous vous invitons à siéger au jury de thèse de M. Antoine Rousseau le 25 mars 2026 à 14h.\n\nSujet : 'Facteurs pronostiques dans l'insuffisance cardiaque'\n\nMerci de confirmer votre participation.\n\nÉcole Doctorale",
+    "ground_truth": "faculty",
+    "expected_confidence_min": 0.80
+  },
+  {
+    "id": "email-039",
+    "account": "research",
+    "from": "grant-office@anr.fr",
+    "subject": "Projet ANR-2025-MED-456 - Financement accordé",
+    "body": "Madame, Monsieur,\n\nNous avons le plaisir de vous informer que votre projet de recherche ANR-2025-MED-456 'Biomarqueurs cardiovasculaires' est retenu pour financement.\n\nMontant accordé : 180 000€ sur 3 ans.\n\nAgence Nationale de la Recherche",
+    "ground_truth": "research",
+    "expected_confidence_min": 0.90
+  },
+  {
+    "id": "email-040",
+    "account": "personnel",
+    "from": "recap@spotify.com",
+    "subject": "Votre Spotify Wrapped 2025",
+    "body": "Découvrez vos statistiques musicales 2025 !\n\n🎵 Top artiste : Stromae\n🎵 Temps d'écoute : 24 500 minutes\n🎵 Top genre : Pop française\n\nDécouvrez votre Wrapped complet sur Spotify.\n\nSpotify Team",
+    "ground_truth": "personnel",
+    "expected_confidence_min": 0.90
+  },
+  {
+    "id": "email-041",
+    "account": "medical",
+    "from": "planning@clinique-paris.fr",
+    "subject": "Vacation bloc opératoire - Février 2026",
+    "body": "Bonjour Docteur,\n\nVos vacations au bloc opératoire pour février 2026 :\n\n- Mardi 4/02 : 8h-12h\n- Jeudi 13/02 : 14h-18h\n- Mardi 25/02 : 8h-12h\n\nMerci de confirmer.\n\nClinique Saint-Louis",
+    "ground_truth": "medical",
+    "expected_confidence_min": 0.80
+  },
+  {
+    "id": "email-042",
+    "account": "finance",
+    "from": "tresor-public@dgfip.gouv.fr",
+    "subject": "SCI Résidence-2 - Taxe foncière 2026",
+    "body": "Madame, Monsieur,\n\nVotre avis de taxe foncière 2026 pour la SCI Résidence-2 est disponible.\n\nMontant : 3 840€\nÉchéance : 15/10/2026\n\nConsultez votre espace en ligne.\n\nDirection Générale des Finances Publiques",
+    "ground_truth": "finance",
+    "expected_confidence_min": 0.85
+  },
+  {
+    "id": "email-043",
+    "account": "faculty",
+    "from": "chef-clinique@chu-paris.fr",
+    "subject": "Staff hebdomadaire - Présentation cas cliniques",
+    "body": "Bonjour,\n\nRappel : staff hebdomadaire jeudi 14h-16h. Merci de préparer 2 cas cliniques intéressants à présenter aux internes.\n\nSalle de réunion service cardiologie.\n\nDr. Vincent, Chef de Clinique",
+    "ground_truth": "faculty",
+    "expected_confidence_min": 0.75
+  },
+  {
+    "id": "email-044",
+    "account": "research",
+    "from": "revue@sciencedirect.com",
+    "subject": "Peer review invitation - Manuscript CARD-2026-0234",
+    "body": "Dear Dr.,\n\nWe invite you to review manuscript CARD-2026-0234 'New therapeutic approaches in heart failure' for the European Heart Journal.\n\nDeadline: February 28, 2026.\n\nAccept/Decline: https://reviewer.sciencedirect.com/...\n\nBest regards,\nEditorial Office",
+    "ground_truth": "research",
+    "expected_confidence_min": 0.85
+  },
+  {
+    "id": "email-045",
+    "account": "personnel",
+    "from": "reservation@airfrance.com",
+    "subject": "Confirmation vol AF1234 Paris-Rome",
+    "body": "Votre réservation est confirmée :\n\nVol AF1234 - 10/04/2026\nParis CDG 10:45 → Rome Fiumicino 13:00\nPassager : Dr. Martin\nSiège : 12A (Classe Économique)\n\nBon vol !\nAir France",
+    "ground_truth": "personnel",
+    "expected_confidence_min": 0.90
+  },
+  {
+    "id": "email-046",
+    "account": "urgent",
+    "from": "secretariat-urgences@chu-paris.fr",
+    "subject": "URGENT - Patient vous demande en consultation",
+    "body": "URGENT\n\nPatient M. Dubois (62 ans, cardiaque) se présente aux urgences avec douleurs thoraciques. Il vous demande personnellement.\n\nPouvez-vous descendre le voir ?\n\nSecrétariat Urgences",
+    "ground_truth": "urgent",
+    "expected_confidence_min": 0.90
+  },
+  {
+    "id": "email-047",
+    "account": "spam",
+    "from": "voyance@madame-soleil.com",
+    "subject": "🔮 Votre avenir dévoilé GRATUITEMENT",
+    "body": "Madame Soleil voit votre avenir !\n\n🔮 Consultation voyance GRATUITE\n🔮 Tarot, numérologie, astrologie\n🔮 Résultats immédiats\n\nCliquez ici : www.voyance-arnaque.com\n\nMADAME SOLEIL - Voyante reconnue",
+    "ground_truth": "spam",
+    "expected_confidence_min": 0.95
+  },
+  {
+    "id": "email-048",
+    "account": "unknown",
+    "from": "mailer-daemon@server-error.com",
+    "subject": "Mail delivery failed: returning message to sender",
+    "body": "This is the mail system at host server-error.com.\n\nI'm sorry to have to inform you that your message could not be delivered to one or more recipients.\n\n<unknown@invalid-domain.xyz>: host invalid-domain.xyz[192.0.2.1] said: 550 5.1.1 User unknown\n\n---------- Original message ----------\n[Message content corrupted]",
+    "ground_truth": "unknown",
+    "expected_confidence_min": 0.60
+  },
+  {
+    "id": "email-049",
+    "account": "medical",
+    "from": "has@haute-autorite-sante.fr",
+    "subject": "Nouvelles recommandations HTA 2026",
+    "body": "Cher confrère,\n\nLa HAS publie ses nouvelles recommandations pour la prise en charge de l'hypertension artérielle 2026.\n\nPrincipales modifications :\n- Seuil traitement abaissé à 130/80\n- Nouvelles molécules recommandées\n\nDocument complet : has-sante.fr/...\n\nHaute Autorité de Santé",
+    "ground_truth": "medical",
+    "expected_confidence_min": 0.85
+  },
+  {
+    "id": "email-050",
+    "account": "finance",
+    "from": "assurance-pro@axa.fr",
+    "subject": "Assurance Responsabilité Civile Professionnelle - Renouvellement",
+    "body": "Bonjour,\n\nVotre contrat RCP arrive à échéance le 31/03/2026.\n\nNouvelle prime annuelle : 2 840€ (stable vs 2025)\nGaranties : 5M€ par sinistre\n\nRenouvellement automatique sauf opposition.\n\nAXA Assurances Professionnelles",
+    "ground_truth": "finance",
+    "expected_confidence_min": 0.85
+  },
+  {
+    "id": "email-051",
+    "account": "faculty",
+    "from": "concours@cnc-sante.fr",
+    "subject": "Correction copies ECN - Session 2026",
+    "body": "Cher correcteur,\n\nVous êtes désigné pour corriger les épreuves ECN 2026 - Cardiologie.\n\nNombre de copies : 45\nDélai correction : 15 jours\nRémunération : 8€/copie\n\nAccès plateforme : ecn-corrections.fr\n\nCNC Santé",
+    "ground_truth": "faculty",
+    "expected_confidence_min": 0.80
+  },
+  {
+    "id": "email-052",
+    "account": "research",
+    "from": "labo@inserm.fr",
+    "subject": "Accès laboratoire - Badge renouvelé",
+    "body": "Bonjour,\n\nVotre badge d'accès au laboratoire INSERM U1234 a été renouvelé pour 2026.\n\nÀ récupérer à l'accueil (pièce d'identité obligatoire).\n\nHoraires accueil : 9h-17h\n\nService Sécurité INSERM",
+    "ground_truth": "research",
+    "expected_confidence_min": 0.75
+  },
+  {
+    "id": "email-053",
+    "account": "personnel",
+    "from": "netflix@netflix.com",
+    "subject": "Nouvelle série recommandée : The Crown S6",
+    "body": "Bonjour,\n\nNous pensons que vous aimerez : The Crown - Saison 6 (nouveauté)\n\nBasé sur vos préférences : Drames historiques\n\nRegardez maintenant sur Netflix.\n\nL'équipe Netflix",
+    "ground_truth": "personnel",
+    "expected_confidence_min": 0.85
+  },
+  {
+    "id": "email-054",
+    "account": "medical",
+    "from": "ars@ars-idf.sante.fr",
+    "subject": "Campagne vaccination grippe 2026-2027",
+    "body": "Cher praticien,\n\nLancement de la campagne de vaccination antigrippale 2026-2027.\n\nCommande vaccins : ars-idf.fr/commande\nPrise en charge : 100% Assurance Maladie\n\nDébut campagne : 15 octobre 2026\n\nARS Île-de-France",
+    "ground_truth": "medical",
+    "expected_confidence_min": 0.85
+  },
+  {
+    "id": "email-055",
+    "account": "finance",
+    "from": "cfe@urssaf.fr",
+    "subject": "Cotisation Foncière des Entreprises - Avis 2026",
+    "body": "Madame, Monsieur,\n\nVotre avis de Cotisation Foncière des Entreprises 2026 est disponible.\n\nSELARL Cabinet Médical\nMontant CFE : 1 240€\nÉchéance : 15/12/2026\n\nPaiement en ligne : impots.gouv.fr\n\nURSSAF",
+    "ground_truth": "finance",
+    "expected_confidence_min": 0.85
+  },
+  {
+    "id": "email-056",
+    "account": "urgent",
+    "from": "laboratoire@biopath.fr",
+    "subject": "URGENT - Résultat critique patient M. DURAND",
+    "body": "ALERTE RÉSULTAT CRITIQUE\n\nPatient : M. DURAND Jean (né 15/05/1955)\nExamen : Troponine\nRésultat : 2.5 ng/mL (VN < 0.04)\n\nSuspicion SCA - CONTACT IMMÉDIAT PATIENT RECOMMANDÉ\n\nLaboratoire BioPath",
+    "ground_truth": "urgent",
+    "expected_confidence_min": 0.95
+  },
+  {
+    "id": "email-057",
+    "account": "spam",
+    "from": "crypto-invest@trading-bot.com",
+    "subject": "💎 BITCOIN +500% en 6 mois - Méthode EXCLUSIVE",
+    "body": "Multipliez votre capital par 5 en 6 mois avec notre BOT de trading !\n\n✅ Intelligence artificielle\n✅ Gains automatiques\n✅ Aucun risque (sic)\n\nInvestissement minimum : 500€\n\nwww.crypto-arnaque.com\n\nCRYPTO TRADING BOT",
+    "ground_truth": "spam",
+    "expected_confidence_min": 0.95
+  },
+  {
+    "id": "email-058",
+    "account": "medical",
+    "from": "syndicat@csmf.fr",
+    "subject": "AG syndicat CSMF - Négociations conventionnelles",
+    "body": "Cher confrère,\n\nAssemblée générale CSMF le 12/03/2026 à 20h.\n\nOrdre du jour : négociations conventionnelles 2026, revalorisation consultations.\n\nVotre présence est importante.\n\nConfédération des Syndicats Médicaux Français",
+    "ground_truth": "medical",
+    "expected_confidence_min": 0.75
+  },
+  {
+    "id": "email-059",
+    "account": "finance",
+    "from": "expert-comptable@fiduciaire-paris.fr",
+    "subject": "TVA Q4 2025 - Déclaration à valider",
+    "body": "Bonjour,\n\nDéclaration TVA Q4 2025 de la SELARL prête :\n\nTVA collectée : 15 240€\nTVA déductible : 8 450€\nTVA à payer : 6 790€\n\nMerci de valider avant dépôt.\n\nFiduciaire Paris Comptabilité",
+    "ground_truth": "finance",
+    "expected_confidence_min": 0.85
+  },
+  {
+    "id": "email-060",
+    "account": "faculty",
+    "from": "responsable-td@medecine.fr",
+    "subject": "TD Sémiologie cardiaque - Groupe A",
+    "body": "Bonjour,\n\nRappel : TD Sémiologie cardiaque groupe A mardi 18/02 14h-16h.\n\nThème : Souffle cardiaque\nLieu : Salle TP 3\n\nMerci de préparer 3 cas cliniques.\n\nDr. Rousseau",
+    "ground_truth": "faculty",
+    "expected_confidence_min": 0.80
+  },
+  {
+    "id": "email-061",
+    "account": "research",
+    "from": "coordination@clinical-trial.org",
+    "subject": "Essai clinique CARDIO-2026 - Inclusion patient",
+    "body": "Cher investigateur,\n\nNous avons 1 patient éligible pour l'essai CARDIO-2026 (insuffisance cardiaque).\n\nPouvez-vous le recevoir cette semaine pour inclusion ?\n\nCritères vérifiés : NYHA II-III, FEVG <40%.\n\nCoordination Essais Cliniques",
+    "ground_truth": "research",
+    "expected_confidence_min": 0.85
+  },
+  {
+    "id": "email-062",
+    "account": "personnel",
+    "from": "garage@renault-paris.fr",
+    "subject": "Révision véhicule - Rappel RDV",
+    "body": "Bonjour,\n\nRappel : Révision de votre Renault Clio jeudi 20/02 à 9h.\n\nRévision 60 000 km + contrôle technique.\nDurée estimée : 2h30\n\nGarage Renault Paris 15ème",
+    "ground_truth": "personnel",
+    "expected_confidence_min": 0.90
+  },
+  {
+    "id": "email-063",
+    "account": "urgent",
+    "from": "dg@chu-paris.fr",
+    "subject": "URGENT - Grève services techniques demain",
+    "body": "INFORMATION URGENTE\n\nGrève des services techniques demain 19/02.\n\nImpact : ascenseurs, chauffage, restauration.\n\nReport consultations externes recommandé.\n\nDirection Générale CHU",
+    "ground_truth": "urgent",
+    "expected_confidence_min": 0.85
+  },
+  {
+    "id": "email-064",
+    "account": "spam",
+    "from": "soldes@mode-discount.shop",
+    "subject": "🛍️ SOLDES -70% sur TOUT le site !",
+    "body": "SOLDES EXCEPTIONNELS !\n\n-70% sur TOUTE la collection mode hiver !\n\n👗 Vêtements\n👞 Chaussures\n👜 Accessoires\n\nLivraison gratuite dès 30€\n\nwww.mode-spam-discount.shop\n\nMODE DISCOUNT",
+    "ground_truth": "spam",
+    "expected_confidence_min": 0.90
+  },
+  {
+    "id": "email-065",
+    "account": "unknown",
+    "from": "bounce@undeliverable-mail.com",
+    "subject": "Undeliverable: RE: RE: FWD: Important",
+    "body": "Delivery to the following recipient failed permanently:\n\n     invalid-address@nonexistent-domain-xyz.com\n\nTechnical details of permanent failure:\nDNS Error: Domain name not found\n\n----- Original message -----\n[Content unreadable - encoding error]",
+    "ground_truth": "unknown",
+    "expected_confidence_min": 0.70
+  },
+  {
+    "id": "email-066",
+    "account": "medical",
+    "from": "covid-vaccination@sante.gouv.fr",
+    "subject": "Rappel vaccination COVID-19 - Campagne 2026",
+    "body": "Campagne de rappel vaccination COVID-19 2026 pour personnes à risque.\n\nPopulation cible : >65 ans, immunodéprimés, comorbidités.\n\nVaccins disponibles : mise à jour variant 2026.\n\nCommande : sante.gouv.fr/vaccination\n\nMinistère de la Santé",
+    "ground_truth": "medical",
+    "expected_confidence_min": 0.85
+  },
+  {
+    "id": "email-067",
+    "account": "finance",
+    "from": "syndic@residence-paris.fr",
+    "subject": "SCI Résidence-2 - Charges copropriété T1 2026",
+    "body": "Madame, Monsieur,\n\nAppel de charges copropriété T1 2026 pour votre lot SCI Résidence-2 :\n\nCharges courantes : 840€\nTravaux votés : 520€\nTotal : 1 360€\n\nÉchéance : 28/02/2026\n\nSyndic Résidence Paris",
+    "ground_truth": "finance",
+    "expected_confidence_min": 0.80
+  },
+  {
+    "id": "email-068",
+    "account": "faculty",
+    "from": "bibliothèque@biu-sante.fr",
+    "subject": "Accès bases de données médicales renouvelé",
+    "body": "Bonjour,\n\nVotre accès aux bases de données médicales (PubMed, Cochrane, UpToDate) a été renouvelé pour 2026.\n\nIdentifiants inchangés.\nAccès : biu-sante.fr/ressources\n\nBibliothèque Interuniversitaire de Santé",
+    "ground_truth": "faculty",
+    "expected_confidence_min": 0.75
+  },
+  {
+    "id": "email-069",
+    "account": "research",
+    "from": "editeur@elsevier.com",
+    "subject": "Article published - DOI assigned",
+    "body": "Dear Author,\n\nYour article 'Novel biomarkers in cardiovascular diseases' has been published online in the Journal of Cardiology.\n\nDOI: 10.1016/j.card.2026.01.234\nView article: https://sciencedirect.com/...\n\nBest regards,\nElsevier Publishing",
+    "ground_truth": "research",
+    "expected_confidence_min": 0.90
+  },
+  {
+    "id": "email-070",
+    "account": "personnel",
+    "from": "banque-perso@credit-mutuel.fr",
+    "subject": "Relevé compte personnel - Janvier 2026",
+    "body": "Bonjour,\n\nVotre relevé de compte personnel pour janvier 2026 est disponible.\n\nSolde au 31/01 : 8 450€\nOpérations du mois : 23\n\nConsultez votre espace en ligne.\n\nCrédit Mutuel",
+    "ground_truth": "personnel",
+    "expected_confidence_min": 0.85
+  },
+  {
+    "id": "email-071",
+    "account": "medical",
+    "from": "dpc@mondpc.fr",
+    "subject": "DPC 2026 - Obligation triennale",
+    "body": "Cher praticien,\n\nRappel : Obligation DPC triennale 2024-2026 arrive à échéance le 31/12/2026.\n\nVotre progression : 12h validées / 21h requises.\n\nManquant : 9h de formation à valider.\n\nMonDPC.fr",
+    "ground_truth": "medical",
+    "expected_confidence_min": 0.80
+  },
+  {
+    "id": "email-072",
+    "account": "finance",
+    "from": "impots-revenus@dgfip.gouv.fr",
+    "subject": "Déclaration revenus 2025 - Ouverture 10 avril",
+    "body": "Madame, Monsieur,\n\nLa déclaration de revenus 2025 sera accessible à partir du 10 avril 2026.\n\nDates limites selon département : mai-juin 2026.\n\nDéclaration en ligne : impots.gouv.fr\n\nDirection Générale des Finances Publiques",
+    "ground_truth": "finance",
+    "expected_confidence_min": 0.85
+  },
+  {
+    "id": "email-073",
+    "account": "faculty",
+    "from": "master@univ-medecine.fr",
+    "subject": "Candidature Master 2 Cardiologie - Entretiens",
+    "body": "Bonjour,\n\nVous êtes membre du jury de sélection Master 2 Cardiologie.\n\nEntretiens candidats : 5-6 mars 2026\nVotre créneau : 6 mars 9h-12h (6 candidats)\n\nDossiers disponibles : master.univ-medecine.fr\n\nService Scolarité",
+    "ground_truth": "faculty",
+    "expected_confidence_min": 0.80
+  },
+  {
+    "id": "email-074",
+    "account": "research",
+    "from": "anr@agencerecherche.fr",
+    "subject": "Rapport scientifique ANR-2024 - Deadline 1er mars",
+    "body": "Madame, Monsieur,\n\nRappel : rapport scientifique annuel projet ANR-2024-MED-123 à soumettre avant le 1er mars 2026.\n\nModèle rapport : anr.fr/rapports\n\nAgence Nationale de la Recherche",
+    "ground_truth": "research",
+    "expected_confidence_min": 0.85
+  },
+  {
+    "id": "email-075",
+    "account": "personnel",
+    "from": "edf@edf.fr",
+    "subject": "Facture électricité janvier 2026",
+    "body": "Bonjour,\n\nVotre facture d'électricité pour janvier 2026 est disponible.\n\nMontant : 142€\nConsommation : 380 kWh\n\nPaiement automatique le 15/02.\n\nEDF - Particuliers",
+    "ground_truth": "personnel",
+    "expected_confidence_min": 0.90
+  },
+  {
+    "id": "email-076",
+    "account": "urgent",
+    "from": "garde@conseil-ordre.fr",
+    "subject": "URGENT - Médecin de garde absent, remplacement immédiat",
+    "body": "URGENCE\n\nLe médecin de garde du secteur 15ème est absent (maladie). Pouvez-vous assurer le remplacement IMMÉDIATEMENT jusqu'à 23h ?\n\nAstreinte payée double tarif.\n\nRéponse URGENTE SVP.\n\nConseil de l'Ordre - Permanence des soins",
+    "ground_truth": "urgent",
+    "expected_confidence_min": 0.90
+  },
+  {
+    "id": "email-077",
+    "account": "spam",
+    "from": "rencontre@site-dating.net",
+    "subject": "💘 Emma, 28 ans, souhaite vous rencontrer",
+    "body": "Bonjour,\n\nEmma, 28 ans, célibataire, habite près de chez vous et souhaite faire votre connaissance !\n\n📸 Voir son profil\n💬 Lui envoyer un message\n\nInscription GRATUITE : www.dating-spam.net\n\nRencontre Sérieuse",
+    "ground_truth": "spam",
+    "expected_confidence_min": 0.95
+  },
+  {
+    "id": "email-078",
+    "account": "medical",
+    "from": "rpps@asip-sante.fr",
+    "subject": "Mise à jour données RPPS obligatoire",
+    "body": "Cher praticien,\n\nMise à jour annuelle de vos données dans le Répertoire Partagé des Professionnels de Santé (RPPS) obligatoire avant le 30/04/2026.\n\nAccès : rpps.asipsante.fr\n\nAgence du Numérique en Santé",
+    "ground_truth": "medical",
+    "expected_confidence_min": 0.75
+  },
+  {
+    "id": "email-079",
+    "account": "finance",
+    "from": "prevoyance@mutuelle-medecin.fr",
+    "subject": "Contrat Prévoyance - Cotisation 2026",
+    "body": "Bonjour,\n\nVotre contrat prévoyance complémentaire 2026 :\n\nGaranties : Incapacité, Invalidité, Décès\nCotisation annuelle : 1 840€\nPrélèvement : mensuel (153€)\n\nMutuelle des Médecins de France",
+    "ground_truth": "finance",
+    "expected_confidence_min": 0.80
+  },
+  {
+    "id": "email-080",
+    "account": "faculty",
+    "from": "cnu@cnu-sante.fr",
+    "subject": "Concours MCU-PH - Session 2026",
+    "body": "Madame, Monsieur le Professeur,\n\nOuverture des candidatures au concours Maître de Conférences Universitaire - Praticien Hospitalier (MCU-PH) session 2026.\n\nPostes ouverts : Cardiologie (2 postes)\nDépôt candidatures : jusqu'au 31/03/2026\n\nConseil National des Universités",
+    "ground_truth": "faculty",
+    "expected_confidence_min": 0.80
+  },
+  {
+    "id": "email-081",
+    "account": "research",
+    "from": "poster@congres-cardio.fr",
+    "subject": "Poster accepté - Congrès SFC 2026",
+    "body": "Cher confrère,\n\nVotre poster 'Nouveaux biomarqueurs dans l'IC' est accepté au Congrès de la Société Française de Cardiologie 2026 (Lille, 18-20 juin).\n\nSession : Posters recherche fondamentale\nNuméro : P-234\n\nInscription avant le 1er mai.\n\nSFC",
+    "ground_truth": "research",
+    "expected_confidence_min": 0.85
+  },
+  {
+    "id": "email-082",
+    "account": "personnel",
+    "from": "prime-video@amazon.fr",
+    "subject": "Nouveau film recommandé : Oppenheimer",
+    "body": "Bonjour,\n\nNous pensons que vous aimerez : Oppenheimer (2023) - Christopher Nolan\n\nDisponible en location 4,99€ ou achat 14,99€.\n\nBasé sur vos préférences : Films historiques\n\nPrime Video",
+    "ground_truth": "personnel",
+    "expected_confidence_min": 0.85
+  },
+  {
+    "id": "email-083",
+    "account": "medical",
+    "from": "telemed@asso-cardio.fr",
+    "subject": "Téléconsultation - Formation obligatoire",
+    "body": "Cher praticien,\n\nFormation téléconsultation sécurisée OBLIGATOIRE pour pratique de la télémédecine.\n\nSession en ligne : 25 février 2026 - 14h-17h\nInscription gratuite : asso-cardio.fr/formation\n\nAssociation des Cardiologues",
+    "ground_truth": "medical",
+    "expected_confidence_min": 0.75
+  },
+  {
+    "id": "email-084",
+    "account": "finance",
+    "from": "notaire-cession@etude-paris.fr",
+    "subject": "SCI Immo-1 - Cession parts sociales",
+    "body": "Mesdames, Messieurs,\n\nProjet de cession de parts sociales SCI Immo-1 : vente 25% parts à nouvel associé.\n\nAG extraordinaire requise pour accord cession.\n\nDate proposée : 20 mars 2026.\n\nMaître Dubois, Notaire",
+    "ground_truth": "finance",
+    "expected_confidence_min": 0.80
+  },
+  {
+    "id": "email-085",
+    "account": "faculty",
+    "from": "concours-internat@chu.fr",
+    "subject": "ECNi 2026 - Convocation surveillance épreuves",
+    "body": "Cher Professeur,\n\nVous êtes convoqué pour surveiller les Épreuves Classantes Nationales informatisées (ECNi) 2026.\n\nDate : 15-17 juin 2026\nLieu : Parc des Expositions\nVacation : 16 juin 14h-18h\n\nRémunération : 150€/vacation\n\nCHU Paris",
+    "ground_truth": "faculty",
+    "expected_confidence_min": 0.80
+  },
+  {
+    "id": "email-086",
+    "account": "research",
+    "from": "comite-ethique@cpp-idf.fr",
+    "subject": "Protocole recherche CPP-2026-045 - Avis favorable",
+    "body": "Madame, Monsieur,\n\nLe Comité de Protection des Personnes Île-de-France a rendu un avis FAVORABLE pour votre protocole de recherche CPP-2026-045 'Étude biomarqueurs cardiovasculaires'.\n\nVous pouvez démarrer l'étude.\n\nCPP Île-de-France",
+    "ground_truth": "research",
+    "expected_confidence_min": 0.85
+  },
+  {
+    "id": "email-087",
+    "account": "personnel",
+    "from": "reservation@hotel-lyon.fr",
+    "subject": "Confirmation réservation Hôtel Lyon",
+    "body": "Bonjour,\n\nVotre réservation est confirmée :\n\nHôtel Mercure Lyon Centre\nChambre double - 2 nuits\nArrivée : 10/03/2026\nDépart : 12/03/2026\n\nPrix total : 240€ (petit-déjeuner inclus)\n\nHôtel Mercure",
+    "ground_truth": "personnel",
+    "expected_confidence_min": 0.90
+  },
+  {
+    "id": "email-088",
+    "account": "urgent",
+    "from": "crise@prefecture-paris.fr",
+    "subject": "ALERTE - Plan blanc activé - Affluence urgences",
+    "body": "ALERTE SANITAIRE\n\nPlan blanc activé - forte affluence urgences suite épidémie grippe.\n\nTOUS les praticiens sont invités à se rendre disponibles pour renfort.\n\nContact cellule de crise : 01.XX.XX.XX.XX\n\nPréfecture de Paris - ARS",
+    "ground_truth": "urgent",
+    "expected_confidence_min": 0.95
+  },
+  {
+    "id": "email-089",
+    "account": "spam",
+    "from": "heritage@notaire-bidon.com",
+    "subject": "Héritage inattendu de 2.5 millions d'euros",
+    "body": "Madame, Monsieur,\n\nNous avons le plaisir de vous informer que vous êtes bénéficiaire d'un héritage de 2 500 000€ suite au décès d'un parent éloigné.\n\nPour débloquer les fonds, frais de dossier : 500€.\n\nwww.arnaque-heritage.com\n\nÉtude Notariale Internationale",
+    "ground_truth": "spam",
+    "expected_confidence_min": 0.95
+  },
+  {
+    "id": "email-090",
+    "account": "unknown",
+    "from": "postmaster@mail-server-failure.net",
+    "subject": "Delivery Status Notification (Failure)",
+    "body": "This is an automatically generated Delivery Status Notification.\n\nTHIS IS A WARNING MESSAGE ONLY.\n\nYOU DO NOT NEED TO RESEND YOUR MESSAGE.\n\nDelivery to the following recipients has been delayed.\n\n[Incomplete SMTP transaction - connection timeout]\n[Original message data corrupted]",
+    "ground_truth": "unknown",
+    "expected_confidence_min": 0.65
+  },
+  {
+    "id": "email-091",
+    "account": "medical",
+    "from": "ameli-pro@assurance-maladie.fr",
+    "subject": "Téléservices Ameli Pro - Nouvelle interface",
+    "body": "Cher praticien,\n\nAnnonce : nouvelle interface Ameli Pro disponible le 1er mars 2026.\n\nAméliorations :\n- Télétransmission plus rapide\n- Suivi paiements en temps réel\n- Nouvelle ergonomie\n\nFormation en ligne gratuite disponible.\n\nAssurance Maladie",
+    "ground_truth": "medical",
+    "expected_confidence_min": 0.75
+  },
+  {
+    "id": "email-092",
+    "account": "finance",
+    "from": "carmf@retraite-medecin.fr",
+    "subject": "CARMF - Relevé points retraite 2025",
+    "body": "Bonjour,\n\nVotre relevé de points retraite CARMF pour l'année 2025 est disponible.\n\nPoints acquis 2025 : 485\nTotal points cumulés : 8 240\n\nEstimation pension : carmf.fr/simulation\n\nCARMF - Caisse Autonome de Retraite des Médecins",
+    "ground_truth": "finance",
+    "expected_confidence_min": 0.85
+  },
+  {
+    "id": "email-093",
+    "account": "faculty",
+    "from": "hceres@evaluation-recherche.fr",
+    "subject": "Évaluation laboratoire - Visite HCERES 2026",
+    "body": "Madame, Monsieur le Directeur,\n\nVisite d'évaluation HCERES de votre unité de recherche programmée du 15 au 17 avril 2026.\n\nMerci de préparer :\n- Rapport d'activité 2021-2025\n- Projet scientifique 2026-2030\n\nHaut Conseil de l'Évaluation",
+    "ground_truth": "faculty",
+    "expected_confidence_min": 0.75
+  },
+  {
+    "id": "email-094",
+    "account": "research",
+    "from": "grant@fondation-coeur.fr",
+    "subject": "Bourse recherche attribuée - 50 000€",
+    "body": "Cher Docteur,\n\nFélicitations ! Votre projet 'Biomarqueurs prédictifs dans l'IC' est lauréat de la bourse de recherche Fondation Cœur et Recherche 2026.\n\nMontant attribué : 50 000€\nDurée : 18 mois\n\nConvention à signer.\n\nFondation Cœur et Recherche",
+    "ground_truth": "research",
+    "expected_confidence_min": 0.90
+  },
+  {
+    "id": "email-095",
+    "account": "personnel",
+    "from": "freebox@free.fr",
+    "subject": "Facture Freebox - Février 2026",
+    "body": "Bonjour,\n\nVotre facture Freebox pour février 2026 :\n\nAbonnement Freebox Révolution : 39.99€\nOptions : 0€\nTotal : 39.99€\n\nPrélèvement automatique le 5/03.\n\nFree",
+    "ground_truth": "personnel",
+    "expected_confidence_min": 0.90
+  },
+  {
+    "id": "email-096",
+    "account": "medical",
+    "from": "fmc@formation-continue-medicale.fr",
+    "subject": "Webinaire gratuit - Nouveautés ESC Guidelines 2026",
+    "body": "Cher confrère,\n\nWebinaire FMC gratuit : Nouveautés ESC Guidelines 2026 en cardiologie\n\nDate : 5 mars 2026 - 20h-21h30\nIntervenant : Pr. Durand (CHU Paris)\nInscription : fmc-cardio.fr\n\n2 crédits FMC validés\n\nFormation Continue Médicale",
+    "ground_truth": "medical",
+    "expected_confidence_min": 0.80
+  },
+  {
+    "id": "email-097",
+    "account": "finance",
+    "from": "prevoyance@macsf.fr",
+    "subject": "MACSF - Contrat multirisque professionnelle",
+    "body": "Bonjour,\n\nÉchéance annuelle contrat multirisque professionnelle MACSF :\n\nRCP : 2 840€\nProtection juridique : 380€\nDéfense pénale : 240€\n\nTotal : 3 460€\n\nÉchéance : 1er avril 2026\n\nMACSF Assurances",
+    "ground_truth": "finance",
+    "expected_confidence_min": 0.85
+  },
+  {
+    "id": "email-098",
+    "account": "faculty",
+    "from": "these-soutenance@univ.fr",
+    "subject": "Soutenance thèse Claire BERNARD - 28 mars 2026",
+    "body": "Madame, Monsieur,\n\nVous êtes invité à la soutenance de thèse de Mme Claire BERNARD :\n\nSujet : 'Biomarqueurs pronostiques de l'insuffisance cardiaque'\nDate : 28 mars 2026 à 14h\nLieu : Amphithéâtre Charcot\n\nPot de thèse à l'issue de la soutenance.\n\nÉcole Doctorale",
+    "ground_truth": "faculty",
+    "expected_confidence_min": 0.80
+  },
+  {
+    "id": "email-099",
+    "account": "research",
+    "from":="international-collab@stanford.edu",
+    "subject": "Collaboration proposal - Biomarkers research",
+    "body": "Dear Dr. Martin,\n\nWe are interested in establishing a research collaboration with your team on cardiovascular biomarkers.\n\nOur lab (Stanford Medicine) has complementary expertise in proteomics.\n\nWould you be available for a video call next week?\n\nBest regards,\nProf. Sarah Johnson\nStanford University",
+    "ground_truth": "research",
+    "expected_confidence_min": 0.85
+  },
+  {
+    "id": "email-100",
+    "account": "personnel",
+    "from": "abonnement@lequipe.fr",
+    "subject": "L'Équipe - Votre abonnement arrive à échéance",
+    "body": "Bonjour,\n\nVotre abonnement L'Équipe Premium arrive à échéance le 28/02/2026.\n\nRenouvellement automatique sauf opposition : 9.99€/mois\n\nGestion abonnement : compte.lequipe.fr\n\nL'Équipe",
+    "ground_truth": "personnel",
+    "expected_confidence_min": 0.85
+  }
+]

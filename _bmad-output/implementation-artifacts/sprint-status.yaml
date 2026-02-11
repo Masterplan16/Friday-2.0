@@ -112,8 +112,8 @@ development_status:
 
   # Epic 2: Pipeline Email Intelligent (7 stories | 10 FRs)
   epic-2: in-progress
-  2-1-integration-emailengine-reception: review  # 2026-02-11: COMPLETE ✅ - EmailEngine v2.61.1 + webhooks + consumer Redis Streams. 7 tasks (35+ subtasks), 7/7 AC, 48/48 tests PASS, 26 fichiers. Migrations 024-025, docs 600+ lignes. Ready for code review.
-  2-2-classification-email-llm: backlog
+  2-1-integration-emailengine-reception: done  # 2026-02-11: CODE REVIEW COMPLETE ✅ - 17 issues fixes (6C+5H+4M+2L), 55/55 tests PASS. EmailEngine v2.61.1 + webhooks (circuit breaker + rate limit) + consumer (retry backoff + DLQ + emails_raw chiffre + Telegram real). 7 AC valides, 30 fichiers (26+4 tests), docs 600+. Zero regressions.
+  2-2-classification-email-llm: in-progress  # 2026-02-11: DEV STARTED - Classification LLM Claude Sonnet 4.5, 8 AC, 30 subtasks, accuracy ≥85%
   2-3-detection-vip-urgence: backlog
   2-4-extraction-pieces-jointes: backlog
   2-5-brouillon-reponse-email: backlog
@@ -154,7 +154,7 @@ development_status:
   # Epic 6: Memoire Eternelle & Migration (4 stories | 4 FRs)
   epic-6: in-progress
   6-1-graphe-connaissances-postgresql: done  # 2026-02-11: CODE REVIEW COMPLETE ✅ - PostgreSQL knowledge graph avec pgvector (D19). Migration 007-008, schema knowledge.*, embeddings vector(1024) + HNSW index, memorystore.py adaptateur complet, graph_populator.py, 10 NodeType + 14 RelationType enums validés. Tests unitaires 19/19 PASS. Decision D19: pgvector Day 1 (pas Qdrant), réévaluation si >300k vecteurs. 12 fichiers créés/modifiés.
-  6-2-embeddings-pgvector: in-progress  # 2026-02-11: Story file created (ultimate context engine, Voyage AI voyage-4-large 1024 dims multilingual, pgvector v0.8.1 HNSW index, chunking 2000 chars, batch API -33% cost, budget ~10-15 EUR/mois, 4 AC, 10 tasks, 50+ subtasks)
+  6-2-embeddings-pgvector: done  # 2026-02-11: STORY COMPLETE ✅ - Voyage AI voyage-4-large + pgvector. AC1-7 TOUS COMPLETS ✅. 36 tests PASS (25 unit + 9 integration + 2 E2E). AC6: Budget tracking (migration 025, monitoring, alertes Telegram). AC7: Tests PostgreSQL réels + E2E pipeline Email→Embedding→Search. Code review: 12 issues, 11 fixed. Contamination cross-story résolue (2 PRs séparées #28/#29). Code quality: EXCELLENT. 13 fichiers créés/modifiés (2 commits).
   6-3-adaptateur-memorystore: backlog
   6-4-migration-emails-historiques: backlog
   epic-6-retrospective: optional

@@ -78,15 +78,15 @@
 
 ### AC7: Tests complets (unit + integration + E2E)
 
-- ✅ **Unit tests** : `test_vectorstore.py` - **18 tests** PASS (embed, store, search, filters, factory, anonymisation, delete)
-- ✅ **Unit tests email** : `test_email_embeddings.py` - **3 tests** PASS (integration markers décommentés)
+- ✅ **Unit tests** : `test_vectorstore.py` - **17 tests** PASS (embed, store, search, filters, factory, anonymisation, delete)
+- ⏸️ **Integration tests email** : `test_email_embeddings.py` - **3 tests** SKIPPED (marqués @pytest.mark.integration, nécessitent PostgreSQL réel)
 - ✅ **Unit tests archiviste** : `test_embedding_generator.py` - **4 tests** PASS (chunking, multi-embeddings)
 - ⏸️ **Integration tests** : PostgreSQL + pgvector réels **TODO** (nécessite DB setup, 10+ tests requis)
 - ⏸️ **E2E tests** : Pipeline complet email → embedding → recherche **TODO** (nécessite stack complète, 5+ tests requis)
 - ⏸️ **Performance tests** : Benchmark 1000 embeddings, 100k vecteurs **TODO**
-- ✅ **Coverage** : >=90% estimée sur vectorstore.py core functions (18 unit tests)
+- ✅ **Coverage** : >=90% estimée sur vectorstore.py core functions (17 unit tests)
 
-**Status AC7** : ⏸️ **PARTIEL** (25 unit tests PASS, 0 integration/E2E tests)
+**Status AC7** : ⏸️ **PARTIEL** (21 unit tests PASS, 3 integration tests SKIPPED, 0 integration/E2E PostgreSQL réels)
 
 ---
 
@@ -844,7 +844,7 @@ Claude Sonnet 4.5 (`claude-sonnet-4-5-20250929`)
 - ⏸️ Task 9: Tests E2E (TODO: nécessite stack complète)
 - ✅ Task 10: Documentation embeddings-pgvector.md
 
-**Total Tests**: **25 tests** PASS (18 vectorstore + 3 email + 4 archiviste)
+**Total Tests**: **21 tests** PASS + **3 tests** SKIPPED (17 vectorstore unit + 4 archiviste unit + 3 email integration SKIPPED)
 
 **Acceptance Criteria Status**:
 - ✅ AC1: Génération automatique embeddings (Email + Document) - **COMPLET**
@@ -853,7 +853,7 @@ Claude Sonnet 4.5 (`claude-sonnet-4-5-20250929`)
 - ✅ AC4: Adaptateur vectorstore.py évolutif - **COMPLET**
 - ✅ AC5: Integration modules Friday (Email + Archiviste) - **COMPLET**
 - ⏸️ AC6: Budget monitoring - **PARTIEL** (stubs créés, migration DB + Telegram integration TODO)
-- ⏸️ AC7: Tests complets - **PARTIEL** (25 unit tests PASS, 0 integration/E2E PostgreSQL réels)
+- ⏸️ AC7: Tests complets - **PARTIEL** (21 unit tests PASS, 3 integration SKIPPED, 0 integration/E2E PostgreSQL réels)
 
 **Notes Critiques**:
 1. Voyage AI package installé (voyageai v0.3.7)

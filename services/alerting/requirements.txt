@@ -1,5 +1,5 @@
 asyncpg==0.31.0
-redis==7.1.1
+redis==5.0.1
 python-telegram-bot==22.6
-pyyaml==6.0.3
-structlog==25.5.0
+pyyaml==6.0.1
+structlog==24.4.0

@@ -5,12 +5,16 @@ Test Strategy:
 - Vérifier compatibilité migration 008 (pgvector) après 007
 - Vérifier que les 10 types de nœuds sont validés
 - Vérifier que les 14 types de relations sont validés
+
+IMPORTANT: Ces tests nécessitent PostgreSQL et sont marqués @pytest.mark.integration.
 """
 
 import asyncio
 import pytest
 import asyncpg
 from pathlib import Path
+
+pytestmark = pytest.mark.integration  # Marquer TOUS les tests de ce fichier comme integration
 
 
 @pytest.fixture

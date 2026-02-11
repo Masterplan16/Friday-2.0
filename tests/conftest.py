@@ -11,9 +11,45 @@ Voir pytest.ini pour la configuration.
 
 import os
 from typing import AsyncGenerator
+from unittest.mock import AsyncMock, MagicMock
 
 import asyncpg
 import pytest
+
+
+# ==========================================
+# Mock Helpers for Unit Tests
+# ==========================================
+
+
+def create_mock_pool_with_conn(mock_conn: AsyncMock) -> MagicMock:
+    """
+    Helper pour créer un mock asyncpg.Pool avec async context manager correctement configuré.
+
+    Le pattern correct pour mocker pool.acquire() est :
+    - pool.acquire() retourne un MagicMock (pas AsyncMock)
+    - Ce MagicMock a __aenter__ et __aexit__ configurés comme AsyncMock
+    - __aenter__ retourne la mock_conn
+
+    Args:
+        mock_conn: AsyncMock de la connexion asyncpg
+
+    Returns:
+        MagicMock pool correctement configuré pour pool.acquire()
+
+    Usage:
+        >>> mock_conn = AsyncMock()
+        >>> mock_conn.fetch.return_value = [...]
+        >>> mock_pool = create_mock_pool_with_conn(mock_conn)
+        >>> async with mock_pool.acquire() as conn:
+        ...     results = await conn.fetch(...)
+    """
+    mock_pool = MagicMock()
+    acquire_ctx = AsyncMock()
+    acquire_ctx.__aenter__ = AsyncMock(return_value=mock_conn)
+    acquire_ctx.__aexit__ = AsyncMock(return_value=None)
+    mock_pool.acquire = MagicMock(return_value=acquire_ctx)
+    return mock_pool
 
 
 # ==========================================

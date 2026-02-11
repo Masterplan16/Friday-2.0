@@ -16,9 +16,10 @@ async def _get_pool(context: ContextTypes.DEFAULT_TYPE) -> asyncpg.Pool:
     Récupérer pool PostgreSQL asyncpg depuis context.
     Pattern H1 fix Story 1.11 : pool asyncpg (pas psycopg2).
     """
-    if not hasattr(context.bot_data, "db_pool"):
+    pool = context.bot_data.get("db_pool")
+    if pool is None:
         raise RuntimeError("Database pool not initialized in bot_data")
-    return context.bot_data["db_pool"]
+    return pool
 
 
 async def recovery_command(update: Update, context: ContextTypes.DEFAULT_TYPE):

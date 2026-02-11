@@ -9,14 +9,14 @@ from unittest.mock import AsyncMock, Mock
 from uuid import uuid4
 
 from services.feedback.pattern_detector import PatternDetector, PatternCluster
+from tests.conftest import create_mock_pool_with_conn
 
 
 @pytest.fixture
 def mock_db_pool():
     """Mock asyncpg Pool pour tests."""
-    pool = AsyncMock()
     conn = AsyncMock()
-    pool.acquire.return_value.__aenter__.return_value = conn
+    pool = create_mock_pool_with_conn(conn)
     return pool, conn
 
 

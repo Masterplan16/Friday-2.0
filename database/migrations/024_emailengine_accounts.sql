@@ -70,25 +70,25 @@ CREATE INDEX IF NOT EXISTS idx_email_accounts_last_sync
 -- Trigger: Encrypt password avant INSERT/UPDATE (pgcrypto)
 -- ------------------------------------------------------------------------
 
--- Fonction pour chiffrer le password avec pgcrypto
--- IMPORTANT: La clé de chiffrement est stockée dans .env (EMAILENGINE_ENCRYPTION_KEY)
+-- Fonction pour valider le password chiffré
+-- IMPORTANT: Le chiffrement se fait dans l'application Python (scripts/setup_emailengine_accounts.py)
+-- JAMAIS stocker la clé de chiffrement dans PostgreSQL !
+-- Ce trigger valide seulement que les données sont bien chiffrées (BYTEA non-vide)
 CREATE OR REPLACE FUNCTION ingestion.encrypt_imap_password()
 RETURNS TRIGGER AS $$
-DECLARE
-    encryption_key TEXT;
 BEGIN
-    -- Récupérer clé de chiffrement depuis .env (via runtime)
-    -- NOTE: En production, la clé doit être passée par l'application Python
-    -- qui insère dans la table, PAS stockée dans la DB.
+    -- Validation : le password doit être BYTEA et non-vide
+    IF NEW.imap_password_encrypted IS NULL THEN
+        RAISE EXCEPTION 'imap_password_encrypted cannot be NULL (must be encrypted BYTEA)';
+    END IF;
 
-    -- Si le password n'est pas déjà chiffré (détection: pas de format BYTEA)
-    -- ALORS le chiffrer avec pgcrypto
+    -- Validation : le BYTEA ne doit pas être vide
+    IF octet_length(NEW.imap_password_encrypted) < 16 THEN
+        RAISE EXCEPTION 'imap_password_encrypted too short (expected pgcrypto encrypted data, min 16 bytes)';
+    END IF;
 
-    -- Pour l'instant, on stocke tel quel (BYTEA)
-    -- L'application Python doit envoyer le password déjà chiffré
-
-    -- Si NEW.imap_password_encrypted est de type TEXT (erreur), convertir
-    -- (Normalement, l'app envoie déjà en BYTEA chiffré)
+    -- Validation OK : les données semblent chiffrées
+    -- (pgcrypto pgp_sym_encrypt produit au minimum 16+ octets)
 
     RETURN NEW;
 END;

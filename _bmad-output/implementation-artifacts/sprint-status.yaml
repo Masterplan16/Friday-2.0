@@ -105,14 +105,14 @@ development_status:
   2-2-classification-email-llm: done  # 2026-02-11: CODE REVIEW COMPLETE ✅ - 15 issues fixés (3C+5H+4M+3L), 45/45 tests PASS + 7 skipped integration. Fixes: C1 RGPD anonymisation, C2 credentials warning, C3 race condition atomic UPDATE, H2 circuit breaker, H3 accuracy calculation, H4 type hints, H5 migration trigger validation, M1-M4 perf+logging+config+docs, L1-L3 imports+typo+optim. Claude Sonnet 4.5 classification, cold start tracking, 8 catégories, 21 fichiers créés (classifier, prompts, migration 026, tests), correction_rules injection, trust=propose Day 1.
   2-3-detection-vip-urgence: done  # 2026-02-11: CODE REVIEW ADVERSARIAL COMPLETE ✅ - 12 issues fixés (3C+3H+5M+1L). C1: Status ready-for-dev→done. C2: Tasks 5.1-5.3, 6.1-6.4, 4.4 marquées [x]. C3: File List complété (test_vip_urgency_pipeline_e2e.py). H1: DB pool refactoré (bot/main.py + vip_commands.py, anti-pattern connexions directes). H2: Test E2E latence VIP <5s créé (test_vip_notification_latency_e2e.py, AC3 validé). H3: Migration 029 CHECK constraint priority (urgent/high/normal). M1: Rate limiting 10/min ajouté (rate_limiter.py, protection DoS). M2: Tests vip_commands créés (6 tests). M3: Tests consumer VIP+urgency créés (5 tests). M4: Docs mises à jour (telegram-user-guide.md + README.md sections VIP). M5: Doc déplacée vers docs/ (vip-urgency-detection.md). L1: Subtask 4.4 SKIPPED marquée [x]. TOTAL: 75+ tests (69 existants + 6 M2 + 5 M3 + 3 H2). Code quality: EXCELLENT. Zero régression. 9 fichiers créés (migration 029, rate_limiter.py, 3 test files), 6 modifiés (story, bot/main.py, vip_commands.py, docs).
   2-4-extraction-pieces-jointes: done  # 2026-02-11: STORY COMPLETE ✅ - Extraction PJ EmailEngine + zone transit + Redis Streams documents:received + consumer stub + cleanup 24h. AC1-6 TOUS COMPLETS ✅. 9/9 tasks done (62 tests: 20 extraction + 8 Redis + 6 consumer + 10 integration + 5 cleanup + 10 E2E + 8 AC validation). EmailEngineClient wrapper, MIME validation (18 whitelist/25+ blacklist), sanitization 8 étapes, ingestion.attachments table, Telegram Topic Email notifications (count+size+filenames max 5 + inline [View Email]), cron 03:05 cleanup archived >24h, docs 470+ lignes (docs/attachment-extraction.md + README + telegram-user-guide). Pipeline: Email→Extract→Transit→DB→Event→Consumer→Notification→Cleanup. PRODUCTION READY. 15 fichiers créés (models, extractor, consumer stub, cleanup script, dataset, tests), 6 modifiés (consumer.py, docker-compose, cleanup-disk, docs).
-  2-5-brouillon-reponse-email: backlog
+  2-5-brouillon-reponse-email: done  # 2026-02-11: CODE REVIEW ADVERSARIAL COMPLETE ✅ - 17 issues ALL FIXED (3C+5H+5M+4L). C1: subtasks marked. C2: consumer Phase 7. C3: action_executor routing. H1: /draft command registered. H2: 3 E2E tests critiques (email→draft→approve→send + RGPD). H3: DB connection refactor (3 blocs). H4: docs merged (README+telegram-user-guide). H5: sys.path fixes. M1: account mapping → constant. M2: DRY violation removed. M3-M5: TODOs (JSONB/structlog/tokens). L1: File List updated. Tests: +3 E2E critiques. Fichiers: 11 modifiés, 1 créé (test_draft_reply_critical.py). Few-shot learning + Claude temp=0.7 + EmailEngine send PRODUCTION READY. TODOs documentés pour optimisations futures.
   2-6-envoi-emails-approuves: backlog
   2-7-extraction-taches-depuis-emails: backlog
   2-8-filtrage-sender-intelligent-economie-tokens: backlog  # 2026-02-11: Action item Epic 6 retrospective - Filtrage intelligent domaines/senders (whitelist/blacklist permanent). Économie $187/an tokens ($132 migration + $55 runtime). Migration 030, check_sender_filter() avant classification, commandes Telegram /blacklist /whitelist /filters, script extract_email_domains.py, 23 tests (15U+5I+3E2E). Dépend 2.1/2.2/6.4 done. ROI payback 4 mois. M (12-18h).
   epic-2-retrospective: optional
 
-  # Epic 3: Archiviste & Recherche Documentaire (7 stories | 11 FRs)
-  epic-3: backlog
+  # Epic 3: Archiviste & Recherche Documentaire (8 stories | 11+ FRs)
+  epic-3: in-progress
   3-1-ocr-renommage-intelligent: backlog
   3-2-classement-arborescence: backlog
   3-3-recherche-semantique-documents: backlog
@@ -120,6 +120,7 @@ development_status:
   3-5-detection-nouveaux-fichiers: backlog
   3-6-fichiers-via-telegram: backlog
   3-7-traitement-batch-dossier: backlog
+  3-8-scan-dedup-pc: backlog  # 2026-02-11: Story créée - Scan PC-wide (C:\Users\lopez\) + déduplication SHA256 tous fichiers (photos/documents/vidéos). Chemins prioritaires: BeeStation\Photos & BeeStation\Documents. Règles: Emplacement > Résolution > EXIF > Nom. Dry-run CSV obligatoire, suppression validation Telegram. M (12-18h).
   epic-3-retrospective: optional
 
   # Epic 4: Intelligence Proactive & Briefings (7 stories | 8 FRs)

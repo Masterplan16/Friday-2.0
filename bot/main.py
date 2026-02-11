@@ -20,6 +20,7 @@ from bot.config import ConfigurationError, load_bot_config, validate_bot_permiss
 from bot.handlers import (
     backup_commands,
     commands,
+    draft_commands,
     messages,
     recovery_commands,
     trust_budget_commands,
@@ -151,6 +152,9 @@ class FridayBot:
         # Commande Story 1.13 - Self-Healing Recovery Events
         self.application.add_handler(CommandHandler("recovery", recovery_commands.recovery_command))
 
+        # Commande Story 2.5 - Draft Reply Email (H1 fix)
+        self.application.add_handler(CommandHandler("draft", draft_commands.draft_command))
+
         # Commandes Story 1.8 - Trust management (AC4, AC5, AC6)
         self.application.add_handler(CommandHandler("trust", trust_commands.trust_command_router))
 
@@ -167,6 +171,30 @@ class FridayBot:
         if db_pool:
             # C1 fix: Creer ActionExecutor et le passer aux callbacks
             action_executor = ActionExecutor(db_pool)
+
+            # C3 fix: Enregistrer action email.draft_reply (Story 2.5)
+            from bot.action_executor_draft_reply import send_email_via_emailengine
+            import httpx
+
+            async def draft_reply_action(**kwargs):
+                """Wrapper pour send_email_via_emailengine (Story 2.5 AC5)"""
+                receipt_id = kwargs.get('receipt_id')
+                if not receipt_id:
+                    raise ValueError("receipt_id manquant dans payload")
+
+                async with httpx.AsyncClient() as http_client:
+                    result = await send_email_via_emailengine(
+                        receipt_id=receipt_id,
+                        db_pool=db_pool,
+                        http_client=http_client,
+                        emailengine_url=os.getenv('EMAILENGINE_BASE_URL', 'http://localhost:3000'),
+                        emailengine_secret=os.getenv('EMAILENGINE_SECRET')
+                    )
+                return result
+
+            action_executor.register_action("email.draft_reply", draft_reply_action)
+            logger.info("Action email.draft_reply registered in ActionExecutor")
+
             register_callbacks_handlers(self.application, db_pool, action_executor=action_executor)
             register_corrections_handlers(self.application, db_pool)
             logger.info("Story 1.10 callback handlers registered with ActionExecutor")

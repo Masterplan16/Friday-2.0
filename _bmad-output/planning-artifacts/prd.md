@@ -222,13 +222,13 @@ Infrastructure et premiers modules metier formant un systeme autonome et stable.
 
 **8h00 — Petit-dejeuner.** Telephone vibre : briefing matinal Friday dans le topic Chat Telegram.
 
-> "Bonjour Mainteneur. 3 emails urgents (Dr. Martin — resultat labo, Doyen — convocation jury jeudi, comptable — TVA a signer). 12 emails classes automatiquement. 2 PJ archivees (facture EDF → Finances/SELARL/2026/02-Fevrier, courrier ARS → Cabinet/Admin). Julie n'a pas touche son Google Doc depuis 12 jours — soutenance dans 6 semaines. CT voiture dans 45 jours."
+> "Bonjour Mainteneur. 3 emails urgents (Dr. Martin — resultat labo, Doyen — convocation jury jeudi, comptable — TVA a signer). 12 emails classes automatiquement. 2 PJ archivees (facture EDF → finance/selarl/2026/02-Fevrier, courrier ARS → Cabinet/Admin). Julie n'a pas touche son Google Doc depuis 12 jours — soutenance dans 6 semaines. CT voiture dans 45 jours."
 
 Mainteneur lit en 90 secondes. Un email du doyen est mal classe — il corrige via inline button. Friday note la correction.
 
 **8h30 — En voiture.** Mainteneur envoie un vocal Telegram : "Friday, qu'est-ce que j'avais lu sur les inhibiteurs SGLT2 le mois dernier ?". Friday transcrit (Faster-Whisper), cherche dans pgvector (PostgreSQL), repond en vocal (Kokoro TTS) avec les 3 documents les plus pertinents.
 
-**9h-12h — Consultations.** Friday travaille en silence. Emails classes en continu. PJ facture OCR-ee, renommee `2026-02-08_Facture_Labo-Cerba_145EUR.pdf`, classee dans Finances/SELARL/2026/02-Fevrier. Email VIP (comptable) → notification dans topic Email.
+**9h-12h — Consultations.** Friday travaille en silence. Emails classes en continu. PJ facture OCR-ee, renommee `2026-02-08_Facture_Labo-Cerba_145EUR.pdf`, classee dans finance/selarl/2026/02-Fevrier. Email VIP (comptable) → notification dans topic Email.
 
 **14h — Entre deux patients.** 2 actions en attente dans Actions : brouillon reponse email (trust=propose), classement financier incertain (confiance 0.72). Mainteneur approuve le brouillon, corrige le classement. Friday apprend.
 

@@ -541,7 +541,7 @@ OCR, renommage intelligent, classement arborescence, recherche semantique, suivi
 - Finance subdivisée : finance/{selarl|scm|sci_ravas|sci_malbosc|personal}/YYYY/MM-Mois/
 - Classification par LLM (trust=propose les premieres semaines, puis auto)
 - Mainteneur peut modifier l'arborescence via commande Telegram (FR108)
-- Sous-dossiers : Finances/SELARL/YYYY/MM-Mois/, etc.
+- Sous-dossiers : finance/selarl/YYYY/MM-Mois/, etc.
 - Pas de contamination inter-perimetres financiers (FR37 — Epic 8)
 
 **Estimation** : M
@@ -552,7 +552,7 @@ OCR, renommage intelligent, classement arborescence, recherche semantique, suivi
 
 **FRs** : FR11
 
-**Description** : Recherche semantique via pgvector (PostgreSQL) embeddings (Desktop Search D5). [D19]
+**Description** : Recherche semantique via pgvector (PostgreSQL) embeddings (Desktop Search D23). [D19]
 
 **Acceptance Criteria** :
 - Requete texte → top-5 resultats pertinents < 3s (NFR3)

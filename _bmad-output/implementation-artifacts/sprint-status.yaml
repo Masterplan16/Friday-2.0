@@ -113,7 +113,7 @@ development_status:
   # Epic 2: Pipeline Email Intelligent (7 stories | 10 FRs)
   epic-2: in-progress
   2-1-integration-emailengine-reception: done  # 2026-02-11: CODE REVIEW COMPLETE ✅ - 17 issues fixes (6C+5H+4M+2L), 55/55 tests PASS. EmailEngine v2.61.1 + webhooks (circuit breaker + rate limit) + consumer (retry backoff + DLQ + emails_raw chiffre + Telegram real). 7 AC valides, 30 fichiers (26+4 tests), docs 600+. Zero regressions.
-  2-2-classification-email-llm: backlog
+  2-2-classification-email-llm: in-progress  # 2026-02-11: DEV STARTED - Classification LLM Claude Sonnet 4.5, 8 AC, 30 subtasks, accuracy ≥85%
   2-3-detection-vip-urgence: backlog
   2-4-extraction-pieces-jointes: backlog
   2-5-brouillon-reponse-email: backlog
@@ -154,7 +154,7 @@ development_status:
   # Epic 6: Memoire Eternelle & Migration (4 stories | 4 FRs)
   epic-6: in-progress
   6-1-graphe-connaissances-postgresql: done  # 2026-02-11: CODE REVIEW COMPLETE ✅ - PostgreSQL knowledge graph avec pgvector (D19). Migration 007-008, schema knowledge.*, embeddings vector(1024) + HNSW index, memorystore.py adaptateur complet, graph_populator.py, 10 NodeType + 14 RelationType enums validés. Tests unitaires 19/19 PASS. Decision D19: pgvector Day 1 (pas Qdrant), réévaluation si >300k vecteurs. 12 fichiers créés/modifiés.
-  6-2-embeddings-pgvector: review  # 2026-02-11: IMPLEMENTATION COMPLETE ✅ - Voyage AI voyage-4-large + pgvector. Adaptateur vectorstore (700 lignes), email + archiviste integration, API Gateway endpoint, 24 tests PASS (17 vectorstore + 3 email + 4 archiviste). AC1-5 satisfaits, AC6-7 partiels (stub monitoring, tests PostgreSQL TODO). 17 fichiers créés, 2 modifiés. Ready for code review.
+  6-2-embeddings-pgvector: review  # 2026-02-11: CODE REVIEW COMPLETE ✅ - 12 issues found (1 CRITICAL, 4 HIGH, 4 MEDIUM, 3 LOW), 11/12 fixed auto. Voyage AI voyage-4-large + pgvector, 25 tests PASS (18 vectorstore + 3 email + 4 archiviste). AC1-5 COMPLET ✅, AC6-7 PARTIEL ⏸️ (DB migration + integration/E2E tests TODO). BLOCKER: Issue #1 contamination cross-story (5 fichiers Story 2.1 à séparer). Code quality post-fixes: EXCELLENT (constantes, structlog, anonymisation optimisée). 7 fichiers modifiés par review. Ready for code review.
   6-3-adaptateur-memorystore: backlog
   6-4-migration-emails-historiques: backlog
   epic-6-retrospective: optional

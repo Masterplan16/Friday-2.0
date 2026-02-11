@@ -498,9 +498,7 @@ class MemorystoreAdapter:
             for row in rows
         ]
 
-    async def get_node_with_relations(
-        self, node_id: str, depth: int = 1
-    ) -> dict[str, Any]:
+    async def get_node_with_relations(self, node_id: str, depth: int = 1) -> dict[str, Any]:
         """
         Récupère un nœud avec ses relations sur N niveaux de profondeur.
 

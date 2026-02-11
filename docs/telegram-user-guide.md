@@ -107,6 +107,78 @@ Friday initie la conversation :
 
 ---
 
+## 🌟 Commandes VIP & Urgence (Story 2.3)
+
+### Gérer vos expéditeurs VIP
+
+Friday peut détecter automatiquement les emails importants via le système VIP. Vous pouvez désigner manuellement des expéditeurs comme VIP pour recevoir des notifications prioritaires.
+
+**Commandes disponibles :**
+
+```
+/vip add <email> <label>    Ajouter un expéditeur VIP
+/vip list                    Lister tous les VIPs actifs
+/vip remove <email>          Retirer un VIP (soft delete)
+```
+
+### Exemples d'usage
+
+**Ajouter un VIP :**
+```
+/vip add doyen@univ-med.fr Doyen Faculté Médecine
+```
+→ Friday confirmera :
+```
+✅ VIP ajouté avec succès
+
+Email (anonymisé) : [EMAIL_a1b2c3d4]
+Label : Doyen Faculté Médecine
+Source : Ajout manuel
+```
+
+**Lister vos VIPs :**
+```
+/vip list
+```
+→ Friday affichera :
+```
+📋 Liste des VIPs (3 total)
+
+👤 Doyen Faculté Médecine
+   Email : [EMAIL_a1b2c3d4]
+   Emails reçus : 15 | Dernier : 2026-02-10
+
+👤 Comptable SCM
+   Email : [EMAIL_e5f6g7h8]
+   Emails reçus : 42 | Dernier : 2026-02-11
+```
+
+**Retirer un VIP :**
+```
+/vip remove doyen@univ-med.fr
+```
+
+### Détection urgence automatique
+
+Friday détecte automatiquement les emails urgents via un algorithme multi-facteurs :
+- **Facteur VIP** : Expéditeur VIP (poids 0.5)
+- **Facteur keywords** : Mots-clés urgence ("URGENT", "deadline", "avant demain", etc.)
+- **Facteur deadline** : Patterns de deadline détectés
+
+**Seuil urgence** : Score >= 0.6 → Email classé urgent
+
+**Notifications :**
+- Email VIP → Topic **Email & Communications**
+- Email URGENT → Topic **Actions & Validations** (notification push)
+
+### Confidentialité & Sécurité
+
+- ✅ Emails VIP **anonymisés via Presidio** avant stockage (RGPD)
+- ✅ Hash SHA256 utilisé pour lookup (pas d'accès PII)
+- ✅ Seul le **Mainteneur** peut ajouter/retirer des VIPs
+
+---
+
 ## 📬 Topic 2 : Email & Communications
 
 ### Rôle

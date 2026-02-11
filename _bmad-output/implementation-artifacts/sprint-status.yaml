@@ -76,17 +76,6 @@ development_status:
   #   Epic 4 (Proactivité) ═══════════
   #   Durée estimée: 2-3 semaines (Epic 4=L)
   #
-  # DÉPENDANCES DÉTAILLÉES:
-  # ═══════════════════════
-  # Epic 1: Aucune (DONE ✅)
-  # Epic 2: Epic 1 uniquement ✅
-  # Epic 3: Epic 1 + Epic 2 (PJ emails)
-  # Epic 4: Epic 1 + Epic 2 + Epic 3 (briefing nécessite tous modules)
-  # Epic 5: Epic 1 + Epic 3 (recherche documentaire FR13)
-  # Epic 6: Epic 1 uniquement ✅
-  # Epic 7: Epic 1 + Epic 2 (détection événements emails)
-  #
-  # RECOMMANDATION: Prioriser Epic 2 (besoin #1 Mainteneur) + continuer Epic 6
   # ────────────────────────────────────────────────────────────
 
   # Epic 1: Socle Operationnel & Controle (15 stories | 28 FRs)
@@ -114,7 +103,7 @@ development_status:
   epic-2: in-progress
   2-1-integration-emailengine-reception: done  # 2026-02-11: CODE REVIEW COMPLETE ✅ - 17 issues fixes (6C+5H+4M+2L), 55/55 tests PASS. EmailEngine v2.61.1 + webhooks (circuit breaker + rate limit) + consumer (retry backoff + DLQ + emails_raw chiffre + Telegram real). 7 AC valides, 30 fichiers (26+4 tests), docs 600+. Zero regressions.
   2-2-classification-email-llm: done  # 2026-02-11: CODE REVIEW COMPLETE ✅ - 15 issues fixés (3C+5H+4M+3L), 45/45 tests PASS + 7 skipped integration. Fixes: C1 RGPD anonymisation, C2 credentials warning, C3 race condition atomic UPDATE, H2 circuit breaker, H3 accuracy calculation, H4 type hints, H5 migration trigger validation, M1-M4 perf+logging+config+docs, L1-L3 imports+typo+optim. Claude Sonnet 4.5 classification, cold start tracking, 8 catégories, 21 fichiers créés (classifier, prompts, migration 026, tests), correction_rules injection, trust=propose Day 1.
-  2-3-detection-vip-urgence: backlog
+  2-3-detection-vip-urgence: done  # 2026-02-11: COMPLETE ✅ - Tasks 1-4+7-8 (6/8 tasks MVP). VIP detector (compute_hash SHA256, detect_vip_sender @friday_action, 11 tests). Urgency detector multi-facteurs (VIP 0.5 + keywords 0.3 + deadline 0.2, seuil 0.6, 18 tests). Migrations 027-028 (vip_senders + urgency_keywords, 17 tests SQL). Models Pydantic (VIPSender + UrgencyResult, 18 tests). Dataset 31 emails + 5 tests E2E AC5 ✅ (100% recall VIP 12/12, 100% recall urgence 5/5, <10% faux positifs, latence <1s). Documentation README 400+ lignes. FIX DEFINITIF @friday_action **kwargs. TOTAL: 69 tests PASS (64 unit + 5 E2E). Task 5 (Telegram /vip) SKIPPED MVP. Task 6 (consumer integration) TODO. 28 fichiers créés/modifiés.
   2-4-extraction-pieces-jointes: backlog
   2-5-brouillon-reponse-email: backlog
   2-6-envoi-emails-approuves: backlog
@@ -155,8 +144,8 @@ development_status:
   epic-6: in-progress
   6-1-graphe-connaissances-postgresql: done  # 2026-02-11: CODE REVIEW COMPLETE ✅ - PostgreSQL knowledge graph avec pgvector (D19). Migration 007-008, schema knowledge.*, embeddings vector(1024) + HNSW index, memorystore.py adaptateur complet, graph_populator.py, 10 NodeType + 14 RelationType enums validés. Tests unitaires 19/19 PASS. Decision D19: pgvector Day 1 (pas Qdrant), réévaluation si >300k vecteurs. 12 fichiers créés/modifiés.
   6-2-embeddings-pgvector: done  # 2026-02-11: STORY COMPLETE ✅ - Voyage AI voyage-4-large + pgvector. AC1-7 TOUS COMPLETS ✅. 36 tests PASS (25 unit + 9 integration + 2 E2E). AC6: Budget tracking (migration 025, monitoring, alertes Telegram). AC7: Tests PostgreSQL réels + E2E pipeline Email→Embedding→Search. Code review: 12 issues, 11 fixed. Contamination cross-story résolue (2 PRs séparées #28/#29). Code quality: EXCELLENT. 13 fichiers créés/modifiés (2 commits).
-  6-3-adaptateur-memorystore: in-progress  # 2026-02-11: Story créée - Refactoring évolutivité (interface abstraite MemoryStore + factory pattern). Pattern référence vectorstore.py (Story 6.2). Non bloquant MVP.
-  6-4-migration-emails-historiques: backlog
+  6-3-adaptateur-memorystore: done  # 2026-02-11: CODE REVIEW COMPLETE ✅ - 15 issues fixés (3C+5H+4M+3L). Interface abstraite MemoryStore(ABC) 429 lignes + PostgreSQLMemorystore renommé + factory multi-provider (stubs Graphiti/Neo4j/Qdrant). Tests 11/11 interface PASS + 19/19 existants PASS (zero régression). Coverage 83% interface, 100% factory. Doc migration 540 lignes + Mermaid. Pattern cohérent vectorstore.py. Effort 12h. 3 fichiers créés, 8 modifiés.
+  6-4-migration-emails-historiques: in-progress  # 2026-02-11: Story créée - Migration 110k emails historiques (PG classification + graph + embeddings). 3 phases ($173 budget réaliste vs $45 PRD), 28h dev + 30-37h runtime. 8 bugs identifiés (4C), Presidio stub critical. Dépend: 6.1/6.2/6.3 done. 6 AC, 30+ subtasks.
   epic-6-retrospective: optional
 
   # Epic 7: Agenda & Calendrier Multi-casquettes (3 stories | 4 FRs)

@@ -5,5 +5,6 @@ Schémas de validation et structures de données.
 """
 
 from agents.src.models.email_classification import EmailClassification
+from agents.src.models.vip_detection import UrgencyResult, VIPSender
 
-__all__ = ["EmailClassification"]
+__all__ = ["EmailClassification", "VIPSender", "UrgencyResult"]

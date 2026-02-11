@@ -29,6 +29,7 @@ import json
 import logging
 import os
 import re
+import sys
 import tempfile
 import time
 from dataclasses import dataclass
@@ -37,6 +38,15 @@ from pathlib import Path
 from typing import Optional
 
 import asyncpg
+
+# Add agents/src to Python path for imports
+sys.path.insert(0, str(Path(__file__).parent.parent / "agents" / "src"))
+
+# Import Presidio anonymization (Story 6.4 Subtask 2.1)
+from tools.anonymize import anonymize_text, AnonymizationResult
+
+# Import Claude LLM adapter (Story 6.4 Subtask 2.2)
+from adapters.llm import ClaudeAdapter, LLMResponse
 
 # Configuration (chargée depuis variables d'environnement - jamais hardcodé)
 # Pas de valeurs par défaut pour les secrets (age/SOPS pour secrets, voir architecture)
@@ -109,13 +119,17 @@ class EmailMigrator:
         return logging.getLogger(__name__)
 
     async def connect(self):
-        """Connexion PostgreSQL + Anthropic"""
+        """Connexion PostgreSQL + Claude Sonnet 4.5"""
         self.logger.info("Connexion à PostgreSQL...")
         self.db = await asyncpg.connect(POSTGRES_DSN)
 
-        self.logger.info("Connexion à Anthropic API (Claude Sonnet 4.5)...")
-        # TODO: Initialiser AnthropicAdapter
-        # self.llm_client = AnthropicAdapter(api_key=ANTHROPIC_API_KEY)
+        self.logger.info("Connexion à Claude Sonnet 4.5 (Anthropic API)...")
+        # Story 6.4 Subtask 2.2: Initialiser ClaudeAdapter
+        self.llm_client = ClaudeAdapter(
+            api_key=ANTHROPIC_API_KEY,
+            model="claude-sonnet-4-5-20250929",
+            anonymize_by_default=False  # Déjà anonymisé par anonymize_for_classification()
+        )
 
     async def load_checkpoint(self) -> Optional[MigrationState]:
         """Charge le checkpoint si existe"""
@@ -204,20 +218,30 @@ class EmailMigrator:
         if self.dry_run:
             return raw_text
 
-        # TODO(Story 1.5): Brancher sur agents/src/tools/anonymize.py
-        # from agents.src.tools.anonymize import anonymize_text
-        # anonymized, mapping = await anonymize_text(
-        #     raw_text, context=f"migration_{email['message_id']}"
-        # )
-        # return anonymized
+        # RGPD: Anonymisation Presidio OBLIGATOIRE (Story 6.4 Subtask 2.1)
+        try:
+            result: AnonymizationResult = await anonymize_text(
+                raw_text,
+                context=f"migration_email_{email['message_id']}"
+            )
 
-        # RGPD: JAMAIS envoyer de PII au cloud sans anonymisation
-        raise NotImplementedError(
-            "Presidio anonymization non implementee. "
-            "RGPD interdit l'envoi de PII au LLM cloud sans anonymisation. "
-            "Implementer agents/src/tools/anonymize.py (Story 1.5) avant d'utiliser "
-            "ce script en mode reel."
-        )
+            # Log anonymisation (structlog serait mieux mais logging suffit pour migration)
+            self.logger.info(
+                f"Email {email['message_id']}: {len(result.entities_found)} entités PII détectées "
+                f"(confidence min: {result.confidence_min:.2f})"
+            )
+
+            # TODO: Stocker mapping dans Redis (TTL 24h) si besoin de dé-anonymisation
+            # Pour migration batch, le mapping n'est pas utilisé après classification
+            # donc on ne le stocke pas pour économiser RAM Redis
+
+            return result.anonymized_text
+
+        except Exception as e:
+            self.logger.error(
+                f"Erreur anonymisation Presidio pour email {email['message_id']}: {e}"
+            )
+            raise
 
     async def classify_email(self, email: dict, retry_count: int = 0) -> dict:
         """
@@ -230,16 +254,7 @@ class EmailMigrator:
             await asyncio.sleep(self.rate_limit_delay)
 
             # RGPD: Anonymiser AVANT l'appel LLM cloud
-            _anonymized_content = await self.anonymize_for_classification(email)  # noqa: F841
-
-            # Appel Claude Sonnet 4.5 (TODO: implémenter avec contenu anonymisé)
-            # response = await self.llm_client.complete(
-            #     messages=[{
-            #         "role": "user",
-            #         "content": f"Classe cet email:\n{anonymized_content}"
-            #     }],
-            #     model="claude-sonnet-4-5-20250929"
-            # )
+            anonymized_content = await self.anonymize_for_classification(email)
 
             if self.dry_run:
                 # Dry run: simuler classification
@@ -250,13 +265,31 @@ class EmailMigrator:
                     "keywords": ["test"],
                 }
 
-            # Parse response (TODO)
-            return {
-                "category": "uncategorized",
-                "priority": "low",
-                "confidence": 0.5,
-                "keywords": [],
-            }
+            # Appel Claude Sonnet 4.5 (texte déjà anonymisé → complete_raw)
+            prompt = f"""Classifie cet email en JSON strict.
+
+Email:
+{anonymized_content}
+
+Réponds UNIQUEMENT en JSON (pas de markdown, pas de texte supplémentaire):
+{{
+  "category": "medical|financial|administrative|professional|personal",
+  "priority": "urgent|high|medium|low",
+  "confidence": 0.0-1.0,
+  "keywords": ["mot1", "mot2"]
+}}"""
+
+            response = await self.llm_client.complete_raw(
+                prompt=prompt, max_tokens=512  # Classification courte
+            )
+
+            # Parser la réponse JSON
+            classification = self._parse_classification(response.content)
+
+            # Tracker usage API pour coûts réels
+            self._track_api_usage(response.usage)
+
+            return classification
 
         except Exception as e:
             if retry_count < MAX_RETRIES:
@@ -271,6 +304,96 @@ class EmailMigrator:
             else:
                 self.logger.error("Echec classification apres %d tentatives: %s", MAX_RETRIES, e)
                 raise
+
+    def _parse_classification(self, response_content: str) -> dict:
+        """
+        Parse la réponse JSON de Claude.
+
+        Args:
+            response_content: Réponse texte brute de Claude
+
+        Returns:
+            dict avec category, priority, confidence, keywords
+
+        Raises:
+            ValueError: Si parsing JSON échoue ou format invalide
+        """
+        try:
+            # Nettoyer markdown potentiel (```json ... ```)
+            content = response_content.strip()
+            if content.startswith("```"):
+                # Extraire JSON entre ```json et ```
+                match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", content, re.DOTALL)
+                if match:
+                    content = match.group(1)
+                else:
+                    # Fallback: enlever juste les balises
+                    content = re.sub(r"```(?:json)?", "", content).strip()
+
+            # Parser JSON
+            data = json.loads(content)
+
+            # Valider structure
+            required_fields = {"category", "priority", "confidence", "keywords"}
+            if not required_fields.issubset(data.keys()):
+                missing = required_fields - data.keys()
+                raise ValueError(f"Champs manquants dans la réponse: {missing}")
+
+            # Valider types
+            if not isinstance(data["confidence"], (int, float)):
+                raise ValueError(f"confidence doit être numérique, reçu: {type(data['confidence'])}")
+            if not isinstance(data["keywords"], list):
+                raise ValueError(f"keywords doit être une liste, reçu: {type(data['keywords'])}")
+
+            # Normaliser confidence (0.0-1.0)
+            data["confidence"] = float(data["confidence"])
+            if not 0.0 <= data["confidence"] <= 1.0:
+                self.logger.warning(
+                    "Confidence hors limites (%s), normalisée à [0,1]", data["confidence"]
+                )
+                data["confidence"] = max(0.0, min(1.0, data["confidence"]))
+
+            return data
+
+        except json.JSONDecodeError as e:
+            self.logger.error("Erreur parsing JSON: %s\nContenu: %s", e, response_content[:200])
+            raise ValueError(f"Réponse Claude invalide (pas JSON): {e}") from e
+        except Exception as e:
+            self.logger.error("Erreur validation classification: %s", e)
+            raise
+
+    def _track_api_usage(self, usage: dict) -> None:
+        """
+        Track l'usage API réel pour calcul coûts précis.
+
+        Args:
+            usage: dict avec input_tokens et output_tokens de LLMResponse
+
+        Claude Sonnet 4.5 pricing (au 2026-02):
+            - Input: $3.00 / 1M tokens
+            - Output: $15.00 / 1M tokens
+        """
+        input_tokens = usage.get("input_tokens", 0)
+        output_tokens = usage.get("output_tokens", 0)
+
+        # Calcul coût réel (en USD)
+        input_cost = (input_tokens / 1_000_000) * 3.00
+        output_cost = (output_tokens / 1_000_000) * 15.00
+        total_cost = input_cost + output_cost
+
+        # Mise à jour état (remplace l'estimation fixe 0.003)
+        self.state.estimated_cost += total_cost
+
+        # Log tous les 1000 emails pour monitoring
+        if self.state.processed % 1000 == 0:
+            self.logger.info(
+                "API usage: %d input tokens (%.4f$) + %d output tokens (%.4f$) = %.4f$ total",
+                input_tokens,
+                input_cost,
+                output_tokens,
+                output_cost,
+                total_cost,
+            )
 
     async def migrate_email(self, email: dict) -> None:
         """Migre un email (classification + insertion)"""
@@ -300,11 +423,8 @@ class EmailMigrator:
             # 3. Publier event Redis (pour pipeline downstream: extraction PJ, graphe, etc.)
             # TODO: redis.publish('email.migrated', {'email_id': email['message_id']})
 
-            # 4. Update cost estimation
-            # ~600 tokens/email avg (500 input + 100 output) selon roadmap
-            # Claude Sonnet 4.5: $3/1M input + $15/1M output
-            # 500 tokens input × $3/1M + 100 tokens output × $15/1M = $0.003/email
-            self.state.estimated_cost += 0.003
+            # 4. Le coût API est tracké automatiquement dans classify_email()
+            # via _track_api_usage() avec les tokens réels
 
             self.state.processed += 1
             self.state.last_email_id = email["message_id"]

@@ -21,6 +21,7 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, Optional
 from datetime import datetime
+import time
 
 import asyncpg
 import httpx
@@ -65,9 +66,12 @@ DATABASE_URL = os.getenv('DATABASE_URL', 'postgresql://friday:friday@localhost:5
 EMAILENGINE_URL = os.getenv('EMAILENGINE_BASE_URL', 'http://localhost:3000')
 EMAILENGINE_SECRET = os.getenv('EMAILENGINE_SECRET')
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
+TELEGRAM_SUPERGROUP_ID = os.getenv('TELEGRAM_SUPERGROUP_ID')
 TOPIC_EMAIL_ID = os.getenv('TOPIC_EMAIL_ID')
+EMAILENGINE_ENCRYPTION_KEY = os.getenv('EMAILENGINE_ENCRYPTION_KEY')
 
 STREAM_NAME = 'emails:received'
+STREAM_DLQ = 'emails:failed'
 CONSUMER_GROUP = 'email-processor-group'
 CONSUMER_NAME = f'consumer-{os.getpid()}'
 
@@ -192,17 +196,26 @@ class EmailProcessorConsumer:
                 message_id=message_id
             )
 
-            # Étape 1: Fetch email complet depuis EmailEngine
-            email_full = await self.fetch_email_from_emailengine(account_id, message_id)
+            # Étape 1: Fetch email complet depuis EmailEngine (avec retry backoff)
+            email_full = await self.fetch_email_from_emailengine(account_id, message_id, max_retries=6)
 
             if not email_full:
-                logger.error("email_fetch_failed", message_id=message_id)
-                # Ne pas XACK, message restera dans PEL pour retry
+                logger.error("email_fetch_failed_max_retries", message_id=message_id)
+                # Publier dans DLQ emails:failed
+                await self.send_to_dlq(event_id, payload, error="EmailEngine fetch failed after 6 retries")
+                # XACK pour retirer du PEL (échec définitif, en DLQ maintenant)
+                await self.redis.xack(STREAM_NAME, CONSUMER_GROUP, event_id)
                 return
 
+            # Extraire données raw (AVANT anonymisation, pour stockage chiffré)
+            from_raw = email_full.get('from', {}).get('address', 'unknown')
+            from_name = email_full.get('from', {}).get('name', '')
+            to_raw = ', '.join([addr.get('address', '') for addr in email_full.get('to', [])])
+            subject_raw = email_full.get('subject', '(no subject)')
+            body_text_raw = email_full.get('text', email_full.get('html', ''))
+
             # Étape 2: Anonymiser body complet
-            body_text = email_full.get('text', email_full.get('html', ''))
-            body_anon = await anonymize_text(body_text) if body_text else ""
+            body_anon = await anonymize_text(body_text_raw) if body_text_raw else ""
 
             logger.info("email_anonymized", message_id=message_id, body_length=len(body_anon))
 
@@ -211,8 +224,8 @@ class EmailProcessorConsumer:
             category = "inbox"
             confidence = 0.5
 
-            # Étape 4: Stocker dans PostgreSQL
-            await self.store_email_in_database(
+            # Étape 4: Stocker dans PostgreSQL (email anonymisé + email raw chiffré)
+            email_id = await self.store_email_in_database(
                 account_id=account_id,
                 message_id=message_id,
                 from_anon=from_anon,
@@ -221,7 +234,12 @@ class EmailProcessorConsumer:
                 category=category,
                 confidence=confidence,
                 received_at=date_str,
-                has_attachments=has_attachments
+                has_attachments=has_attachments,
+                # Données raw pour stockage chiffré
+                from_raw=f"{from_name} <{from_raw}>" if from_name else from_raw,
+                to_raw=to_raw,
+                subject_raw=subject_raw,
+                body_raw=body_text_raw
             )
 
             # Étape 5: Notification Telegram
@@ -256,29 +274,152 @@ class EmailProcessorConsumer:
     async def fetch_email_from_emailengine(
         self,
         account_id: str,
-        message_id: str
+        message_id: str,
+        max_retries: int = 6
     ) -> Optional[Dict]:
-        """Fetch email complet depuis EmailEngine API"""
+        """
+        Fetch email complet depuis EmailEngine API avec retry backoff exponentiel
+
+        Args:
+            account_id: ID compte EmailEngine
+            message_id: ID message
+            max_retries: Nombre max de retries (défaut 6)
+
+        Returns:
+            Email JSON ou None si échec après retries
+
+        Retry policy:
+            - Backoff: 1s, 2s, 4s, 8s, 16s, 32s (total ~63s)
+            - Max 6 retries
+        """
+        for attempt in range(max_retries + 1):
+            try:
+                response = await self.http_client.get(
+                    f'{EMAILENGINE_URL}/v1/account/{account_id}/message/{message_id}',
+                    headers={'Authorization': f'Bearer {EMAILENGINE_SECRET}'}
+                )
+
+                if response.status_code == 200:
+                    if attempt > 0:
+                        logger.info(
+                            "emailengine_fetch_success_after_retry",
+                            message_id=message_id,
+                            attempt=attempt + 1
+                        )
+                    return response.json()
+                else:
+                    logger.error(
+                        "emailengine_fetch_failed",
+                        account_id=account_id,
+                        message_id=message_id,
+                        status_code=response.status_code,
+                        attempt=attempt + 1
+                    )
+
+            except Exception as e:
+                logger.error(
+                    "emailengine_request_error",
+                    message_id=message_id,
+                    error=str(e),
+                    attempt=attempt + 1
+                )
+
+            # Si pas encore au max retries, attendre avec backoff exponentiel
+            if attempt < max_retries:
+                backoff_seconds = 2 ** attempt  # 1s, 2s, 4s, 8s, 16s, 32s
+                logger.info(
+                    "emailengine_retry_backoff",
+                    message_id=message_id,
+                    attempt=attempt + 1,
+                    next_retry_seconds=backoff_seconds
+                )
+                await asyncio.sleep(backoff_seconds)
+
+        # Après max_retries tentatives, échec définitif
+        logger.error(
+            "emailengine_fetch_max_retries_exceeded",
+            message_id=message_id,
+            max_retries=max_retries
+        )
+        return None
+
+    async def send_to_dlq(self, event_id: str, payload: Dict[str, str], error: str):
+        """
+        Envoyer événement échoué dans Dead-Letter Queue (DLQ)
+
+        Args:
+            event_id: ID de l'événement original
+            payload: Payload original
+            error: Message d'erreur
+        """
+        dlq_event = {
+            **payload,
+            'original_event_id': event_id,
+            'error': error,
+            'failed_at': datetime.utcnow().isoformat(),
+            'retry_count': '6'  # Max retries atteint
+        }
+
         try:
-            response = await self.http_client.get(
-                f'{EMAILENGINE_URL}/v1/account/{account_id}/message/{message_id}',
-                headers={'Authorization': f'Bearer {EMAILENGINE_SECRET}'}
+            dlq_id = await self.redis.xadd(STREAM_DLQ, dlq_event)
+            logger.error(
+                "email_sent_to_dlq",
+                message_id=payload.get('message_id'),
+                dlq_id=dlq_id,
+                error=error
             )
 
-            if response.status_code == 200:
-                return response.json()
-            else:
-                logger.error(
-                    "emailengine_fetch_failed",
-                    account_id=account_id,
-                    message_id=message_id,
-                    status_code=response.status_code
-                )
-                return None
+            # Alerte Telegram topic System
+            await self.send_telegram_alert_dlq(
+                message_id=payload.get('message_id'),
+                account_id=payload.get('account_id'),
+                error=error
+            )
 
         except Exception as e:
-            logger.error("emailengine_request_error", error=str(e))
-            return None
+            logger.error("dlq_publish_failed", error=str(e), exc_info=True)
+
+    async def send_telegram_alert_dlq(self, message_id: str, account_id: str, error: str):
+        """Envoyer alerte Telegram pour email en DLQ"""
+        if not TELEGRAM_BOT_TOKEN or not TELEGRAM_SUPERGROUP_ID:
+            logger.warning("telegram_not_configured_for_dlq_alert")
+            return
+
+        try:
+            # Message d'alerte
+            alert_text = (
+                f"ALERTE Email echoue apres 6 retries\n\n"
+                f"Account: {account_id}\n"
+                f"Message ID: {message_id}\n"
+                f"Erreur: {error}\n\n"
+                f"L'email est dans la DLQ emails:failed"
+            )
+
+            # Envoyer vers topic System (TOPIC_SYSTEM_ID)
+            topic_system_id = os.getenv('TOPIC_SYSTEM_ID')
+
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    f'https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage',
+                    json={
+                        'chat_id': TELEGRAM_SUPERGROUP_ID,
+                        'message_thread_id': topic_system_id,
+                        'text': alert_text,
+                        'parse_mode': 'HTML'
+                    }
+                )
+
+                if response.status_code == 200:
+                    logger.info("dlq_alert_sent_telegram", message_id=message_id)
+                else:
+                    logger.error(
+                        "dlq_alert_failed",
+                        status_code=response.status_code,
+                        response=response.text
+                    )
+
+        except Exception as e:
+            logger.error("dlq_alert_exception", error=str(e))
 
     async def store_email_in_database(
         self,
@@ -290,10 +431,21 @@ class EmailProcessorConsumer:
         category: str,
         confidence: float,
         received_at: str,
-        has_attachments: bool
-    ):
-        """Store email dans PostgreSQL ingestion.emails"""
-        await self.db.execute(
+        has_attachments: bool,
+        # Données raw pour stockage chiffré
+        from_raw: str,
+        to_raw: str,
+        subject_raw: str,
+        body_raw: str
+    ) -> str:
+        """
+        Store email dans PostgreSQL ingestion.emails + ingestion.emails_raw (chiffré)
+
+        Returns:
+            email_id (UUID) de l'email inséré
+        """
+        # Étape 1: Insérer email anonymisé dans ingestion.emails
+        email_id = await self.db.fetchval(
             """
             INSERT INTO ingestion.emails (
                 account_id, message_id, from_anon, subject_anon, body_anon,
@@ -306,6 +458,7 @@ class EmailProcessorConsumer:
                 category = EXCLUDED.category,
                 confidence = EXCLUDED.confidence,
                 processed_at = CURRENT_TIMESTAMP
+            RETURNING id
             """,
             account_id,
             message_id,
@@ -318,7 +471,38 @@ class EmailProcessorConsumer:
             has_attachments
         )
 
-        logger.info("email_stored_database", message_id=message_id)
+        logger.info("email_stored_database", message_id=message_id, email_id=str(email_id))
+
+        # Étape 2: Insérer email raw chiffré dans ingestion.emails_raw
+        # Chiffrement pgcrypto avec EMAILENGINE_ENCRYPTION_KEY
+        await self.db.execute(
+            """
+            INSERT INTO ingestion.emails_raw (
+                email_id, from_encrypted, to_encrypted, subject_encrypted, body_encrypted
+            ) VALUES (
+                $1,
+                pgp_sym_encrypt($2, $3),
+                pgp_sym_encrypt($4, $3),
+                pgp_sym_encrypt($5, $3),
+                pgp_sym_encrypt($6, $3)
+            )
+            ON CONFLICT (email_id) DO UPDATE SET
+                from_encrypted = EXCLUDED.from_encrypted,
+                to_encrypted = EXCLUDED.to_encrypted,
+                subject_encrypted = EXCLUDED.subject_encrypted,
+                body_encrypted = EXCLUDED.body_encrypted
+            """,
+            email_id,
+            from_raw,
+            EMAILENGINE_ENCRYPTION_KEY,
+            to_raw,
+            subject_raw,
+            body_raw
+        )
+
+        logger.info("email_raw_stored_encrypted", message_id=message_id, email_id=str(email_id))
+
+        return str(email_id)
 
     async def send_telegram_notification(
         self,
@@ -327,19 +511,46 @@ class EmailProcessorConsumer:
         subject_anon: str,
         category: str
     ):
-        """Send notification to Telegram topic Email"""
-        if not TELEGRAM_BOT_TOKEN or not TOPIC_EMAIL_ID:
-            logger.warning("telegram_not_configured")
+        """Envoyer notification Telegram topic Email"""
+        if not TELEGRAM_BOT_TOKEN or not TELEGRAM_SUPERGROUP_ID or not TOPIC_EMAIL_ID:
+            logger.warning("telegram_not_configured_skip_notification")
             return
 
         try:
-            # TODO: Implémenter envoi Telegram via bot API
-            # Format: "📬 Nouvel email : [subject_anon] de [from_anon] - Catégorie: inbox"
-            logger.info(
-                "telegram_notification_sent",
-                account_id=account_id,
-                category=category
+            # Format message notification (sans emojis)
+            notification_text = (
+                f"Nouvel email : {subject_anon}\n"
+                f"De : {from_anon}\n"
+                f"Categorie : {category}\n"
+                f"Compte : {account_id}"
             )
+
+            # Envoyer vers topic Email
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    f'https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage',
+                    json={
+                        'chat_id': TELEGRAM_SUPERGROUP_ID,
+                        'message_thread_id': TOPIC_EMAIL_ID,
+                        'text': notification_text,
+                        'parse_mode': 'HTML'
+                    },
+                    timeout=10.0
+                )
+
+                if response.status_code == 200:
+                    logger.info(
+                        "telegram_notification_sent",
+                        account_id=account_id,
+                        category=category
+                    )
+                else:
+                    logger.error(
+                        "telegram_notification_failed",
+                        status_code=response.status_code,
+                        response=response.text[:200]
+                    )
+
         except Exception as e:
             logger.error("telegram_notification_error", error=str(e))
 

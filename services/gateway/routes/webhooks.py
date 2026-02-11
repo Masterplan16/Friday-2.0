@@ -22,6 +22,9 @@ from datetime import datetime
 from fastapi import APIRouter, HTTPException, Header, Request, Depends
 from pydantic import BaseModel, Field
 import redis.asyncio as redis
+from aiobreaker import CircuitBreaker
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 # Imports internes (paths relatifs depuis services/gateway/)
 import sys
@@ -36,6 +39,19 @@ from services.gateway.config import get_settings
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/webhooks", tags=["webhooks"])
+
+# Rate limiter: 100 requêtes par minute par IP
+limiter = Limiter(key_func=get_remote_address)
+
+# Circuit breaker: open après 5 échecs, half-open après 30s
+webhook_circuit_breaker = CircuitBreaker(
+    fail_max=5,
+    timeout_duration=30,
+    expected_exception=Exception
+)
+
+# Limite taille body webhook (10 MB max)
+MAX_WEBHOOK_BODY_SIZE = 10 * 1024 * 1024  # 10 MB
 
 
 # ============================================
@@ -130,6 +146,7 @@ def verify_webhook_signature(
 # ============================================
 
 @router.post("/emailengine/{account_id}")
+@limiter.limit("100/minute")  # Rate limiting: 100 req/min par IP
 async def webhook_emailengine_message_new(
     account_id: str,
     request: Request,
@@ -140,15 +157,19 @@ async def webhook_emailengine_message_new(
     Webhook EmailEngine - Nouvel email reçu (messageNew)
 
     Flow:
-        1. Valider signature HMAC-SHA256
-        2. Parser payload EmailEngine
-        3. Anonymiser from/subject/body (Presidio)
-        4. Publier événement Redis Streams "emails:received"
-        5. Retourner 200 OK
+        1. Valider taille body (<10MB)
+        2. Valider signature HMAC-SHA256
+        3. Parser payload EmailEngine
+        4. Anonymiser from/subject/body (Presidio)
+        5. Publier événement Redis Streams "emails:received" (via circuit breaker)
+        6. Retourner 200 OK
 
     Security:
         - Signature HMAC-SHA256 obligatoire (X-EE-Signature header)
         - Secret partagé WEBHOOK_SECRET dans .env
+        - Rate limiting: 100 req/min par IP
+        - Body size limit: 10 MB max
+        - Circuit breaker: fail-fast si Redis down
 
     Args:
         account_id: ID du compte EmailEngine (account-medical, etc.)
@@ -157,36 +178,64 @@ async def webhook_emailengine_message_new(
         redis_client: Client Redis (dependency)
 
     Returns:
-        200 OK si succès, 401 si signature invalide, 500 si erreur
+        200 OK si succès, 401 si signature invalide, 413 si body trop gros, 500 si erreur
     """
     settings = get_settings()
+
+    # Étape 0 : Vérifier taille body (protection DoS)
+    content_length = request.headers.get("content-length")
+    if content_length and int(content_length) > MAX_WEBHOOK_BODY_SIZE:
+        logger.error(
+            "webhook_body_too_large",
+            account_id=account_id,
+            size_bytes=int(content_length),
+            max_bytes=MAX_WEBHOOK_BODY_SIZE
+        )
+        raise HTTPException(status_code=413, detail="Request body too large (max 10 MB)")
 
     # Lire body brut (nécessaire pour vérifier signature)
     payload_body = await request.body()
 
+    # Vérifier taille réelle après lecture
+    if len(payload_body) > MAX_WEBHOOK_BODY_SIZE:
+        logger.error(
+            "webhook_body_too_large",
+            account_id=account_id,
+            size_bytes=len(payload_body),
+            max_bytes=MAX_WEBHOOK_BODY_SIZE
+        )
+        raise HTTPException(status_code=413, detail="Request body too large (max 10 MB)")
+
     # Étape 1 : Vérifier signature HMAC-SHA256
     if not verify_webhook_signature(payload_body, x_ee_signature, settings.WEBHOOK_SECRET):
-        logger.error(f"❌ Invalid webhook signature for account {account_id}")
+        logger.error("webhook_signature_invalid", account_id=account_id)
         raise HTTPException(status_code=401, detail="Invalid webhook signature")
 
     # Parser JSON
     try:
         payload = EmailEngineWebhookPayload.parse_raw(payload_body)
     except Exception as e:
-        logger.error(f"❌ Invalid webhook payload: {e}")
+        logger.error("webhook_payload_invalid", account_id=account_id, error=str(e))
         raise HTTPException(status_code=400, detail=f"Invalid payload: {e}")
 
-    # Vérifier que l'account_id correspond
+    # Vérifier que l'account_id correspond (strict validation)
     if payload.account != account_id:
-        logger.warning(f"⚠️  Account mismatch: URL={account_id}, payload={payload.account}")
-        # Continuer quand même (tolérance)
+        logger.error(
+            "webhook_account_mismatch",
+            url_account=account_id,
+            payload_account=payload.account
+        )
+        raise HTTPException(
+            status_code=400,
+            detail=f"Account mismatch: URL={account_id}, payload={payload.account}"
+        )
 
     # Vérifier que c'est bien un événement messageNew
     if payload.event != "messageNew":
-        logger.info(f"ℹ️  Ignoring event {payload.event} for account {account_id}")
+        logger.info("webhook_event_ignored", account_id=account_id, event=payload.event)
         return {"status": "ignored", "event": payload.event}
 
-    # Extraire données email
+    # Extraire données email (PAS de log avant anonymisation!)
     message_data = payload.data
     message_id = message_data.get("id", "unknown")
     from_raw = message_data.get("from", {}).get("address", "unknown")
@@ -195,11 +244,6 @@ async def webhook_emailengine_message_new(
     date_raw = message_data.get("date", datetime.utcnow().isoformat())
     text_raw = message_data.get("text", message_data.get("html", ""))
     attachments = message_data.get("attachments", [])
-
-    logger.info(
-        f"📧 Received webhook: account={account_id}, message_id={message_id}, "
-        f"from={from_raw}, subject={subject_raw[:50]}..."
-    )
 
     # Étape 2 : Anonymiser from, subject, body (Presidio)
     try:
@@ -214,10 +258,24 @@ async def webhook_emailengine_message_new(
         body_preview = text_raw[:500] if text_raw else ""
         body_preview_anon = await anonymize_text(body_preview) if body_preview else ""
 
-        logger.info(f"✅ Anonymized: from={from_anon}, subject={subject_anon[:50]}...")
+        # Log APRÈS anonymisation (pas de PII)
+        logger.info(
+            "webhook_received",
+            account_id=account_id,
+            message_id=message_id,
+            from_anon=from_anon[:50],
+            subject_anon=subject_anon[:50]
+        )
+
+        logger.info(
+            "presidio_anonymized",
+            message_id=message_id,
+            from_length=len(from_anon),
+            subject_length=len(subject_anon)
+        )
 
     except Exception as e:
-        logger.error(f"❌ Presidio anonymization failed: {e}")
+        logger.error("presidio_anonymization_failed", message_id=message_id, error=str(e))
         raise HTTPException(status_code=500, detail=f"Anonymization failed: {e}")
 
     # Étape 3 : Créer événement Redis
@@ -231,17 +289,25 @@ async def webhook_emailengine_message_new(
         body_preview_anon=body_preview_anon
     )
 
-    # Étape 4 : Publier dans Redis Streams "emails:received"
+    # Étape 4 : Publier dans Redis Streams "emails:received" (via circuit breaker)
     try:
-        event_id = await redis_client.xadd(
-            "emails:received",
-            event.dict()
-        )
+        # Circuit breaker protège contre Redis down
+        async def publish_to_redis():
+            return await redis_client.xadd("emails:received", event.dict())
 
-        logger.info(f"✅ Published to Redis Streams: event_id={event_id}")
+        event_id = await webhook_circuit_breaker.call_async(publish_to_redis)
+
+        logger.info("redis_event_published", event_id=event_id, message_id=message_id)
 
     except Exception as e:
-        logger.error(f"❌ Failed to publish to Redis Streams: {e}")
+        logger.error("redis_publish_failed", message_id=message_id, error=str(e))
+        # Si circuit breaker open, quand même retourner 200 (webhook retenté par EmailEngine)
+        if webhook_circuit_breaker.opened:
+            logger.warning(
+                "circuit_breaker_open",
+                message_id=message_id,
+                fail_count=webhook_circuit_breaker.fail_counter
+            )
         raise HTTPException(status_code=500, detail=f"Redis publish failed: {e}")
 
     # Étape 5 : Retourner succès

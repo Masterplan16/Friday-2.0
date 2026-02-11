@@ -52,6 +52,25 @@ logger = structlog.get_logger(__name__)
 
 
 # ============================================================
+# Constants (Fix Issue #9: Magic numbers → constantes)
+# ============================================================
+
+# Voyage AI constants
+VOYAGE_MODEL_DEFAULT = "voyage-4-large"
+VOYAGE_DIMENSIONS_DEFAULT = 1024
+VOYAGE_BATCH_MAX_TEXTS = 50  # Limite batch API Voyage
+VOYAGE_RATE_LIMIT_RPM = 300  # Requests per minute
+
+# PostgreSQL pgvector constants
+PGVECTOR_SEARCH_TOP_K_MAX = 100  # Limite recherche pour performance
+PGVECTOR_SEARCH_TOP_K_DEFAULT = 10
+
+# Chunking constants (pour documents longs)
+CHUNK_SIZE_CHARS = 2000  # Taille chunk pour documents >10k
+CHUNK_OVERLAP_CHARS = 200  # Overlap entre chunks
+
+
+# ============================================================
 # Pydantic Models
 # ============================================================
 
@@ -59,8 +78,8 @@ logger = structlog.get_logger(__name__)
 class EmbeddingRequest(BaseModel):
     """Requête génération embeddings"""
 
-    texts: list[str] = Field(..., description="Textes à embedder (max 50 batch Voyage)")
-    model: str = Field(default="voyage-4-large", description="Modèle embeddings")
+    texts: list[str] = Field(..., description=f"Textes à embedder (max {VOYAGE_BATCH_MAX_TEXTS} batch Voyage)")
+    model: str = Field(default=VOYAGE_MODEL_DEFAULT, description="Modèle embeddings")
     anonymize: bool = Field(default=True, description="Appliquer anonymisation Presidio")
 
 
@@ -68,7 +87,7 @@ class EmbeddingResponse(BaseModel):
     """Réponse génération embeddings"""
 
     embeddings: list[list[float]] = Field(..., description="Vecteurs embeddings")
-    dimensions: int = Field(..., description="Nombre dimensions (1024 pour voyage-4-large)")
+    dimensions: int = Field(..., description=f"Nombre dimensions ({VOYAGE_DIMENSIONS_DEFAULT} pour voyage-4-large)")
     tokens_used: int = Field(..., description="Tokens consommés")
     anonymization_applied: bool = Field(False, description="True si anonymisation appliquée")
 
@@ -202,8 +221,8 @@ class VoyageAIAdapter:
     def __init__(
         self,
         api_key: Optional[str] = None,
-        model: str = "voyage-4-large",
-        dimensions: int = 1024,
+        model: str = VOYAGE_MODEL_DEFAULT,
+        dimensions: int = VOYAGE_DIMENSIONS_DEFAULT,
     ):
         """
         Initialise Voyage AI adapter.
@@ -257,9 +276,9 @@ class VoyageAIAdapter:
         if not texts:
             raise ValueError("texts ne peut pas être vide")
 
-        if len(texts) > 50:
+        if len(texts) > VOYAGE_BATCH_MAX_TEXTS:
             raise ValueError(
-                f"Batch max 50 textes (Voyage limit), reçu {len(texts)}. "
+                f"Batch max {VOYAGE_BATCH_MAX_TEXTS} textes (Voyage limit), reçu {len(texts)}. "
                 "Splittez en plusieurs batches."
             )
 
@@ -269,20 +288,23 @@ class VoyageAIAdapter:
 
         if anonymize:
             try:
-                anonymized_results = []
+                # Anonymiser tous les textes et stocker les résultats complets
+                anon_results = []
                 for text in texts:
                     result = await anonymize_text(text)
-                    anonymized_results.append(result.anonymized_text)
+                    anon_results.append(result)
 
-                processed_texts = anonymized_results
+                processed_texts = [r.anonymized_text for r in anon_results]
                 anonymization_applied = True
+
+                # Fix Issue #6: Pas de double anonymisation - réutiliser résultats existants
+                pii_detected = any(len(r.entities) > 0 for r in anon_results)
 
                 logger.info(
                     "voyage_texts_anonymized",
                     count=len(texts),
-                    pii_detected=any(
-                        len(r.entities) > 0 for r in [await anonymize_text(t) for t in texts]
-                    ),
+                    pii_detected=pii_detected,
+                    pii_entities_total=sum(len(r.entities) for r in anon_results),
                 )
 
             except AnonymizationError as e:
@@ -441,22 +463,22 @@ class PgvectorStore:
     async def search(
         self,
         query_embedding: list[float],
-        top_k: int = 10,
+        top_k: int = PGVECTOR_SEARCH_TOP_K_DEFAULT,
         filters: Optional[dict] = None,
     ) -> list[SearchResult]:
         """
         Rechercher vecteurs similaires via HNSW index.
 
         Args:
-            query_embedding: Vecteur query (1024 floats)
-            top_k: Nombre résultats (max 100)
+            query_embedding: Vecteur query ({VOYAGE_DIMENSIONS_DEFAULT} floats)
+            top_k: Nombre résultats (max {PGVECTOR_SEARCH_TOP_K_MAX})
             filters: Filtres {"node_type": "document", "date_range": {...}}
 
         Returns:
             Liste SearchResult triés par similarity DESC
         """
-        if top_k > 100:
-            raise ValueError("top_k max 100 (limiter coût compute)")
+        if top_k > PGVECTOR_SEARCH_TOP_K_MAX:
+            raise ValueError(f"top_k max {PGVECTOR_SEARCH_TOP_K_MAX} (limiter coût compute)")
 
         pool = await self._ensure_pool()
 

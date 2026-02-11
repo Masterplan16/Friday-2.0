@@ -95,8 +95,8 @@ development_status:
   4-3-digest-soir-18h: backlog
   4-4-rapport-hebdomadaire: backlog
   4-5-alertes-immediates-push: backlog
-  4-6-agent-conversationnel-task-dispatcher: ready-for-dev  # 2026-02-10: Story créée - Gap critique identifié. Agent conversationnel pour messages libres Telegram. Intent detection, task creation, Trust Layer integration. 6 AC, 32+ tests unitaires, 6 E2E. Dépend de: 1.5, 1.6, 1.9. Estimation: L (25h).
-  4-7-task-management-commands-daily-briefing-integration: ready-for-dev  # 2026-02-10: Story créée - Gap critique #2. Commandes Telegram consultation/gestion tâches (/taches list/search/complete/delete) + intégration briefing matinal (Story 4.2). 8 AC, 18 tests (15 unit + 3 E2E). Migration 020 due_date. Dépend de: 1.6, 1.9, 4.6. Estimation: M (8h).
+  4-6-agent-conversationnel-task-dispatcher: backlog  # 2026-02-11: Retour backlog (prématuré, Epic 1 prioritaire)
+  4-7-task-management-commands-daily-briefing-integration: backlog  # 2026-02-11: Retour backlog (prématuré, Epic 1 prioritaire)
   epic-4-retrospective: optional
 
   # Epic 5: Interaction Vocale & Personnalite (4 stories | 4 FRs)
@@ -109,7 +109,7 @@ development_status:
 
   # Epic 6: Memoire Eternelle & Migration (4 stories | 4 FRs)
   epic-6: backlog
-  6-1-graphe-connaissances-postgresql: backlog
+  6-1-graphe-connaissances-postgresql: done  # 2026-02-11: CODE REVIEW COMPLETE ✅ - PostgreSQL knowledge graph avec pgvector (D19). Migration 007-008, schema knowledge.*, embeddings vector(1024) + HNSW index, memorystore.py adaptateur complet, graph_populator.py, 10 NodeType + 14 RelationType enums validés. Tests unitaires 19/19 PASS. Decision D19: pgvector Day 1 (pas Qdrant), réévaluation si >300k vecteurs. 12 fichiers créés/modifiés.
   6-2-embeddings-pgvector: backlog  # [D19] Qdrant remplace par pgvector Day 1
   6-3-adaptateur-memorystore: backlog
   6-4-migration-emails-historiques: backlog

@@ -80,15 +80,15 @@
 
 ### AC7: Tests complets (unit + integration + E2E)
 
-- ✅ **Unit tests** : `test_vectorstore.py` - **18 tests** PASS (embed, store, search, filters, factory, anonymisation, delete)
-- ✅ **Unit tests email** : `test_email_embeddings.py` - **3 tests** PASS (integration markers décommentés)
+- ✅ **Unit tests** : `test_vectorstore.py` - **17 tests** PASS (embed, store, search, filters, factory, anonymisation, delete)
+- ⏸️ **Integration tests email** : `test_email_embeddings.py` - **3 tests** SKIPPED (nécessitent PostgreSQL + fixtures setup)
 - ✅ **Unit tests archiviste** : `test_embedding_generator.py` - **4 tests** PASS (chunking, multi-embeddings)
 - ✅ **Integration tests** : `test_pgvector_real.py` - **9 tests** PASS (PostgreSQL + pgvector réels, store/search/delete, HNSW index)
 - ✅ **E2E tests** : `test_embeddings_pipeline_e2e.py` - **2 tests** PASS (pipeline Email → Embedding → Search complet)
 - ⏸️ **Performance tests** : Benchmark 1000 embeddings, 100k vecteurs **TODO** (Story future)
-- ✅ **Coverage** : >=90% sur vectorstore.py core functions (18 unit tests)
+- ✅ **Coverage** : >=90% sur vectorstore.py core functions (17 unit tests)
 
-**Status AC7** : ✅ **COMPLET** (36 tests PASS : 25 unit + 9 integration + 2 E2E, perf tests Story future)
+**Status AC7** : ✅ **COMPLET** (32 tests PASS : 21 unit + 9 integration + 2 E2E + 3 integration SKIPPED, perf tests Story future)
 
 ---
 

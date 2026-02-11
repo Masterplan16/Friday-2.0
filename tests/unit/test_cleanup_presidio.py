@@ -20,6 +20,7 @@ async def db_pool():
 
 
 @pytest.mark.asyncio
+@pytest.mark.integration
 async def test_cleanup_presidio_purges_old_mappings(db_pool):
     """Test purge mappings Presidio >30 jours.
 
@@ -77,6 +78,7 @@ async def test_cleanup_presidio_purges_old_mappings(db_pool):
 
 
 @pytest.mark.asyncio
+@pytest.mark.integration
 async def test_cleanup_presidio_idempotent(db_pool):
     """Test que cleanup_presidio() est idempotent.
 
@@ -125,6 +127,7 @@ async def test_cleanup_presidio_idempotent(db_pool):
 
 
 @pytest.mark.asyncio
+@pytest.mark.integration
 async def test_cleanup_presidio_count_accurate(db_pool):
     """Test que le count retourné est précis.
 

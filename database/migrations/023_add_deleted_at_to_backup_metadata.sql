@@ -14,7 +14,7 @@ CREATE INDEX IF NOT EXISTS idx_backup_metadata_deleted
 
 -- Add comment explaining soft delete pattern
 COMMENT ON COLUMN core.backup_metadata.deleted_at IS
-'Timestamp de suppression du backup (soft delete pour audit trail). NULL = backup actif. VPS backups (retention_policy=keep_7_days) sont marqués deleted après 30 jours.';
+'TIMESTAMPTZ de suppression du backup (soft delete pour audit trail). NULL = backup actif. VPS backups (retention_policy=keep_7_days) sont marqués deleted après 30 jours.';
 
 -- Verify column exists
 DO $$

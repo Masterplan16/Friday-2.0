@@ -241,6 +241,7 @@ async def test_get_recent_corrections_days_parameter(mock_db_pool):
 
 
 @pytest.mark.asyncio
+@pytest.mark.integration
 async def test_pattern_detector_connect_disconnect():
     """Test lifecycle connect/disconnect."""
     detector = PatternDetector()

@@ -194,6 +194,7 @@ async def test_migration_007_relation_types_validation(test_db):
 
 
 @pytest.mark.asyncio
+@pytest.mark.integration
 async def test_migration_008_compatible_with_007(test_db):
     """Test que migration 008 (pgvector) s'applique correctement après 007."""
     # Setup schemas + migration 007

@@ -44,6 +44,50 @@ development_status:
   # ────────────────────────────────────────────────────────────
   # SPRINT 1 — MVP Day 1 (Epics 1-7 | 45 stories | 82 FRs)
   # ────────────────────────────────────────────────────────────
+  #
+  # GRAPHE DE DÉPENDANCES:
+  # ═══════════════════════
+  # Epic 1 (DONE) ────┬─────> Epic 2 ──────┬────> Epic 3 ────┬────> Epic 4
+  #                   │                     │                 │
+  #                   │                     └────> Epic 7      │
+  #                   │                                        │
+  #                   └─────> Epic 6                           │
+  #                   │                                        │
+  #                   └──────────────────> (Epic 3) ──> Epic 5 ┘
+  #
+  # PHASES DE PARALLÉLISME:
+  # ═══════════════════════
+  #
+  # PHASE 1 - MAINTENANT (Épics indépendants):
+  #   Epic 2 (Email)   ═══════════════ } EN PARALLÈLE
+  #   Epic 6 (Mémoire) ═══════════════ }
+  #   Durée estimée: 2-3 semaines (Epic 2=L, Epic 6=L, 6.1 déjà done)
+  #
+  # PHASE 2 - Après Epic 2 terminé (Dépendants de Epic 2):
+  #   Epic 3 (Archiviste) ════════════ } EN PARALLÈLE (possible)
+  #   Epic 7 (Agenda)     ════════════ }
+  #   Durée estimée: 2-3 semaines (Epic 3=L, Epic 7=M)
+  #
+  # PHASE 3 - Après Epic 3 terminé (Dépendant de Epic 3):
+  #   Epic 5 (Vocal) ═════════════════
+  #   Durée estimée: 1-2 semaines (Epic 5=M)
+  #
+  # PHASE 4 - Finale (Dépendant de Epic 2 + Epic 3):
+  #   Epic 4 (Proactivité) ═══════════
+  #   Durée estimée: 2-3 semaines (Epic 4=L)
+  #
+  # DÉPENDANCES DÉTAILLÉES:
+  # ═══════════════════════
+  # Epic 1: Aucune (DONE ✅)
+  # Epic 2: Epic 1 uniquement ✅
+  # Epic 3: Epic 1 + Epic 2 (PJ emails)
+  # Epic 4: Epic 1 + Epic 2 + Epic 3 (briefing nécessite tous modules)
+  # Epic 5: Epic 1 + Epic 3 (recherche documentaire FR13)
+  # Epic 6: Epic 1 uniquement ✅
+  # Epic 7: Epic 1 + Epic 2 (détection événements emails)
+  #
+  # RECOMMANDATION: Prioriser Epic 2 (besoin #1 Mainteneur) + continuer Epic 6
+  # ────────────────────────────────────────────────────────────
 
   # Epic 1: Socle Operationnel & Controle (15 stories | 28 FRs)
   epic-1: done

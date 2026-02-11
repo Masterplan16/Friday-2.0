@@ -14,7 +14,7 @@ CREATE INDEX IF NOT EXISTS idx_action_receipts_purged
 
 -- Add comment explaining RGPD compliance
 COMMENT ON COLUMN core.action_receipts.purged_at IS
-'Timestamp de purge du mapping Presidio (RGPD - 30 jours retention). NULL = mapping non encore purgé ou jamais existé.';
+'TIMESTAMPTZ de purge du mapping Presidio (RGPD - 30 jours retention). NULL = mapping non encore purgé ou jamais existé.';
 
 -- Verify column exists
 DO $$

@@ -20,6 +20,7 @@ async def db_pool():
 
 
 @pytest.mark.asyncio
+@pytest.mark.integration
 async def test_cleanup_backups_respects_retention_policy(db_pool):
     """Test cleanup respecte retention_policy (keep_7_days vs keep_30_days).
 
@@ -76,6 +77,7 @@ async def test_cleanup_backups_respects_retention_policy(db_pool):
 
 
 @pytest.mark.asyncio
+@pytest.mark.integration
 async def test_cleanup_backups_preserves_recent_vps(db_pool):
     """Test que backups VPS récents (<30j) ne sont PAS supprimés.
 
@@ -116,6 +118,7 @@ async def test_cleanup_backups_preserves_recent_vps(db_pool):
 
 
 @pytest.mark.asyncio
+@pytest.mark.integration
 async def test_cleanup_backups_idempotent(db_pool):
     """Test que cleanup_backups() est idempotent.
 
@@ -164,6 +167,7 @@ async def test_cleanup_backups_idempotent(db_pool):
 
 
 @pytest.mark.asyncio
+@pytest.mark.integration
 async def test_cleanup_backups_count_accurate(db_pool):
     """Test que le count retourné est précis.
 

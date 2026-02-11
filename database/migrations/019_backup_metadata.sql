@@ -109,7 +109,7 @@ COMMENT ON COLUMN core.backup_metadata.synced_to_pc IS
 'Indique si backup a été synchronisé vers PC Mainteneur via Tailscale rsync';
 
 COMMENT ON COLUMN core.backup_metadata.pc_arrival_time IS
-'Timestamp de l''arrivée du backup sur PC (après sync rsync réussi)';
+'TIMESTAMPTZ de l''arrivée du backup sur PC (après sync rsync réussi)';
 
 COMMENT ON COLUMN core.backup_metadata.retention_policy IS
 'Politique de rétention: keep_7_days (défaut VPS), keep_30_days (PC), keep_forever (archives)';

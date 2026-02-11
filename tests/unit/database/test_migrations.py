@@ -569,6 +569,9 @@ class TestSQLConsistency:
                 if not line.strip().startswith("--")
             ]
             for line in lines:
+                # Skip CREATE INDEX lines (column names may contain "timestamp")
+                if re.match(r"CREATE\s+INDEX", line, re.IGNORECASE):
+                    continue
                 if re.search(r"\bTIMESTAMP\b", line, re.IGNORECASE):
                     # TIMESTAMP WITH TIME ZONE est equivalent a TIMESTAMPTZ
                     if "TIMESTAMP WITH TIME ZONE" in line.upper():

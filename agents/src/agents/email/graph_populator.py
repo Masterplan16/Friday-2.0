@@ -41,7 +41,7 @@ logger = logging.getLogger(__name__)
 async def populate_email_graph(
     email_data: dict[str, Any],
     memorystore: MemorystoreAdapter,
-    attachments: Optional[list[dict[str, Any]]] = None
+    attachments: Optional[list[dict[str, Any]]] = None,
 ) -> str:
     """
     Peuple le graphe de connaissances à partir d'un email classifié.
@@ -79,7 +79,7 @@ async def populate_email_graph(
             "priority": email_data.get("priority", "normal"),
             "thread_id": email_data.get("thread_id"),
         },
-        source="email"
+        source="email",
     )
 
     logger.info("Created Email node: %s", email_node_id)
@@ -92,7 +92,7 @@ async def populate_email_graph(
         node_type=NodeType.PERSON.value,
         name=sender_name,
         metadata={"email": sender_email},
-        source="email"
+        source="email",
     )
 
     # Task 9.3 : Créer edge SENT_BY (Email → Person)
@@ -100,7 +100,7 @@ async def populate_email_graph(
         from_node_id=email_node_id,
         to_node_id=sender_node_id,
         relation_type=RelationType.SENT_BY.value,
-        metadata={"confidence": 1.0}
+        metadata={"confidence": 1.0},
     )
 
     logger.info("Linked Email SENT_BY Person: %s", sender_node_id)
@@ -114,14 +114,14 @@ async def populate_email_graph(
             node_type=NodeType.PERSON.value,
             name=recipient_name,
             metadata={"email": recipient_email},
-            source="email"
+            source="email",
         )
 
         await memorystore.create_edge(
             from_node_id=email_node_id,
             to_node_id=recipient_node_id,
             relation_type=RelationType.RECEIVED_BY.value,
-            metadata={"confidence": 1.0}
+            metadata={"confidence": 1.0},
         )
 
     logger.info("Linked %d recipients via RECEIVED_BY", len(recipients))
@@ -137,8 +137,8 @@ async def populate_email_graph(
                     relation_type=RelationType.ATTACHED_TO.value,
                     metadata={
                         "filename": attachment.get("filename"),
-                        "mime_type": attachment.get("mime_type")
-                    }
+                        "mime_type": attachment.get("mime_type"),
+                    },
                 )
 
         logger.info("Linked %d attachments via ATTACHED_TO", len(attachments))
@@ -155,16 +155,16 @@ async def populate_email_graph(
                 name=entity["name"],
                 metadata={
                     "entity_type": entity["type"],
-                    "confidence": entity.get("confidence", 0.8)
+                    "confidence": entity.get("confidence", 0.8),
                 },
-                source="email"
+                source="email",
             )
 
             await memorystore.create_edge(
                 from_node_id=email_node_id,
                 to_node_id=entity_node_id,
                 relation_type=RelationType.MENTIONS.value,
-                metadata={"context": entity.get("context", "")}
+                metadata={"context": entity.get("context", "")},
             )
 
         logger.info("Extracted %d entities via NER", len(entities))
@@ -198,9 +198,7 @@ async def extract_entities_ner(text: str) -> list[dict[str, Any]]:
 
 
 async def link_email_to_task(
-    email_node_id: str,
-    task_node_id: str,
-    memorystore: MemorystoreAdapter
+    email_node_id: str, task_node_id: str, memorystore: MemorystoreAdapter
 ) -> str:
     """
     Crée relation CREATED_FROM entre Task et Email.
@@ -221,7 +219,7 @@ async def link_email_to_task(
         from_node_id=task_node_id,
         to_node_id=email_node_id,
         relation_type=RelationType.CREATED_FROM.value,
-        metadata={"extraction_date": datetime.utcnow().isoformat()}
+        metadata={"extraction_date": datetime.utcnow().isoformat()},
     )
 
     logger.info("Linked Task %s CREATED_FROM Email %s", task_node_id[:8], email_node_id[:8])
@@ -230,9 +228,7 @@ async def link_email_to_task(
 
 
 async def link_email_to_event(
-    email_node_id: str,
-    event_node_id: str,
-    memorystore: MemorystoreAdapter
+    email_node_id: str, event_node_id: str, memorystore: MemorystoreAdapter
 ) -> str:
     """
     Crée relation CREATED_FROM entre Event et Email.
@@ -253,7 +249,7 @@ async def link_email_to_event(
         from_node_id=event_node_id,
         to_node_id=email_node_id,
         relation_type=RelationType.CREATED_FROM.value,
-        metadata={"detection_date": datetime.utcnow().isoformat()}
+        metadata={"detection_date": datetime.utcnow().isoformat()},
     )
 
     logger.info("Linked Event %s CREATED_FROM Email %s", event_node_id[:8], email_node_id[:8])

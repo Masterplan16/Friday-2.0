@@ -103,6 +103,7 @@ class MemorystoreAdapter:
         name: str,
         metadata: dict[str, Any],
         embedding: Optional[list[float]] = None,
+        source: Optional[str] = None,
     ) -> str:
         """
         Crée un nouveau nœud dans le graphe.
@@ -112,6 +113,7 @@ class MemorystoreAdapter:
             name: Nom du nœud (ex: "owner Lopez", "Email RE: Projet X")
             metadata: Métadonnées JSON (ex: {email, company, date, etc.})
             embedding: Vecteur d'embedding optionnel (1024 dims par défaut)
+            source: Source du nœud (backward compatibility, deprecated)
 
         Returns:
             UUID du nœud créé (string)

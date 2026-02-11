@@ -78,9 +78,7 @@ async def expire_pending_validations(
     return expired_count
 
 
-async def notify_expiration_telegram(
-    expired_count: int, timeout_hours: int
-) -> None:
+async def notify_expiration_telegram(expired_count: int, timeout_hours: int) -> None:
     """
     H5 fix: Envoie une notification dans le topic System & Alerts
     quand des validations expirent (AC6).

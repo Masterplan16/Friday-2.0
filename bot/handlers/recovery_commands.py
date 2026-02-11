@@ -43,9 +43,7 @@ async def recovery_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Afficher statistiques
         async with pool.acquire() as conn:
             # Total recoveries
-            total_recoveries = await conn.fetchval(
-                "SELECT COUNT(*) FROM core.recovery_events"
-            )
+            total_recoveries = await conn.fetchval("SELECT COUNT(*) FROM core.recovery_events")
 
             # Successful recoveries
             successful_recoveries = await conn.fetchval(
@@ -66,7 +64,9 @@ async def recovery_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
 
             # Success rate
-            success_rate = (successful_recoveries / total_recoveries * 100) if total_recoveries > 0 else 100.0
+            success_rate = (
+                (successful_recoveries / total_recoveries * 100) if total_recoveries > 0 else 100.0
+            )
 
         # Format response
         response = "📊 **Recovery Statistics**\n\n"
@@ -81,8 +81,7 @@ async def recovery_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # Liste événements recovery
     async with pool.acquire() as conn:
-        events = await conn.fetch(
-            """
+        events = await conn.fetch("""
             SELECT
                 event_type,
                 services_affected,
@@ -95,8 +94,7 @@ async def recovery_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             FROM core.recovery_events
             ORDER BY created_at DESC
             LIMIT 10
-            """
-        )
+            """)
 
     if not events:
         await update.message.reply_text("✅ Aucun événement recovery enregistré.")
@@ -106,28 +104,28 @@ async def recovery_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     response = "🛡️ **Recovery Events** (10 derniers)\n\n"
 
     for event in events:
-        icon = "✅" if event['success'] else "❌"
+        icon = "✅" if event["success"] else "❌"
         event_type_label = {
-            'auto_recovery_ram': 'RAM Auto-Recovery',
-            'crash_loop_detected': 'Crash Loop',
-            'os_reboot': 'OS Reboot',
-            'docker_restart': 'Docker Restart'
-        }.get(event['event_type'], event['event_type'])
+            "auto_recovery_ram": "RAM Auto-Recovery",
+            "crash_loop_detected": "Crash Loop",
+            "os_reboot": "OS Reboot",
+            "docker_restart": "Docker Restart",
+        }.get(event["event_type"], event["event_type"])
 
-        timestamp_str = format_timestamp(event['created_at'])
+        timestamp_str = format_timestamp(event["created_at"])
 
         response += f"{icon} **{event_type_label}**\n"
         response += f"   {timestamp_str}\n"
 
         if verbose:
             # Détails complets
-            if event['services_affected']:
+            if event["services_affected"]:
                 response += f"   Services: `{event['services_affected']}`\n"
 
-            if event['ram_before'] and event['ram_after']:
+            if event["ram_before"] and event["ram_after"]:
                 response += f"   RAM: {event['ram_before']}% → {event['ram_after']}%\n"
 
-            if event['recovery_duration_seconds']:
+            if event["recovery_duration_seconds"]:
                 response += f"   Duration: {event['recovery_duration_seconds']}s\n"
 
             response += f"   Notification: {'✓' if event['notification_sent'] else '✗'}\n"

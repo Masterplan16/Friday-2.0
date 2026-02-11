@@ -21,18 +21,27 @@ from agents.src.adapters.memorystore import (
 
 
 @pytest.fixture
-def mock_db_pool():
-    """Mock asyncpg Pool."""
-    pool = MagicMock()
-    pool.acquire = AsyncMock()
-    return pool
-
-
-@pytest.fixture
 def mock_conn():
     """Mock asyncpg Connection."""
     conn = AsyncMock()
     return conn
+
+
+@pytest.fixture
+def mock_db_pool(mock_conn):
+    """Mock asyncpg Pool with proper async context manager support."""
+    pool = MagicMock()
+
+    # Create async context manager for acquire()
+    acquire_ctx = AsyncMock()
+    acquire_ctx.__aenter__ = AsyncMock(return_value=mock_conn)
+    acquire_ctx.__aexit__ = AsyncMock(return_value=None)
+
+    pool.acquire = MagicMock(return_value=acquire_ctx)
+    pool.fetchval = AsyncMock()
+    pool.fetch = AsyncMock()
+
+    return pool
 
 
 @pytest.fixture

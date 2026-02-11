@@ -22,11 +22,7 @@ async def _get_pool(context: ContextTypes.DEFAULT_TYPE) -> asyncpg.Pool:
     pool = context.bot_data.get("db_pool")
     if pool is None:
         database_url = os.getenv("DATABASE_URL")
-        pool = await asyncpg.create_pool(
-            database_url,
-            min_size=2,
-            max_size=10
-        )
+        pool = await asyncpg.create_pool(database_url, min_size=2, max_size=10)
         context.bot_data["db_pool"] = pool
     return pool
 
@@ -82,13 +78,13 @@ async def backup_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     for i, b in enumerate(backups, 1):
         # Format timestamp
-        backup_time = format_timestamp(b['backup_date'])
+        backup_time = format_timestamp(b["backup_date"])
 
         # Size MB
-        size_mb = b['size_bytes'] // (1024 * 1024)
+        size_mb = b["size_bytes"] // (1024 * 1024)
 
         # Sync status icon
-        sync_icon = "✅" if b['synced_to_pc'] else "❌"
+        sync_icon = "✅" if b["synced_to_pc"] else "❌"
 
         # Basic info (toujours affiché)
         response += f"**{i}. {backup_time}**\n"
@@ -100,13 +96,13 @@ async def backup_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             response += f"   🔒 Chiffré: age (clé publique VPS)\n"
             response += f"   📅 Rétention: {b['retention_policy']}\n"
 
-            if b['synced_to_pc']:
-                pc_time = format_timestamp(b['pc_arrival_time']) if b['pc_arrival_time'] else "N/A"
+            if b["synced_to_pc"]:
+                pc_time = format_timestamp(b["pc_arrival_time"]) if b["pc_arrival_time"] else "N/A"
                 response += f"   🖥️  Arrivée PC: {pc_time}\n"
 
-            if b['last_restore_test']:
-                test_time = format_timestamp(b['last_restore_test'])
-                test_status_icon = "✅" if b['restore_test_status'] == "success" else "❌"
+            if b["last_restore_test"]:
+                test_time = format_timestamp(b["last_restore_test"])
+                test_status_icon = "✅" if b["restore_test_status"] == "success" else "❌"
                 response += f"   🧪 Dernier test restore: {test_time} {test_status_icon}\n"
 
         response += "\n"

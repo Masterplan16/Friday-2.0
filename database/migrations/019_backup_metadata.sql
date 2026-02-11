@@ -10,13 +10,13 @@ BEGIN
     RAISE NOTICE 'Migration 019: Creating core.backup_metadata table';
 END $$;
 
--- ════════════════════════════════════════════════════════════════════════
+-- ------------------------------------------------------------------------
 -- Subtask 2.3.1: Créer table core.backup_metadata
--- ════════════════════════════════════════════════════════════════════════
+-- ------------------------------------------------------------------------
 
 CREATE TABLE IF NOT EXISTS core.backup_metadata (
-    -- Primary key (pgcrypto extension gen_random_uuid)
-    id UUID PRIMARY KEY DEFAULT public.gen_random_uuid(),
+    -- Primary key (pgcrypto extension uuid_generate_v4)
+    id UUID PRIMARY KEY DEFAULT public.uuid_generate_v4(),
 
     -- Backup info
     backup_date TIMESTAMPTZ NOT NULL,
@@ -45,9 +45,9 @@ CREATE TABLE IF NOT EXISTS core.backup_metadata (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- ════════════════════════════════════════════════════════════════════════
+-- ------------------------------------------------------------------------
 -- Subtask 2.3.2: Ajouter index sur backup_date pour queries rapides
--- ════════════════════════════════════════════════════════════════════════
+-- ------------------------------------------------------------------------
 
 -- Index principal pour queries par date
 CREATE INDEX IF NOT EXISTS idx_backup_metadata_backup_date
@@ -66,9 +66,9 @@ CREATE INDEX IF NOT EXISTS idx_backup_metadata_retention
 CREATE INDEX IF NOT EXISTS idx_backup_metadata_restore_test
     ON core.backup_metadata(last_restore_test DESC NULLS LAST);
 
--- ════════════════════════════════════════════════════════════════════════
+-- ------------------------------------------------------------------------
 -- Trigger auto-update updated_at
--- ════════════════════════════════════════════════════════════════════════
+-- ------------------------------------------------------------------------
 
 CREATE OR REPLACE FUNCTION core.update_backup_metadata_updated_at()
 RETURNS TRIGGER AS $$
@@ -83,9 +83,9 @@ CREATE TRIGGER trigger_backup_metadata_updated_at
     FOR EACH ROW
     EXECUTE FUNCTION core.update_backup_metadata_updated_at();
 
--- ════════════════════════════════════════════════════════════════════════
+-- ------------------------------------------------------------------------
 -- Comments (documentation in-database)
--- ════════════════════════════════════════════════════════════════════════
+-- ------------------------------------------------------------------------
 
 COMMENT ON TABLE core.backup_metadata IS
 'Métadonnées des backups PostgreSQL chiffrés avec age. Un enregistrement par backup créé.';
@@ -120,9 +120,9 @@ COMMENT ON COLUMN core.backup_metadata.last_restore_test IS
 COMMENT ON COLUMN core.backup_metadata.restore_test_status IS
 'Résultat du dernier test restore: success | failed | pending';
 
--- ════════════════════════════════════════════════════════════════════════
+-- ------------------------------------------------------------------------
 -- Validation Migration
--- ════════════════════════════════════════════════════════════════════════
+-- ------------------------------------------------------------------------
 
 -- Vérifier que la table a été créée
 DO $$

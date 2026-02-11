@@ -1,7 +1,8 @@
 -- Migration 018: Add missing columns to core.trust_metrics
 -- Story 1.11 - Fixes BUG-1.11.1, BUG-1.11.2
 -- Colonnes referancees par nightly.py (Story 1.8) mais absentes du schema original (migration 011)
--- Note: apply_migrations.py wraps this in a transaction automatically
+
+BEGIN;
 
 -- BUG-1.11.1: avg_confidence calculee par nightly.py mais absente du schema
 ALTER TABLE core.trust_metrics
@@ -38,3 +39,5 @@ END $$;
 
 COMMENT ON COLUMN core.trust_metrics.recommended_trust_level IS
     'Trust level recommande apres analyse accuracy (retrogradation auto si <90%)';
+
+COMMIT;

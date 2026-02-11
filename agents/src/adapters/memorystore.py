@@ -117,7 +117,15 @@ class MemorystoreAdapter:
 
         Returns:
             UUID du nœud créé (string)
+
+        Raises:
+            ValueError: Si node_type n'est pas dans NodeType enum
         """
+        # Validation node_type
+        valid_types = [t.value for t in NodeType]
+        if node_type not in valid_types:
+            raise ValueError(f"Invalid node_type '{node_type}'. Must be one of: {valid_types}")
+
         node_id = str(uuid.uuid4())
         now = datetime.utcnow()
 
@@ -213,7 +221,17 @@ class MemorystoreAdapter:
 
         Returns:
             UUID de l'edge créée (string)
+
+        Raises:
+            ValueError: Si relation_type n'est pas dans RelationType enum
         """
+        # Validation relation_type
+        valid_relations = [r.value for r in RelationType]
+        if relation_type not in valid_relations:
+            raise ValueError(
+                f"Invalid relation_type '{relation_type}'. Must be one of: {valid_relations}"
+            )
+
         edge_id = str(uuid.uuid4())
         now = datetime.utcnow()
         metadata = metadata or {}
@@ -295,49 +313,55 @@ class MemorystoreAdapter:
             source_type: Filtrer par type de source (optionnel)
 
         Returns:
-            Liste de résultats [{node_id, score, metadata}, ...]
+            Liste de résultats [{node_id, score, metadata}, ...] ou [] si erreur
         """
-        vector_str = "[" + ",".join(str(v) for v in query_embedding) + "]"
+        try:
+            vector_str = "[" + ",".join(str(v) for v in query_embedding) + "]"
 
-        # cosine distance: 1 - cosine_similarity
-        # pgvector <=> = cosine distance, on veut similarity = 1 - distance
-        if source_type:
-            rows = await self.db_pool.fetch(
-                """
-                SELECT source_id, 1 - (embedding <=> $1::vector) AS score, metadata
-                FROM knowledge.embeddings
-                WHERE source_type = $2
-                  AND 1 - (embedding <=> $1::vector) >= $3
-                ORDER BY embedding <=> $1::vector
-                LIMIT $4
-                """,
-                vector_str,
-                source_type,
-                score_threshold,
-                limit,
-            )
-        else:
-            rows = await self.db_pool.fetch(
-                """
-                SELECT source_id, 1 - (embedding <=> $1::vector) AS score, metadata
-                FROM knowledge.embeddings
-                WHERE 1 - (embedding <=> $1::vector) >= $2
-                ORDER BY embedding <=> $1::vector
-                LIMIT $3
-                """,
-                vector_str,
-                score_threshold,
-                limit,
-            )
+            # cosine distance: 1 - cosine_similarity
+            # pgvector <=> = cosine distance, on veut similarity = 1 - distance
+            if source_type:
+                rows = await self.db_pool.fetch(
+                    """
+                    SELECT source_id, 1 - (embedding <=> $1::vector) AS score, metadata
+                    FROM knowledge.embeddings
+                    WHERE source_type = $2
+                      AND 1 - (embedding <=> $1::vector) >= $3
+                    ORDER BY embedding <=> $1::vector
+                    LIMIT $4
+                    """,
+                    vector_str,
+                    source_type,
+                    score_threshold,
+                    limit,
+                )
+            else:
+                rows = await self.db_pool.fetch(
+                    """
+                    SELECT source_id, 1 - (embedding <=> $1::vector) AS score, metadata
+                    FROM knowledge.embeddings
+                    WHERE 1 - (embedding <=> $1::vector) >= $2
+                    ORDER BY embedding <=> $1::vector
+                    LIMIT $3
+                    """,
+                    vector_str,
+                    score_threshold,
+                    limit,
+                )
 
-        return [
-            {
-                "node_id": str(row["source_id"]),
-                "score": float(row["score"]),
-                "metadata": row["metadata"],
-            }
-            for row in rows
-        ]
+            return [
+                {
+                    "node_id": str(row["source_id"]),
+                    "score": float(row["score"]),
+                    "metadata": row["metadata"],
+                }
+                for row in rows
+            ]
+
+        except Exception as e:
+            # Circuit breaker : retourner liste vide si pgvector indisponible
+            logger.warning(f"semantic_search failed: {e}")
+            return []
 
     async def count_nodes(self, node_type: Optional[str] = None) -> int:
         """Compte le nombre de nœuds dans le graphe."""
@@ -355,6 +379,250 @@ class MemorystoreAdapter:
                 relation_type,
             )
         return await self.db_pool.fetchval("SELECT COUNT(*) FROM knowledge.edges")
+
+    async def get_related_nodes(
+        self,
+        node_id: str,
+        direction: str = "out",
+        relation_type: Optional[str] = None,
+        limit: int = 100,
+    ) -> list[dict[str, Any]]:
+        """
+        Récupère les nœuds reliés à un nœud donné.
+
+        Args:
+            node_id: UUID du nœud source
+            direction: "out" (sortants), "in" (entrants), ou "both"
+            relation_type: Filtrer par type de relation (optionnel)
+            limit: Nombre maximal de résultats
+
+        Returns:
+            Liste de nœuds [{id, type, name, metadata, relation_type}, ...]
+        """
+        if direction == "out":
+            query = """
+                SELECT n.id, n.type, n.name, n.metadata, e.relation_type
+                FROM knowledge.edges e
+                JOIN knowledge.nodes n ON e.to_node_id = n.id
+                WHERE e.from_node_id = $1
+            """
+            params = [node_id]
+        elif direction == "in":
+            query = """
+                SELECT n.id, n.type, n.name, n.metadata, e.relation_type
+                FROM knowledge.edges e
+                JOIN knowledge.nodes n ON e.from_node_id = n.id
+                WHERE e.to_node_id = $1
+            """
+            params = [node_id]
+        elif direction == "both":
+            query = """
+                SELECT n.id, n.type, n.name, n.metadata, e.relation_type
+                FROM knowledge.edges e
+                JOIN knowledge.nodes n ON (
+                    (e.from_node_id = $1 AND n.id = e.to_node_id) OR
+                    (e.to_node_id = $1 AND n.id = e.from_node_id)
+                )
+                WHERE e.from_node_id = $1 OR e.to_node_id = $1
+            """
+            params = [node_id]
+        else:
+            raise ValueError(f"Invalid direction '{direction}'. Must be 'out', 'in', or 'both'")
+
+        if relation_type:
+            query += " AND e.relation_type = $2 LIMIT $3"
+            params.extend([relation_type, limit])
+        else:
+            query += " LIMIT $2"
+            params.append(limit)
+
+        rows = await self.db_pool.fetch(query, *params)
+        return [
+            {
+                "id": str(row["id"]),
+                "type": row["type"],
+                "name": row["name"],
+                "metadata": row["metadata"],
+                "relation_type": row["relation_type"],
+            }
+            for row in rows
+        ]
+
+    async def query_temporal(
+        self,
+        start_date: datetime,
+        end_date: datetime,
+        node_type: Optional[str] = None,
+        limit: int = 100,
+    ) -> list[dict[str, Any]]:
+        """
+        Requête temporelle : récupère les nœuds créés dans une période donnée.
+
+        Args:
+            start_date: Date de début (inclusive)
+            end_date: Date de fin (inclusive)
+            node_type: Filtrer par type de nœud (optionnel)
+            limit: Nombre maximal de résultats
+
+        Returns:
+            Liste de nœuds [{id, type, name, metadata, created_at}, ...]
+        """
+        if node_type:
+            query = """
+                SELECT id, type, name, metadata, created_at
+                FROM knowledge.nodes
+                WHERE created_at >= $1 AND created_at <= $2 AND type = $3
+                ORDER BY created_at DESC
+                LIMIT $4
+            """
+            params = [start_date, end_date, node_type, limit]
+        else:
+            query = """
+                SELECT id, type, name, metadata, created_at
+                FROM knowledge.nodes
+                WHERE created_at >= $1 AND created_at <= $2
+                ORDER BY created_at DESC
+                LIMIT $3
+            """
+            params = [start_date, end_date, limit]
+
+        rows = await self.db_pool.fetch(query, *params)
+        return [
+            {
+                "id": str(row["id"]),
+                "type": row["type"],
+                "name": row["name"],
+                "metadata": row["metadata"],
+                "created_at": row["created_at"],
+            }
+            for row in rows
+        ]
+
+    async def get_node_with_relations(
+        self, node_id: str, depth: int = 1
+    ) -> dict[str, Any]:
+        """
+        Récupère un nœud avec ses relations sur N niveaux de profondeur.
+
+        Args:
+            node_id: UUID du nœud racine
+            depth: Profondeur de récursion (1 = relations directes uniquement)
+
+        Returns:
+            Dictionnaire {node, edges_out, edges_in}
+        """
+        # Récupérer le nœud racine
+        node_row = await self.db_pool.fetchrow(
+            "SELECT id, type, name, metadata, created_at FROM knowledge.nodes WHERE id = $1",
+            node_id,
+        )
+
+        if not node_row:
+            raise ValueError(f"Node {node_id} not found")
+
+        node = {
+            "id": str(node_row["id"]),
+            "type": node_row["type"],
+            "name": node_row["name"],
+            "metadata": node_row["metadata"],
+            "created_at": node_row["created_at"],
+        }
+
+        # Récupérer relations sortantes (depth = 1)
+        edges_out = await self.get_related_nodes(node_id, direction="out")
+
+        # Récupérer relations entrantes (depth = 1)
+        edges_in = await self.get_related_nodes(node_id, direction="in")
+
+        result = {"node": node, "edges_out": edges_out, "edges_in": edges_in}
+
+        # Si depth > 1, récursion sur les nœuds liés
+        if depth > 1:
+            for rel in edges_out:
+                rel["children"] = await self.get_node_with_relations(rel["id"], depth - 1)
+            for rel in edges_in:
+                rel["children"] = await self.get_node_with_relations(rel["id"], depth - 1)
+
+        return result
+
+    async def query_path(
+        self, from_node_id: str, to_node_id: str, max_depth: int = 3
+    ) -> list[dict[str, Any]]:
+        """
+        Trouve le chemin le plus court entre deux nœuds (BFS).
+
+        Args:
+            from_node_id: UUID du nœud source
+            to_node_id: UUID du nœud cible
+            max_depth: Profondeur maximale de recherche
+
+        Returns:
+            Liste d'edges formant le chemin [{relation_type, from_node_id, to_node_id}, ...]
+        """
+        # Cas simple : connexion directe
+        direct_edge = await self.db_pool.fetchrow(
+            """
+            SELECT id, from_node_id, to_node_id, relation_type, metadata
+            FROM knowledge.edges
+            WHERE from_node_id = $1 AND to_node_id = $2
+            LIMIT 1
+            """,
+            from_node_id,
+            to_node_id,
+        )
+
+        if direct_edge:
+            return [
+                {
+                    "id": str(direct_edge["id"]),
+                    "from_node_id": str(direct_edge["from_node_id"]),
+                    "to_node_id": str(direct_edge["to_node_id"]),
+                    "relation_type": direct_edge["relation_type"],
+                    "metadata": direct_edge["metadata"],
+                }
+            ]
+
+        # Cas complexe : BFS pour trouver chemin multi-hop
+        from collections import deque
+
+        queue = deque([([from_node_id], [])])  # (nodes_path, edges_path)
+
+        visited = {from_node_id}
+
+        while queue:
+            nodes_path, edges_path = queue.popleft()
+            current_node = nodes_path[-1]
+
+            if len(nodes_path) > max_depth + 1:
+                continue
+
+            # Explorer les voisins (relations sortantes)
+            neighbors = await self.get_related_nodes(current_node, direction="out")
+
+            for neighbor in neighbors:
+                neighbor_id = neighbor["id"]
+
+                if neighbor_id == to_node_id:
+                    # Chemin trouvé !
+                    final_edge = {
+                        "from_node_id": current_node,
+                        "to_node_id": neighbor_id,
+                        "relation_type": neighbor["relation_type"],
+                        "metadata": neighbor.get("metadata", {}),
+                    }
+                    return edges_path + [final_edge]
+
+                if neighbor_id not in visited:
+                    visited.add(neighbor_id)
+                    new_edge = {
+                        "from_node_id": current_node,
+                        "to_node_id": neighbor_id,
+                        "relation_type": neighbor["relation_type"],
+                        "metadata": neighbor.get("metadata", {}),
+                    }
+                    queue.append((nodes_path + [neighbor_id], edges_path + [new_edge]))
+
+        return []  # Aucun chemin trouvé
 
 
 # Factory function pour initialiser l'adaptateur

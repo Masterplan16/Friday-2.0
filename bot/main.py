@@ -173,11 +173,12 @@ class FridayBot:
             action_executor = ActionExecutor(db_pool)
 
             # C3 fix: Enregistrer action email.draft_reply (Story 2.5)
+            # Story 2.6: Ajouter paramètre bot pour notifications
             from bot.action_executor_draft_reply import send_email_via_emailengine
             import httpx
 
             async def draft_reply_action(**kwargs):
-                """Wrapper pour send_email_via_emailengine (Story 2.5 AC5)"""
+                """Wrapper pour send_email_via_emailengine (Story 2.5 AC5 + Story 2.6 notifications)"""
                 receipt_id = kwargs.get('receipt_id')
                 if not receipt_id:
                     raise ValueError("receipt_id manquant dans payload")
@@ -188,12 +189,13 @@ class FridayBot:
                         db_pool=db_pool,
                         http_client=http_client,
                         emailengine_url=os.getenv('EMAILENGINE_BASE_URL', 'http://localhost:3000'),
-                        emailengine_secret=os.getenv('EMAILENGINE_SECRET')
+                        emailengine_secret=os.getenv('EMAILENGINE_SECRET'),
+                        bot=self.application.bot  # Story 2.6: Passer bot pour notifications
                     )
                 return result
 
             action_executor.register_action("email.draft_reply", draft_reply_action)
-            logger.info("Action email.draft_reply registered in ActionExecutor")
+            logger.info("Action email.draft_reply registered in ActionExecutor (with notifications support)")
 
             register_callbacks_handlers(self.application, db_pool, action_executor=action_executor)
             register_corrections_handlers(self.application, db_pool)

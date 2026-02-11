@@ -341,17 +341,35 @@ async def receipt_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         if row.get("correction"):
             lines.append(f"Correction: {row['correction']}")
 
+        # Story 2.6 AC4: Section spéciale pour emails envoyés (lisibilité améliorée)
+        if row['module'] == 'email' and row['action_type'] == 'draft_reply' and row.get("payload"):
+            payload = row["payload"]
+            lines.append("\n**Email Details**")
+            if payload.get("account_id"):
+                lines.append(f"Compte IMAP: `{payload['account_id']}`")
+            if payload.get("email_type"):
+                lines.append(f"Type: {payload['email_type']}")
+            if payload.get("message_id"):
+                lines.append(f"Message ID: `{payload['message_id'][:50]}...`")
+            if payload.get("draft_body"):
+                draft_preview = truncate_text(payload['draft_body'], 300)
+                lines.append(f"\nBrouillon (extrait):\n---\n{draft_preview}\n---")
+
         if verbose:
             lines.append("\n**Details** (`-v`)")
             if row.get("duration_ms"):
                 lines.append(f"Duration: {row['duration_ms']}ms")
             if row.get("validated_by"):
                 lines.append(f"Validated by: user {row['validated_by']}")
+            if row.get("validated_at"):
+                lines.append(f"Validated at: {format_timestamp(row['validated_at'], verbose=True)}")
+            if row.get("executed_at"):
+                lines.append(f"Executed at: {format_timestamp(row['executed_at'], verbose=True)}")
             if row.get("payload"):
                 payload_str = json.dumps(row["payload"], indent=2, ensure_ascii=False)
                 if len(payload_str) > 1500:
                     payload_str = payload_str[:1500] + "\n..."
-                lines.append(f"Payload:\n```json\n{payload_str}\n```")
+                lines.append(f"Payload (JSON complet):\n```json\n{payload_str}\n```")
             if row.get("feedback_comment"):
                 lines.append(f"Feedback: {row['feedback_comment']}")
             lines.append(f"Updated: {format_timestamp(row['updated_at'], verbose=True)}")
@@ -372,10 +390,14 @@ async def receipt_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
 
 async def journal_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Handler /journal - 20 dernieres actions (AC3).
+    """Handler /journal - 20 dernieres actions (AC3 Story 1.11 + AC4 Story 2.6).
 
     Affiche chronologiquement les actions avec status emoji et confidence.
     Flag -v pour afficher input_summary par entree.
+
+    Story 2.6 AC4:
+        - Format spécialisé pour emails envoyés (affiche recipient_anon)
+        - Filtrage optionnel par module: /journal email
     """
     user_id = update.effective_user.id if update.effective_user else None
     if not _check_owner(user_id):
@@ -383,28 +405,58 @@ async def journal_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         return
 
     verbose = parse_verbose_flag(context.args)
-    logger.info("/journal command received", user_id=user_id, verbose=verbose)
+
+    # Story 2.6 AC4: Support filtrage module (/journal email)
+    filter_module = None
+    if context.args:
+        for arg in context.args:
+            if arg != "-v":
+                filter_module = arg
+                break
+
+    logger.info("/journal command received", user_id=user_id, verbose=verbose, filter_module=filter_module)
 
     try:
         pool = await _get_pool()
         async with pool.acquire() as conn:
-            rows = await conn.fetch("""
-                SELECT id, module, action_type, status, confidence,
-                       input_summary, created_at
-                FROM core.action_receipts
-                ORDER BY created_at DESC LIMIT 20
-                """)
+            if filter_module:
+                rows = await conn.fetch("""
+                    SELECT id, module, action_type, status, confidence,
+                           input_summary, output_summary, created_at
+                    FROM core.action_receipts
+                    WHERE module = $1
+                    ORDER BY created_at DESC LIMIT 20
+                    """, filter_module)
+            else:
+                rows = await conn.fetch("""
+                    SELECT id, module, action_type, status, confidence,
+                           input_summary, output_summary, created_at
+                    FROM core.action_receipts
+                    ORDER BY created_at DESC LIMIT 20
+                    """)
 
         if not rows:
             await update.message.reply_text("Aucune action enregistree", parse_mode="Markdown")
             return
 
-        lines = ["**Journal** (20 dernieres actions)\n"]
+        filter_label = f" (filtre: {filter_module})" if filter_module else ""
+        lines = [f"**Journal** (20 dernieres actions{filter_label})\n"]
+
         for row in rows:
             ts = format_timestamp(row["created_at"])
             emoji = format_status_emoji(row["status"])
             conf = format_confidence(row["confidence"])
-            lines.append(f"`{ts}` {row['module']}.{row['action_type']} " f"{emoji} {conf}")
+
+            # Story 2.6 AC4: Format spécialisé pour emails envoyés
+            if row['module'] == 'email' and row['action_type'] == 'draft_reply':
+                # Extraire recipient_anon depuis output_summary
+                output_summary = row.get('output_summary', '')
+                # Format: "Email envoyé → [RECIPIENT_ANON]" ou similaire
+                lines.append(f"`{ts}` {emoji} Email envoyé → {output_summary} {conf}")
+            else:
+                # Format générique pour autres actions
+                lines.append(f"`{ts}` {row['module']}.{row['action_type']} " f"{emoji} {conf}")
+
             if verbose and row.get("input_summary"):
                 lines.append(f"  Input: {truncate_text(row['input_summary'], 150)}")
 

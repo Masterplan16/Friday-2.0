@@ -10,11 +10,23 @@ Voir pytest.ini pour la configuration.
 """
 
 import os
+import sys
+from pathlib import Path
 from typing import AsyncGenerator
 from unittest.mock import AsyncMock, MagicMock
 
 import asyncpg
 import pytest
+
+# ==========================================
+# PYTHONPATH Setup (Fix LOW-3 à LOW-6)
+# ==========================================
+
+# Add repo root to PYTHONPATH (une seule fois pour tous les tests)
+# Remplace tous les sys.path.insert() dans les fichiers de tests individuels
+repo_root = Path(__file__).parent.parent
+if str(repo_root) not in sys.path:
+    sys.path.insert(0, str(repo_root))
 
 
 # ==========================================

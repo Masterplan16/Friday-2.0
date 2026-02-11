@@ -186,6 +186,41 @@ Email reçu → Classification → Brouillon généré →
 
 ---
 
+### ✉️ Envoi Emails Approuvés (Story 2.6) ✅
+
+**Friday envoie automatiquement les emails approuvés via inline buttons Telegram avec notifications complètes**
+
+| Feature | Description |
+|---------|-------------|
+| **Envoi** | EmailEngine API v2 (threading correct inReplyTo + references) |
+| **Retry** | 3 tentatives automatiques avec backoff exponentiel |
+| **Notifications** | ✅ Confirmation (topic Email) + ⚠️ Échec (topic System) |
+| **Anonymisation** | Recipient + Subject anonymisés (Presidio) dans notifications |
+| **Historique** | `/journal` affiche emails envoyés, `/receipt [id]` détails complets |
+| **Trust Layer** | Receipt status transitions : pending → approved → executed/failed |
+| **Latence** | <5s (clic Approve → confirmation envoi) |
+| **Error Handling** | Gestion erreurs EmailEngine complète + alertes System |
+
+**Workflow** :
+
+```
+Email reçu → Classification → Brouillon → [Approve] → Envoi EmailEngine → ✅ Confirmation
+                                                   ↓                      ↓
+                                        Receipt approved → executed   Notification topic Email
+                                                   ↓
+                                        Writing example stocké (few-shot learning)
+```
+
+**Commandes Telegram** :
+- `/journal` — 20 dernières actions (dont emails envoyés)
+- `/journal email` — Filtrer uniquement emails
+- `/receipt [id]` — Détails complets avec payload
+- `/receipt [id] -v` — Mode verbose (JSON payload)
+
+**Documentation** : Story 2.6 complète workflow brouillon → validation → envoi sans friction.
+
+---
+
 ### 🌟 Détection VIP & Urgence (Story 2.3) ✅
 
 **Système automatique de détection des emails prioritaires avec notifications push**

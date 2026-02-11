@@ -17,7 +17,7 @@ redis==5.0.1  # Redis client
 aioredis==2.0.1  # Async Redis
 
 # Utils
-PyYAML==6.0.1  # YAML config parsing
+PyYAML==6.0.3  # YAML config parsing
 
 # Testing (dev)
 pytest==8.0.0

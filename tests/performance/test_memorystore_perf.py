@@ -22,7 +22,7 @@ import random
 from pathlib import Path
 from datetime import datetime
 
-from agents.src.adapters.memorystore import MemorystoreAdapter
+from agents.src.adapters.memorystore import PostgreSQLMemorystore
 
 
 # Configuration BDD test
@@ -84,8 +84,8 @@ async def perf_db_pool():
 
 @pytest.fixture
 async def memorystore_perf(perf_db_pool):
-    """Fixture MemorystoreAdapter pour tests performance."""
-    adapter = MemorystoreAdapter(perf_db_pool)
+    """Fixture PostgreSQLMemorystore pour tests performance."""
+    adapter = PostgreSQLMemorystore(perf_db_pool)
     await adapter.init_pgvector()
     return adapter
 

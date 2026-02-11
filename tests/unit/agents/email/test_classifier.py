@@ -143,15 +143,17 @@ async def test_fetch_correction_rules_degraded_mode():
 @patch("agents.src.agents.email.classifier.get_llm_adapter")
 async def test_call_claude_success_first_try(mock_get_adapter):
     """Test appel Claude réussi du premier coup."""
-    # Mock LLM adapter
+    # Mock LLM adapter (C1 fix: mock complete_with_anonymization)
     mock_adapter = AsyncMock()
-    mock_adapter.complete.return_value = json.dumps({
+    mock_response = AsyncMock()
+    mock_response.content = json.dumps({
         "category": "finance",
         "confidence": 0.88,
         "reasoning": "Banking email with account details",
         "keywords": ["bank", "account"],
         "suggested_priority": "normal",
     })
+    mock_adapter.complete_with_anonymization.return_value = mock_response
     mock_get_adapter.return_value = mock_adapter
 
     # Test
@@ -164,7 +166,7 @@ async def test_call_claude_success_first_try(mock_get_adapter):
     # Assertions
     assert classification.category == "finance"
     assert classification.confidence == 0.88
-    mock_adapter.complete.assert_called_once()
+    mock_adapter.complete_with_anonymization.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -172,19 +174,20 @@ async def test_call_claude_success_first_try(mock_get_adapter):
 @patch("agents.src.agents.email.classifier._async_sleep")
 async def test_call_claude_retry_on_json_error(mock_sleep, mock_get_adapter):
     """Test retry en cas d'erreur parsing JSON."""
-    # Mock LLM adapter
+    # Mock LLM adapter (C1 fix: mock complete_with_anonymization)
     mock_adapter = AsyncMock()
     # Premier appel : JSON invalide
     # Deuxième appel : JSON valide
-    mock_adapter.complete.side_effect = [
-        "Invalid JSON response",  # 1er essai
-        json.dumps({
-            "category": "medical",
-            "confidence": 0.90,
-            "reasoning": "Valid response on retry",
-            "keywords": ["test"],
-        }),  # 2e essai
-    ]
+    mock_response_1 = AsyncMock()
+    mock_response_1.content = "Invalid JSON response"
+    mock_response_2 = AsyncMock()
+    mock_response_2.content = json.dumps({
+        "category": "medical",
+        "confidence": 0.90,
+        "reasoning": "Valid response on retry",
+        "keywords": ["test"],
+    })
+    mock_adapter.complete_with_anonymization.side_effect = [mock_response_1, mock_response_2]
     mock_get_adapter.return_value = mock_adapter
     mock_sleep.return_value = None
 
@@ -197,7 +200,7 @@ async def test_call_claude_retry_on_json_error(mock_sleep, mock_get_adapter):
 
     # Assertions
     assert classification.category == "medical"
-    assert mock_adapter.complete.call_count == 2
+    assert mock_adapter.complete_with_anonymization.call_count == 2
     mock_sleep.assert_called_once_with(1)  # Backoff 1s
 
 
@@ -206,9 +209,9 @@ async def test_call_claude_retry_on_json_error(mock_sleep, mock_get_adapter):
 @patch("agents.src.agents.email.classifier._async_sleep")
 async def test_call_claude_fail_after_max_retries(mock_sleep, mock_get_adapter):
     """Test échec après max retries."""
-    # Mock LLM adapter qui fail toujours
+    # Mock LLM adapter qui fail toujours (C1 fix: mock complete_with_anonymization)
     mock_adapter = AsyncMock()
-    mock_adapter.complete.side_effect = Exception("API error")
+    mock_adapter.complete_with_anonymization.side_effect = Exception("API error")
     mock_get_adapter.return_value = mock_adapter
     mock_sleep.return_value = None
 
@@ -224,7 +227,7 @@ async def test_call_claude_fail_after_max_retries(mock_sleep, mock_get_adapter):
     # Message peut être en français ou anglais
     error_msg = str(exc_info.value).lower()
     assert ("3 tentatives" in error_msg or "max retries" in error_msg)
-    assert mock_adapter.complete.call_count == 3
+    assert mock_adapter.complete_with_anonymization.call_count == 3  # C1 fix
 
 
 # ==========================================

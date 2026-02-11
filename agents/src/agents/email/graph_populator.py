@@ -33,7 +33,7 @@ import structlog
 from datetime import datetime
 from typing import Any, Optional
 
-from agents.src.adapters.memorystore import MemorystoreAdapter, NodeType, RelationType
+from agents.src.adapters.memorystore_interface import MemoryStore, NodeType, RelationType
 from agents.src.adapters.vectorstore import get_vectorstore_adapter
 from agents.src.tools.anonymize import anonymize_text
 
@@ -42,7 +42,7 @@ logger = structlog.get_logger(__name__)
 
 async def populate_email_graph(
     email_data: dict[str, Any],
-    memorystore: MemorystoreAdapter,
+    memorystore: MemoryStore,
     attachments: Optional[list[dict[str, Any]]] = None,
 ) -> str:
     """
@@ -240,7 +240,7 @@ async def extract_entities_ner(text: str) -> list[dict[str, Any]]:
 
 
 async def link_email_to_task(
-    email_node_id: str, task_node_id: str, memorystore: MemorystoreAdapter
+    email_node_id: str, task_node_id: str, memorystore: MemoryStore
 ) -> str:
     """
     Crée relation CREATED_FROM entre Task et Email.
@@ -270,7 +270,7 @@ async def link_email_to_task(
 
 
 async def link_email_to_event(
-    email_node_id: str, event_node_id: str, memorystore: MemorystoreAdapter
+    email_node_id: str, event_node_id: str, memorystore: MemoryStore
 ) -> str:
     """
     Crée relation CREATED_FROM entre Event et Email.

@@ -7,14 +7,14 @@ en 8 catégories avec injection de règles de correction.
 
 from __future__ import annotations
 
-import json
 import time
-from typing import TYPE_CHECKING
+from json import JSONDecodeError  # L1 fix: Import specific exception
+from typing import TYPE_CHECKING, Sequence
 
 import asyncpg
 import structlog
 
-from agents.src.adapters.llm import get_llm_adapter
+from agents.src.adapters.llm import ClaudeAdapter, get_llm_adapter  # H4 fix: Import type for hints
 from agents.src.agents.email.prompts import build_classification_prompt
 from agents.src.middleware.models import ActionResult, CorrectionRule
 from agents.src.middleware.trust import friday_action
@@ -24,6 +24,10 @@ if TYPE_CHECKING:
     from typing import Any
 
 logger = structlog.get_logger(__name__)
+
+# H2 fix: Circuit breaker pour correction_rules fetch
+# Tracks consecutive failures par composant
+_circuit_breaker_failures: dict[str, int] = {}
 
 
 class EmailClassifierError(Exception):
@@ -151,10 +155,11 @@ async def _fetch_correction_rules(
     """
     try:
         async with db_pool.acquire() as conn:
+            # M1 fix: Exclure source_receipts (potentiellement volumineux) pour perf
             rows = await conn.fetch(
                 """
                 SELECT id, module, action_type, scope, priority,
-                       conditions, output, source_receipts, hit_count, active
+                       conditions, output, hit_count, active
                 FROM core.correction_rules
                 WHERE module = $1
                   AND (action_type = $2 OR action_type IS NULL)
@@ -166,6 +171,7 @@ async def _fetch_correction_rules(
                 "classify",
             )
 
+            # M1: source_receipts non chargé (optim perf), defaulté à []
             rules = [
                 CorrectionRule(
                     id=row["id"],
@@ -175,7 +181,7 @@ async def _fetch_correction_rules(
                     priority=row["priority"],
                     conditions=row["conditions"],
                     output=row["output"],
-                    source_receipts=row["source_receipts"] or [],
+                    source_receipts=[],  # M1 fix: Non chargé pour perf
                     hit_count=row["hit_count"],
                     active=row["active"],
                 )
@@ -190,13 +196,36 @@ async def _fetch_correction_rules(
                     message="Plus de 50 règles actives, seules les 50 plus prioritaires sont chargées. Envisager un cleanup.",
                 )
 
+            # H2 fix: Reset circuit breaker on success
+            circuit_key = "correction_rules_fetch"
+            if circuit_key in _circuit_breaker_failures:
+                del _circuit_breaker_failures[circuit_key]
+
             return rules
 
     except Exception as e:
+        # H2 fix: Circuit breaker - si >= 3 échecs consécutifs, raise au lieu de fallback
+        circuit_key = "correction_rules_fetch"
+        consecutive_failures = _circuit_breaker_failures.get(circuit_key, 0) + 1
+        _circuit_breaker_failures[circuit_key] = consecutive_failures
+
+        if consecutive_failures >= 3:
+            logger.error(
+                "correction_rules_fetch_circuit_breaker_open",
+                consecutive_failures=consecutive_failures,
+                error=str(e),
+                error_type=type(e).__name__,
+                message="Circuit breaker open: correction_rules fetch failed 3+ times consecutively",
+            )
+            raise EmailClassifierError(
+                f"Circuit breaker ouvert: correction_rules fetch a échoué {consecutive_failures} fois consécutives"
+            ) from e
+
         logger.warning(
             "correction_rules_fetch_failed",
             error=str(e),
             error_type=type(e).__name__,
+            consecutive_failures=consecutive_failures,
             fallback="degraded_mode",
         )
         # Mode dégradé : continuer sans règles
@@ -229,8 +258,9 @@ async def _call_claude_with_retry(
         - Backoff exponentiel : 1s, 2s, 4s
         - Si JSON parsing fail → retry 1x avec prompt ajusté
     """
-    llm_adapter = get_llm_adapter()
+    llm_adapter: ClaudeAdapter = get_llm_adapter()  # H4 fix: Explicit type hint
     backoff_delays = [1, 2, 4]  # secondes
+    start_time = time.time()  # M2 fix: Track latency
 
     for attempt in range(max_retries):
         try:
@@ -241,22 +271,21 @@ async def _call_claude_with_retry(
                 max_retries=max_retries,
             )
 
-            # Appel Claude
-            response = await llm_adapter.complete(
-                system_prompt=system_prompt,
-                user_prompt=user_prompt,
+            # Appel Claude avec anonymisation RGPD (C1 fix)
+            # Combine system + user prompts dans le context pour anonymisation
+            combined_context = f"{system_prompt}\n\n{user_prompt}"
+
+            llm_response = await llm_adapter.complete_with_anonymization(
+                prompt="Classifie cet email dans l'une des catégories disponibles selon les règles fournies.",
+                context=combined_context,  # PII sera anonymisée automatiquement
                 temperature=0.1,  # Classification déterministe
                 max_tokens=300,   # Catégorie + confidence + reasoning
             )
 
-            # Parse JSON response
+            response = llm_response.content
+
+            # Parse JSON response (L3 fix: Pydantic valide le JSON, pas besoin de check manuel)
             json_text = response.strip()
-
-            # Validation rapide format
-            if not (json_text.startswith("{") and json_text.endswith("}")):
-                raise ValueError("Response n'est pas du JSON valide")
-
-            # Parse avec Pydantic
             classification = EmailClassification.model_validate_json(json_text)
 
             logger.info(
@@ -264,12 +293,14 @@ async def _call_claude_with_retry(
                 email_id=email_id,
                 category=classification.category,
                 confidence=classification.confidence,
+                keywords=classification.keywords,  # M2 fix: Add keywords for debugging
+                latency_ms=round((time.time() - start_time) * 1000, 2),  # M2 fix: Add latency
                 attempt=attempt + 1,
             )
 
             return classification
 
-        except json.JSONDecodeError as e:
+        except JSONDecodeError as e:  # L1 fix: Use imported JSONDecodeError
             logger.warning(
                 "json_parsing_failed",
                 email_id=email_id,
@@ -379,21 +410,15 @@ async def _check_cold_start_progression(db_pool: asyncpg.Pool) -> None:
     """
     try:
         async with db_pool.acquire() as conn:
-            # Incrémenter emails_processed
-            await conn.execute(
-                """
-                UPDATE core.cold_start_tracking
-                SET emails_processed = emails_processed + 1
-                WHERE module = 'email' AND action_type = 'classify'
-                """
-            )
-
-            # Fetch état actuel
+            # C3 fix: Incrémentation atomique avec RETURNING (évite race condition)
             row = await conn.fetchrow(
                 """
-                SELECT phase, emails_processed, accuracy
-                FROM core.cold_start_tracking
+                UPDATE core.cold_start_tracking
+                SET
+                    emails_processed = emails_processed + 1,
+                    updated_at = NOW()
                 WHERE module = 'email' AND action_type = 'classify'
+                RETURNING phase, emails_processed, accuracy
                 """
             )
 
@@ -418,14 +443,74 @@ async def _check_cold_start_progression(db_pool: asyncpg.Pool) -> None:
             if emails_processed < 10:
                 return
 
-            # Si >= 10 emails → calculer accuracy et décider promotion
-            # TODO: Implémenter calcul accuracy (Story 1.8 dépendance)
-            # Pour l'instant, log info uniquement
-            logger.info(
-                "cold_start_checkpoint_reached",
-                emails_processed=emails_processed,
-                message="Seuil 10 emails atteint - calcul accuracy requis (Story 1.8)",
-            )
+            # H3 fix: Si >= 10 emails → calculer accuracy et décider promotion
+            if phase == "cold_start":
+                # Calculer accuracy depuis core.action_receipts
+                accuracy_row = await conn.fetchrow(
+                    """
+                    SELECT
+                        COUNT(*) FILTER (WHERE status IN ('auto', 'approved', 'executed')) as correct,
+                        COUNT(*) as total
+                    FROM core.action_receipts
+                    WHERE module = 'email' AND action_type = 'classify'
+                      AND created_at >= (
+                          SELECT created_at
+                          FROM core.cold_start_tracking
+                          WHERE module = 'email' AND action_type = 'classify'
+                      )
+                    """
+                )
+
+                if not accuracy_row or accuracy_row["total"] == 0:
+                    logger.warning(
+                        "cold_start_accuracy_no_data",
+                        message="No action_receipts found for email.classify"
+                    )
+                    return
+
+                correct = accuracy_row["correct"]
+                total = accuracy_row["total"]
+                accuracy = correct / total if total > 0 else 0.0
+
+                logger.info(
+                    "cold_start_accuracy_calculated",
+                    emails_processed=emails_processed,
+                    correct=correct,
+                    total=total,
+                    accuracy=round(accuracy, 3),
+                )
+
+                # Si accuracy >= 90% → promouvoir à 'calibrated'
+                if accuracy >= 0.90:
+                    await conn.execute(
+                        """
+                        UPDATE core.cold_start_tracking
+                        SET phase = 'calibrated', accuracy = $1
+                        WHERE module = 'email' AND action_type = 'classify'
+                        """,
+                        accuracy,
+                    )
+                    logger.info(
+                        "cold_start_promoted_to_calibrated",
+                        accuracy=round(accuracy, 3),
+                        message="Email classifier promoted to calibrated phase (accuracy >= 90%)",
+                    )
+                else:
+                    # Accuracy < 90% → rester en cold_start, mais update accuracy pour tracking
+                    await conn.execute(
+                        """
+                        UPDATE core.cold_start_tracking
+                        SET accuracy = $1
+                        WHERE module = 'email' AND action_type = 'classify'
+                        """,
+                        accuracy,
+                    )
+                    logger.warning(
+                        "cold_start_accuracy_below_threshold",
+                        accuracy=round(accuracy, 3),
+                        threshold=0.90,
+                        message=f"Accuracy {accuracy:.1%} < 90% - staying in cold_start phase",
+                    )
 
     except Exception as e:
         logger.warning(

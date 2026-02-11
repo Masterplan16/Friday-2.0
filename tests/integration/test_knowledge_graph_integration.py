@@ -15,7 +15,7 @@ from datetime import datetime, timedelta
 from uuid import uuid4
 import os
 
-from agents.src.adapters.memorystore import MemorystoreAdapter, NodeType, RelationType
+from agents.src.adapters.memorystore import PostgreSQLMemorystore, NodeType, RelationType
 
 
 # Configuration BDD test (override avec env vars)
@@ -90,8 +90,8 @@ async def test_db_pool():
 
 @pytest.fixture
 async def memorystore(test_db_pool):
-    """Fixture MemorystoreAdapter avec BDD test réelle."""
-    adapter = MemorystoreAdapter(test_db_pool)
+    """Fixture PostgreSQLMemorystore avec BDD test réelle."""
+    adapter = PostgreSQLMemorystore(test_db_pool)
     await adapter.init_pgvector()
     return adapter
 

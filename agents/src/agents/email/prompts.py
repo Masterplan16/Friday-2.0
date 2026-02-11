@@ -7,11 +7,21 @@ avec injection des correction_rules et contexte utilisateur.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Sequence  # H4 fix: Add Sequence for immutability
 
 if TYPE_CHECKING:
     from agents.src.middleware.models import CorrectionRule
 
+
+# M3 fix: Configuration centralisée (éviter magic numbers)
+CLASSIFICATION_CONFIG = {
+    "reasoning_min_length": 10,  # Minimum caractères pour reasoning
+    "keywords_min": 3,  # Minimum mots-clés requis
+    "keywords_max": 5,  # Maximum mots-clés acceptés
+    "max_tokens": 300,  # Limite tokens réponse Claude
+    "temperature": 0.1,  # Temperature classification (déterministe)
+    "max_correction_rules": 50,  # Limite règles injectées dans prompt
+}
 
 # Catégories supportées avec descriptions détaillées
 CATEGORY_DESCRIPTIONS = {
@@ -79,8 +89,8 @@ def build_classification_prompt(
         "```\n\n"
         "**RÈGLES STRICTES** :\n"
         "- Si tu as un doute → category='unknown' + confidence faible (<0.6)\n"
-        "- Reasoning doit expliquer ta décision (minimum 10 caractères)\n"
-        "- Keywords : 3-5 mots-clés max qui ont influencé ta décision\n"
+        f"- Reasoning doit expliquer ta décision (minimum {CLASSIFICATION_CONFIG['reasoning_min_length']} caractères)\n"  # M3 fix
+        f"- Keywords : {CLASSIFICATION_CONFIG['keywords_min']}-{CLASSIFICATION_CONFIG['keywords_max']} mots-clés max qui ont influencé ta décision\n"  # M3 fix
         "- Confidence : sois réaliste (pas systématiquement >0.9)\n"
         "- JAMAIS de commentaires hors JSON\n",
     ]
@@ -99,7 +109,7 @@ def build_classification_prompt(
     return (system_prompt, user_prompt)
 
 
-def _format_correction_rules(rules: list[CorrectionRule]) -> str:
+def _format_correction_rules(rules: Sequence[CorrectionRule]) -> str:  # H4 fix: Sequence for immutability
     """
     Formate les règles de correction pour injection dans le prompt.
 
@@ -110,7 +120,7 @@ def _format_correction_rules(rules: list[CorrectionRule]) -> str:
         Bloc texte formaté avec les règles
 
     Notes:
-        - Maximum 50 règles (AC2 Story 2.2)
+        - Maximum 50 règles (limite feedback loop Story 1.7)  # L2 fix: Correct AC reference
         - Si >50 règles actives, prendre les 50 plus prioritaires
     """
     if not rules:

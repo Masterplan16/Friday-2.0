@@ -378,7 +378,7 @@ tailscale up --hostname=friday-vps
 - LLM : Claude Sonnet 4.5 via Anthropic API (D17)
 - BDD : PostgreSQL 16
 - Vectoriel : pgvector (extension PostgreSQL) (D19) — Ré-évaluation Qdrant si >300k vecteurs ou latence >100ms
-- Memoire graphe : PostgreSQL (knowledge.*) via abstraction memorystore.py (Zep fermé 2024, Graphiti immature) (D19)
+- Memoire graphe : PostgreSQL (knowledge.*) via **interface abstraite MemoryStore** (Story 6.3 — pattern abstraction, D19) — Day 1: PostgreSQL, swap futur: Graphiti (~août 2026), Neo4j, Qdrant (si >300k vecteurs)
 - ~~Inference locale~~ : Ollama retire (D12/D17) — 100% Claude cloud avec Presidio
 - Bot : python-telegram-bot
 - API Gateway : FastAPI
@@ -456,10 +456,18 @@ PostgreSQL (source de verite) (D19 : pgvector integre dans PostgreSQL)
 
 | Composant | Adaptateur | Remplacable par |
 |-----------|-----------|-----------------|
-| pgvector (D19) | `adapters/memorystore.py` (D19) | Qdrant (si >300k vecteurs ou latence >100ms), Milvus, Weaviate |
-| Graphe connaissances | `adapters/memorystore.py` | Neo4j, Graphiti (si mature), MemGPT, custom |
+| Vectorstore (embeddings) | `adapters/vectorstore.py` (Story 6.2) | Day 1: Voyage AI + pgvector. Futur: OpenAI, Cohere, Ollama (embeddings) ; Qdrant, Milvus (si >300k vecteurs) |
+| Memorystore (graphe) | `adapters/memorystore.py` + **interface `MemoryStore`** (Story 6.3) | Day 1: PostgreSQL + pgvector. Futur: Graphiti (~août 2026), Neo4j (graphe complexe), Qdrant (si >300k vecteurs) |
 | Syncthing | `adapters/filesync.py` | rsync, rclone |
 | EmailEngine | `adapters/email.py` | IMAP direct, autre bridge |
+
+**Pattern abstraction memorystore (Story 6.3, 2026-02-11)** :
+- **Interface** : `MemoryStore(ABC)` avec 11 méthodes abstraites (`create_node`, `get_or_create_node`, `create_edge`, `query_path`, `query_temporal`, `semantic_search`, etc.)
+- **Implémentation Day 1** : `PostgreSQLMemorystore(MemoryStore)` (PostgreSQL + pgvector pour embeddings)
+- **Factory** : `get_memorystore_adapter(provider="postgresql")` → retourne interface `MemoryStore`
+- **Swap provider** : 1 variable env changée (`MEMORYSTORE_PROVIDER`), zéro refactoring code métier
+- **Futur** : Stubs Graphiti/Neo4j/Qdrant avec `NotImplementedError` + messages décisions (D3, D19)
+- **Guide** : [docs/memorystore-provider-migration.md](../docs/memorystore-provider-migration.md)
 
 #### 1f. Schema du graphe de connaissances (PostgreSQL knowledge.* + pgvector) (D19)
 

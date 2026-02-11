@@ -10,6 +10,8 @@ Available adapters:
 """
 
 from agents.src.adapters.llm import ClaudeAdapter, LLMError, LLMResponse
+from agents.src.adapters.memorystore import PostgreSQLMemorystore, get_memorystore_adapter
+from agents.src.adapters.memorystore_interface import MemoryStore, NodeType, RelationType
 from agents.src.adapters.vectorstore import (
     CombinedVectorStoreAdapter,
     EmbeddingProviderError,
@@ -39,4 +41,10 @@ __all__ = [
     "SearchResult",
     "VectorStoreError",
     "EmbeddingProviderError",
+    # Memorystore Adapter
+    "get_memorystore_adapter",
+    "MemoryStore",
+    "PostgreSQLMemorystore",
+    "NodeType",
+    "RelationType",
 ]

@@ -20,7 +20,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 from agents.src.agents.email.graph_populator import populate_email_graph
-from agents.src.adapters.memorystore import MemorystoreAdapter
+from agents.src.adapters.memorystore import PostgreSQLMemorystore
 
 
 @pytest.mark.integration
@@ -37,7 +37,7 @@ async def test_email_creates_embedding_automatically():
         5. node_id lié entre Email et embedding
     """
     # Mock memorystore
-    mock_memorystore = AsyncMock(spec=MemorystoreAdapter)
+    mock_memorystore = AsyncMock(spec=PostgreSQLMemorystore)
     mock_memorystore.create_node = AsyncMock(return_value="email_node_123")
     mock_memorystore.get_or_create_node = AsyncMock(return_value="person_node_456")
     mock_memorystore.create_edge = AsyncMock()
@@ -113,7 +113,7 @@ async def test_email_embedding_anonymizes_pii():
 
     Selon AC1 Story 6.2 : AUCUNE PII ne doit être envoyée à Voyage AI.
     """
-    mock_memorystore = AsyncMock(spec=MemorystoreAdapter)
+    mock_memorystore = AsyncMock(spec=PostgreSQLMemorystore)
     mock_memorystore.create_node = AsyncMock(return_value="email_node_789")
     mock_memorystore.get_or_create_node = AsyncMock(return_value="person_node_012")
     mock_memorystore.create_edge = AsyncMock()
@@ -183,7 +183,7 @@ async def test_email_embedding_error_handling():
         - Alerte Telegram envoyée
         - Job nightly retentera plus tard
     """
-    mock_memorystore = AsyncMock(spec=MemorystoreAdapter)
+    mock_memorystore = AsyncMock(spec=PostgreSQLMemorystore)
     mock_memorystore.create_node = AsyncMock(return_value="email_node_err")
     mock_memorystore.get_or_create_node = AsyncMock(return_value="person_node_err")
     mock_memorystore.create_edge = AsyncMock()
@@ -209,10 +209,13 @@ async def test_email_embedding_error_handling():
         assert email_node_id == "email_node_err"
         mock_memorystore.create_node.assert_awaited_once()
 
-        # Embedding non stocké (erreur gérée)
-        # TODO: Vérifier alerte Telegram envoyée
+        # Embedding non stocké (erreur gérée gracieusement)
+        # Note: Alertes Telegram + receipt status="failed" implémentés dans Story 6.2 Subtask 2.3
+        # Tests de ces features dans test_voyage_retry_logic.py (TODO Story future)
 
 
-# Test manquant dans cette itération :
-# - test_email_embedding_retry_logic (Task 7.6)
-# - test_email_bulk_embeddings_batch (optimisation batch API)
+# Tests manquants (Stories futures):
+# - test_email_embedding_retry_logic (Task 7.6 - retry 3x avec backoff)
+# - test_email_bulk_embeddings_batch (optimisation batch API Voyage)
+# - test_telegram_alert_on_embedding_failure (alertes Telegram)
+# - test_action_receipt_failed_status (receipt status="failed")

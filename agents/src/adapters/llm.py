@@ -81,9 +81,19 @@ class ClaudeAdapter:
         Raises:
             ValueError: Si api_key manquante
         """
+        # C2 fix: Warning si api_key passée directement (risque hardcoding)
+        if api_key is not None:
+            logger.warning(
+                "api_key_passed_directly",
+                message="API key passed as parameter. Prefer ANTHROPIC_API_KEY env var to avoid hardcoding risk.",
+            )
+
         self.api_key = api_key or os.getenv("ANTHROPIC_API_KEY")
         if not self.api_key:
-            raise ValueError("ANTHROPIC_API_KEY manquante (env var ou paramètre constructor)")
+            raise ValueError(
+                "ANTHROPIC_API_KEY manquante. "
+                "Définir la variable d'environnement ANTHROPIC_API_KEY (requis en production)."
+            )
 
         self.model = model
         self.anonymize_by_default = anonymize_by_default

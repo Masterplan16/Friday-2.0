@@ -20,7 +20,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import asyncpg
 import pytest
-from agents.src.adapters.memorystore import MemorystoreAdapter
+from agents.src.adapters.memorystore import PostgreSQLMemorystore
 from agents.src.adapters.vectorstore import get_vectorstore_adapter
 from agents.src.agents.email.graph_populator import populate_email_graph
 
@@ -81,7 +81,7 @@ async def test_email_to_search_e2e_pipeline(db_pool: asyncpg.Pool, clean_test_da
     """
 
     # Mock memorystore (PostgreSQL knowledge.nodes)
-    mock_memorystore = AsyncMock(spec=MemorystoreAdapter)
+    mock_memorystore = AsyncMock(spec=PostgreSQLMemorystore)
 
     # Email node créé (PAS mock - vrai INSERT)
     email_node_id = "test_email_e2e_facture_plombier"
@@ -219,7 +219,7 @@ async def test_multi_email_semantic_search_e2e(db_pool: asyncpg.Pool, clean_test
     """
 
     # Mock memorystore
-    mock_memorystore = AsyncMock(spec=MemorystoreAdapter)
+    mock_memorystore = AsyncMock(spec=PostgreSQLMemorystore)
 
     email_nodes_created = []
 

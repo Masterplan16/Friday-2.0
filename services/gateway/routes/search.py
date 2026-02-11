@@ -18,9 +18,18 @@ Story: 6.2 - Task 4
 
 from typing import Optional
 
-from agents.src.adapters.vectorstore import SearchResult, get_vectorstore_adapter
+import structlog
+from agents.src.adapters.vectorstore import (
+    EmbeddingProviderError,
+    SearchResult,
+    VectorStoreError,
+    get_vectorstore_adapter,
+)
+from agents.src.tools.anonymize import AnonymizationError
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError
+
+logger = structlog.get_logger(__name__)
 
 router = APIRouter(prefix="/search", tags=["search"])
 
@@ -115,5 +124,31 @@ async def semantic_search(request: SemanticSearchRequest):
             count=len(formatted_results),
         )
 
+    except EmbeddingProviderError as e:
+        logger.error("voyage_api_error", error=str(e), query=request.query)
+        raise HTTPException(
+            status_code=503,
+            detail="Embedding service temporarily unavailable. Please try again later."
+        )
+
+    except VectorStoreError as e:
+        logger.error("vectorstore_error", error=str(e), query=request.query)
+        raise HTTPException(
+            status_code=503,
+            detail="Search service temporarily unavailable. Please try again later."
+        )
+
+    except AnonymizationError as e:
+        logger.error("anonymization_error", error=str(e), query_length=len(request.query))
+        raise HTTPException(
+            status_code=500,
+            detail="Query anonymization failed. Please try with a different query."
+        )
+
+    except ValidationError as e:
+        logger.warning("validation_error", error=str(e), query=request.query[:50])
+        raise HTTPException(status_code=400, detail="Invalid query format")
+
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Search error: {str(e)}")
+        logger.error("search_unexpected_error", error=str(e), query=request.query[:50])
+        raise HTTPException(status_code=500, detail="Search failed")

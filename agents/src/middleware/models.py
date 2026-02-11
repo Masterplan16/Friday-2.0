@@ -183,6 +183,24 @@ class CorrectionRule(BaseModel):
 
     Les règles sont stockées dans core.correction_rules et injectées
     dans les prompts LLM pour garantir la répétabilité des corrections.
+
+    Exemples de format JSON (M4 fix - documentation enrichie):
+
+    Classification email:
+        conditions = {"from": "@urssaf.fr"}
+        output = {"category": "finance"}
+
+    Classification avec keywords:
+        conditions = {"category": "medical", "keywords": ["CPAM"]}
+        output = {"category": "finance", "subcategory": "CPAM"}
+
+    Drafting réponse:
+        conditions = {"category": "medical", "keywords": ["rendez-vous"]}
+        output = {"tone": "formal", "template": "confirmation_rdv"}
+
+    Détection VIP:
+        conditions = {"from": "doyen@univ-paris.fr"}
+        output = {"priority": "urgent", "vip": true}
     """
 
     id: UUID = Field(default_factory=uuid4, description="ID unique de la règle")

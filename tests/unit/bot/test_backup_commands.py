@@ -170,7 +170,7 @@ async def test_backup_command_lazy_pool_initialization(mock_update, mock_context
     os.environ["OWNER_USER_ID"] = "123456"
     os.environ["DATABASE_URL"] = "postgresql://test:test@localhost:5432/test"
 
-    with patch("bot.handlers.backup_commands.asyncpg.create_pool", return_value=pool):
+    with patch("bot.handlers.backup_commands.asyncpg.create_pool", AsyncMock(return_value=pool)):
         # Execute
         await backup_command(mock_update, mock_context)
 

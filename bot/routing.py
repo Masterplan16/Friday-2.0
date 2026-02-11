@@ -72,7 +72,19 @@ class EventRouter:
             )
             return self.chat_proactive_thread_id
 
-        # 2. Email/desktop_search → Email & Communications
+        # 2. Critical/Warning → System & Alerts (PRIORITAIRE sur module)
+        #    BUG-1.9.11 fix: Cette règle intercepte TOUS les events critical/warning,
+        #    même email.urgent avec priority=critical. C'est intentionnel - les alertes
+        #    critiques ont priorité absolue sur le module source.
+        if event.priority in ["critical", "warning"]:
+            logger.debug(
+                "Event routé vers System & Alerts",
+                event_type=event.type,
+                priority=event.priority,
+            )
+            return self.system_thread_id
+
+        # 3. Email/desktop_search → Email & Communications
         if event.module in ["email", "desktop_search"]:
             logger.debug(
                 "Event routé vers Email & Communications",
@@ -81,25 +93,13 @@ class EventRouter:
             )
             return self.email_thread_id
 
-        # 3. Actions (pending/corrected/trust_changed) → Actions & Validations
+        # 4. Actions (pending/corrected/trust_changed) → Actions & Validations
         if event.type.startswith("action."):
             logger.debug(
                 "Event routé vers Actions & Validations",
                 event_type=event.type,
             )
             return self.actions_thread_id
-
-        # 4. Critical/Warning → System & Alerts
-        #    BUG-1.9.11 fix: Cette règle peut intercepter des events email.urgent
-        #    avec priority=critical. C'est intentionnel - les alertes critiques
-        #    ont priorité sur le module source.
-        if event.priority in ["critical", "warning"]:
-            logger.debug(
-                "Event routé vers System & Alerts",
-                event_type=event.type,
-                priority=event.priority,
-            )
-            return self.system_thread_id
 
         # 5. Default → Metrics & Logs
         logger.debug(

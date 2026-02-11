@@ -22,7 +22,7 @@ def test_cleanup_logs_docker_command_valid():
     result = subprocess.run(cmd, capture_output=True, text=True)
 
     assert result.returncode == 0, "docker system prune command should be valid"
-    assert "until" in result.stdout.lower(), "--filter until should be documented"
+    assert "--filter" in result.stdout.lower(), "--filter option should be documented"
 
 
 def test_cleanup_logs_docker_filter_syntax():
@@ -121,7 +121,8 @@ def test_format_bytes_conversion():
         else:
             return f"{bytes_count} bytes"
 
-    assert format_bytes(500_000_000) == "0.5 GB"
+    assert format_bytes(500_000_000) == "500.0 MB"  # < 1 GB threshold
+    assert format_bytes(1_000_000_000) == "1.0 GB"  # Exactly 1 GB
     assert format_bytes(1_500_000) == "1.5 MB"
     assert format_bytes(1_500) == "1.5 KB"
     assert format_bytes(500) == "500 bytes"

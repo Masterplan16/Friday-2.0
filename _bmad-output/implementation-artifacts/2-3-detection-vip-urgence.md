@@ -930,22 +930,31 @@ _À compléter après code review_
 - README_VIP_URGENCE.md complet (11 sections, 400+ lignes)
 - API complete, troubleshooting, benchmarks, evolutions
 
+#### Task 5: Commandes Telegram /vip (3 subtasks) ✅
+- /vip add <email> <label> : Ajout manuel VIP via Telegram (SQL direct)
+- /vip list : Liste tous les VIPs actifs (email_anon, label, stats)
+- /vip remove <email> : Soft delete VIP (active=FALSE)
+- Fichier : bot/handlers/vip_commands.py
+- Integration : bot/main.py + bot/handlers/commands.py (/help)
+
+#### Task 6: Integration Consumer Pipeline (4 subtasks) ✅
+- Appel detect_vip_sender() avec hash SHA256 AVANT anonymisation
+- Appel detect_urgency() avec texte anonymise + VIP status
+- Mise a jour priority='urgent'|'high'|'normal' dans ingestion.emails
+- Notification Telegram topic Actions si urgent (TOPIC_ACTIONS_ID)
+- Update stats VIP (emails_received_count, last_email_at)
+- Fichier : services/email_processor/consumer.py (refactor Connection->Pool)
+
 ### TOTAL TESTS : 64 unitaires + 5 E2E = 69 tests PASS ✅
 
-### PENDING (Non-bloquant MVP)
+### ALL TASKS COMPLETE ✅
 
-#### Task 5: Commandes Telegram /vip (3 subtasks) - SKIPPED MVP
-- /vip add [email] : Ajout manuel VIP possible via SQL direct
-- /vip list : Non critique pour MVP
-- /vip remove : Non critique pour MVP
+**Story 2.3 MVP : 8/8 tasks DONE**
+- Tasks 1-4 : Migrations + Models + Detectors (69 tests PASS)
+- Tasks 5-6 : Telegram commands + Consumer integration (commit 8ea95f4)
+- Tasks 7-8 : Dataset 31 emails + Tests E2E + Documentation
 
-#### Task 6: Integration Consumer Pipeline (4 subtasks) - TODO
-- Appel detect_vip_sender() dans consumer email
-- Appel detect_urgency() dans consumer email  
-- Mise a jour priority='urgent' dans ingestion.emails
-- Notification Telegram topic Actions si urgent
-
-### FICHIERS CREES/MODIFIES (28 fichiers)
+### FICHIERS CREES/MODIFIES (32 fichiers)
 
 **Nouveau** :
 - database/migrations/027_vip_senders.sql
@@ -960,13 +969,17 @@ _À compléter après code review_
 - tests/e2e/email/conftest.py
 - tests/e2e/email/test_urgency_detection_e2e.py
 - tests/fixtures/vip_urgency_dataset.json
+- bot/handlers/vip_commands.py (Task 5)
 
 **Modifie** :
 - agents/src/models/__init__.py (exports VIPSender, UrgencyResult)
 - agents/src/agents/email/__init__.py (exports 6 fonctions)
 - tests/unit/database/test_migrations_syntax.py (+17 tests)
-- _bmad-output/implementation-artifacts/sprint-status.yaml (status in-progress)
-- _bmad-output/implementation-artifacts/2-3-detection-vip-urgence.md (subtasks completion)
+- services/email_processor/consumer.py (Task 6 : integration VIP+urgence)
+- bot/main.py (Task 5 : handler /vip)
+- bot/handlers/commands.py (Task 5 : /help)
+- _bmad-output/implementation-artifacts/sprint-status.yaml (status done)
+- _bmad-output/implementation-artifacts/2-3-detection-vip-urgence.md (all tasks complete)
 
 ### LECONS APPRISES
 
@@ -978,9 +991,18 @@ _À compléter après code review_
 
 ### PROCHAINES ETAPES
 
-1. Task 6 : Integrer VIP+urgence dans consumer pipeline email
-2. Task 5 : Commandes Telegram /vip (optionnel post-MVP)
-3. Epic 2 autres stories : Classification (2.2), PJ (2.4), etc.
+1. **Tests end-to-end workflow complet** :
+   - EmailEngine -> Consumer -> VIP detection -> Urgency detection -> Telegram notification
+   - Valider priority='urgent' dans BDD
+   - Valider notification topic Actions si urgent
+2. **Epic 2 autres stories** :
+   - Story 2.2 : Classification emails LLM
+   - Story 2.4 : Extraction PJ
+   - Story 2.5 : Suggestions reponses
+3. **Ameliorations post-MVP** :
+   - Apprentissage automatique VIP (designation_source='learned')
+   - Patterns deadline adaptatifs (ML)
+   - Detection spam/phishing VIP compromis
 
 ---
 

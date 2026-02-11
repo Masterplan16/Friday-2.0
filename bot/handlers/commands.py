@@ -35,6 +35,11 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 • `/stats` - Métriques globales
 • `/budget` - Consommation API Claude du mois
 
+👤 **VIP & URGENCE**
+• `/vip add <email> <label>` - Ajouter un VIP
+• `/vip list` - Lister les VIPs
+• `/vip remove <email>` - Retirer un VIP
+
 📚 Plus d'infos: `docs/telegram-user-guide.md`
 """
 

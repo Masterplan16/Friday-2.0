@@ -216,8 +216,7 @@ services:
       - EENGINE_REDIS=redis://friday_emailengine:${REDIS_EMAILENGINE_PASSWORD:-REDACTED_EE_PASSWORD}@redis:6379/2
       - EENGINE_SECRET=${EMAILENGINE_SECRET}
       - EENGINE_ENCRYPTION_KEY=${EMAILENGINE_ENCRYPTION_KEY}
-      - EENGINE_LOG_LEVEL=${LOG_LEVEL:-info}
-      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      - EENGINE_LOG_LEVEL=info
     volumes:
       - emailengine-data:/app/data
     ports:

@@ -10,7 +10,10 @@ import os
 from datetime import datetime
 from typing import List
 
-from agents.src.agents.email.models import TaskDetected
+try:
+    from agents.src.agents.email.models import TaskDetected
+except ImportError:
+    TaskDetected = None  # type: ignore[assignment,misc]
 from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup
 
 logger = logging.getLogger(__name__)

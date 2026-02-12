@@ -160,7 +160,7 @@ services:
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
       - SPACY_MODEL=fr_core_news_lg
     ports:
-      - "127.0.0.1:5001:5001"
+      - "127.0.0.1:5001:3000"
     networks:
       friday-network:
         ipv4_address: 172.20.0.34
@@ -171,7 +171,7 @@ services:
         reservations:
           memory: 1G
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:5001/health"]
+      test: ["CMD-SHELL", "wget -qO /dev/null http://localhost:3000/health"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -184,7 +184,7 @@ services:
     environment:
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
     ports:
-      - "127.0.0.1:5002:5002"
+      - "127.0.0.1:5002:3000"
     networks:
       friday-network:
         ipv4_address: 172.20.0.35
@@ -195,7 +195,7 @@ services:
         reservations:
           memory: 512M
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:5002/health"]
+      test: ["CMD-SHELL", "wget -qO /dev/null http://localhost:3000/health"]
       interval: 30s
       timeout: 5s
       retries: 3

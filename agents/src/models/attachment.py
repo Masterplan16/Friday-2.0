@@ -11,7 +11,7 @@ from uuid import UUID
 from pydantic import BaseModel, Field, field_validator
 
 
-MAX_ATTACHMENT_SIZE_BYTES = 26214400  # 25 Mo (EmailEngine limite)
+MAX_ATTACHMENT_SIZE_BYTES = 52428800  # 50 Mo default (configurable via MAX_ATTACHMENT_SIZE_MB env var)
 MAX_FILENAME_LENGTH = 200
 
 

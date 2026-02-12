@@ -73,7 +73,6 @@ limiter = Limiter(key_func=get_remote_address)
 webhook_circuit_breaker = CircuitBreaker(
     fail_max=5,
     timeout_duration=30,
-    expected_exception=Exception
 )
 
 # Limite taille body webhook (10 MB max)

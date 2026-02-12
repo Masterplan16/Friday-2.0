@@ -161,82 +161,81 @@ async def vip_add_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     try:
         # Utiliser pool au lieu de connexion directe (H1 fix)
         async with db_pool.acquire() as db:
+            # Étape 1: Anonymiser email (RGPD)
+            email_anon = await anonymize_text(email) if anonymize_text else email
 
-        # Étape 1: Anonymiser email (RGPD)
-        email_anon = await anonymize_text(email)
+            # Étape 2: Calculer hash SHA256
+            email_hash = compute_email_hash(email) if compute_email_hash else email
 
-        # Étape 2: Calculer hash SHA256
-        email_hash = compute_email_hash(email)
+            # Étape 3: Vérifier si VIP existe déjà
+            existing_vip = await db.fetchrow(
+                """
+                SELECT id, active, label
+                FROM core.vip_senders
+                WHERE email_hash = $1
+                """,
+                email_hash,
+            )
 
-        # Étape 3: Vérifier si VIP existe déjà
-        existing_vip = await db.fetchrow(
-            """
-            SELECT id, active, label
-            FROM core.vip_senders
-            WHERE email_hash = $1
-            """,
-            email_hash,
-        )
+            if existing_vip:
+                if existing_vip["active"]:
+                    await update.message.reply_text(
+                        f"ℹ️ **VIP déjà existant**\n\n"
+                        f"Email (anonymisé) : `{email_anon}`\n"
+                        f"Label actuel : `{existing_vip['label']}`\n\n"
+                        f"Utilisez `/vip remove` puis `/vip add` pour modifier le label.",
+                        parse_mode="Markdown",
+                    )
+                    return
+                else:
+                    # VIP existe mais inactif → réactiver
+                    await db.execute(
+                        """
+                        UPDATE core.vip_senders
+                        SET active = TRUE, label = $1
+                        WHERE email_hash = $2
+                        """,
+                        label,
+                        email_hash,
+                    )
 
-        if existing_vip:
-            if existing_vip["active"]:
-                await update.message.reply_text(
-                    f"ℹ️ **VIP déjà existant**\n\n"
-                    f"Email (anonymisé) : `{email_anon}`\n"
-                    f"Label actuel : `{existing_vip['label']}`\n\n"
-                    f"Utilisez `/vip remove` puis `/vip add` pour modifier le label.",
-                    parse_mode="Markdown",
-                )
-                return
-            else:
-                # VIP existe mais inactif → réactiver
-                await db.execute(
-                    """
-                    UPDATE core.vip_senders
-                    SET active = TRUE, label = $1
-                    WHERE email_hash = $2
-                    """,
-                    label,
-                    email_hash,
-                )
+                    await update.message.reply_text(
+                        f"✅ **VIP réactivé**\n\n"
+                        f"Email (anonymisé) : `{email_anon}`\n"
+                        f"Label : `{label}`",
+                        parse_mode="Markdown",
+                    )
+                    logger.info(
+                        "/vip add success (reactivated)",
+                        user_id=user_id,
+                        email_anon=email_anon,
+                        label=label,
+                    )
+                    return
 
-                await update.message.reply_text(
-                    f"✅ **VIP réactivé**\n\n"
-                    f"Email (anonymisé) : `{email_anon}`\n"
-                    f"Label : `{label}`",
-                    parse_mode="Markdown",
-                )
-                logger.info(
-                    "/vip add success (reactivated)",
-                    user_id=user_id,
-                    email_anon=email_anon,
-                    label=label,
-                )
-                return
+            # Étape 4: Insérer nouveau VIP
+            await db.execute(
+                """
+                INSERT INTO core.vip_senders (
+                    email_anon, email_hash, label, designation_source, added_by, active
+                ) VALUES ($1, $2, $3, 'manual', $4, TRUE)
+                """,
+                email_anon,
+                email_hash,
+                label,
+                user_id,
+            )
 
-        # Étape 4: Insérer nouveau VIP
-        await db.execute(
-            """
-            INSERT INTO core.vip_senders (
-                email_anon, email_hash, label, designation_source, added_by, active
-            ) VALUES ($1, $2, $3, 'manual', $4, TRUE)
-            """,
-            email_anon,
-            email_hash,
-            label,
-            user_id,
-        )
+            # Succès
+            await update.message.reply_text(
+                f"✅ **VIP ajouté avec succès**\n\n"
+                f"Email (anonymisé) : `{email_anon}`\n"
+                f"Label : `{label}`\n"
+                f"Source : Ajout manuel",
+                parse_mode="Markdown",
+            )
 
-        # Succès
-        await update.message.reply_text(
-            f"✅ **VIP ajouté avec succès**\n\n"
-            f"Email (anonymisé) : `{email_anon}`\n"
-            f"Label : `{label}`\n"
-            f"Source : Ajout manuel",
-            parse_mode="Markdown",
-        )
-
-        logger.info("/vip add success", user_id=user_id, email_anon=email_anon, label=label)
+            logger.info("/vip add success", user_id=user_id, email_anon=email_anon, label=label)
 
     except Exception as e:
         logger.error("/vip add error", user_id=user_id, error=str(e), exc_info=True)
@@ -270,51 +269,50 @@ async def vip_list_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     try:
         # Utiliser pool au lieu de connexion directe (H1 fix)
         async with db_pool.acquire() as db:
+            # Récupérer tous les VIPs actifs
+            vips = await db.fetch(
+                """
+                SELECT email_anon, label, emails_received_count, last_email_at, designation_source
+                FROM core.vip_senders
+                WHERE active = TRUE
+                ORDER BY emails_received_count DESC, label ASC
+                """
+            )
 
-        # Récupérer tous les VIPs actifs
-        vips = await db.fetch(
-            """
-            SELECT email_anon, label, emails_received_count, last_email_at, designation_source
-            FROM core.vip_senders
-            WHERE active = TRUE
-            ORDER BY emails_received_count DESC, label ASC
-            """
-        )
+            if not vips:
+                await update.message.reply_text(
+                    "ℹ️ **Aucun VIP enregistré**\n\n"
+                    "Utilisez `/vip add <email> <label>` pour ajouter un VIP.",
+                    parse_mode="Markdown",
+                )
+                return
 
-        if not vips:
+            # Formater liste VIPs
+            vip_lines = []
+            for vip in vips:
+                email_anon = vip["email_anon"]
+                label = vip["label"]
+                count = vip["emails_received_count"]
+                last_email = vip["last_email_at"]
+                source = vip["designation_source"]
+
+                last_email_str = last_email.strftime("%Y-%m-%d") if last_email else "Jamais"
+                source_emoji = "👤" if source == "manual" else "🤖"
+
+                vip_lines.append(
+                    f"{source_emoji} **{label}**\n"
+                    f"   Email : `{email_anon}`\n"
+                    f"   Emails reçus : {count} | Dernier : {last_email_str}"
+                )
+
+            vip_list_text = "\n\n".join(vip_lines)
+            total_vips = len(vips)
+
             await update.message.reply_text(
-                "ℹ️ **Aucun VIP enregistré**\n\n"
-                "Utilisez `/vip add <email> <label>` pour ajouter un VIP.",
-                parse_mode="Markdown",
-            )
-            return
-
-        # Formater liste VIPs
-        vip_lines = []
-        for vip in vips:
-            email_anon = vip["email_anon"]
-            label = vip["label"]
-            count = vip["emails_received_count"]
-            last_email = vip["last_email_at"]
-            source = vip["designation_source"]
-
-            last_email_str = last_email.strftime("%Y-%m-%d") if last_email else "Jamais"
-            source_emoji = "👤" if source == "manual" else "🤖"
-
-            vip_lines.append(
-                f"{source_emoji} **{label}**\n"
-                f"   Email : `{email_anon}`\n"
-                f"   Emails reçus : {count} | Dernier : {last_email_str}"
+                f"📋 **Liste des VIPs** ({total_vips} total)\n\n{vip_list_text}", parse_mode="Markdown"
             )
 
-        vip_list_text = "\n\n".join(vip_lines)
-        total_vips = len(vips)
-
-        await update.message.reply_text(
-            f"📋 **Liste des VIPs** ({total_vips} total)\n\n{vip_list_text}", parse_mode="Markdown"
-        )
-
-        logger.info("/vip list success", user_id=user_id, total_vips=total_vips)
+            logger.info("/vip list success", user_id=user_id, total_vips=total_vips)
 
     except Exception as e:
         logger.error("/vip list error", user_id=user_id, error=str(e), exc_info=True)
@@ -390,64 +388,63 @@ async def vip_remove_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
     try:
         # Utiliser pool au lieu de connexion directe (H1 fix)
         async with db_pool.acquire() as db:
+            # Calculer hash SHA256
+            email_hash = compute_email_hash(email) if compute_email_hash else email
 
-        # Calculer hash SHA256
-        email_hash = compute_email_hash(email)
-
-        # Vérifier si VIP existe
-        existing_vip = await db.fetchrow(
-            """
-            SELECT id, email_anon, label, active
-            FROM core.vip_senders
-            WHERE email_hash = $1
-            """,
-            email_hash,
-        )
-
-        if not existing_vip:
-            await update.message.reply_text(
-                f"ℹ️ **VIP non trouvé**\n\n"
-                f"Aucun VIP correspondant à cet email n'a été trouvé.\n\n"
-                f"Utilisez `/vip list` pour voir la liste des VIPs.",
-                parse_mode="Markdown",
+            # Vérifier si VIP existe
+            existing_vip = await db.fetchrow(
+                """
+                SELECT id, email_anon, label, active
+                FROM core.vip_senders
+                WHERE email_hash = $1
+                """,
+                email_hash,
             )
-            return
 
-        if not existing_vip["active"]:
+            if not existing_vip:
+                await update.message.reply_text(
+                    f"ℹ️ **VIP non trouvé**\n\n"
+                    f"Aucun VIP correspondant à cet email n'a été trouvé.\n\n"
+                    f"Utilisez `/vip list` pour voir la liste des VIPs.",
+                    parse_mode="Markdown",
+                )
+                return
+
+            if not existing_vip["active"]:
+                await update.message.reply_text(
+                    f"ℹ️ **VIP déjà inactif**\n\n"
+                    f"Email (anonymisé) : `{existing_vip['email_anon']}`\n"
+                    f"Label : `{existing_vip['label']}`\n\n"
+                    f"Ce VIP est déjà désactivé.",
+                    parse_mode="Markdown",
+                )
+                return
+
+            # Soft delete : active = FALSE
+            await db.execute(
+                """
+                UPDATE core.vip_senders
+                SET active = FALSE
+                WHERE email_hash = $1
+                """,
+                email_hash,
+            )
+
+            # Succès
             await update.message.reply_text(
-                f"ℹ️ **VIP déjà inactif**\n\n"
+                f"✅ **VIP retiré avec succès**\n\n"
                 f"Email (anonymisé) : `{existing_vip['email_anon']}`\n"
                 f"Label : `{existing_vip['label']}`\n\n"
-                f"Ce VIP est déjà désactivé.",
+                f"Ce VIP ne sera plus détecté comme prioritaire.",
                 parse_mode="Markdown",
             )
-            return
 
-        # Soft delete : active = FALSE
-        await db.execute(
-            """
-            UPDATE core.vip_senders
-            SET active = FALSE
-            WHERE email_hash = $1
-            """,
-            email_hash,
-        )
-
-        # Succès
-        await update.message.reply_text(
-            f"✅ **VIP retiré avec succès**\n\n"
-            f"Email (anonymisé) : `{existing_vip['email_anon']}`\n"
-            f"Label : `{existing_vip['label']}`\n\n"
-            f"Ce VIP ne sera plus détecté comme prioritaire.",
-            parse_mode="Markdown",
-        )
-
-        logger.info(
-            "/vip remove success",
-            user_id=user_id,
-            email_anon=existing_vip["email_anon"],
-            label=existing_vip["label"],
-        )
+            logger.info(
+                "/vip remove success",
+                user_id=user_id,
+                email_anon=existing_vip["email_anon"],
+                label=existing_vip["label"],
+            )
 
     except Exception as e:
         logger.error("/vip remove error", user_id=user_id, error=str(e), exc_info=True)

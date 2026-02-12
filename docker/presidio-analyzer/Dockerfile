@@ -2,6 +2,11 @@
 # Base image: Microsoft Presidio Analyzer 2.2.354
 FROM mcr.microsoft.com/presidio-analyzer:2.2.354
 
+# Installer build tools (gcc nécessaire pour blis/thinc/spacy)
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends gcc g++ build-essential && \
+    rm -rf /var/lib/apt/lists/*
+
 # Upgrade pip + installer spaCy + modèle français
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
     pip install --no-cache-dir spacy && \
@@ -12,6 +17,11 @@ RUN python -m spacy validate
 
 # Valider que fr_core_news_lg est bien présent
 RUN python -c "import spacy; nlp = spacy.load('fr_core_news_lg'); print('fr_core_news_lg loaded successfully')"
+
+# Cleanup build tools pour réduire taille image
+RUN apt-get purge -y gcc g++ build-essential && \
+    apt-get autoremove -y && \
+    rm -rf /var/lib/apt/lists/*
 
 # Variables d'environnement par défaut
 ENV SPACY_MODEL=fr_core_news_lg

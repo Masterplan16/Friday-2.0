@@ -26,25 +26,42 @@ from aiobreaker import CircuitBreaker
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
-# Imports internes
-import sys
-from pathlib import Path
-
-# En container Docker: ./agents/src monté sur /agents
-# En dev local: repo_root/agents/src
-_agents_path = Path("/agents")
-if _agents_path.is_dir():
-    sys.path.insert(0, str(_agents_path))
-else:
-    repo_root = Path(__file__).parent.parent.parent.parent
-    sys.path.insert(0, str(repo_root / "agents" / "src"))
-
-try:
-    from tools.anonymize import anonymize_text
-except ImportError:
-    from agents.src.tools.anonymize import anonymize_text
-
 from config import get_settings
+
+# Import lazy de anonymize_text pour éviter conflit de noms
+# (le config.py gateway masque le package config/ des agents)
+_anonymize_text = None
+
+
+def _get_anonymize_text():
+    """Import lazy de anonymize_text depuis agents (résout conflit config.py vs config/)"""
+    global _anonymize_text
+    if _anonymize_text is not None:
+        return _anonymize_text
+
+    import sys
+    from pathlib import Path
+
+    # En container Docker: ./agents/src monté sur /agents
+    # En dev local: repo_root/agents/src
+    agents_path = Path("/agents")
+    if agents_path.is_dir():
+        search_path = str(agents_path)
+    else:
+        repo_root = Path(__file__).parent.parent.parent.parent
+        search_path = str(repo_root / "agents" / "src")
+
+    # Temporairement insérer le path agents EN PREMIER pour que
+    # config/ (package agents) prenne priorité sur config.py (gateway)
+    old_path = sys.path.copy()
+    sys.path.insert(0, search_path)
+    try:
+        from tools.anonymize import anonymize_text
+        _anonymize_text = anonymize_text
+    finally:
+        sys.path[:] = old_path
+
+    return _anonymize_text
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/webhooks", tags=["webhooks"])
@@ -258,14 +275,15 @@ async def webhook_emailengine_message_new(
     try:
         # Anonymiser expéditeur
         from_combined = f"{from_name} <{from_raw}>" if from_name else from_raw
-        from_anon = await anonymize_text(from_combined)
+        anonymize = _get_anonymize_text()
+        from_anon = await anonymize(from_combined)
 
         # Anonymiser sujet
-        subject_anon = await anonymize_text(subject_raw)
+        subject_anon = await anonymize(subject_raw)
 
         # Anonymiser body preview (premiers 500 chars)
         body_preview = text_raw[:500] if text_raw else ""
-        body_preview_anon = await anonymize_text(body_preview) if body_preview else ""
+        body_preview_anon = await anonymize(body_preview) if body_preview else ""
 
         # Log APRÈS anonymisation (pas de PII)
         logger.info(

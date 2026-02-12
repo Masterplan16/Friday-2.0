@@ -83,9 +83,9 @@ TOPIC_EMAIL_ID = os.getenv('TOPIC_EMAIL_ID')
 TOPIC_ACTIONS_ID = os.getenv('TOPIC_ACTIONS_ID')
 EMAILENGINE_ENCRYPTION_KEY = os.getenv('EMAILENGINE_ENCRYPTION_KEY')
 
-STREAM_NAME = 'emails:received'
-STREAM_DLQ = 'emails:failed'
-CONSUMER_GROUP = 'email-processor-group'
+STREAM_NAME = 'email.received'
+STREAM_DLQ = 'email.failed'
+CONSUMER_GROUP = 'email-processor'
 CONSUMER_NAME = f'consumer-{os.getpid()}'
 
 
@@ -183,7 +183,7 @@ class EmailProcessorConsumer:
     Consumer Redis Streams pour pipeline email
 
     Workflow:
-        1. XREADGROUP sur stream emails:received
+        1. XREADGROUP sur stream email.received
         2. Pour chaque événement:
             a. Fetch email complet EmailEngine API
             b. Anonymiser body (Presidio)
@@ -380,7 +380,7 @@ class EmailProcessorConsumer:
                     tokens_saved=filter_result["tokens_saved_estimate"],
                 )
 
-                await self.redis.xadd('emails:filtered', {
+                await self.redis.xadd('email.filtered', {
                     'message_id': message_id,
                     'account_id': account_id,
                     'filter_type': 'blacklist',
@@ -830,7 +830,7 @@ class EmailProcessorConsumer:
                 f"Account: {account_id}\n"
                 f"Message ID: {message_id}\n"
                 f"Erreur: {error}\n\n"
-                f"L'email est dans la DLQ emails:failed"
+                f"L'email est dans la DLQ email.failed"
             )
 
             # Envoyer vers topic System (TOPIC_SYSTEM_ID)

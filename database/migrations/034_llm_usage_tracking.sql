@@ -22,7 +22,8 @@ CREATE TABLE IF NOT EXISTS core.llm_usage (
 
 CREATE INDEX idx_llm_usage_timestamp ON core.llm_usage(timestamp);
 CREATE INDEX idx_llm_usage_provider ON core.llm_usage(provider, model);
-CREATE INDEX idx_llm_usage_daily ON core.llm_usage((timestamp::date));
+-- Note: index daily supprimé car timestamp::date n'est pas IMMUTABLE.
+-- Utiliser idx_llm_usage_timestamp avec range filter (WHERE timestamp >= date AND timestamp < date+1).
 CREATE INDEX idx_llm_usage_context ON core.llm_usage(context);
 
 COMMENT ON TABLE core.llm_usage IS 'Tracking couts LLM par appel (classification, extraction entites, embeddings). Budget quotidien et mensuel.';

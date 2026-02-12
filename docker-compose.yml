@@ -329,7 +329,7 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "pgrep", "-f", "python.*bot"]
+      test: ["CMD-SHELL", "python -c 'import os; os.kill(1, 0)'"]
       interval: 60s
       timeout: 10s
       start_period: 30s

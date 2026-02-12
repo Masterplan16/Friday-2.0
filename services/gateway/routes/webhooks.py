@@ -26,16 +26,25 @@ from aiobreaker import CircuitBreaker
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
-# Imports internes (paths relatifs depuis services/gateway/)
+# Imports internes
 import sys
 from pathlib import Path
 
-# Ajouter repo root au path pour imports agents
-repo_root = Path(__file__).parent.parent.parent.parent
-sys.path.insert(0, str(repo_root))
+# En container Docker: ./agents/src monté sur /agents
+# En dev local: repo_root/agents/src
+_agents_path = Path("/agents")
+if _agents_path.is_dir():
+    sys.path.insert(0, str(_agents_path))
+else:
+    repo_root = Path(__file__).parent.parent.parent.parent
+    sys.path.insert(0, str(repo_root / "agents" / "src"))
 
-from agents.src.tools.anonymize import anonymize_text
-from services.gateway.config import get_settings
+try:
+    from tools.anonymize import anonymize_text
+except ImportError:
+    from agents.src.tools.anonymize import anonymize_text
+
+from config import get_settings
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/webhooks", tags=["webhooks"])

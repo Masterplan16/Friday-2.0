@@ -1,0 +1,28 @@
+# Dockerfile.email-processor
+# Email Processor Consumer - Pipeline email Friday 2.0
+# Consomme Redis Streams emails:received, classifie, stocke, notifie
+
+FROM python:3.12-slim
+
+WORKDIR /app
+
+# System dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    procps \
+    && rm -rf /var/lib/apt/lists/*
+
+# Python dependencies
+COPY services/email_processor/requirements.txt /app/requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application code
+COPY services/email_processor/ /app/
+COPY agents/ /app/agents/
+COPY config/ /app/config/
+
+# Healthcheck
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD python /app/healthcheck.py || exit 1
+
+# Run consumer
+CMD ["python", "-u", "consumer.py"]

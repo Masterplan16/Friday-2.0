@@ -229,52 +229,9 @@ services:
       start_period: 30s
 
   # ============================================
-  # Bot Telegram - Supergroup avec 5 Topics (Story 1.9)
+  # [RETIRÉ A.1] telegram-bot supprimé — doublon de friday-bot
+  # Garder uniquement friday-bot (autonome, sans dépendance gateway)
   # ============================================
-  telegram-bot:
-    build:
-      context: .
-      dockerfile: Dockerfile.bot
-    container_name: friday-telegram-bot
-    restart: unless-stopped
-    environment:
-      # Telegram credentials
-      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
-      - TELEGRAM_SUPERGROUP_ID=${TELEGRAM_SUPERGROUP_ID}
-      # Topics thread IDs (5 requis - Story 1.9)
-      - TOPIC_CHAT_PROACTIVE_ID=${TOPIC_CHAT_PROACTIVE_ID}
-      - TOPIC_EMAIL_ID=${TOPIC_EMAIL_ID}
-      - TOPIC_ACTIONS_ID=${TOPIC_ACTIONS_ID}
-      - TOPIC_SYSTEM_ID=${TOPIC_SYSTEM_ID}
-      - TOPIC_METRICS_ID=${TOPIC_METRICS_ID}
-      # Owner user ID (pour onboarding - AC6)
-      - OWNER_USER_ID=${OWNER_USER_ID}
-      # Database & Redis
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-friday}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-friday}
-      - REDIS_URL=redis://friday_bot:${REDIS_BOT_PASSWORD:-REDACTED_BOT_PASSWORD}@redis:6379/0
-      # Autres services
-      - GATEWAY_URL=http://gateway:8000
-      - LOG_LEVEL=${LOG_LEVEL:-INFO}
-    volumes:
-      - ./bot:/app:ro
-      - ./config:/app/config:ro
-    networks:
-      friday-network:
-        ipv4_address: 172.20.0.21
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      gateway:
-        condition: service_healthy
-    # Healthcheck: Vérifie que le process Python tourne (Story 1.9)
-    healthcheck:
-      test: ["CMD", "pgrep", "-f", "python.*bot.main"]
-      interval: 60s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
 
   # ============================================
   # Alerting Service - Écoute Redis → Telegram
@@ -384,6 +341,58 @@ services:
       interval: 60s
       timeout: 10s
       start_period: 30s
+      retries: 3
+
+  # ============================================
+  # Email Processor Consumer - Pipeline email (Epic 2)
+  # ============================================
+  email-processor:
+    build:
+      context: .
+      dockerfile: Dockerfile.email-processor
+    container_name: friday-email-processor
+    restart: unless-stopped
+    environment:
+      # Database & Redis
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-friday}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-friday}
+      - REDIS_URL=redis://friday_email:${REDIS_EMAIL_PASSWORD:-REDACTED_EMAIL_PASSWORD}@redis:6379/0
+      # EmailEngine
+      - EMAILENGINE_BASE_URL=${EMAILENGINE_BASE_URL:-http://emailengine:3000}
+      - EMAILENGINE_SECRET=${EMAILENGINE_SECRET}
+      - EMAILENGINE_ENCRYPTION_KEY=${EMAILENGINE_ENCRYPTION_KEY}
+      # Telegram notifications
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_SUPERGROUP_ID=${TELEGRAM_SUPERGROUP_ID}
+      - TOPIC_EMAIL_ID=${TOPIC_EMAIL_ID}
+      - TOPIC_ACTIONS_ID=${TOPIC_ACTIONS_ID}
+      - TOPIC_SYSTEM_ID=${TOPIC_SYSTEM_ID}
+      # LLM
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - LLM_PROVIDER=${LLM_PROVIDER:-anthropic}
+      # Pipeline controls
+      - PIPELINE_ENABLED=${PIPELINE_ENABLED:-false}
+      - MAX_EMAILS_PER_HOUR=${MAX_EMAILS_PER_HOUR:-100}
+      - MAX_CLAUDE_COST_PER_DAY=${MAX_CLAUDE_COST_PER_DAY:-50}
+      - MAX_ATTACHMENT_SIZE_MB=${MAX_ATTACHMENT_SIZE_MB:-50}
+      - MAX_TOTAL_ATTACHMENTS_MB=${MAX_TOTAL_ATTACHMENTS_MB:-200}
+      # Mainteneur
+      - MAINTENEUR_EMAILS=${MAINTENEUR_EMAILS}
+      - OWNER_USER_ID=${OWNER_USER_ID}
+      # Config
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    networks:
+      friday-network:
+        ipv4_address: 172.20.0.26
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "/app/healthcheck.py"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
       retries: 3
 
   # ============================================

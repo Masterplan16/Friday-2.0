@@ -46,6 +46,9 @@ ENV/
 .env
 .env.local
 .env.*.local
+.env.email
+.env.prod
+.env.telegram
 
 # Secrets (SOPS encrypted files are OK to commit)
 *.key

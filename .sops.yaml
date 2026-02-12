@@ -27,6 +27,14 @@ creation_rules:
   - path_regex: \.env\.test\.enc$
     age: age17zcpkgjxdyk6g34anhymukncq49dtf6k4f3vgp5fchsv04a8quzq7rjn8t  # Clé publique mainteneur
 
+  # Fichiers .env.email (credentials 4 comptes IMAP)
+  - path_regex: \.env\.email$
+    age: age17zcpkgjxdyk6g34anhymukncq49dtf6k4f3vgp5fchsv04a8quzq7rjn8t  # Clé publique mainteneur
+
+  # Fichiers .env.email.enc (credentials chiffrés)
+  - path_regex: \.env\.email\.enc$
+    age: age17zcpkgjxdyk6g34anhymukncq49dtf6k4f3vgp5fchsv04a8quzq7rjn8t  # Clé publique mainteneur
+
   # Fichiers secrets YAML/JSON
   - path_regex: secrets.*\.(yaml|json)$
     age: age17zcpkgjxdyk6g34anhymukncq49dtf6k4f3vgp5fchsv04a8quzq7rjn8t  # Clé publique mainteneur

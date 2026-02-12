@@ -7,7 +7,7 @@ Workflow :
 1. Query EmailEngine API pour liste attachments d'un email
 2. Pour chaque attachment :
    - Valider MIME type (whitelist/blacklist)
-   - Valider taille (<= 25 Mo)
+   - Valider taille (configurable via env vars)
    - Télécharger fichier via EmailEngine
    - Sanitizer nom fichier (sécurité path traversal)
    - Stocker en zone transit VPS
@@ -39,6 +39,12 @@ logger = structlog.get_logger(__name__)
 # Zone transit VPS
 TRANSIT_BASE_DIR = "/var/friday/transit/attachments"
 MAX_FILENAME_LENGTH = 200
+
+# Limites taille PJ (configurables via env vars, A.8)
+_max_attachment_size_mb = int(os.getenv("MAX_ATTACHMENT_SIZE_MB", "50"))
+_max_total_attachments_mb = int(os.getenv("MAX_TOTAL_ATTACHMENTS_MB", "200"))
+MAX_SINGLE_ATTACHMENT_BYTES = _max_attachment_size_mb * 1024 * 1024
+MAX_TOTAL_ATTACHMENTS_BYTES = _max_total_attachments_mb * 1024 * 1024
 
 
 def sanitize_filename(filename: str, max_length: int = MAX_FILENAME_LENGTH) -> str:
@@ -120,7 +126,7 @@ async def extract_attachments(
     1. Query EmailEngine API /message/:id pour liste attachments
     2. Pour chaque attachment :
        - Valider MIME type (whitelist/blacklist)
-       - Valider taille (<= 25 Mo)
+       - Valider taille (configurable via env vars)
        - Télécharger via /attachment/:id
        - Sanitizer filename
        - Stocker zone transit /var/friday/transit/attachments/YYYY-MM-DD/
@@ -204,16 +210,30 @@ async def extract_attachments(
             failed_count += 1
             continue
 
-        # Validation taille (<= 25 Mo)
-        if size > MAX_ATTACHMENT_SIZE_BYTES:
+        # Validation taille individuelle (A.8 : configurable via MAX_ATTACHMENT_SIZE_MB)
+        if size > MAX_SINGLE_ATTACHMENT_BYTES:
             size_mb = size / (1024 * 1024)
             log_ctx.warning(
                 "attachment_too_large",
                 size_mb=round(size_mb, 2),
-                max_mb=25
+                max_mb=_max_attachment_size_mb,
             )
             failed_count += 1
             continue
+
+        # Validation taille totale par email (A.8 : configurable via MAX_TOTAL_ATTACHMENTS_MB)
+        if total_size + size > MAX_TOTAL_ATTACHMENTS_BYTES:
+            size_mb = size / (1024 * 1024)
+            total_mb = total_size / (1024 * 1024)
+            log_ctx.warning(
+                "attachment_total_size_exceeded",
+                current_total_mb=round(total_mb, 2),
+                attachment_mb=round(size_mb, 2),
+                max_total_mb=_max_total_attachments_mb,
+                remaining_skipped=attachments_total - idx,
+            )
+            failed_count += attachments_total - idx
+            break
 
         # Sanitization nom fichier
         sanitized_filename = sanitize_filename(original_filename)

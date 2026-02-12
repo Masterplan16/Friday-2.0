@@ -22,7 +22,9 @@ from bot.handlers import (
     commands,
     draft_commands,
     messages,
+    pipeline_control,
     recovery_commands,
+    sender_filter_commands,
     trust_budget_commands,
     trust_commands,
     vip_commands,
@@ -161,6 +163,14 @@ class FridayBot:
         # Commandes Story 2.3 - VIP Management (Task 5)
         self.application.add_handler(CommandHandler("vip", vip_commands.vip_command_router))
 
+        # Commandes Story 2.8 - Sender Filter Management
+        self.application.add_handler(CommandHandler("blacklist", sender_filter_commands.blacklist_command))
+        self.application.add_handler(CommandHandler("whitelist", sender_filter_commands.whitelist_command))
+        self.application.add_handler(CommandHandler("filters", sender_filter_commands.filters_command))
+
+        # Commandes Phase A.0 - Pipeline Control & Kill Switch
+        self.application.add_handler(CommandHandler("pipeline", pipeline_control.pipeline_command))
+
         # Story 1.10 - Inline buttons callbacks (Approve/Reject/Correct)
         from bot.action_executor import ActionExecutor
         from bot.handlers.callbacks import register_callbacks_handlers
@@ -277,6 +287,22 @@ class FridayBot:
         if self.db_pool:
             self.application.bot_data["db_pool"] = self.db_pool
             logger.info("DB pool disponible pour handlers via bot_data")
+
+        # Initialiser Redis client pour pipeline control (A.0)
+        redis_url = os.getenv("REDIS_URL")
+        if redis_url:
+            try:
+                import redis.asyncio as redis_async
+
+                redis_client = redis_async.from_url(redis_url)
+                await redis_client.ping()
+                self.application.bot_data["redis"] = redis_client
+                logger.info("Redis client disponible pour handlers via bot_data")
+            except Exception as redis_err:
+                logger.warning(
+                    "Impossible de connecter Redis, commande /pipeline desactivee",
+                    error=str(redis_err),
+                )
 
         # Démarrer polling Telegram
         logger.info("Démarrage polling Telegram...")

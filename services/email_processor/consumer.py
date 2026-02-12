@@ -41,7 +41,9 @@ from agents.src.agents.email.vip_detector import (
 )
 from agents.src.agents.email.urgency_detector import detect_urgency
 from agents.src.agents.email.attachment_extractor import extract_attachments
+from agents.src.agents.email.classifier import classify_email  # A.5: Branche classifier
 from agents.src.agents.email.draft_reply import draft_email_reply
+from agents.src.agents.email.sender_filter import check_sender_filter  # Story 2.8 Task 5
 from agents.src.middleware.trust import init_trust_manager
 
 # ============================================
@@ -262,12 +264,25 @@ class EmailProcessorConsumer:
             await self.redis.close()
         logger.info("connections_closed")
 
+    async def _is_pipeline_enabled(self) -> bool:
+        """Check kill switch in Redis (Phase A.0)"""
+        enabled = await self.redis.get("friday:pipeline_enabled")
+        # Default to env var PIPELINE_ENABLED if Redis key not set
+        if enabled is None:
+            return os.getenv("PIPELINE_ENABLED", "false").lower() == "true"
+        return enabled == "true"
+
     async def start(self):
         """Start consumer loop"""
         logger.info("consumer_starting", group=CONSUMER_GROUP, consumer=CONSUMER_NAME)
 
         while True:
             try:
+                # Kill switch check (Phase A.0)
+                if not await self._is_pipeline_enabled():
+                    await asyncio.sleep(10)
+                    continue
+
                 # XREADGROUP: Lire événements du stream
                 events = await self.redis.xreadgroup(
                     groupname=CONSUMER_GROUP,
@@ -336,25 +351,91 @@ class EmailProcessorConsumer:
             subject_raw = email_full.get('subject', '(no subject)')
             body_text_raw = email_full.get('text', email_full.get('html', ''))
 
-            # Étape 2: Anonymiser body complet
+            # Etape 2: Filtrage sender AVANT anonymisation (A.6 nouvelle semantique)
+            # Semantique: blacklist=skip analyse, whitelist=analyser, VIP=prioritaire
+            filter_result = await check_sender_filter(
+                email_id=message_id,
+                sender_email=from_raw,
+                sender_domain=from_raw.split("@")[1] if "@" in from_raw else None,
+                db_pool=self.db_pool,
+            )
+
+            is_vip_filter = False
+            if filter_result and filter_result["filter_type"] == "vip":
+                is_vip_filter = True
+                logger.info(
+                    "email_vip_detected_by_filter",
+                    message_id=message_id,
+                    sender=from_raw,
+                )
+
+            # Blacklist short-circuit: skip anonymisation, classification, tout
+            if filter_result and filter_result["filter_type"] == "blacklist":
+                category = "blacklisted"
+                confidence = 1.0
+                logger.info(
+                    "email_filtered_blacklist",
+                    message_id=message_id,
+                    filter_type="blacklist",
+                    tokens_saved=filter_result["tokens_saved_estimate"],
+                )
+
+                await self.redis.xadd('emails:filtered', {
+                    'message_id': message_id,
+                    'account_id': account_id,
+                    'filter_type': 'blacklist',
+                    'category': category,
+                    'confidence': str(confidence),
+                })
+
+                await self._log_filter_savings(message_id, "blacklist", category)
+
+                # Store minimal in DB (body_anon vide, priority normal)
+                email_id = await self.store_email_in_database(
+                    account_id=account_id,
+                    message_id=message_id,
+                    from_anon=from_anon,
+                    subject_anon=subject_anon,
+                    body_anon="",
+                    category=category,
+                    confidence=confidence,
+                    priority="normal",
+                    received_at=date_str,
+                    has_attachments=has_attachments,
+                    from_raw=f"{from_name} <{from_raw}>" if from_name else from_raw,
+                    to_raw=to_raw,
+                    subject_raw=subject_raw,
+                    body_raw=body_text_raw
+                )
+
+                # Pas de notification pour blacklist
+                await self.redis.xack(STREAM_NAME, CONSUMER_GROUP, event_id)
+                latency_ms = (datetime.utcnow() - start_time).total_seconds() * 1000
+                logger.info(
+                    "email_processed_filtered",
+                    event_id=event_id,
+                    message_id=message_id,
+                    filter_type="blacklist",
+                    latency_ms=int(latency_ms)
+                )
+                return  # Short-circuit: skip rest of pipeline
+
+            # Etape 3: Anonymiser body complet
             body_anon = await anonymize_text(body_text_raw) if body_text_raw else ""
 
             logger.info("email_anonymized", message_id=message_id, body_length=len(body_anon))
 
-            # Étape 2.5: Detection VIP + Urgence (Story 2.3)
-            # Calcul hash email original (AVANT anonymisation)
+            # Etape 3.5: Detection VIP + Urgence (Story 2.3)
             email_hash = compute_email_hash(from_raw)
 
-            # Detection VIP via hash lookup
             vip_result = await detect_vip_sender(
                 email_anon=from_anon,
                 email_hash=email_hash,
                 db_pool=self.db_pool,
             )
-            is_vip = vip_result.payload["is_vip"]
+            is_vip = is_vip_filter or vip_result.payload["is_vip"]
             vip_data = vip_result.payload.get("vip")
 
-            # Detection urgence multi-facteurs
             email_text = f"{subject_anon} {body_anon}"
             urgency_result = await detect_urgency(
                 email_text=email_text,
@@ -364,7 +445,6 @@ class EmailProcessorConsumer:
             is_urgent = urgency_result.payload["is_urgent"]
             urgency_score = urgency_result.confidence
 
-            # Déterminer priority
             if is_urgent:
                 priority = "urgent"
             elif is_vip:
@@ -381,10 +461,31 @@ class EmailProcessorConsumer:
                 priority=priority
             )
 
-            # Étape 4: Classification stub (Day 1)
-            # TODO Story 2.2: Remplacer par classification LLM réelle
-            category = "inbox"
-            confidence = 0.5
+            # Etape 4: Classification via Claude Sonnet 4.5 (A.5)
+            # VIP, whitelist, et non-liste passent tous par le classifier
+            try:
+                classification_result = await classify_email(
+                    email_id=message_id,
+                    email_text=f"{from_anon}\n{subject_anon}\n{body_anon}",
+                    db_pool=self.db_pool,
+                )
+                category = classification_result.payload.get("category", "inconnu")
+                confidence = classification_result.confidence
+                logger.info(
+                    "email_classified",
+                    message_id=message_id,
+                    category=category,
+                    confidence=confidence,
+                )
+            except Exception as e:
+                logger.error(
+                    "email_classification_failed",
+                    message_id=message_id,
+                    error=str(e),
+                )
+                # Fallback si classifier echoue
+                category = "inconnu"
+                confidence = 0.0
 
             # Étape 5: Stocker dans PostgreSQL (email anonymisé + email raw chiffré)
             email_id = await self.store_email_in_database(
@@ -1007,32 +1108,50 @@ class EmailProcessorConsumer:
         except Exception as e:
             logger.error("telegram_attachment_notification_error", error=str(e))
 
+    async def _log_filter_savings(self, message_id: str, filter_type: str, category: str):
+        """
+        Log economie tokens dans core.llm_usage (migration 034).
+        """
+        try:
+            async with self.db_pool.acquire() as conn:
+                await conn.execute(
+                    """
+                    INSERT INTO core.llm_usage
+                    (provider, model, input_tokens, output_tokens, cost_usd, context, tokens_saved_by_filters)
+                    VALUES ('anthropic', 'filter_skip', 0, 0, 0, $1, $2)
+                    """,
+                    f"filter_{filter_type}",
+                    1000,  # Estimation tokens economises
+                )
+        except Exception as e:
+            logger.warning(
+                "filter_savings_log_failed",
+                message_id=message_id,
+                error=str(e),
+            )
+
     def _is_from_mainteneur(self, from_email: str) -> bool:
         """
         Vérifier si l'email provient du Mainteneur lui-même (Story 2.5)
 
-        Évite boucle infinie draft → envoi → reçu → draft → ...
+        Évite boucle infinie draft -> envoi -> recu -> draft -> ...
+
+        Lit la liste depuis la variable d'environnement MAINTENEUR_EMAILS
+        (virgules comme séparateur). JAMAIS hardcodé dans le code.
 
         Args:
             from_email: Email expéditeur brut (peut inclure nom)
 
         Returns:
             True si email de Mainteneur, False sinon
-
-        Example:
-            >>> _is_from_mainteneur("antonio.lopez@example.com")
-            True
-            >>> _is_from_mainteneur("Dr. Antonio Lopez <antonio.lopez@example.com>")
-            True
-            >>> _is_from_mainteneur("john.doe@example.com")
-            False
         """
-        # Liste emails du Mainteneur (hardcodé Day 1, TODO: migration DB config)
+        mainteneur_emails_raw = os.getenv("MAINTENEUR_EMAILS", "")
+        if not mainteneur_emails_raw:
+            logger.warning("MAINTENEUR_EMAILS not configured, _is_from_mainteneur always False")
+            return False
+
         mainteneur_emails = [
-            "antonio.lopez@example.com",
-            "dr.lopez@hospital.fr",
-            "lopez@university.fr",
-            "personal@gmail.com"
+            e.strip().lower() for e in mainteneur_emails_raw.split(",") if e.strip()
         ]
 
         # Normaliser from_email (extraire email si format "Name <email>")

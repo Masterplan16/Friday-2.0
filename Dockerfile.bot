@@ -25,7 +25,7 @@ COPY bot/requirements.txt ./bot/
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r bot/requirements.txt
 
-# Copier code bot
+# Copier code bot (agents imports sont lazy/optionnels)
 COPY bot/ ./bot/
 
 # Copier config

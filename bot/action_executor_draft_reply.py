@@ -18,12 +18,19 @@ import httpx
 from telegram import Bot
 
 # Import EmailEngine client (PYTHONPATH géré par bot/main.py startup)
-from services.email_processor.emailengine_client import EmailEngineClient, EmailEngineError
+try:
+    from services.email_processor.emailengine_client import EmailEngineClient, EmailEngineError
+except ImportError:
+    EmailEngineClient = None  # type: ignore[assignment,misc]
+    EmailEngineError = Exception  # type: ignore[assignment,misc]
 from bot.handlers.draft_reply_notifications import (
     send_email_confirmation_notification,
     send_email_failure_notification
 )
-from agents.src.tools.anonymize import anonymize_text
+try:
+    from agents.src.tools.anonymize import anonymize_text
+except ImportError:
+    anonymize_text = None  # type: ignore[assignment]
 
 logger = logging.getLogger(__name__)
 

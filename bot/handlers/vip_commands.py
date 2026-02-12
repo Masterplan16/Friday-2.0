@@ -20,8 +20,12 @@ from telegram.ext import ContextTypes
 repo_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(repo_root))
 
-from agents.src.agents.email.vip_detector import compute_email_hash
-from agents.src.tools.anonymize import anonymize_text
+try:
+    from agents.src.agents.email.vip_detector import compute_email_hash
+    from agents.src.tools.anonymize import anonymize_text
+except ImportError:
+    compute_email_hash = None  # type: ignore[assignment]
+    anonymize_text = None  # type: ignore[assignment]
 from bot.handlers.rate_limiter import vip_rate_limiter
 
 logger = structlog.get_logger(__name__)

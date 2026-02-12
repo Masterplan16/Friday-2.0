@@ -12,14 +12,23 @@ import asyncpg
 from telegram import Update
 from telegram.ext import ContextTypes
 
-# Import draft_email_reply agent
-# TODO(Story future): Refactor imports avec proper PYTHONPATH setup au lieu de sys.path.insert
-import sys
-from pathlib import Path
-repo_root = Path(__file__).parent.parent.parent  # bot/handlers/ -> repo root
-sys.path.insert(0, str(repo_root))
+# Import lazy de draft_email_reply (disponible uniquement si agents/ est dans le PYTHONPATH)
+draft_email_reply = None
 
-from agents.src.agents.email.draft_reply import draft_email_reply
+def _get_draft_email_reply():
+    global draft_email_reply
+    if draft_email_reply is not None:
+        return draft_email_reply
+    try:
+        import sys
+        from pathlib import Path
+        repo_root = Path(__file__).parent.parent.parent
+        sys.path.insert(0, str(repo_root))
+        from agents.src.agents.email.draft_reply import draft_email_reply as _fn
+        draft_email_reply = _fn
+        return draft_email_reply
+    except ImportError:
+        return None
 
 logger = logging.getLogger(__name__)
 
@@ -98,8 +107,12 @@ async def draft_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
         # Call draft_email_reply (async)
         # La notification sera envoyée automatiquement via @friday_action
+        _draft_fn = _get_draft_email_reply()
+        if _draft_fn is None:
+            await update.message.reply_text("Draft reply agent non disponible (agents/ non deploye).")
+            return
         email_data = dict(email)
-        result = await draft_email_reply(
+        result = await _draft_fn(
             email_id=email_id,
             email_data=email_data,
             db_pool=db_pool

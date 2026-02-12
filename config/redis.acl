@@ -5,8 +5,8 @@
 # IMPORTANT: En production, remplacer les passwords via SOPS/age
 # Les passwords ci-dessous sont pour le développement LOCAL uniquement.
 
-# Default user désactivé (force authentification)
-user default off nopass ~* &* -@all
+# Default user : ping uniquement (healthcheck Docker)
+user default on nopass ~* &* +ping -@all
 
 # Admin (usage dev/debug uniquement)
 user admin on >REDACTED_ADMIN_PASSWORD ~* &* +@all
@@ -25,6 +25,15 @@ user friday_metrics on >REDACTED_METRICS_PASSWORD ~metrics:* &* +get +set +incrb
 
 # n8n workflows - Cache lecture + Pub/Sub
 user friday_n8n on >REDACTED_N8N_PASSWORD ~cache:* ~bull:* ~n8n:* &* +get +set +setex +del +expire +lpush +rpush +lrange +llen +publish +subscribe +sadd +smembers +ping +info +client +select
+
+# Bot Telegram - Streams + Pub/Sub
+user friday_bot on >REDACTED_BOT_PASSWORD ~* &* +get +set +setex +del +expire +publish +subscribe +xadd +xreadgroup +xack +xpending +xlen +ping +info +client +select
+
+# Email Processor - Streams + mapping Presidio
+user friday_email on >REDACTED_EMAIL_PASSWORD ~* &* +get +set +setex +del +expire +publish +subscribe +xadd +xreadgroup +xack +xpending +xlen +ping +info +client +select
+
+# Document Processor - Streams + cache
+user document_processor on >REDACTED_DOC_PASSWORD ~* &* +get +set +setex +del +expire +publish +subscribe +xadd +xreadgroup +xack +xpending +xlen +ping +info +client +select
 
 # EmailEngine - Accès dédié à sa DB Redis (DB 2)
 user friday_emailengine on >REDACTED_EE_PASSWORD ~* &* +@read +@write -flushall -flushdb -flushdbnosync +@pubsub +@connection +select +ping +info +client

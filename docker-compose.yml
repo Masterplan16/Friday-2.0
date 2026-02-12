@@ -74,19 +74,11 @@ services:
     container_name: friday-redis
     restart: unless-stopped
     command: >
-      redis-server
-      --appendonly yes
-      --appendfsync everysec
-      --maxmemory 2gb
-      --maxmemory-policy allkeys-lru
-      --save 900 1
-      --save 300 10
-      --save 60 10000
+      redis-server /usr/local/etc/redis/redis.conf
     volumes:
       - redis-data:/data
-    # NOTE: ACL désactivé pour dev local (pas nécessaire en environnement contrôlé)
-    # PRODUCTION: Décommenter la ligne ci-dessous pour activer ACL (fichier déjà en LF Unix ✓)
-    # - ./config/redis.acl:/etc/redis/users.acl:ro
+      - ./config/redis.conf:/usr/local/etc/redis/redis.conf:ro
+      - ./config/redis.acl:/usr/local/etc/redis/redis.acl:ro
     ports:
       - "127.0.0.1:6379:6379"
     networks:

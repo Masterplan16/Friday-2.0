@@ -40,7 +40,7 @@ USER friday
 
 # Healthcheck (vérifie que le process Python tourne)
 HEALTHCHECK --interval=60s --timeout=10s --start-period=30s --retries=3 \
-  CMD pgrep -f "python.*bot/main.py" || exit 1
+  CMD pgrep -f "python.*bot" || exit 1
 
-# Point d'entrée - CRIT-5 fix: compatible avec if __name__ == "__main__"
-CMD ["python", "bot/main.py"]
+# Point d'entrée - utilise -m pour imports absolus (from bot.xxx)
+CMD ["python", "-m", "bot.main"]

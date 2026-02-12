@@ -159,7 +159,8 @@ async def send_email_via_emailengine(
     account_id = emailengine_client.determine_account_id(dict(email_original))
 
     # Convert plain text to simple HTML (escape HTML + convert newlines)
-    body_html = f"<p>{html.escape(draft_body).replace('\n', '<br>')}</p>"
+    escaped_body = html.escape(draft_body).replace("\n", "<br>")
+    body_html = f"<p>{escaped_body}</p>"
 
     try:
         result = await emailengine_client.send_message(

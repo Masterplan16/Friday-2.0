@@ -28,10 +28,10 @@ ENV SPACY_MODEL=fr_core_news_lg
 ENV LOG_LEVEL=INFO
 
 # Exposer le port Analyzer
-EXPOSE 5001
+EXPOSE 3000
 
-# Healthcheck
+# Healthcheck (Python car wget/curl absents de l'image)
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 --start-period=60s \
-  CMD wget --spider -q http://localhost:5001/health || exit 1
+  CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:3000/health')" || exit 1
 
 # CMD hérité de l'image parente (presidio-analyzer)

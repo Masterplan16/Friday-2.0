@@ -1,4 +1,4 @@
-user default on nopass ~* &* +ping -@all
+user default on nopass sanitize-payload -@all +ping
 user admin on >REDACTED_ADMIN_PASSWORD ~* &* +@all
 user friday_gateway on >REDACTED_GW_PASSWORD ~* &* +get +set +setex +del +expire +ttl +publish +subscribe +xadd +xreadgroup +xack +xlen +ping +info +client
 user friday_agents on >REDACTED_AGENTS_PASSWORD ~stream:* ~presidio:mapping:* &* +xadd +xreadgroup +xack +xpending +xlen +get +setex +del +publish +subscribe +ping +info +client

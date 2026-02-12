@@ -53,6 +53,7 @@ ENV/
 # Secrets (SOPS encrypted files are OK to commit)
 *.key
 *.pem
+telegram-ids-extracted.txt
 !*.key.age
 credentials.json
 service-account.json

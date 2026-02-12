@@ -93,7 +93,7 @@ services:
       friday-network:
         ipv4_address: 172.20.0.11
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "REDACTED_ADMIN_PASSWORD", "ping"]
+      test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 3s
       retries: 5
@@ -222,7 +222,7 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8000/api/v1/health"]
+      test: ["CMD-SHELL", "wget -qO /dev/null http://localhost:8000/api/v1/health"]
       interval: 15s
       timeout: 5s
       retries: 3

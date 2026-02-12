@@ -2,9 +2,9 @@
 # Base image: Microsoft Presidio Analyzer 2.2.354
 FROM mcr.microsoft.com/presidio-analyzer:2.2.354
 
-# Installer spaCy (au cas où absent dans l'image de base) + modèle français
-# NOTE: Le téléchargement se fait pendant le build Docker (pas au runtime)
-RUN pip install --no-cache-dir spacy && \
+# Upgrade pip + installer spaCy + modèle français
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
+    pip install --no-cache-dir spacy && \
     python -m spacy download fr_core_news_lg
 
 # Vérifier que le modèle est installé

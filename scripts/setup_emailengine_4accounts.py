@@ -105,18 +105,20 @@ ACCOUNTS = [
         "name": "ProtonMail (Bridge)",
         "email": os.getenv("PROTONMAIL_EMAIL"),
         "imap": {
-            "host": os.getenv("PROTONMAIL_IMAP_HOST"),  # 100.100.4.31 (Tailscale)
+            "host": os.getenv("PROTONMAIL_IMAP_HOST"),  # Tailscale IP du PC
             "port": int(os.getenv("PROTONMAIL_IMAP_PORT", 1143)),
-            "secure": True,  # STARTTLS
+            "secure": False,  # STARTTLS, pas TLS direct
+            "tls": {"rejectUnauthorized": False},  # Cert auto-signe Bridge
             "auth": {
                 "user": os.getenv("PROTONMAIL_IMAP_USER"),
                 "pass": os.getenv("PROTONMAIL_BRIDGE_PASSWORD"),
             }
         },
         "smtp": {
-            "host": os.getenv("PROTONMAIL_SMTP_HOST"),  # 100.100.4.31
+            "host": os.getenv("PROTONMAIL_SMTP_HOST"),  # Tailscale IP du PC
             "port": int(os.getenv("PROTONMAIL_SMTP_PORT", 1025)),
-            "secure": True,
+            "secure": False,  # STARTTLS
+            "tls": {"rejectUnauthorized": False},
             "auth": {
                 "user": os.getenv("PROTONMAIL_IMAP_USER"),
                 "pass": os.getenv("PROTONMAIL_BRIDGE_PASSWORD"),
@@ -233,10 +235,11 @@ async def main():
     async with httpx.AsyncClient() as client:
         try:
             response = await client.get(
-                f"{EMAILENGINE_URL}/health",
+                f"{EMAILENGINE_URL}/v1/settings",
+                headers={"Authorization": f"Bearer {EMAILENGINE_SECRET}"},
                 timeout=5.0,
             )
-            if response.status_code == 200:
+            if response.status_code in (200, 401):
                 print(f"   ✅ EmailEngine is running at {EMAILENGINE_URL}")
             else:
                 print(f"   ❌ EmailEngine returned status {response.status_code}")

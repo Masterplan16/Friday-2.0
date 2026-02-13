@@ -20,7 +20,7 @@
 | account_professional | lopez.tonio@gmail.com | ✅ Connected | Gmail 1 |
 | account_protonmail | contact.antoniolopez@proton.me | ❌ Auth Error | Bridge configuré mais "no such user" depuis VPS |
 
-~~**Access Token** : `REDACTED_EMAILENGINE_TOKEN`~~ **[SUPERSEDE D25 : token EmailEngine obsolète]**
+~~**Access Token** : `[REDACTED - was exposed in git history, rotate immediately]`~~ **[SUPERSEDE D25 : token EmailEngine obsolète]**
 
 ### 2. Sécurité & Secrets
 
@@ -99,10 +99,10 @@ docker restart friday-email-processor friday-gateway
 - Bridge nécessite restart après ajout compte
 - Rate limiting actif
 
-**Credentials confirmés** (depuis screenshot) :
-- Username: `contact.antoniolopez@proton.me`
-- Password: `REDACTED_PROTONMAIL_BRIDGE_PASSWORD`
-- Host: `100.100.4.31:1143` (Tailscale)
+**Credentials** : [REDACTED - credentials removed, were exposed in git history]
+- Username: voir .env.enc (chiffré age/SOPS)
+- Password: [REDACTED - ROTATE IMMEDIATELY on ProtonMail Bridge]
+- Host: ProtonMail Bridge via Tailscale
 - Security: STARTTLS
 
 **Debug** :

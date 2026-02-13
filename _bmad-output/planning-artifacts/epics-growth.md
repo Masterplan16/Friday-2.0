@@ -313,10 +313,10 @@ Detection connecteurs casses, drift accuracy, patterns degradation, healthcheck 
 
 **FRs** : FR71, FR132
 
-**Description** : Detecter les connecteurs externes casses (EmailEngine, APIs tierces).
+**Description** : Detecter les connecteurs externes casses (~~EmailEngine~~ serveurs IMAP `[HISTORIQUE D25]`, APIs tierces).
 
 **Acceptance Criteria** :
-- Healthcheck APIs externes cron 30min (FR132) : Anthropic, EmailEngine OAuth, etc.
+- Healthcheck APIs externes cron 30min (FR132) : Anthropic, ~~EmailEngine OAuth~~ serveurs IMAP `[HISTORIQUE D25]`, etc.
 - Detection panne connecteur (FR71)
 - Alerte System immediate avec suggestion de resolution
 - Tentative reconnexion automatique

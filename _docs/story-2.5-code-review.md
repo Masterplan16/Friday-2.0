@@ -32,7 +32,7 @@
    - Validation (2 tests)
    - User preferences (2 tests)
 
-3. **test_emailengine_client_send.py** — 11/11 tests ✓
+3. **test_emailengine_client_send.py** — 11/11 tests ✓ **[D25 : EmailEngine retire, tests a reecrire pour SMTPDirectAdapter]**
    - Send message success (1 test)
    - Retry logic (2 tests)
    - Threading (1 test)
@@ -148,7 +148,7 @@ response_tokens_est = len(draft_body.split())
 
 ### Priorité MOYENNE (amélioration qualité)
 
-1. **TODOs non qualifiés** (emailengine_client.py)
+1. **TODOs non qualifiés** (emailengine_client.py) **[D25 : fichier a reecrire avec aiosmtplib]**
    - `# TODO: Config` → `# TODO(Story 2.6): Migrer DEFAULT_ACCOUNT_MAPPING vers config/DB`
    - Impact : Maintenabilité
    - Effort : 5 min
@@ -171,12 +171,12 @@ response_tokens_est = len(draft_body.split())
    - `mock_anon_result()` helper (test_draft_reply.py:24) — a un docstring ✓
    - Impact : Minime (fonction triviale)
 
-5. **Hardcoded secret dans docstring** (emailengine_client.py:47)
+5. **Hardcoded secret dans docstring** (emailengine_client.py:47) **[SUPERSEDE D25 : fichier retire]**
    ```python
    secret="secret_token_123"  # Dans Example, PAS dans code
    ```
    - Impact : Aucun (exemple uniquement)
-   - Suggestion : Remplacer par `secret=os.getenv("EMAILENGINE_SECRET")`
+   - ~~Suggestion : Remplacer par `secret=os.getenv("EMAILENGINE_SECRET")`~~ [D25 : variable retiree]
 
 ---
 
@@ -194,7 +194,7 @@ response_tokens_est = len(draft_body.split())
 ### ✅ Adaptateurs
 
 - `get_llm_adapter()` factory pattern (draft_reply.py:453)
-- EmailEngineClient wrapper HTTP (emailengine_client.py)
+- ~~EmailEngineClient wrapper HTTP (emailengine_client.py)~~ [D25 : remplace par SMTPDirectAdapter]
 - Pas d'import direct Anthropic SDK
 
 ### ✅ Pydantic v2
@@ -213,7 +213,7 @@ response_tokens_est = len(draft_body.split())
 
 - ValueError pour brouillon vide (draft_reply.py:198)
 - NotImplementedError pour Presidio indisponible (anonymize.py:140)
-- EmailEngineError custom exception (emailengine_client.py:314)
+- ~~EmailEngineError~~ [D25 : SMTPError] custom exception (emailengine_client.py:314)
 - Exception propagation explicite
 
 ### ✅ Logging

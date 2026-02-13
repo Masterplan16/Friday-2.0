@@ -122,9 +122,7 @@ echo "  ✓ friday_email"
 $REDIS_CLI ACL SETUSER document_processor on ">$REDIS_DOCUMENT_PROCESSOR_PASSWORD" ~* \&* +get +set +setex +del +expire +exists +publish +subscribe +xadd +xreadgroup +xack +xpending +xlen +xgroup\|create +xgroup\|setid +xinfo\|groups +xinfo\|stream +ping +info +client +select
 echo "  ✓ document_processor"
 
-# EmailEngine
-$REDIS_CLI ACL SETUSER friday_emailengine on ">$REDIS_EMAILENGINE_PASSWORD" ~* \&* +@read +@write -flushall -flushdb +@pubsub +@scripting +@connection +select +ping +info +client
-echo "  ✓ friday_emailengine"
+# [DEPRECATED D25] EmailEngine retiré — imap-fetcher utilise friday_email ACL
 
 echo ""
 echo "ACL sauvegardés sur Redis (en mémoire)"
@@ -141,7 +139,6 @@ export REDIS_N8N_PASSWORD
 export REDIS_BOT_PASSWORD
 export REDIS_EMAIL_PASSWORD
 export REDIS_DOCUMENT_PROCESSOR_PASSWORD
-export REDIS_EMAILENGINE_PASSWORD
 
 envsubst < "$PROJECT_ROOT/config/redis.acl.template" > "$PROJECT_ROOT/config/redis.acl"
 chmod 600 "$PROJECT_ROOT/config/redis.acl"

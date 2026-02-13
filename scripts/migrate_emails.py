@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
-Migration progressive des 108k emails historiques via API EmailEngine REST.
+[DEPRECATED D25] Migration progressive des 108k emails historiques via API EmailEngine REST.
+Ce script dependait de l'API REST EmailEngine, retiree par D25 (IMAP direct).
 
 Story 2.9 — Reecriture complete.
 Source de donnees : API EmailEngine REST (remplace ingestion.emails_legacy).

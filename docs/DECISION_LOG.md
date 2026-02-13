@@ -4,12 +4,55 @@
 
 ---
 
+## 2026-02-13 : D25 - Remplacement EmailEngine par IMAP Direct
+
+**Decision** : Retirer EmailEngine (PostalSys, 99 EUR/an). Implementer IMAP direct via `aioimaplib` 2.0.1 + `aiosmtplib`. Creer adaptateur `adapters/email.py` obligatoire.
+
+**Raison** :
+- EmailEngine coute 99 EUR/an — non prevu au budget initial (73 EUR/mois)
+- Le code existant (~2900 lignes, 15+ fichiers) a ete ecrit par Claude Code en ~1 jour — cout de reecriture negligeable
+- IMAP IDLE offre 2-5s de latence (vs <1s EmailEngine) — invisible pour l'utilisateur
+- Liberation ~500 Mo RAM (marginal sur VPS-4 48 Go)
+- Zero dependance externe (vs risque PostalSys ferme)
+- `aioimaplib` 2.0.1 (jan 2025) : activement maintenu, 161 stars, IDLE RFC 2177 supporte
+
+**Review adversariale** : 10 failles identifiees et corrigees (4 haute severite)
+1. IMAP IDLE instable ProtonMail Bridge -> polling explicite + detection silence
+2. Pas de deduplication UIDs -> Redis SET `seen_uids:{account}` TTL 7j
+3. Attachments volumineux -> BODYSTRUCTURE + limite 25 Mo configurable
+4. Pas de test IMAP reel -> Dovecot Docker pour tests integration
+5. aioimaplib inconnu -> verifie : v2.0.1, maintenu, IDLE OK
+6. OAuth2 Gmail non gere -> module prepare, activable si App Passwords deprecies
+7. SMTP sous-estime -> threading In-Reply-To/References, MIME, bounces
+8. SPOF fetcher/consumer -> container Docker separe
+9. IDLE timeout 29 min -> renew toutes les 25 min
+10. Suppression webhooks.py trop agressive -> retirer routes EE seulement
+
+**Impact** :
+- Budget : 81 EUR/mois -> 73 EUR/mois (economie 99 EUR/an)
+- 119 fichiers referencant EmailEngine identifies pour mise a jour
+- Pipeline aval (Redis Streams -> consumer -> PostgreSQL) : **inchange**
+- 7 phases, ~30 taches
+
+**Alternatives considerees** :
+1. **Garder EmailEngine (99 EUR/an)** : Rejetee car cout recurrent sans valeur ajoutee significative (2-5s vs <1s invisible)
+2. **IMAP direct sans adaptateur** : Rejetee car viole principe adaptateur du CLAUDE.md
+3. **IMAP direct avec adaptateur (retenue)** : Gratuit, porte de sortie preservee, review adversariale validee
+
+**Plan complet** : [`_docs/plan-d25-emailengine-to-imap-direct.md`](_docs/plan-d25-emailengine-to-imap-direct.md)
+
+**Fichiers impactes** : 119 fichiers (voir inventaire dans le plan)
+
+**Rollback plan** : Adaptateur `adapters/email.py` permet de rebrancher EmailEngine ou tout autre provider en changeant un seul fichier + config
+
+---
+
 ## 2026-02-09 : D22 - VPS-4 (48 Go) comme baseline — cohabitation Friday 2.0 + Jarvis Friday
 
 **Décision** : Utiliser VPS-4 (48 Go RAM, ~25€ TTC/mois) au lieu de VPS-3 (24 Go) pour accueillir cohabitation Friday 2.0 + Jarvis Friday
 
 **Raison** :
-- Socle permanent Friday 2.0 : ~6-8 Go (PG+pgvector, Redis, n8n, Presidio, EmailEngine, Caddy, OS)
+- Socle permanent Friday 2.0 : ~6-8 Go (PG+pgvector, Redis, n8n, Presidio, imap-fetcher, Caddy, OS) [MaJ D25 : imap-fetcher remplace EmailEngine]
 - Services lourds Friday 2.0 résidents : ~8 Go (Faster-Whisper 4 Go, Kokoro TTS 2 Go, Surya OCR 2 Go)
 - Total Friday 2.0 : ~14-16 Go
 - Marge pour Jarvis Friday + buffer : ~32 Go disponibles
@@ -486,5 +529,5 @@ else → Metrics & Logs
 
 ---
 
-**Dernière mise à jour** : 2026-02-09
-**Version** : 1.1.0
+**Dernière mise à jour** : 2026-02-13
+**Version** : 1.2.0

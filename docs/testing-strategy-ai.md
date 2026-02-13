@@ -322,19 +322,17 @@ async def test_email_classification_accuracy(email_dataset):
 async def test_email_with_invoice_attachment_full_flow():
     """Test flow complet : Email avec PJ facture → Archivage"""
 
-    # 1. Simuler réception email via EmailEngine webhook
+    # 1. Simuler réception email via imap-fetcher (Redis Streams) [D25 : remplace webhook EmailEngine]
     email_payload = {
-        "messageId": "test_123",
-        "from": {"address": "plombier@example.com"},
-        "subject": "Facture intervention 2026-02-01",
-        "text": "Bonjour, voici la facture...",
-        "attachments": [{
-            "filename": "facture.pdf",
-            "contentId": "att_001"
-        }]
+        "account_id": "account-medical",
+        "message_id": "test_123",
+        "from_anon": "[EMAIL_1]",
+        "subject_anon": "Facture intervention [DATE_1]",
+        "date": "2026-02-01T10:30:00Z",
+        "has_attachments": "True",
     }
 
-    response = await client.post("/webhook/emailengine", json=email_payload)
+    await redis.xadd("email.received", email_payload)
     assert response.status_code == 200
 
     # 2. Attendre traitement async (Redis pub/sub)
@@ -666,7 +664,7 @@ La review adversariale du 2026-02-05 a identifie les tests suivants comme manqua
 | Redis Streams delivery guarantee | Integration | 1 | HAUTE |
 | Trust retrogradation edge cases (sample size <10) | Unit | 1.5 | MOYENNE |
 | Checkpoint JSON corruption recovery | Unit | 2 | MOYENNE |
-| EmailEngine token expiration detection | Integration | 2 | MOYENNE |
+| IMAP credentials expiration detection [D25 : remplace EmailEngine token] | Integration | 2 | MOYENNE |
 
 **Details** :
 
@@ -675,7 +673,7 @@ La review adversariale du 2026-02-05 a identifie les tests suivants comme manqua
 - **Redis Streams delivery guarantee** : Verifier qu'un message publie dans un Stream est bien consomme meme si le consumer redemarre entre-temps (consumer groups + ACK).
 - **Trust retrogradation edge cases** : Que se passe-t-il si un module n'a que 3 actions sur la semaine ? Le seuil de 90% sur 3 actions (= 1 erreur = retrogradation) est-il trop sensible ? Definir un sample size minimum.
 - **Checkpoint JSON corruption recovery** : Tester la recuperation quand le fichier JSON de checkpoint de migration est corrompu (ecriture interrompue). Le script doit detecter la corruption et reprendre depuis le dernier checkpoint valide.
-- **EmailEngine token expiration detection** : Verifier que le systeme detecte quand le token OAuth/IMAP d'EmailEngine expire et envoie une alerte Telegram au lieu de silencieusement echouer.
+- **IMAP credentials expiration detection** [D25 : remplace EmailEngine token] : Verifier que le systeme detecte quand les credentials IMAP (App Password, OAuth2) expirent et envoie une alerte Telegram au lieu de silencieusement echouer. Le daemon imap-fetcher doit detecter les erreurs d'authentification et publier un evenement `service.down` via Redis Streams.
 
 ---
 

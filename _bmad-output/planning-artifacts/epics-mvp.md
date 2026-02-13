@@ -376,21 +376,21 @@ Le besoin #1 d'Mainteneur. Pipeline complet : reception → anonymisation → cl
 
 **FRs** : FR1-FR7, FR104, FR109, FR129
 
-**NFRs** : NFR1 (< 30s/email), NFR15 (zero email perdu), NFR17 (Anthropic resilience), NFR18 (EmailEngine resilience)
+**NFRs** : NFR1 (< 30s/email), NFR15 (zero email perdu), NFR17 (Anthropic resilience), NFR18 (~~EmailEngine~~ IMAP resilience) `[HISTORIQUE D25]`
 
 **Dependances** : Epic 1 (socle complet)
 
-### Story 2.1 : Integration EmailEngine & Reception
+### Story 2.1 : Integration ~~EmailEngine~~ IMAP Direct & Reception `[HISTORIQUE D25]`
 
 **FRs** : FR1 (partiel)
 
-**Description** : Connecter les 4 comptes IMAP via EmailEngine et publier les emails recus dans Redis Streams.
+**Description** : Connecter les 4 comptes IMAP via ~~EmailEngine~~ IMAP direct (aioimaplib) `[HISTORIQUE D25]` et publier les emails recus dans Redis Streams.
 
 **Acceptance Criteria** :
-- 4 comptes IMAP configures dans EmailEngine
+- 4 comptes IMAP configures ~~dans EmailEngine~~ via imap-fetcher (aioimaplib) `[HISTORIQUE D25]`
 - Email recu → evenement `email.received` dans Redis Streams (delivery garanti)
 - Consumer Python lit le stream et declenche le pipeline
-- Retry automatique si EmailEngine indisponible (NFR18)
+- Retry automatique si ~~EmailEngine~~ serveur IMAP indisponible (NFR18) `[HISTORIQUE D25]`
 - Zero email perdu (NFR15)
 
 **Fichiers existants** : services/email-processor/consumer.py
@@ -464,7 +464,7 @@ Le besoin #1 d'Mainteneur. Pipeline complet : reception → anonymisation → cl
 - Trust level = propose (FR4)
 - Style redactionnel appris (table core.writing_examples, few-shot injection) (FR129)
 - Inline buttons dans topic Actions : [Approve] [Edit] [Reject]
-- Approve → envoi via EmailEngine (FR104)
+- Approve → envoi via ~~EmailEngine~~ aiosmtplib `[HISTORIQUE D25]` (FR104)
 
 **Estimation** : M
 
@@ -474,7 +474,7 @@ Le besoin #1 d'Mainteneur. Pipeline complet : reception → anonymisation → cl
 
 **FRs** : FR104
 
-**Description** : Envoyer les emails approuves par Mainteneur via EmailEngine.
+**Description** : Envoyer les emails approuves par Mainteneur via ~~EmailEngine~~ aiosmtplib `[HISTORIQUE D25]`.
 
 **Acceptance Criteria** :
 - Clic Approve → email envoye depuis le bon compte IMAP (FR104)

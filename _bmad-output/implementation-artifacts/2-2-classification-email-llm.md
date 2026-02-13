@@ -1,11 +1,13 @@
 # Story 2.2 : Classification Email LLM
 
+> **[SUPERSEDE D25]** EmailEngine remplace par IMAP direct (aioimaplib + aiosmtplib). Voir _docs/plan-d25-emailengine-to-imap-direct.md.
+
 **Status**: ready-for-dev
 
 **Epic**: Epic 2 - Pipeline Email Intelligent
 **Story ID**: 2.2
 **Estimation**: L (20-30h)
-**Dépendances**: Story 2.1 (Integration EmailEngine & Reception) ✅
+**Dépendances**: Story 2.1 (Integration IMAP Direct & Reception) ✅ [HISTORIQUE D25 — anciennement "Integration EmailEngine"]
 
 ---
 
@@ -462,7 +464,7 @@ Format exact :
 
 **Learnings de Story 2.1** :
 
-1. **EmailEngine webhook → Redis Streams** :
+1. **~~EmailEngine webhook~~ [HISTORIQUE D25] IMAP IDLE + polling → Redis Streams** :
    - Circuit breaker + rate limiting (100/min) déjà implémentés
    - Anonymisation Presidio AVANT publication Redis
    - Delivery garanti via Redis Streams (PEL, XACK)
@@ -719,7 +721,7 @@ Toutes les références techniques avec sources complètes :
 - [Architecture Addendum](../../_docs/architecture-addendum-20260205.md) — Section 2 (Pattern Detection), Section 7 (Trust Rétrogradation), Presidio benchmarks
 - [Epics MVP](../../_bmad-output/planning-artifacts/epics-mvp.md) — Epic 2, Story 2.2 requirements
 - [PRD Friday 2.0](../../_bmad-output/planning-artifacts/prd.md) — FRs FR1-FR7, NFR1, NFR6, NFR7
-- [Story 2.1](./2-1-integration-emailengine-reception.md) — EmailEngine integration (prérequis)
+- [Story 2.1](./2-1-integration-emailengine-reception.md) — ~~EmailEngine~~ [HISTORIQUE D25] IMAP direct integration (prérequis)
 - [Story 1.5](./1-5-presidio-anonymisation-fail-explicit.md) — Presidio anonymisation
 - [Story 1.6](./1-6-trust-layer-middleware.md) — Trust Layer middleware @friday_action
 - [Story 1.7](./1-7-feedback-loop-correction-rules.md) — Feedback loop & correction rules

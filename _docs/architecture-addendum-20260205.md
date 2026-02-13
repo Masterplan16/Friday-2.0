@@ -371,14 +371,17 @@ Workflows n8n mentionnent `${TELEGRAM_CHAT_ID}` mais aucun doc n'explique commen
 3. Chercher `"chat":{"id":123456789}` dans la réponse JSON
 4. Copier ID
 
-#### **EMAILENGINE_TOKEN**
+#### ~~**EMAILENGINE_TOKEN**~~ [SUPERSEDE D25 : EmailEngine remplacé par IMAP direct]
 
-**Étapes** :
-1. Lancer EmailEngine : `docker compose up -d emailengine`
-2. Accéder UI : `http://friday.local/emailengine` (via Caddy) ou `http://localhost:3000`
-3. Premier lancement → Créer compte admin
-4. Settings → API → "Generate new token"
-5. Copier token → `.env` : `EMAILENGINE_TOKEN=ee_...`
+> **[D25]** : EmailEngine a été retiré. Les credentials IMAP/SMTP sont configurés directement
+> dans `.env.email.enc` (variables `IMAP_ACCOUNT_*`). Voir `docs/imap-direct-integration.md`.
+
+~~**Étapes** :~~
+~~1. Lancer EmailEngine : `docker compose up -d emailengine`~~
+~~2. Accéder UI : `http://friday.local/emailengine` (via Caddy) ou `http://localhost:3000`~~
+~~3. Premier lancement → Créer compte admin~~
+~~4. Settings → API → "Generate new token"~~
+~~5. Copier token → `.env` : `EMAILENGINE_TOKEN=ee_...`~~
 
 #### **ANTHROPIC_API_KEY**
 
@@ -636,11 +639,12 @@ HEALTH_CHECKS: dict[str, HealthCheckConfig] = {
         critical=False,
         dependencies=["postgres", "redis"],
     ),
-    "emailengine": HealthCheckConfig(
-        func=lambda: check_http("http://emailengine:3000/health"),
+    # EmailEngine retiré (D25) — remplacé par imap-fetcher (IMAP direct)
+    "imap-fetcher": HealthCheckConfig(
+        func=lambda: check_http("http://imap-fetcher:8080/health"),
         timeout_ms=3000,
         critical=False,
-        dependencies=["postgres"],
+        dependencies=["redis"],
     ),
     "presidio": HealthCheckConfig(
         func=lambda: check_http("http://presidio-analyzer:5001/health"),
@@ -1207,5 +1211,5 @@ Les fonctionnalités suivantes sont **hors scope v1.0** :
 ---
 
 **Cree le** : 2026-02-05
-**Mis a jour** : 2026-02-09 (D19 : pgvector remplace Qdrant Day 1, D17 : remplacement Mistral par Claude Sonnet 4.5, nettoyage references Ollama LLM)
-**Version** : 1.4
+**Mis a jour** : 2026-02-13 (D25 : EmailEngine remplacé par IMAP direct aioimaplib+aiosmtplib, D19 : pgvector remplace Qdrant Day 1, D17 : remplacement Mistral par Claude Sonnet 4.5, nettoyage references Ollama LLM)
+**Version** : 1.5

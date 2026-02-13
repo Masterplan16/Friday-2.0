@@ -10,7 +10,7 @@
 - [x] **Tests unitaires** : 45/45 PASS (100%) — commit 0645a97
   - test_draft_reply.py : 18/18 ✓
   - test_prompts_draft_reply.py : 16/16 ✓
-  - test_emailengine_client_send.py : 11/11 ✓
+  - test_emailengine_client_send.py : 11/11 ✓ **[D25 : EmailEngine retire, client a reecrire avec aiosmtplib]**
 - [x] **Code review** : APPROVED (0 bug critique)
 - [x] **Documentation** : README, code review, specs, guide utilisateur
 - [x] **Commit** : 0645a97 feat(story-2.5): implement email draft reply
@@ -50,7 +50,7 @@ pytest tests/unit/database/test_migration_032_writing_examples.py -v
 **Prérequis :**
 ```bash
 # 1. Démarrer services
-docker compose up -d postgres redis emailengine presidio-analyzer presidio-anonymizer
+docker compose up -d postgres redis imap-fetcher presidio-analyzer presidio-anonymizer  # [D25: emailengine → imap-fetcher]
 
 # 2. Attendre healthcheck
 docker compose ps | grep healthy
@@ -97,7 +97,7 @@ pytest tests/e2e/test_draft_reply_critical.py -v --run-e2e
 ### Infrastructure
 - [ ] PostgreSQL 16 + pgvector (port 5433)
 - [ ] Redis 7 (port 6379)
-- [ ] EmailEngine API (port 3000)
+- [ ] ~~EmailEngine API (port 3000)~~ **[SUPERSEDE D25]** → imap-fetcher (port 8080)
 - [ ] Presidio Analyzer (port 5001)
 - [ ] Presidio Anonymizer (port 5002)
 
@@ -109,8 +109,8 @@ pytest tests/e2e/test_draft_reply_critical.py -v --run-e2e
 - [ ] `ANTHROPIC_API_KEY` configurée
 - [ ] `PRESIDIO_ANALYZER_URL` = http://presidio-analyzer:5001
 - [ ] `PRESIDIO_ANONYMIZER_URL` = http://presidio-anonymizer:5002
-- [ ] `EMAILENGINE_URL` = http://emailengine:3000
-- [ ] `EMAILENGINE_SECRET` configuré
+- [ ] ~~`EMAILENGINE_URL` = http://emailengine:3000~~ **[SUPERSEDE D25]** → `IMAP_ACCOUNT_*` variables
+- [ ] ~~`EMAILENGINE_SECRET` configuré~~ **[SUPERSEDE D25]**
 - [ ] `DATABASE_URL` configurée (port 5433)
 
 ### Tests
@@ -156,7 +156,7 @@ pytest tests/e2e/test_draft_reply_critical.py -v --tb=short
 docker compose ps
 curl http://localhost:5001/health  # Presidio Analyzer
 curl http://localhost:5002/health  # Presidio Anonymizer
-curl http://localhost:3000/health  # EmailEngine
+curl http://localhost:8080/health  # imap-fetcher [D25: EmailEngine retire]
 psql -h localhost -p 5433 -U postgres -d friday_test -c "SELECT 1"  # PostgreSQL
 redis-cli -p 6379 ping  # Redis
 ```

@@ -35,5 +35,4 @@ user friday_email on >${REDIS_EMAIL_PASSWORD} ~* &* +get +set +setex +del +expir
 # Document Processor: full streams + consumer groups
 user document_processor on >${REDIS_DOCUMENT_PROCESSOR_PASSWORD} ~* &* +get +set +setex +del +expire +exists +publish +subscribe +xadd +xreadgroup +xack +xpending +xlen +xgroup|create +xgroup|setid +xinfo|groups +xinfo|stream +ping +info +client +select
 
-# EmailEngine: read/write + scripting (Bull queue requires eval/evalsha)
-user friday_emailengine on >${REDIS_EMAILENGINE_PASSWORD} ~* &* +@read +@write -flushall -flushdb +@pubsub +@scripting +@connection +select +ping +info +client
+# [DEPRECATED D25] EmailEngine retiré — imap-fetcher utilise friday_email ACL

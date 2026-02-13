@@ -224,7 +224,7 @@ async def draft_email_reply(
             "style_examples_used": len(writing_examples),
             "correction_rules_used": len(correction_rules),
             "draft_body": draft_body,
-            "email_original_id": email_id,  # Nécessaire pour envoi via EmailEngine
+            "email_original_id": email_id,  # Nécessaire pour envoi via SMTP (D25)
             "prompt_tokens": prompt_tokens_est,
             "response_tokens": response_tokens_est
         },

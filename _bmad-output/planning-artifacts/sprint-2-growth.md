@@ -319,10 +319,10 @@ So que les problemes soient signales avant qu'ils n'impactent les utilisateurs.
 
 **Given** un cron 30min est configure
 **When** le healthcheck APIs externes s'execute
-**Then** chaque API est verifiee : Anthropic, EmailEngine OAuth, Google APIs, PubMed (FR132)
+**Then** chaque API est verifiee : Anthropic, ~~EmailEngine OAuth~~ serveurs IMAP `[HISTORIQUE D25]`, Google APIs, PubMed (FR132)
 **And** les APIs en panne sont signalees dans le topic System
 
-**Given** EmailEngine perd sa connexion OAuth
+**Given** ~~EmailEngine perd sa connexion OAuth~~ un serveur IMAP est injoignable `[HISTORIQUE D25]`
 **When** le healthcheck detecte l'echec
 **Then** une alerte specifique est envoyee avec suggestion de resolution (FR71)
 **And** une tentative de reconnexion automatique est effectuee

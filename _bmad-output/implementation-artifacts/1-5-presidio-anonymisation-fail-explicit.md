@@ -132,7 +132,7 @@ so that **ma conformité RGPD soit garantie, qu'aucune donnée sensible ne soit 
 ### Intelligence Story 1.4 (Tailscale VPN & Sécurité)
 
 **Leçons applicables à Story 1.5 :**
-- **Redis ACL précision** : L'ACL emailengine avait `+@write` incluant FLUSHALL — corrigé avec exclusions explicites (`-flushall -flushdb`). Vérifier que l'ACL `friday_agents` pour `presidio:mapping:*` n'a pas ce problème.
+- **Redis ACL précision** : L'ACL ~~emailengine~~ [HISTORIQUE D25] imap-fetcher avait `+@write` incluant FLUSHALL — corrigé avec exclusions explicites (`-flushall -flushdb`). Vérifier que l'ACL `friday_agents` pour `presidio:mapping:*` n'a pas ce problème.
 - **Test isolation** : Vérifier couverture existante avant d'ajouter tests — éviter duplication (Story 1.4 a trouvé tests existants à ne pas recréer).
 - **Script portabilité** : Utiliser détection OS (VERSION_CODENAME) plutôt que hardcoder — pertinent si Dockerfile custom pour Presidio.
 - **Secrets dans .env.example** : Mettre placeholders explicites (`your-presidio-url-here`) pas juste vide.

@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 """
+[DEPRECATED D25 - 2026-02-13] EmailEngine retiré. Ce script n'est plus utilisé.
+Remplacé par: agents/src/adapters/email.py (IMAP direct)
+
 Script setup EmailEngine accounts - Story 2.1 Task 1.3
 Configure 4 comptes IMAP dans EmailEngine via API REST
 

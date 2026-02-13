@@ -129,7 +129,7 @@ fi
 echo "REDIS_PASSWORD=$REDIS_PASSWORD" >> "$ENV_NEW"
 
 # Générer passwords Redis par service
-for service in GATEWAY BOT EMAILENGINE ALERTING METRICS DOCUMENT_PROCESSOR; do
+for service in GATEWAY BOT EMAIL ALERTING METRICS DOCUMENT_PROCESSOR; do
     var_name="REDIS_${service}_PASSWORD"
     current_value=$(get_env_value "$var_name")
 
@@ -328,55 +328,31 @@ TAILSCALE_PC_HOSTNAME=$(get_env_value "TAILSCALE_PC_HOSTNAME")
 TAILSCALE_PC_HOSTNAME=${TAILSCALE_PC_HOSTNAME:-mainteneur-pc}
 echo "TAILSCALE_PC_HOSTNAME=$TAILSCALE_PC_HOSTNAME" >> "$ENV_NEW"
 
-# EmailEngine
+# PGP Encryption (D25: renomme depuis EMAILENGINE_ENCRYPTION_KEY)
 cat >> "$ENV_NEW" << 'EOF'
 
 # ============================================
-# EmailEngine - Email IMAP/SMTP Interface (Story 2.1)
+# PGP Encryption - pgcrypto pour emails raw (D25)
 # ============================================
 EOF
 
 echo "" >> "$ENV_NEW"
 
-EMAILENGINE_SECRET=$(get_env_value "EMAILENGINE_SECRET")
-if [[ -z "$EMAILENGINE_SECRET" || "$EMAILENGINE_SECRET" == "changeme"* ]]; then
-    EMAILENGINE_SECRET=$(generate_hex_key)
-    echo -e "${GREEN}✓ Généré: EMAILENGINE_SECRET${NC}"
+PGP_ENCRYPTION_KEY=$(get_env_value "PGP_ENCRYPTION_KEY")
+# Fallback: essayer ancien nom si nouveau absent
+if [[ -z "$PGP_ENCRYPTION_KEY" ]]; then
+    PGP_ENCRYPTION_KEY=$(get_env_value "EMAILENGINE_ENCRYPTION_KEY")
+fi
+if [[ -z "$PGP_ENCRYPTION_KEY" || "$PGP_ENCRYPTION_KEY" == "changeme"* ]]; then
+    PGP_ENCRYPTION_KEY=$(generate_hex_key)
+    echo -e "${GREEN}✓ Généré: PGP_ENCRYPTION_KEY${NC}"
     ((generated_count++))
 else
-    echo -e "${BLUE}→ Préservé: EMAILENGINE_SECRET (existant)${NC}"
+    echo -e "${BLUE}→ Préservé: PGP_ENCRYPTION_KEY (existant)${NC}"
 fi
-echo "EMAILENGINE_SECRET=$EMAILENGINE_SECRET" >> "$ENV_NEW"
+echo "PGP_ENCRYPTION_KEY=$PGP_ENCRYPTION_KEY" >> "$ENV_NEW"
 
-EMAILENGINE_ENCRYPTION_KEY=$(get_env_value "EMAILENGINE_ENCRYPTION_KEY")
-if [[ -z "$EMAILENGINE_ENCRYPTION_KEY" || "$EMAILENGINE_ENCRYPTION_KEY" == "changeme"* ]]; then
-    EMAILENGINE_ENCRYPTION_KEY=$(generate_hex_key)
-    echo -e "${GREEN}✓ Généré: EMAILENGINE_ENCRYPTION_KEY${NC}"
-    ((generated_count++))
-else
-    echo -e "${BLUE}→ Préservé: EMAILENGINE_ENCRYPTION_KEY (existant)${NC}"
-fi
-echo "EMAILENGINE_ENCRYPTION_KEY=$EMAILENGINE_ENCRYPTION_KEY" >> "$ENV_NEW"
-
-# Webhook Security
-cat >> "$ENV_NEW" << 'EOF'
-
-# ============================================
-# Webhook Security (Story 2.1 - AC2)
-# ============================================
-EOF
-
-echo "" >> "$ENV_NEW"
-
-WEBHOOK_SECRET=$(get_env_value "WEBHOOK_SECRET")
-if [[ -z "$WEBHOOK_SECRET" || "$WEBHOOK_SECRET" == "changeme"* ]]; then
-    WEBHOOK_SECRET=$(generate_hex_key)
-    echo -e "${GREEN}✓ Généré: WEBHOOK_SECRET${NC}"
-    ((generated_count++))
-else
-    echo -e "${BLUE}→ Préservé: WEBHOOK_SECRET (existant)${NC}"
-fi
-echo "WEBHOOK_SECRET=$WEBHOOK_SECRET" >> "$ENV_NEW"
+# [RETIRÉ D25] WEBHOOK_SECRET n'est plus nécessaire (IMAP direct, pas de webhook)
 
 # Attachments Storage
 cat >> "$ENV_NEW" << 'EOF'

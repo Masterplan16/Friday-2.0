@@ -18,7 +18,7 @@ date: '2026-02-02'
 **Version** : 1.3.0
 **Date initiale** : 2 février 2026
 **Dernière mise à jour** : 9 février 2026
-**Statut** : Complet + corrections review adversariale v2 (Zep→PostgreSQL+Qdrant, Redis Streams/Pub/Sub, VPS-4 ~25€, budget ~73€) + migration 100% Claude Sonnet 4.5 (D17) + pgvector remplace Qdrant Day 1 (D19)
+**Statut** : Complet + corrections review adversariale v2 (Zep→PostgreSQL+Qdrant, Redis Streams/Pub/Sub, VPS-4 ~25€, budget ~73€) + migration 100% Claude Sonnet 4.5 (D17) + pgvector remplace Qdrant Day 1 (D19) + IMAP direct remplace EmailEngine (D25)
 
 _Ce document se construit collaborativement par etapes. Chaque section est ajoutee au fur et a mesure des decisions architecturales prises ensemble._
 
@@ -114,7 +114,7 @@ Note : les domaines utilisateur (medecin, enseignant, financier, personnel) rest
 
 | ID | Exigence | Solution retenue |
 |----|----------|-----------------|
-| S1 | Email multi-comptes (4 comptes IMAP) | EmailEngine (auto-heberge) |
+| S1 | Email multi-comptes (4 comptes IMAP) | IMAP direct (aioimaplib + aiosmtplib) — daemon imap-fetcher (D25). ~~EmailEngine~~ [SUPERSEDE D25] |
 | S2 | Google Docs API | API v1 (limitation : pas de commentaires ancres, utiliser API Suggestions) |
 | S3 | Google Calendar API | API v3 |
 | S5 | BeeStation (photos) | Sync PC → VPS via Syncthing/Tailscale (pas d'API sur BSM) |
@@ -158,7 +158,7 @@ Note : les domaines utilisateur (medecin, enseignant, financier, personnel) rest
 | **BeeStation Synology** | Photos stockees sur BeeStation | Pas d'API BSM, pas de support Tailscale/packages tiers | Flux indirect : Telephone → BeeStation → PC (copie manuelle/auto) → VPS (Syncthing) | Sync automatique BeeStation → PC (Synology Drive Client) + Syncthing PC → VPS |
 | **Plaud Note upload** | Transcriptions audio automatiques | Depend de l'integration GDrive de Plaud Note | Si Plaud Note n'upload pas auto sur GDrive, Mainteneur doit exporter manuellement | Verifier si Plaud Note Pro a auto-upload GDrive, sinon export manuel periodique |
 | **Budget initial** | 20-30 euros/mois (APIs cloud) | 50 euros/mois (VPS + APIs), estimation reelle ~63 euros/mois (D17 : 100% Claude Sonnet 4.5) | Budget plus eleve que prevu initial | Acceptable — qualite structured output et instruction following superieure justifie le cout API Claude ~45 euros/mois |
-| **Thunderbird** | 4 comptes mails via Thunderbird | EmailEngine (auto-heberge Docker) comme backend sync | Thunderbird reste interface utilisateur optionnelle, Friday accede via EmailEngine | Thunderbird = lecture emails classique, EmailEngine = backend API pour Friday |
+| **Thunderbird** | 4 comptes mails via Thunderbird | ~~EmailEngine~~ → IMAP direct (aioimaplib, daemon imap-fetcher) [SUPERSEDE D25] | Thunderbird reste interface utilisateur optionnelle, Friday accede via IMAP direct | Thunderbird = lecture emails classique, imap-fetcher = backend async pour Friday |
 
 ### Decisions techniques prises
 
@@ -459,7 +459,7 @@ PostgreSQL (source de verite) (D19 : pgvector integre dans PostgreSQL)
 | Vectorstore (embeddings) | `adapters/vectorstore.py` (Story 6.2) | Day 1: Voyage AI + pgvector. Futur: OpenAI, Cohere, Ollama (embeddings) ; Qdrant, Milvus (si >300k vecteurs) |
 | Memorystore (graphe) | `adapters/memorystore.py` + **interface `MemoryStore`** (Story 6.3) | Day 1: PostgreSQL + pgvector. Futur: Graphiti (~août 2026), Neo4j (graphe complexe), Qdrant (si >300k vecteurs) |
 | Syncthing | `adapters/filesync.py` | rsync, rclone |
-| EmailEngine | `adapters/email.py` | IMAP direct, autre bridge |
+| Email (IMAP direct) | `adapters/email.py` | IMAPDirectAdapter + SMTPDirectAdapter (D25). ~~EmailEngine~~ [SUPERSEDE D25 : remplace par aioimaplib + aiosmtplib, 0 EUR/an vs 99 EUR/an] |
 
 **Pattern abstraction memorystore (Story 6.3, 2026-02-11)** :
 - **Interface** : `MemoryStore(ABC)` avec 11 méthodes abstraites (`create_node`, `get_or_create_node`, `create_edge`, `query_path`, `query_temporal`, `semantic_search`, etc.)
@@ -1130,11 +1130,12 @@ n8n fournit son propre dashboard pour l'administration des workflows. Aucun deve
 | Telegram Bot | ~100 Mo | Permanent |
 | ~~Qdrant~~ | ~~1-2 Go~~ | ~~Permanent~~ → Retiré (D19 : pgvector dans PostgreSQL, économie ~500 Mo-2.5 Go RAM + 1 container Docker) |
 | Graphe + embeddings (knowledge.*) | ~500 Mo | Permanent (inclut dans PostgreSQL avec pgvector) (D19) |
-| EmailEngine | ~500 Mo | Permanent |
+| ~~EmailEngine~~ | ~~500 Mo~~ | ~~Permanent~~ → Retiré (D25 : remplacé par imap-fetcher, <50 Mo RAM, économie ~450 Mo) |
+| imap-fetcher | ~50 Mo | Permanent (D25) |
 | Caddy | ~50 Mo | Permanent |
 | Presidio + spaCy-fr | ~1-1.5 Go | Permanent |
 | OS + overhead Docker | ~1-2 Go | Permanent |
-| **Sous-total permanent** | **~7-9 Go** | |
+| **Sous-total permanent** | **~6.5-8.5 Go** | (D25 : EmailEngine retiré, imap-fetcher ~50 Mo) |
 
 | Service lourd | RAM | Mode |
 |---------------|-----|------|
@@ -1189,7 +1190,7 @@ RAM_ALERT_THRESHOLD_PCT = 85  # Alerte Telegram si depasse
 
 | Module | Workflow n8n | Agent LangGraph |
 |--------|-------------|-----------------|
-| **Moteur Vie (Email)** | Webhook EmailEngine → Validation payload → Insert PostgreSQL → Publish Redis event | Classification email (appel LLM) → Extraction taches → Generation brouillon reponse |
+| **Moteur Vie (Email)** | IMAP IDLE/polling (imap-fetcher) → Insert PostgreSQL → Publish Redis Stream event [D25 : remplace webhook EmailEngine] | Classification email (appel LLM) → Extraction taches → Generation brouillon reponse |
 | **Archiviste** | Watch dossier uploads → OCR Surya → Insert PostgreSQL → Publish Redis event | Renommage intelligent (appel LLM) → Classification document → Extraction metadonnees |
 | **Briefing** | Cron 7h00 → Aggregate data PostgreSQL → HTTP call FastAPI Gateway → Send Telegram | Generation briefing (appel LLM) → Priorisation items → Structuration resume |
 | **Finance** | Watch dossier CSV → Parse Papa Parse → Insert PostgreSQL → Publish Redis event | Classification transactions (appel LLM) → Detection anomalies → Suggestions optimisation |
@@ -1788,7 +1789,7 @@ friday-2.0/
 │       │   ├── __init__.py
 │       │   ├── memorystore.py         # Adaptateur memorystore (pgvector + knowledge.*) (D19) — remplacable: Qdrant (si >300k vecteurs), Milvus, Neo4j, Graphiti (si mature)
 │       │   ├── filesync.py            # Adaptateur Syncthing (remplacable: rsync, rclone)
-│       │   ├── email.py               # Adaptateur EmailEngine (remplacable: IMAP direct)
+│       │   ├── email.py               # Adaptateur IMAP direct (IMAPDirectAdapter + SMTPDirectAdapter, D25). ~~EmailEngine~~ [SUPERSEDE D25]
 │       │   └── llm.py                 # [AJOUT] Adaptateur LLM minimal (complete + embed)
 │       │
 │       ├── models/                    # Pydantic schemas globaux
@@ -1895,7 +1896,7 @@ friday-2.0/
 │
 ├── n8n-workflows/                     # Workflows n8n (JSON exporte)
 │   ├── README.md                      # Import dans n8n
-│   ├── email-ingestion.json           # Pipeline emails (EmailEngine → PostgreSQL → Redis event)
+│   ├── email-ingestion.json           # Pipeline emails (imap-fetcher → Redis Streams → consumer → PostgreSQL) [D25 : remplace EmailEngine webhooks]
 │   ├── file-processing.json           # Pipeline fichiers (surveillance dossiers → OCR → classification)
 │   ├── calendar-sync.json             # Sync Google Calendar → PostgreSQL
 │   ├── csv-import.json                # Import CSV bancaires → classification LLM
@@ -2119,7 +2120,8 @@ HEALTH_CHECKS: dict[str, HealthCheckFunc] = {
     "pgvector": check_pgvector,  # (D19) Vérifie extension pgvector + table knowledge.embeddings
     "n8n": lambda: check_http("http://n8n:5678/healthz"),
     # "ollama" retire (D12/D17) — 100% Claude cloud
-    "emailengine": lambda: check_http("http://emailengine:3000/health"),
+    # "emailengine" retire (D25) — remplace par imap-fetcher
+    "imap-fetcher": lambda: check_http("http://imap-fetcher:8080/health"),  # D25
 }
 
 # services/gateway/api/v1/health.py
@@ -2354,7 +2356,7 @@ Les 37 exigences techniques sont couvertes à 100% :
 - Infrastructure (4/4) : n8n + LangGraph + PostgreSQL 16 (avec pgvector, D19)
 - Traitement IA (12/12) : Claude Sonnet 4.5 (D17), Surya, spaCy, GLiNER, Presidio, CrossRef/PubMed, Playwright
 - Communication (4/4) : Telegram, Faster-Whisper, Kokoro, ntfy
-- Connecteurs (11/11) : EmailEngine, Google APIs, Syncthing, CSV, APIs médicales/juridiques
+- Connecteurs (11/11) : IMAP direct (aioimaplib + aiosmtplib, D25 — remplace EmailEngine), Google APIs, Syncthing, CSV, APIs médicales/juridiques
 - Contraintes (6/6) : Budget ~73€/mois (D17, depasse X1 50€ — justifie par qualite Claude), chiffrement age/SOPS, architecture hybride VPS+PC+cloud
 
 **Non-Functional Requirements Coverage:**

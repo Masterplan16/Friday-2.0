@@ -174,7 +174,7 @@ Infrastructure et premiers modules metier formant un systeme autonome et stable.
 | **Trust Layer** | @friday_action middleware, ActionResult, 3 trust levels (auto/propose/blocked), correction_rules |
 | **Anonymisation** | Presidio + spaCy-fr, mapping ephemere Redis TTL court |
 | **Bot Telegram** | 5 topics (Chat, Email, Actions, System, Metrics), commandes /status /journal /receipt /confiance /stats, inline buttons validation |
-| **Pipeline Mail** | 4 comptes IMAP via EmailEngine, classification, extraction PJ, brouillons reponse (trust=propose) |
+| **Pipeline Mail** | 4 comptes IMAP via ~~EmailEngine~~ IMAP direct `[HISTORIQUE D25]`, classification, extraction PJ, brouillons reponse (trust=propose) |
 | **Archiviste** | OCR (Surya), renommage intelligent, classement automatique, suivi garanties |
 | **Agenda** | Extraction evenements depuis mails/transcriptions, multi-casquettes |
 | **Briefing matinal** | Agregation quotidienne tous modules, envoye via Telegram |
@@ -482,7 +482,7 @@ Architecture event-driven single-user sur VPS personnel (Docker Compose). Interf
 | vectorstore.py | pgvector (PostgreSQL) [D19] | Qdrant (si >300k vecteurs), Milvus |
 | memorystore.py | PostgreSQL + pgvector [D19] | Graphiti/Neo4j (reevaluation aout 2026) |
 | filesync.py | Syncthing | rsync, rclone |
-| email.py | EmailEngine | IMAP direct |
+| email.py | ~~EmailEngine~~ IMAP direct (aioimaplib + aiosmtplib) `[HISTORIQUE D25]` | IMAP direct |
 
 ## Project Scoping & Developpement phase
 
@@ -545,7 +545,7 @@ Aide consultation, Menus & Courses, Coach, Entretien cyclique, Generateur TCS/EC
 | R5 | Confusion perimetres financiers | Erreurs comptables | Classification stricte 5 perimetres, trust=propose Day 1 |
 | R6 | Anthropic API indisponible | Tous modules bloques | Retry automatique, alertes, adaptateur swappable + veille D18 |
 | R7 | Dependance unique Anthropic (Claude) | Lock-in fournisseur | Adaptateur llm.py (1 fichier), veille mensuelle D18, 3 mois avant migration |
-| R8 | EmailEngine indisponible | Pipeline email arrete | Adaptateur email.py swappable IMAP direct, alerte System immediate |
+| R8 | ~~EmailEngine~~ Serveur IMAP indisponible `[HISTORIQUE D25]` | Pipeline email arrete | Adaptateur email.py swappable, IMAP direct (aioimaplib), alerte System immediate |
 | R9 | Backup corrompu | Perte donnees | Test restore mensuel, backup chiffre age, sync PC via Tailscale |
 | R10 | Migration 110k lente/couteuse | Retard demarrage | Batch nuit, ~18-24h, ~$45 Claude API, checkpointing resume |
 | R11 | Cold start 100 emails | Surcharge initiale | Batch 10-20, trust=propose, calibrage progressif |
@@ -676,7 +676,7 @@ Aide consultation, Menus & Courses, Coach, Entretien cyclique, Generateur TCS/EC
 | ID | Exigence | Mesure | Seuil |
 |----|----------|--------|-------|
 | NFR17 | Anthropic API resilience | Comportement si API Claude indisponible | Retry automatique (3 tentatives, backoff exponentiel), alerte System |
-| NFR18 | EmailEngine resilience | Comportement si EmailEngine crash | Alerte immediate, adaptateur swappable IMAP direct |
+| NFR18 | ~~EmailEngine~~ IMAP resilience `[HISTORIQUE D25]` | Comportement si serveur IMAP indisponible | Alerte immediate, retry automatique, IMAP direct (aioimaplib) |
 | NFR19 | Telegram API resilience | Comportement si Telegram indisponible | Queue messages, retry, log local |
 | NFR20 | Google Docs API (post-MVP) | Comportement si API Docs indisponible | Skip thesis review, notifier Mainteneur, retry prochain cycle |
 

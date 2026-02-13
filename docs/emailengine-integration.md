@@ -1,4 +1,9 @@
-# EmailEngine Integration - Story 2.1
+> **[DEPRECATED D25]** Ce guide est obsolete. EmailEngine (PostalSys, 99 EUR/an) a ete remplace par IMAP direct (aioimaplib + aiosmtplib, gratuit).
+> Voir : `_docs/plan-d25-emailengine-to-imap-direct.md` pour le plan de migration.
+> L'architecture de reception email est desormais : IMAP IDLE (aioimaplib) -> Redis Streams `email.received` -> Consumer -> PostgreSQL.
+> L'envoi se fait via aiosmtplib (adaptateur `adapters/email.py`).
+
+# EmailEngine Integration - Story 2.1 [DEPRECATED D25]
 
 Documentation technique intégration EmailEngine pour réception emails IMAP.
 

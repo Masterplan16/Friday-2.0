@@ -1,11 +1,14 @@
 """
 Action Executor pour brouillons emails
 
-Exécute l'envoi email via EmailEngine après validation Approve.
+Execute l'envoi email via adapter IMAP/SMTP apres validation Approve.
 Stocke writing_example pour apprentissage few-shot.
 
-Story: 2.5 Brouillon Réponse Email - Task 5 Subtask 5.3
-Story: 2.6 Envoi Emails Approuvés - Task 1.2 (notifications)
+D25 (2026-02-13): Refactore pour utiliser email adapter (IMAP direct)
+au lieu de EmailEngineClient.
+
+Story: 2.5 Brouillon Reponse Email - Task 5 Subtask 5.3
+Story: 2.6 Envoi Emails Approuves - Task 1.2 (notifications)
 """
 
 # TODO(M4 - Story future): Migrer vers structlog pour logs structurés JSON
@@ -17,12 +20,13 @@ import asyncpg
 import httpx
 from telegram import Bot
 
-# Import EmailEngine client (PYTHONPATH géré par bot/main.py startup)
+# Import email adapter (D25: remplace EmailEngineClient)
 try:
-    from services.email_processor.emailengine_client import EmailEngineClient, EmailEngineError
+    from agents.src.adapters.email import get_email_adapter, EmailAdapterError, SMTPSendError
 except ImportError:
-    EmailEngineClient = None  # type: ignore[assignment,misc]
-    EmailEngineError = Exception  # type: ignore[assignment,misc]
+    get_email_adapter = None  # type: ignore[assignment,misc]
+    EmailAdapterError = Exception  # type: ignore[assignment,misc]
+    SMTPSendError = Exception  # type: ignore[assignment,misc]
 from bot.handlers.draft_reply_notifications import (
     send_email_confirmation_notification,
     send_email_failure_notification
@@ -46,21 +50,24 @@ ACCOUNT_NAME_MAPPING = {
 async def send_email_via_emailengine(
     receipt_id: str,
     db_pool: asyncpg.Pool,
-    http_client: httpx.AsyncClient,
-    emailengine_url: str,
-    emailengine_secret: str,
+    http_client: Optional[httpx.AsyncClient] = None,
+    emailengine_url: str = "",
+    emailengine_secret: str = "",
     bot: Optional[Bot] = None
 ) -> Dict:
     """
-    Envoyer email via EmailEngine après validation Approve (Story 2.5 AC5)
+    Envoyer email apres validation Approve (Story 2.5 AC5)
 
-    Workflow (Story 2.6 modifié):
+    D25: Utilise adapter IMAP/SMTP au lieu de EmailEngine.
+    Signature gardee pour compatibilite (http_client/url/secret ignores).
+
+    Workflow (Story 2.6 modifie):
         1. Load receipt depuis core.action_receipts
-        2. Vérifier status='approved'
+        2. Verifier status='approved'
         3. Extract draft_body + email_original_id depuis receipt.payload
         4. Fetch email original depuis ingestion.emails
         5. Determine account_id (compte IMAP source)
-        6. Send via EmailEngine (avec threading correct)
+        6. Send via adapter SMTP (avec threading correct)
         7. [Story 2.6] Notification confirmation topic Email (AC3)
         8. UPDATE receipt status='executed'
         9. INSERT writing_example (apprentissage few-shot)
@@ -68,32 +75,20 @@ async def send_email_via_emailengine(
     Args:
         receipt_id: UUID du receipt (core.action_receipts)
         db_pool: Pool connexions PostgreSQL
-        http_client: HTTP client pour EmailEngine
-        emailengine_url: URL base EmailEngine
-        emailengine_secret: Bearer token EmailEngine
+        http_client: [DEPRECATED D25] Ignore, garde pour compat
+        emailengine_url: [DEPRECATED D25] Ignore
+        emailengine_secret: [DEPRECATED D25] Ignore
         bot: Instance Telegram Bot (optionnel, pour notifications Story 2.6)
 
     Returns:
-        Dict avec résultat EmailEngine:
-            - messageId: ID message envoyé
+        Dict avec resultat envoi:
+            - messageId: ID message envoye
             - success: True/False
 
     Raises:
         ValueError: Si receipt invalid ou status != 'approved'
-        EmailEngineError: Si envoi échoue après retries
+        SMTPSendError: Si envoi echoue apres retries
         Exception: Autres erreurs
-
-    Example:
-        >>> result = await send_email_via_emailengine(
-        ...     receipt_id="uuid-123",
-        ...     db_pool=pool,
-        ...     http_client=client,
-        ...     emailengine_url="http://localhost:3000",
-        ...     emailengine_secret="secret",
-        ...     bot=telegram_bot
-        ... )
-        >>> print(result['messageId'])
-        "<sent-456@example.com>"
     """
 
     # =======================================================================
@@ -146,26 +141,21 @@ async def send_email_via_emailengine(
     references = [in_reply_to] if in_reply_to else []
 
     # =======================================================================
-    # BLOC 2: Send via EmailEngine (SANS connexion DB - évite pool exhaustion)
+    # BLOC 2: Send via adapter SMTP (D25: remplace EmailEngine)
     # =======================================================================
 
-    # Create EmailEngine client
-    emailengine_client = EmailEngineClient(
-        http_client=http_client,
-        base_url=emailengine_url,
-        secret=emailengine_secret
-    )
-
-    account_id = emailengine_client.determine_account_id(dict(email_original))
+    # Determine account_id depuis email original
+    account_id = _determine_account_id(dict(email_original))
 
     # Convert plain text to simple HTML (escape HTML + convert newlines)
     escaped_body = html.escape(draft_body).replace("\n", "<br>")
     body_html = f"<p>{escaped_body}</p>"
 
     try:
-        result = await emailengine_client.send_message(
+        email_adapter = get_email_adapter()
+        send_result = await email_adapter.send_message(
             account_id=account_id,
-            recipient_email=recipient_email,
+            to=recipient_email,
             subject=subject,
             body_text=draft_body,
             body_html=body_html,
@@ -173,10 +163,15 @@ async def send_email_via_emailengine(
             references=references
         )
 
+        if not send_result.success:
+            raise SMTPSendError(f"SMTP send failed: {send_result.error}")
+
+        result = {'messageId': send_result.message_id, 'success': True}
+
         logger.info(
-            "email_sent_via_emailengine",
+            "email_sent_via_adapter",
             receipt_id=receipt_id,
-            message_id=result.get('messageId'),
+            message_id=send_result.message_id,
             recipient=recipient_email
         )
 
@@ -214,9 +209,9 @@ async def send_email_via_emailengine(
                     error=str(notif_error)
                 )
 
-    except EmailEngineError as e:
+    except (SMTPSendError, EmailAdapterError) as e:
         logger.error(
-            "emailengine_send_failed",
+            "smtp_send_failed",
             receipt_id=receipt_id,
             error=str(e),
             exc_info=True
@@ -302,3 +297,34 @@ async def send_email_via_emailengine(
         'recipient': recipient_email,
         'subject': subject
     }
+
+
+def _determine_account_id(email_original: Dict) -> str:
+    """
+    Determine le compte IMAP source pour reponse.
+
+    Mapping recipient → account_id. Fallback: account_medical.
+
+    Args:
+        email_original: Email original (dict from DB row)
+
+    Returns:
+        Account ID pour envoi reponse
+    """
+    recipient = email_original.get('recipient_email') or email_original.get('to')
+
+    # Mapping configurable (a terme: depuis DB ou config)
+    import os
+    mapping_str = os.getenv("ACCOUNT_EMAIL_MAPPING", "")
+    if mapping_str:
+        # Format: "email1:account1,email2:account2"
+        mapping = {}
+        for pair in mapping_str.split(","):
+            if ":" in pair:
+                email, account = pair.strip().split(":", 1)
+                mapping[email.strip()] = account.strip()
+        if recipient and recipient in mapping:
+            return mapping[recipient]
+
+    # Fallback par defaut
+    return "account_medical"

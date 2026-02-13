@@ -51,13 +51,14 @@
 - ✅ Analyse besoins clarifiée : "**AUCUN modèle IA ne tourne sur le laptop** - rôle = stockage documents uniquement"
 - **Fichier modifié** : `_docs/friday-2.0-analyse-besoins.md` (Section 8)
 
-### 4. Thunderbird vs EmailEngine - Clarifié ✅
+### 4. Thunderbird vs EmailEngine - Clarifie [HISTORIQUE D25 : EmailEngine remplace par IMAP direct]
 
-**Problème** : Confusion sur le rôle de Thunderbird vs EmailEngine.
+**Probleme** : Confusion sur le role de Thunderbird vs EmailEngine.
 
 **Fix** :
-- ✅ Analyse besoins clarifiée : "EmailEngine (auto-hébergé Docker). Thunderbird reste interface utilisateur optionnelle"
-- **Fichier modifié** : `_docs/friday-2.0-analyse-besoins.md` (Section 8)
+- Analyse besoins clarifiee : "EmailEngine (auto-heberge Docker). Thunderbird reste interface utilisateur optionnelle"
+- **[HISTORIQUE D25]** EmailEngine a ete retire (decision D25, 2026-02-13). Remplace par IMAP direct (aioimaplib + aiosmtplib). Thunderbird reste interface utilisateur optionnelle.
+- **Fichier modifie** : `_docs/friday-2.0-analyse-besoins.md` (Section 8)
 
 ### 5. Google Docs - Limitation signalée ✅
 
@@ -123,14 +124,14 @@
 - **Fichier modifié** : `_docs/architecture-friday-2.0.md` (Section 2d)
 - **Taille ajoutée** : ~120 lignes de spécifications + code
 
-### 11. Workflows n8n - Spécifications complètes créées ✅
+### 11. Workflows n8n - Specifications completes creees
 
-**Problème** : Aucun workflow n8n spécifié.
+**Probleme** : Aucun workflow n8n specifie.
 
 **Fix** :
-- ✅ **Nouveau document créé** : `docs/n8n-workflows-spec.md` (1200+ lignes)
-- 3 workflows critiques Day 1 spécifiés en détail :
-  1. **Email Ingestion Pipeline** (8 nodes, webhook EmailEngine)
+- **Nouveau document cree** : `docs/n8n-workflows-spec.md` (1200+ lignes)
+- 3 workflows critiques Day 1 specifies en detail :
+  1. **Email Ingestion Pipeline** (consumer Redis Streams, imap-fetcher IMAP IDLE) [HISTORIQUE D25 : webhook EmailEngine remplace par IMAP IDLE + Redis Streams]
   2. **Briefing Daily** (12 nodes, cron 7h00, agrégation données)
   3. **Backup Daily** (11 nodes, cron 2h00, sync Tailscale)
 - Chaque workflow inclut : diagramme, nodes détaillés, variables env, configuration externe, tests

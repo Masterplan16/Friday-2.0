@@ -282,7 +282,7 @@ And manual intervention is required to restart (prevent automated chaos)
 | **91%** | 43.7 Go | 🔴 Auto-recovery : kill services par priorité (AC3) |
 | **95%** | 45.6 Go | 🚨 Emergency : kill tous services lourds (safety guard) |
 
-**Socle permanent** : ~6-8 Go (PostgreSQL, Redis, n8n, Caddy, EmailEngine, Presidio, OS)
+**Socle permanent** : ~6-8 Go (PostgreSQL, Redis, n8n, Caddy, ~~EmailEngine~~ [HISTORIQUE D25] imap-fetcher, Presidio, OS)
 
 **Services lourds résidents** :
 - Faster-Whisper (STT) : ~4 Go
@@ -1478,7 +1478,7 @@ jobs:
 
 - ✅ **D22** : VPS-4 48 Go RAM (seuils 85%/91%/95%)
 - ✅ Priority kill : TTS → STT → OCR
-- ✅ Protected services : postgres, redis, gateway, bot, n8n, emailengine, presidio
+- ✅ Protected services : postgres, redis, gateway, bot, n8n, ~~emailengine~~ [HISTORIQUE D25] imap-fetcher, presidio
 - ✅ NFR13 : Recovery <30s Docker, <2min RAM
 - ✅ Self-healing tiers 1-2 (Tier 3-4 → Epic 12)
 - ✅ asyncpg pool pattern Story 1.11 (not psycopg2)

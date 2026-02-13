@@ -45,7 +45,7 @@ Afin que **l'infrastructure de base soit opérationnelle et prête pour les modu
   - [x] [RETIRÉ D19] ~~Qdrant~~ remplacé par pgvector (healthcheck via PostgreSQL)
   - [x] n8n : `wget http://localhost:5678/healthz`
   - [x] Gateway : `wget http://localhost:8000/api/v1/health`
-  - [x] EmailEngine : `wget http://localhost:3000/health`
+  - [x] ~~EmailEngine : `wget http://localhost:3000/health`~~ [HISTORIQUE D25] Remplacé par imap-fetcher (daemon Python, pas de healthcheck HTTP)
   - [x] Presidio Analyzer/Anonymizer : `wget http://localhost:5001/health`, `5002/health`
   - [x] Faster-Whisper (STT) : `wget http://localhost:8001/health`
   - [x] Kokoro (TTS) : `wget http://localhost:8002/health`
@@ -84,7 +84,7 @@ Afin que **l'infrastructure de base soit opérationnelle et prête pour les modu
 
 **Deux fichiers séparés** (pattern multi-compose) :
 - **docker-compose.yml** : Services core légers (PG+pgvector, Redis, n8n, Caddy, Gateway, Bot, Alerting, Metrics)
-- **docker-compose.services.yml** : Services lourds résidents (STT, TTS, OCR, Presidio, EmailEngine)
+- **docker-compose.services.yml** : Services lourds résidents (STT, TTS, OCR, Presidio, ~~EmailEngine~~ [HISTORIQUE D25] imap-fetcher)
   - **Note** : Ollama retiré (Décision D12 - voir PRD)
 
 **Commande de démarrage** :
@@ -111,7 +111,7 @@ docker compose -f docker-compose.yml -f docker-compose.services.yml up -d
 | Contrainte | Valeur | Impact |
 |------------|--------|--------|
 | VPS | **OVH VPS-4** : 48 Go RAM / 12 vCores / 300 Go SSD | ~25 EUR TTC/mois |
-| Socle permanent | ~6-8 Go | PostgreSQL+pgvector, Redis, n8n, Presidio, EmailEngine, Caddy, OS — **Qdrant retiré (D19)** |
+| Socle permanent | ~6-8 Go | PostgreSQL+pgvector, Redis, n8n, Presidio, ~~EmailEngine~~ [HISTORIQUE D25] imap-fetcher, Caddy, OS — **Qdrant retiré (D19)** |
 | Services lourds | ~8 Go résidents | STT (4 Go), TTS (2 Go), OCR (2 Go) — **Ollama retiré (D12)** |
 | **Total attendu** | **~14-16 Go** | Marge disponible : **32-37 Go** |
 | Seuil alerte | 85% (40.8 Go) | Monitoring : [scripts/monitor-ram.sh](../../scripts/monitor-ram.sh) |
@@ -128,7 +128,7 @@ docker compose -f docker-compose.yml -f docker-compose.services.yml up -d
 | Caddy | 2.8-alpine | **2.10.2-alpine** | ❌ Non (patch releases) |
 | ~~Ollama~~ | ~~latest~~ | **[RETIRÉ D12]** | — |
 | Presidio | latest | latest | ❌ Non |
-| EmailEngine | latest | latest | ❌ Non |
+| ~~EmailEngine~~ | ~~latest~~ | **[RETIRÉ D25]** | IMAP direct (aioimaplib + aiosmtplib) remplace EmailEngine |
 
 **Recherches web (2026-02-08)** :
 - PostgreSQL 16.11 : [GitHub Releases](https://github.com/postgres/postgres/releases) - fixes 2 CVEs + 50+ bugs (nov 2025)
@@ -172,7 +172,7 @@ docker compose -f docker-compose.yml -f docker-compose.services.yml up -d
 | Redis | ✅ Oui | `redis-cli ping` | 3s |
 | n8n | ❌ Non | GET `/healthz` | 10s |
 | Gateway | ✅ Oui | GET `/api/v1/health` | 5s |
-| EmailEngine | ✅ Oui | GET `/health` | 5s |
+| ~~EmailEngine~~ [HISTORIQUE D25] imap-fetcher | ❌ Non | Daemon Python (pas de healthcheck HTTP) | — |
 | Presidio Analyzer | ✅ Oui | GET `/health` | 5s |
 | Presidio Anonymizer | ✅ Oui | GET `/health` | 5s |
 | Faster-Whisper (STT) | ❌ Non | GET `/health` | 10s |
@@ -187,7 +187,7 @@ docker compose -f docker-compose.yml -f docker-compose.services.yml up -d
   "services": {
     "postgres": {"status": "up", "latency_ms": 2},
     "redis": {"status": "up", "latency_ms": 1},
-    "emailengine": {"status": "up", "latency_ms": 5},
+    "imap_fetcher": {"status": "up", "latency_ms": 5},
     "presidio_analyzer": {"status": "up", "latency_ms": 8},
     "presidio_anonymizer": {"status": "up", "latency_ms": 4},
     "stt": {"status": "up", "latency_ms": 12},
@@ -220,9 +220,7 @@ REDIS_PASSWORD=<généré via pwgen>
 N8N_PASSWORD=<strong password>
 N8N_ENCRYPTION_KEY=<32 chars random>
 
-# EmailEngine
-EMAILENGINE_SECRET=<généré via openssl rand>
-EMAILENGINE_ENCRYPTION_KEY=<généré via openssl rand>
+# [HISTORIQUE D25] EmailEngine remplacé par IMAP direct — voir .env.email.enc pour credentials IMAP
 
 # Telegram
 TELEGRAM_BOT_TOKEN=<depuis BotFather>
@@ -259,7 +257,7 @@ sops .env.enc
 | Gateway | `gateway` | `+@read +@write +@pubsub ~*` |
 | n8n | `n8n` | `+@read +@write ~*` (pas pubsub) |
 | Alerting | `alerting` | `+@read +@pubsub ~*` (pas write) |
-| EmailEngine | `emailengine` | `+@read +@write ~email:* ~session:*` (keyspace restreint) |
+| ~~EmailEngine~~ [HISTORIQUE D25] imap-fetcher | `friday_imap_fetcher` | `+@read +@write ~email:* ~stream:*` (keyspace restreint) |
 
 **Fichier ACL** : `config/redis.acl` (monté en volume)
 
@@ -423,7 +421,7 @@ Claude Sonnet 4.5 (claude-sonnet-4-5-20250929) via BMAD create-story workflow
 - ✅ Config n8n v2 : N8N_RESTRICT_FILE_ACCESS_TO + N8N_BLOCK_ENV_ACCESS_IN_NODE ajoutés
 - ✅ Redis ACL créé (config/redis.acl) avec 7 utilisateurs par service (moindre privilège)
 - ✅ Fichier ACL monté en volume + --aclfile dans commande Redis
-- ✅ Toutes REDIS_URL mises à jour avec credentials ACL par service (gateway, agents, alerting, metrics, emailengine)
+- ✅ Toutes REDIS_URL mises à jour avec credentials ACL par service (gateway, agents, alerting, metrics, ~~emailengine~~ [HISTORIQUE D25] imap-fetcher)
 - ✅ Redis healthcheck utilise credentials admin pour AUTH
 - ✅ Caddyfile créé (config/Caddyfile) avec reverse proxy n8n, gateway, emailengine
 - ✅ .env.example mis à jour : VPS-4 48 Go, Redis ACL passwords ajoutés
@@ -434,12 +432,12 @@ Claude Sonnet 4.5 (claude-sonnet-4-5-20250929) via BMAD create-story workflow
 
 **Fichiers modifiés** :
 - docker-compose.yml (versions images, Redis ACL, n8n v2 config, REDIS_URL par service)
-- docker-compose.services.yml (Ollama commenté, header VPS-4, version supprimée, EmailEngine REDIS_URL)
+- docker-compose.services.yml (Ollama commenté, header VPS-4, version supprimée, ~~EmailEngine~~ [HISTORIQUE D25] imap-fetcher REDIS_URL)
 - .env.example (VPS-4 48 Go, Redis ACL passwords)
 
 **Fichiers créés** :
 - config/redis.acl (ACL Redis par service : 7 utilisateurs)
-- config/Caddyfile (reverse proxy n8n, gateway, emailengine)
+- config/Caddyfile (reverse proxy n8n, gateway, ~~emailengine~~ [HISTORIQUE D25])
 - tests/unit/infra/__init__.py
 - tests/unit/infra/test_docker_compose.py (33 tests couvrant 8 AC)
 
@@ -456,7 +454,7 @@ Claude Sonnet 4.5 (claude-sonnet-4-5-20250929) via BMAD create-story workflow
 | C1 | CRITICAL | Image PG `postgres:16.11-alpine` sans pgvector — AC#4 non fonctionnel | Image changée → `pgvector/pgvector:pg16` |
 | C2 | CRITICAL | .env.example contient encore Qdrant (violation D19) | Section Qdrant supprimée, MEMORYSTORE_PROVIDER=pg_pgvector |
 | H1 | HIGH | Presidio URLs inversées dans .env.example (analyzer↔anonymizer) | Ports corrigés : analyzer=5001, anonymizer=5002 |
-| H2 | HIGH | Redis ACL EmailEngine `+@all` (violation moindre privilège) | Restreint à `+@read +@write +@pubsub +@connection` |
+| H2 | HIGH | Redis ACL ~~EmailEngine~~ [HISTORIQUE D25] `+@all` (violation moindre privilège) | Restreint à `+@read +@write +@pubsub +@connection` |
 | H3 | HIGH | n8n v2 `N8N_BASIC_AUTH` deprecated/removed | Vars basic auth supprimées, user management v2 documenté |
 | H4 | HIGH | Caddy healthcheck `/` → 404 (seul `/health` renvoie 200) | Healthcheck corrigé vers `/health` |
 | H5 | HIGH | Aucun test pour AC#4 (pgvector) | Test `test_postgres_uses_pgvector_image` ajouté |
@@ -477,7 +475,7 @@ Claude Sonnet 4.5 (claude-sonnet-4-5-20250929) via BMAD create-story workflow
 |----|--------|
 | #1 docker compose up | OK |
 | #2 PostgreSQL 16 + 3 schemas | OK |
-| #3 Redis ACL par service | OK (EmailEngine restreint, Gateway élargi) |
+| #3 Redis ACL par service | OK (~~EmailEngine~~ [HISTORIQUE D25] imap-fetcher restreint, Gateway élargi) |
 | #4 pgvector (D19) | OK (image pgvector/pgvector:pg16 + test) |
 | #5 n8n via Caddy | OK (tests contenu Caddyfile ajoutés) |
 | #6 Healthchecks | OK (Caddy /health fixé, 3 services TODO) |

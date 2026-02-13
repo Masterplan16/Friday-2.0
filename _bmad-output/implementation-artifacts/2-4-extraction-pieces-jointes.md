@@ -1,5 +1,7 @@
 # Story 2.4: Extraction Pièces Jointes
 
+> **[SUPERSEDE D25]** EmailEngine remplace par IMAP direct (aioimaplib + aiosmtplib). Voir _docs/plan-d25-emailengine-to-imap-direct.md.
+
 Status: done
 
 ---
@@ -14,12 +16,12 @@ Status: done
 
 ## Acceptance Criteria
 
-### AC1 : Extraction PJ depuis EmailEngine (FR3)
+### AC1 : Extraction PJ ~~depuis EmailEngine~~ [HISTORIQUE D25] depuis IMAP direct (FR3)
 
 **Given** un email reçu contient 1+ pièces jointes
 **When** le consumer email traite l'événement `email.received`
 **Then** :
-- Pièces jointes extraites via EmailEngine API (`/attachment/:id`)
+- Pièces jointes extraites ~~via EmailEngine API (`/attachment/:id`)~~ [HISTORIQUE D25] via IMAP direct (aioimaplib FETCH)
 - Types supportés Day 1 : PDF, images (JPG/PNG), documents Office (DOCX/XLSX/PPTX)
 - Types ignorés : exécutables (.exe, .bat, .sh), archives (.zip, .rar), vidéos (>10 Mo)
 - Métadonnées extraites : `filename`, `size`, `mime_type`, `email_id`, `attachment_index`
@@ -158,7 +160,7 @@ Status: done
 
 ---
 
-### Task 3 : Extraction PJ EmailEngine (AC1, AC2)
+### Task 3 : Extraction PJ ~~EmailEngine~~ [HISTORIQUE D25] IMAP direct (AC1, AC2)
 
 - [x] **Subtask 3.1** : Créer `agents/src/agents/email/attachment_extractor.py`
   - Module créé (~250 lignes) avec décorateur @friday_action

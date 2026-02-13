@@ -28,7 +28,7 @@ Friday détecte automatiquement les tâches mentionnées dans les emails (explic
 ### Pipeline Extraction
 
 ```
-Email reçu (EmailEngine)
+Email reçu (IMAP IDLE via imap-fetcher) [D25 : remplace EmailEngine]
   ↓
 Consumer Phase 1-4 (Classification, VIP, PJ)
   ↓

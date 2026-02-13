@@ -405,7 +405,7 @@ async def cmd_filters(message: Message):
 5. ✅ 23+ tests (15 unit + 5 integ + 3 E2E) PASS, métriques économie trackées
 
 **Dépendances** :
-- Story 2.1 (EmailEngine réception) - ✅ DONE
+- Story 2.1 (~~EmailEngine~~ IMAP Direct réception `[HISTORIQUE D25]`) - ✅ DONE
 - Story 2.2 (Classification LLM) - ✅ DONE
 - Story 6.4 (Migration 110k) - ✅ DONE
 

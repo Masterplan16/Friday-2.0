@@ -183,7 +183,7 @@ async def send_email_confirmation_notification(
     """
     Notifier envoi email réussi dans topic Email & Communications
 
-    Envoie notification détaillée après envoi EmailEngine réussi,
+    Envoie notification détaillée après envoi SMTP réussi (D25),
     conforme au AC3 Story 2.6.
 
     Args:
@@ -267,20 +267,20 @@ async def send_email_failure_notification(
     """
     Notifier échec envoi email dans topic System & Alerts
 
-    Envoie alerte System si EmailEngine échoue après retries,
+    Envoie alerte System si envoi SMTP échoue après retries (D25),
     conforme au AC5 Story 2.6.
 
     Args:
         bot: Instance telegram.Bot
         receipt_id: ID du receipt
-        error_message: Message erreur EmailEngine
+        error_message: Message erreur SMTP/IMAP
         recipient_anon: Email destinataire anonymisé
 
     Example:
         >>> await send_email_failure_notification(
         ...     bot=bot,
         ...     receipt_id="uuid-fail",
-        ...     error_message="EmailEngine send failed: 500 Internal Server Error",
+        ...     error_message="SMTP send failed: 500 Internal Server Error",
         ...     recipient_anon="[NAME_1]@[DOMAIN_1]"
         ... )
     """
@@ -299,7 +299,7 @@ async def send_email_failure_notification(
 Destinataire: {recipient_anon}
 Erreur: {error_truncated}
 
-Action requise: Vérifier EmailEngine + compte IMAP
+Action requise: Vérifier connexion SMTP/IMAP du compte
 Receipt ID: {receipt_id}
 """
 

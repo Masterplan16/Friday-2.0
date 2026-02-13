@@ -1,5 +1,7 @@
 # Story 2.6: Envoi Emails Approuvés
 
+> **[SUPERSEDE D25]** EmailEngine remplace par IMAP direct (aioimaplib + aiosmtplib). Voir _docs/plan-d25-emailengine-to-imap-direct.md.
+
 Status: done
 
 ---
@@ -105,7 +107,7 @@ ORDER BY created_at DESC LIMIT 10;
 
 ---
 
-### AC5 : Gestion erreurs EmailEngine
+### AC5 : Gestion erreurs ~~EmailEngine~~ [HISTORIQUE D25] SMTP/IMAP
 
 **Given** EmailEngine est indisponible OU compte IMAP invalide OU erreur SMTP
 **When** `EmailEngineClient.send_message()` échoue après 3 tentatives
@@ -218,7 +220,7 @@ pytest tests/e2e/test_draft_reply_critical.py -v
 
 ---
 
-### Task 3 : Gestion erreurs EmailEngine (AC5)
+### Task 3 : Gestion erreurs ~~EmailEngine~~ [HISTORIQUE D25] SMTP (AC5)
 
 - [x] **Subtask 3.1** : Améliorer error handling dans `action_executor_draft_reply.py`
   - Catch `EmailEngineError` déjà existant (ligne ~160)

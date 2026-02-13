@@ -20,7 +20,7 @@ Email reçu → Classification → Brouillon → [Approve] → Envoi → ✅ Con
 
 ```mermaid
 sequenceDiagram
-    participant EmailEngine as EmailEngine
+    participant IMAPFetcher as imap-fetcher (IMAP IDLE)
     participant RedisStreams as Redis Streams
     participant Consumer as Email Consumer
     participant Classifier as Email Classifier
@@ -31,8 +31,8 @@ sequenceDiagram
     participant Telegram as Telegram API
     participant ActionExecutor as Action Executor
 
-    %% Réception email (Story 2.1)
-    EmailEngine->>RedisStreams: email.received event
+    %% Réception email (Story 2.1) [D25 : IMAP direct remplace EmailEngine]
+    IMAPFetcher->>RedisStreams: email.received event
     Consumer->>RedisStreams: XREAD group (email_processor)
     RedisStreams-->>Consumer: email.received payload
 
@@ -59,22 +59,22 @@ sequenceDiagram
     Bot->>Telegram: Edit message "✅ Brouillon approuvé"
     Bot->>ActionExecutor: execute_action("email.draft_reply", receipt_id)
 
-    %% Envoi EmailEngine (Story 2.6)
+    %% Envoi SMTP direct (Story 2.6) [D25 : aiosmtplib remplace EmailEngine API]
     ActionExecutor->>DB: SELECT receipt (status=approved)
     ActionExecutor->>DB: SELECT email_original (for threading)
     ActionExecutor->>ActionExecutor: determine_account_id()
-    ActionExecutor->>EmailEngine: POST /v1/account/{accountId}/submit
-    Note right of EmailEngine: inReplyTo + references<br/>3 retries avec backoff
+    ActionExecutor->>IMAPFetcher: SMTP send via aiosmtplib (adapters/email.py)
+    Note right of IMAPFetcher: In-Reply-To + References<br/>3 retries avec backoff
 
     alt Envoi réussi
-        EmailEngine-->>ActionExecutor: 200 OK + messageId
+        IMAPFetcher-->>ActionExecutor: OK + messageId
         ActionExecutor->>ActionExecutor: Anonymize recipient + subject (Presidio)
         ActionExecutor->>Telegram: Notification topic Email (confirmation)
         ActionExecutor->>DB: UPDATE receipt (status=executed, executed_at)
         ActionExecutor->>DB: INSERT writing_example (few-shot learning)
         ActionExecutor-->>Bot: Success
     else Envoi échoué
-        EmailEngine-->>ActionExecutor: 500 Error (after 3 retries)
+        IMAPFetcher-->>ActionExecutor: SMTP Error (after 3 retries)
         ActionExecutor->>DB: UPDATE receipt (status=failed)
         ActionExecutor->>ActionExecutor: Anonymize recipient (Presidio)
         ActionExecutor->>Telegram: Notification topic System (échec)
@@ -97,16 +97,18 @@ sequenceDiagram
 
 ## Composants & Responsabilités
 
-### 1. EmailEngine (Service externe)
+### 1. imap-fetcher daemon + adaptateur email.py [D25 : remplace EmailEngine]
 
-**Rôle** : Réception IMAP + Envoi SMTP
+**Role** : Reception IMAP (aioimaplib IDLE) + Envoi SMTP (aiosmtplib)
 
-**API Endpoints** :
-- `GET /v1/account/{accountId}/messages` — Récupération emails
-- `POST /v1/account/{accountId}/submit` — Envoi email
-- Webhook : `POST /webhooks/emailengine` → Redis Streams
+**Reception** :
+- IMAP IDLE (aioimaplib 2.0.1) : notification temps reel nouveaux emails
+- Latence : 2-5s (vs <1s EmailEngine, invisible pour l'utilisateur)
+- Publication : Redis Streams `email.received`
 
-**Threading** : Gère automatiquement `inReplyTo` + `references` si fournis
+**Envoi** :
+- aiosmtplib : envoi direct SMTP avec threading (In-Reply-To + References)
+- Adaptateur : `agents/src/adapters/email.py` (pattern factory, remplacable)
 
 **Retry** : 3 tentatives automatiques avec backoff exponentiel
 
@@ -155,17 +157,17 @@ pending → approved → failed    (échec EmailEngine)
 
 ### 5. Action Executor (Story 2.6)
 
-**Fonction principale** : `send_email_via_emailengine()`
+**Fonction principale** : `send_email_via_smtp()` [D25 : remplace send_email_via_emailengine]
 
 **Workflow interne** :
 1. Load receipt + email original
 2. Verify status='approved'
-3. Call EmailEngine API (retry 3x)
+3. Send via aiosmtplib (adaptateur email.py, retry 3x)
 4. **Story 2.6 : Notifications** :
-   - Succès → Anonymize + notify topic Email
-   - Échec → Anonymize + notify topic System
+   - Succes -> Anonymize + notify topic Email
+   - Echec -> Anonymize + notify topic System
 5. Update receipt status (executed/failed)
-6. Store writing_example (si succès)
+6. Store writing_example (si succes)
 
 ---
 

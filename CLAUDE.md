@@ -55,7 +55,7 @@ agents/src/agents/email/
 | Vectorstore | `adapters/memorystore.py` | pgvector dans PostgreSQL (D19 Day 1) → Qdrant/Milvus si >300k vecteurs |
 | Memorystore | `adapters/memorystore.py` | PostgreSQL+pgvector (Day 1, D19) → Graphiti/Neo4j (si maturité atteinte) |
 | Filesync | `adapters/filesync.py` | Syncthing → rsync/rclone |
-| Email | `adapters/email.py` | EmailEngine → IMAP direct |
+| Email | `adapters/email.py` | IMAP direct (aioimaplib + aiosmtplib, D25) — EmailEngine retiré |
 
 **Factory pattern obligatoire :**
 ```python
@@ -79,7 +79,7 @@ def get_llm_adapter() -> LLMAdapter:
 | Kokoro TTS | ~2 Go | Résident |
 | Surya OCR | ~2 Go | Résident |
 | **Total services lourds** | **~8 Go** | Ollama retiré (D12), LLM = Claude Sonnet 4.5 API (D17) |
-| **Socle permanent (corrigé)** | **~6-8 Go** | Inclut PG (+pgvector D19), Redis, n8n, Presidio, EmailEngine, Caddy, OS (SANS Zep - fermé 2024, SANS Qdrant - D19) |
+| **Socle permanent (corrigé)** | **~6-8 Go** | Inclut PG (+pgvector D19), Redis, n8n, Presidio, Caddy, OS (SANS Zep - fermé 2024, SANS Qdrant - D19, SANS EmailEngine - D25) |
 | **Marge disponible** | **~32-34 Go** | Cohabitation Jarvis Friday possible (~5 Go) |
 
 **Orchestrator simplifié (moniteur RAM, pas gestionnaire d'exclusions) :**
@@ -286,7 +286,7 @@ class ActionResult(BaseModel):
 - **Sync** : REST (FastAPI) pour requêtes
 - **Async critique** : Redis Streams pour événements métier (delivery garanti)
 - **Async informatif** : Redis Pub/Sub pour logs/notifications (fire-and-forget)
-- **HTTP interne** : Docker network pour services (n8n, emailengine, etc.)
+- **HTTP interne** : Docker network pour services (n8n, imap-fetcher, etc.)
 
 ---
 
@@ -679,6 +679,7 @@ Prérequis à tout. Infrastructure, Trust Layer, sécurité RGPD, Telegram, Self
 - **Heartbeat (2026-02-05)** : Natif Friday (pas OpenClaw). Réévaluation août 2026.
 - **Graphiti (2026-02-05)** : Zep fermé 2024. Day 1 = PG + pgvector. Réévaluation Graphiti 6 mois (~août 2026).
 - **LLM (D17, 2026-02-09)** : 100% Claude Sonnet 4.5. Zéro routing multi-provider.
+- **Email (D25, 2026-02-13)** : EmailEngine retiré, remplacé par IMAP direct (aioimaplib + aiosmtplib). Économie 99 EUR/an.
 
 ---
 
@@ -792,5 +793,5 @@ New-BurntToastNotification -Text "Claude", "Toujours en cours..."
 
 ---
 
-**Version** : 1.6.0 (2026-02-09)
-**Status** : Architecture complète + D17 100% Claude Sonnet 4.5 (remplace Mistral/Gemini/Ollama) + Trust Layer + Code Review v2 — **Prêt pour implémentation Story 1**
+**Version** : 1.7.0 (2026-02-13)
+**Status** : Architecture complète + D17 100% Claude Sonnet 4.5 + D25 IMAP direct (EmailEngine retiré) + Trust Layer + Code Review v2 — **Prêt pour implémentation Story 1**

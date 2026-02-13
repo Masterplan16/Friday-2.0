@@ -81,8 +81,8 @@ Notification Telegram
     ├─ Inline buttons : [Approve] [Reject] [Correct]
     └─ Attend validation Mainteneur
     ↓
-[Si Approve] Envoi EmailEngine + Stockage Writing Example
-    ├─ EmailEngine API : /v1/account/{id}/submit
+[Si Approve] Envoi SMTP + Stockage Writing Example
+    ├─ aiosmtplib : envoi direct SMTP (D25 : remplace EmailEngine API)
     ├─ Threading : inReplyTo + references
     ├─ core.writing_examples : INSERT pour future few-shot
     └─ Receipt status : executed
@@ -109,14 +109,14 @@ agents/src/agents/email/
     └── estimate_prompt_tokens()      # Token estimation
 
 services/email_processor/
-└── emailengine_client.py             # Client EmailEngine API (320 lignes)
-    ├── send_message()                # POST /v1/account/{id}/submit
+└── emailengine_client.py             # [SUPERSEDE D25 : a reecrire avec aiosmtplib] Client EmailEngine API (320 lignes)
+    ├── send_message()                # [D25] → SMTPDirectAdapter.send()
     ├── determine_account_id()        # Mapping recipient → account
-    └── EmailEngineError              # Custom exception
+    └── EmailEngineError              # Custom exception → SMTPError
 
 bot/
 ├── action_executor_draft_reply.py   # Exécution approve (Story 1.10)
-│   └── send_email_via_emailengine()
+│   └── send_email_via_smtp()        # [D25 : renomme, utilise SMTPDirectAdapter]
 └── handlers/
     ├── draft_commands.py             # Commandes Telegram /draft
     └── draft_reply_notifications.py  # Notifications Telegram
@@ -134,7 +134,7 @@ tests/
 │   │   ├── test_draft_reply.py             # 18 tests ✓
 │   │   └── test_prompts_draft_reply.py     # 16 tests ✓
 │   ├── services/
-│   │   └── test_emailengine_client_send.py # 11 tests ✓
+│   │   └── test_emailengine_client_send.py # 11 tests ✓ [D25 : a reecrire pour SMTPDirectAdapter]
 │   └── database/
 │       └── test_migration_032_writing_examples.py  # 6 tests (nécessite PostgreSQL)
 ├── e2e/
@@ -171,14 +171,14 @@ _docs/
 # Tests unitaires (rapide, 100% pass)
 pytest tests/unit/agents/email/test_draft_reply.py -v
 pytest tests/unit/agents/email/test_prompts_draft_reply.py -v
-pytest tests/unit/services/test_emailengine_client_send.py -v
+pytest tests/unit/services/test_emailengine_client_send.py -v  # [D25: a migrer vers test_smtp_client.py]
 
 # Tests migration (nécessite PostgreSQL)
 docker compose up -d postgres
 pytest tests/unit/database/test_migration_032_writing_examples.py -v
 
 # Tests E2E (nécessite infra complète)
-docker compose up -d postgres redis emailengine
+docker compose up -d postgres redis imap-fetcher  # [D25: emailengine → imap-fetcher]
 pytest tests/e2e/test_draft_reply_critical.py -v --run-e2e
 
 # Coverage
@@ -231,7 +231,7 @@ open htmlcov/index.html
    ```
 
 4. **Actions possibles** :
-   - **[Approve]** → Envoi immédiat via EmailEngine + stockage writing example
+   - **[Approve]** → Envoi immédiat via SMTP direct (D25) + stockage writing example
    - **[Reject]** → Receipt status='rejected', brouillon annulé
    - **[Correct]** → Éditer brouillon puis Approve
 
@@ -455,7 +455,8 @@ logger.info("📬 email_received")  # ✗ Avoid
 python = "^3.11"
 anthropic = "^0.40.0"  # Claude Sonnet 4.5 SDK
 asyncpg = "^0.30.0"    # PostgreSQL async
-httpx = "^0.27.0"      # EmailEngine HTTP client
+httpx = "^0.27.0"      # HTTP client (general purpose)
+aiosmtplib = "^3.0.0"  # [D25] SMTP direct (remplace EmailEngine HTTP)
 pydantic = "^2.10.0"   # Validation models
 pytest = "^9.0.0"      # Tests
 pytest-asyncio = "^1.3.0"  # Tests async
@@ -476,8 +477,8 @@ pytest-asyncio = "^1.3.0"  # Tests async
   ANTHROPIC_API_KEY=sk-ant-...
   PRESIDIO_ANALYZER_URL=http://presidio-analyzer:5001
   PRESIDIO_ANONYMIZER_URL=http://presidio-anonymizer:5002
-  EMAILENGINE_URL=http://emailengine:3000
-  EMAILENGINE_SECRET=***
+  # [SUPERSEDE D25] EMAILENGINE_URL et EMAILENGINE_SECRET retires
+  # Remplace par IMAP_ACCOUNT_* dans .env.email
   ```
 
 ### Avant production

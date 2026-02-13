@@ -23,10 +23,10 @@ load_dotenv(".env.email")
 
 # EmailEngine API configuration
 EMAILENGINE_URL = os.getenv("EMAILENGINE_URL", "http://localhost:3000")
-EMAILENGINE_SECRET = os.getenv("EMAILENGINE_SECRET")
+EMAILENGINE_ACCESS_TOKEN = os.getenv("EMAILENGINE_ACCESS_TOKEN")
 
-if not EMAILENGINE_SECRET:
-    print("❌ EMAILENGINE_SECRET not found in environment")
+if not EMAILENGINE_ACCESS_TOKEN:
+    print("❌ EMAILENGINE_ACCESS_TOKEN not found in environment")
     sys.exit(1)
 
 # Account configurations
@@ -149,7 +149,7 @@ async def create_account(client: httpx.AsyncClient, account: Dict[str, Any], dry
                 "imap": account["imap"],
                 "smtp": account.get("smtp"),
             },
-            headers={"Authorization": f"Bearer {EMAILENGINE_SECRET}"},
+            headers={"Authorization": f"Bearer {EMAILENGINE_ACCESS_TOKEN}"},
             timeout=30.0,
         )
 
@@ -176,7 +176,7 @@ async def verify_account(client: httpx.AsyncClient, account_id: str) -> bool:
     try:
         response = await client.get(
             f"{EMAILENGINE_URL}/v1/account/{account_id}",
-            headers={"Authorization": f"Bearer {EMAILENGINE_SECRET}"},
+            headers={"Authorization": f"Bearer {EMAILENGINE_ACCESS_TOKEN}"},
             timeout=10.0,
         )
 
@@ -236,7 +236,7 @@ async def main():
         try:
             response = await client.get(
                 f"{EMAILENGINE_URL}/v1/settings",
-                headers={"Authorization": f"Bearer {EMAILENGINE_SECRET}"},
+                headers={"Authorization": f"Bearer {EMAILENGINE_ACCESS_TOKEN}"},
                 timeout=5.0,
             )
             if response.status_code in (200, 401):

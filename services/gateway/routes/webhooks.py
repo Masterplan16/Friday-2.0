@@ -231,10 +231,15 @@ async def webhook_emailengine_message_new(
         )
         raise HTTPException(status_code=413, detail="Request body too large (max 10 MB)")
 
-    # Étape 1 : Vérifier signature HMAC-SHA256
-    if not verify_webhook_signature(payload_body, x_ee_signature, settings.WEBHOOK_SECRET):
-        logger.error("webhook_signature_invalid", account_id=account_id)
-        raise HTTPException(status_code=401, detail="Invalid webhook signature")
+    # Étape 1 : Vérifier signature HMAC-SHA256 (optionnel pour MVP - réseau Docker privé)
+    # TODO Story 2.9: Configurer EmailEngine webhook routes avec signature HMAC
+    if x_ee_signature:
+        if not verify_webhook_signature(payload_body, x_ee_signature, settings.WEBHOOK_SECRET):
+            logger.error("webhook_signature_invalid", account_id=account_id)
+            raise HTTPException(status_code=401, detail="Invalid webhook signature")
+        logger.info("webhook_signature_valid", account_id=account_id)
+    else:
+        logger.warning("webhook_signature_missing", account_id=account_id)
 
     # Parser JSON
     try:
@@ -243,17 +248,17 @@ async def webhook_emailengine_message_new(
         logger.error("webhook_payload_invalid", account_id=account_id, error=str(e))
         raise HTTPException(status_code=400, detail=f"Invalid payload: {e}")
 
-    # Vérifier que l'account_id correspond (strict validation)
-    if payload.account != account_id:
-        logger.error(
-            "webhook_account_mismatch",
+    # Log si l'account_id URL ne correspond pas (mais pas bloquant)
+    # Source de vérité = payload.account (EmailEngine global webhook URL="/emailengine/all")
+    if payload.account != account_id and account_id != "all":
+        logger.warning(
+            "webhook_account_mismatch_non_blocking",
             url_account=account_id,
             payload_account=payload.account
         )
-        raise HTTPException(
-            status_code=400,
-            detail=f"Account mismatch: URL={account_id}, payload={payload.account}"
-        )
+
+    # Utiliser payload.account comme account_id réel
+    account_id = payload.account
 
     # Vérifier que c'est bien un événement messageNew
     if payload.event != "messageNew":

@@ -7,5 +7,5 @@ user friday_metrics on >REDACTED_METRICS_PASSWORD ~metrics:* &* +get +set +incrb
 user friday_n8n on >REDACTED_N8N_PASSWORD ~cache:* ~bull:* ~n8n:* &* +get +set +setex +del +expire +lpush +rpush +lrange +llen +publish +subscribe +sadd +smembers +ping +info +client +select
 user friday_bot on >REDACTED_BOT_PASSWORD ~* &* +get +set +setex +del +expire +publish +subscribe +xadd +xreadgroup +xack +xpending +xlen +ping +info +client +select
 user friday_email on >REDACTED_EMAIL_PASSWORD ~* &* +get +set +setex +del +expire +exists +publish +subscribe +xadd +xreadgroup +xack +xpending +xlen +xgroup|create +xgroup|setid +xgroup|delconsumer +xinfo|groups +xinfo|stream +ping +info +client +select
-user document_processor on >REDACTED_DOC_PASSWORD ~* &* +get +set +setex +del +expire +publish +subscribe +xadd +xreadgroup +xack +xpending +xlen +ping +info +client +select
+user document_processor on >REDACTED_DOC_PASSWORD ~* &* +get +set +setex +del +expire +exists +publish +subscribe +xadd +xreadgroup +xack +xpending +xlen +xgroup|create +xgroup|setid +xinfo|groups +xinfo|stream +ping +info +client +select
 user friday_emailengine on >REDACTED_EE_PASSWORD ~* &* +@read +@write -flushall -flushdb +@pubsub +@connection +select +ping +info +client

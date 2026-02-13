@@ -35,8 +35,8 @@ structlog.configure(
 logger = structlog.get_logger(__name__)
 
 # Configuration Redis Streams
-STREAM_NAME = "documents:received"
-CONSUMER_GROUP = "document-processor-group"
+STREAM_NAME = "document.received"
+CONSUMER_GROUP = "document-processor"
 CONSUMER_NAME = "document-processor-1"
 BLOCK_MS = 5000  # Block 5s en attente de nouveaux messages
 BATCH_SIZE = 10  # Nombre max messages lus par batch
@@ -49,7 +49,7 @@ async def init_consumer_group(redis_client: Redis) -> None:
     """
     Initialise consumer group si n'existe pas.
 
-    Crée group 'document-processor-group' sur stream 'documents:received'.
+    Crée group 'document-processor' sur stream 'document.received'.
     Utilise mkstream=True pour créer stream automatiquement si absent.
 
     Args:

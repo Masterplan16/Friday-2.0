@@ -377,8 +377,8 @@ async def _publish_document_received(
     """
     Publie événement document.received dans Redis Streams avec retry logic.
 
-    Stream: documents:received
-    Consumer group: document-processor-group (Epic 3 - Archiviste)
+    Stream: document.received
+    Consumer group: document-processor (Epic 3 - Archiviste)
     Maxlen: 10000 (rétention 10k events)
 
     Retry policy:
@@ -410,7 +410,7 @@ async def _publish_document_received(
 
     # Publier dans Redis Streams avec maxlen (rétention 10k events)
     await redis_client.xadd(
-        'documents:received',
+        'document.received',
         event_payload,
         maxlen=10000
     )
@@ -418,5 +418,5 @@ async def _publish_document_received(
     logger.info(
         "document_received_published",
         attachment_id=attachment_id,
-        stream='documents:received'
+        stream='document.received'
     )

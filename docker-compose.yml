@@ -195,7 +195,7 @@ services:
     restart: unless-stopped
     environment:
       - POSTGRES_DSN=postgresql://${POSTGRES_USER:-friday}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-friday}
-      - REDIS_URL=redis://friday_gateway:${REDIS_GATEWAY_PASSWORD:-REDACTED_GW_PASSWORD}@redis:6379/0
+      - REDIS_URL=redis://friday_gateway:${REDIS_GATEWAY_PASSWORD}@redis:6379/0
       - API_TOKEN=${API_TOKEN}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
@@ -237,7 +237,7 @@ services:
     environment:
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
       - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
-      - REDIS_URL=redis://friday_alerting:${REDIS_ALERTING_PASSWORD:-REDACTED_ALERTING_PASSWORD}@redis:6379/0
+      - REDIS_URL=redis://friday_alerting:${REDIS_ALERTING_PASSWORD}@redis:6379/0
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
     volumes:
       - ./services/alerting:/app:ro
@@ -265,7 +265,7 @@ services:
     restart: unless-stopped
     environment:
       - POSTGRES_DSN=postgresql://${POSTGRES_USER:-friday}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-friday}
-      - REDIS_URL=redis://friday_metrics:${REDIS_METRICS_PASSWORD:-REDACTED_METRICS_PASSWORD}@redis:6379/0
+      - REDIS_URL=redis://friday_metrics:${REDIS_METRICS_PASSWORD}@redis:6379/0
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
       - CRON_SCHEDULE=${METRICS_CRON_SCHEDULE:-0 2 * * *}
     volumes:
@@ -312,7 +312,7 @@ services:
 
       # Database & Redis
       - DATABASE_URL=postgresql://${POSTGRES_USER:-friday}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-friday}
-      - REDIS_URL=redis://friday_bot:${REDIS_BOT_PASSWORD:-REDACTED_BOT_PASSWORD}@redis:6379/0
+      - REDIS_URL=redis://friday_bot:${REDIS_BOT_PASSWORD}@redis:6379/0
 
       # Config optionnelle
       - TELEGRAM_CONFIG_PATH=${TELEGRAM_CONFIG_PATH:-config/telegram.yaml}
@@ -347,7 +347,7 @@ services:
     environment:
       # Database & Redis
       - DATABASE_URL=postgresql://${POSTGRES_USER:-friday}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-friday}
-      - REDIS_URL=redis://friday_email:${REDIS_EMAIL_PASSWORD:-REDACTED_EMAIL_PASSWORD}@redis:6379/0
+      - REDIS_URL=redis://friday_email:${REDIS_EMAIL_PASSWORD}@redis:6379/0
       # EmailEngine
       - EMAILENGINE_BASE_URL=${EMAILENGINE_BASE_URL:-http://emailengine:3000}
       - EMAILENGINE_SECRET=${EMAILENGINE_SECRET}
@@ -402,7 +402,7 @@ services:
       - DATABASE_URL=postgresql://${POSTGRES_USER:-friday}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-friday}
 
       # Redis (ACL document_processor user)
-      - REDIS_URL=redis://document_processor:${REDIS_DOCUMENT_PROCESSOR_PASSWORD:-REDACTED_DOC_PASSWORD}@redis:6379/0
+      - REDIS_URL=redis://document_processor:${REDIS_DOCUMENT_PROCESSOR_PASSWORD}@redis:6379/0
 
       # Config optionnelle
       - LOG_LEVEL=${LOG_LEVEL:-INFO}

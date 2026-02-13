@@ -49,6 +49,7 @@ ENV/
 .env.email
 .env.prod
 .env.telegram
+.env.decrypted
 
 # Secrets (SOPS encrypted files are OK to commit)
 *.key
@@ -97,6 +98,7 @@ database/backups/
 
 # Redis
 dump.rdb
+config/redis.acl
 
 # Tailscale
 config/tailscale/*.state
@@ -128,6 +130,7 @@ desktop.ini
 *.bak
 *.swp
 *~
+run_migrations_temp.py
 
 # Jupyter
 .ipynb_checkpoints/

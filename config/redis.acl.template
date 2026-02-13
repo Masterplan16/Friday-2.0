@@ -1,0 +1,39 @@
+# Redis ACL Template - Friday 2.0
+# GENERE par: scripts/generate-redis-acl.sh
+# NE PAS éditer config/redis.acl directement (gitignored)
+#
+# Usage: ./scripts/generate-redis-acl.sh > config/redis.acl
+# Requiert: variables REDIS_*_PASSWORD dans l'environnement (.env)
+
+# Default user: deny all except ping (sécurité)
+user default on nopass sanitize-payload -@all +ping
+
+# Admin: full access
+user admin on >${REDIS_ADMIN_PASSWORD} ~* &* +@all
+
+# Gateway (FastAPI): REST cache + events
+user friday_gateway on >${REDIS_GATEWAY_PASSWORD} ~* &* +get +set +setex +del +expire +ttl +publish +subscribe +xadd +xreadgroup +xack +xlen +ping +info +client
+
+# Agents: streams + Presidio mapping
+user friday_agents on >${REDIS_AGENTS_PASSWORD} ~stream:* ~presidio:mapping:* &* +xadd +xreadgroup +xack +xpending +xlen +get +setex +del +publish +subscribe +ping +info +client
+
+# Alerting: stream consumer + publisher
+user friday_alerting on >${REDIS_ALERTING_PASSWORD} ~stream:* &* +xreadgroup +xack +xadd +xpending +xlen +subscribe +ping +info +client
+
+# Metrics: counters + expiry
+user friday_metrics on >${REDIS_METRICS_PASSWORD} ~metrics:* &* +get +set +incrby +expire +ping +info +client
+
+# n8n: cache + Bull queues
+user friday_n8n on >${REDIS_N8N_PASSWORD} ~cache:* ~bull:* ~n8n:* &* +get +set +setex +del +expire +lpush +rpush +lrange +llen +publish +subscribe +sadd +smembers +ping +info +client +select
+
+# Bot Telegram: full streams + cache
+user friday_bot on >${REDIS_BOT_PASSWORD} ~* &* +get +set +setex +del +expire +publish +subscribe +xadd +xreadgroup +xack +xpending +xlen +ping +info +client +select
+
+# Email Processor: full streams + consumer groups
+user friday_email on >${REDIS_EMAIL_PASSWORD} ~* &* +get +set +setex +del +expire +exists +publish +subscribe +xadd +xreadgroup +xack +xpending +xlen +xgroup|create +xgroup|setid +xgroup|delconsumer +xinfo|groups +xinfo|stream +ping +info +client +select
+
+# Document Processor: full streams + consumer groups
+user document_processor on >${REDIS_DOCUMENT_PROCESSOR_PASSWORD} ~* &* +get +set +setex +del +expire +exists +publish +subscribe +xadd +xreadgroup +xack +xpending +xlen +xgroup|create +xgroup|setid +xinfo|groups +xinfo|stream +ping +info +client +select
+
+# EmailEngine: read/write + scripting (Bull queue requires eval/evalsha)
+user friday_emailengine on >${REDIS_EMAILENGINE_PASSWORD} ~* &* +@read +@write -flushall -flushdb +@pubsub +@scripting +@connection +select +ping +info +client

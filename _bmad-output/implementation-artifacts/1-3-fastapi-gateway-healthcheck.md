@@ -75,7 +75,7 @@ Afin que **tous les services soient accessibles via une API REST sécurisée ave
 **Services critiques** (DOWN = unhealthy) :
 1. **PostgreSQL** : Base de données principale (3 schemas)
 2. **Redis** : Cache et pub/sub
-3. **EmailEngine** : Réception emails (4 comptes IMAP)
+3. ~~**EmailEngine**~~ [HISTORIQUE D25] **imap-fetcher** : Réception emails (4 comptes IMAP via IMAP direct)
 
 **Services non-critiques** (DOWN = degraded) :
 4. **n8n** : Orchestration workflows (peut redémarrer sans impact immédiat)
@@ -97,7 +97,7 @@ Afin que **tous les services soient accessibles via une API REST sécurisée ave
   "services": {
     "postgresql": {"status": "up", "latency_ms": 12},
     "redis": {"status": "up", "latency_ms": 3},
-    "emailengine": {"status": "up", "latency_ms": 45},
+    "imap_fetcher": {"status": "up", "latency_ms": 45},
     "n8n": {"status": "up", "latency_ms": 120},
     "caddy": {"status": "up", "latency_ms": 5},
     "presidio": {"status": "up", "latency_ms": 80},
@@ -164,7 +164,7 @@ logger = structlog.get_logger()
 ServiceStatus = Literal["up", "down", "not_deployed"]
 SystemStatus = Literal["healthy", "degraded", "unhealthy"]
 
-CRITICAL_SERVICES = {"postgresql", "redis", "emailengine"}
+CRITICAL_SERVICES = {"postgresql", "redis", "imap_fetcher"}  # [HISTORIQUE D25] emailengine → imap_fetcher
 
 class HealthChecker:
     def __init__(self, cache_ttl: int = 5):
@@ -227,7 +227,7 @@ class HealthChecker:
         checks = {
             "postgresql": self.check_postgresql(),
             "redis": self.check_redis(),
-            "emailengine": self.check_service_http("emailengine", "http://emailengine:3000/health"),
+            "imap_fetcher": self.check_service_http("imap_fetcher", "http://imap-fetcher:8010/health"),  # [HISTORIQUE D25] emailengine → imap-fetcher
             "n8n": self.check_service_http("n8n", "http://n8n:5678/healthz"),
             "caddy": self.check_service_http("caddy", "http://caddy:80/"),
             "presidio": self.check_service_http("presidio", "http://presidio-analyzer:3000/health"),

@@ -1,5 +1,7 @@
 # Story 2.8: Filtrage Sender Intelligent & Économie Tokens
 
+> **[SUPERSEDE D25]** EmailEngine remplace par IMAP direct (aioimaplib + aiosmtplib). Voir _docs/plan-d25-emailengine-to-imap-direct.md.
+
 Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->

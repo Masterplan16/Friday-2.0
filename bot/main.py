@@ -184,8 +184,8 @@ class FridayBot:
 
             # C3 fix: Enregistrer action email.draft_reply (Story 2.5)
             # Story 2.6: Ajouter paramètre bot pour notifications
+            # D25: Utilise adapter SMTP (plus besoin de http_client/emailengine params)
             from bot.action_executor_draft_reply import send_email_via_emailengine
-            import httpx
 
             async def draft_reply_action(**kwargs):
                 """Wrapper pour send_email_via_emailengine (Story 2.5 AC5 + Story 2.6 notifications)"""
@@ -193,15 +193,11 @@ class FridayBot:
                 if not receipt_id:
                     raise ValueError("receipt_id manquant dans payload")
 
-                async with httpx.AsyncClient() as http_client:
-                    result = await send_email_via_emailengine(
-                        receipt_id=receipt_id,
-                        db_pool=db_pool,
-                        http_client=http_client,
-                        emailengine_url=os.getenv('EMAILENGINE_BASE_URL', 'http://localhost:3000'),
-                        emailengine_secret=os.getenv('EMAILENGINE_SECRET'),
-                        bot=self.application.bot  # Story 2.6: Passer bot pour notifications
-                    )
+                result = await send_email_via_emailengine(
+                    receipt_id=receipt_id,
+                    db_pool=db_pool,
+                    bot=self.application.bot  # Story 2.6: Passer bot pour notifications
+                )
                 return result
 
             action_executor.register_action("email.draft_reply", draft_reply_action)

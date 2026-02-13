@@ -24,9 +24,9 @@ L'extraction automatique de pièces jointes permet à Friday de :
 ### Pipeline complet
 
 ```
-┌──────────────┐
-│   EmailEngine│──▶ Webhook email.received
-└──────────────┘
+┌──────────────────────┐
+│ imap-fetcher (IDLE)  │──▶ Redis Streams email.received [D25]
+└──────────────────────┘
         │
         ▼
 ┌────────────────────────────────────────────────────────────┐
@@ -37,12 +37,12 @@ L'extraction automatique de pièces jointes permet à Friday de :
 │ Phase 3: Détection VIP + Urgence                            │
 │ Phase 4: Classification LLM                                 │
 │ Phase 5: Stockage DB ingestion.emails                       │
-│ Phase 6: 🆕 EXTRACTION PIÈCES JOINTES (Story 2.4)           │
-│   ├─ Query EmailEngine /message/:id (liste attachments)    │
+│ Phase 6: EXTRACTION PIECES JOINTES (Story 2.4)              │
+│   ├─ IMAP FETCH BODYSTRUCTURE (liste attachments) [D25]    │
 │   ├─ Pour chaque attachment :                               │
 │   │   ├─ Validation MIME type (whitelist/blacklist)        │
 │   │   ├─ Validation taille (<= 25 Mo)                       │
-│   │   ├─ Download via /attachment/:id                       │
+│   │   ├─ Download via IMAP FETCH BODY[part] [D25]          │
 │   │   ├─ Sanitization nom fichier (sécurité)               │
 │   │   ├─ Stockage zone transit VPS                          │
 │   │   ├─ INSERT métadonnées DB                              │
@@ -105,12 +105,12 @@ async def extract_attachments(
 ) -> AttachmentExtractResult
 ```
 
-**Workflow** :
-1. Query EmailEngine API `/message/:id` pour liste attachments
+**Workflow** [D25 : IMAP FETCH remplace EmailEngine API] :
+1. IMAP FETCH BODYSTRUCTURE pour liste attachments
 2. Pour chaque attachment :
-   - Validation MIME type (cf. section Sécurité)
+   - Validation MIME type (cf. section Securite)
    - Validation taille <= 25 Mo (`MAX_ATTACHMENT_SIZE_BYTES`)
-   - Download via `/attachment/:id`
+   - Download via IMAP FETCH BODY[part_number]
    - Sanitization nom fichier (cf. `sanitize_filename()`)
    - Stockage zone transit `/var/friday/transit/attachments/YYYY-MM-DD/`
    - INSERT métadonnées `ingestion.attachments`
@@ -272,7 +272,7 @@ document-processor-stub:
 **Limite** : 25 Mo (`MAX_ATTACHMENT_SIZE_BYTES = 26214400`)
 
 **Rationale** :
-- EmailEngine limite API : 25 Mo par attachment
+- Limite configurable : 25 Mo par attachment (defaut)
 - RAM VPS-4 : 48 Go (limite buffer memory)
 - Performance : download + sanitization < 5s par fichier
 
@@ -534,7 +534,7 @@ Catégories :
 - **Story File** : `_bmad-output/implementation-artifacts/2-4-extraction-pieces-jointes.md`
 - **Architecture** : `_docs/architecture-friday-2.0.md`
 - **MIME Types** : https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types
-- **EmailEngine API** : https://emailengine.app/api/
+- **aioimaplib** : https://github.com/bamthomas/aioimaplib [D25 : remplace EmailEngine API]
 - **Redis Streams** : https://redis.io/docs/manual/data-types/streams/
 - **Tenacity** : https://tenacity.readthedocs.io/
 

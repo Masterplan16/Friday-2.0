@@ -1,4 +1,8 @@
-# EmailEngine Setup - 4 Comptes IMAP
+> **[DEPRECATED D25]** Ce guide est obsolete. EmailEngine (PostalSys, 99 EUR/an) a ete remplace par IMAP direct (aioimaplib + aiosmtplib, gratuit).
+> Voir : `_docs/plan-d25-emailengine-to-imap-direct.md` pour le plan de migration.
+> Les comptes IMAP sont desormais configures via les variables `IMAP_ACCOUNT_*` dans `.env.email.enc` et geres par le daemon `imap-fetcher`.
+
+# EmailEngine Setup - 4 Comptes IMAP [DEPRECATED D25]
 
 **Date** : 2026-02-12
 **Author** : Configuration Masterplan

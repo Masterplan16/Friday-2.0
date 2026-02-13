@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 """
+[DEPRECATED D25 - 2026-02-13] EmailEngine retiré. Ce script n'est plus utilisé.
+Remplacé par: agents/src/adapters/email.py (IMAP direct)
+
 Setup EmailEngine avec les 4 comptes IMAP de Masterplan.
 
 Usage:

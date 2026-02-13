@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """
-Compare count EmailEngine API REST vs PostgreSQL pour periode donnee.
+[DEPRECATED D25] Compare count EmailEngine API REST vs PostgreSQL pour periode donnee.
 Detecte emails manquants (timeout reseau, crash, etc.)
-Note : EmailEngine n'a PAS de SDK Python — on utilise httpx sur l'API REST.
+Note : Ce script dependait de l'API REST EmailEngine, retiree par D25 (IMAP direct).
+A reecrire pour Story 2.9 avec IMAP direct.
 
 Story 2.9 - Validation integrite migration.
 

@@ -1,5 +1,7 @@
 # Story 2.5: Brouillon Réponse Email
 
+> **[SUPERSEDE D25]** EmailEngine remplace par IMAP direct (aioimaplib + aiosmtplib). Voir _docs/plan-d25-emailengine-to-imap-direct.md.
+
 Status: done
 
 ---
@@ -94,7 +96,7 @@ Status: done
 
 ---
 
-### AC5 : Validation Approve → Envoi via EmailEngine (FR104)
+### AC5 : Validation Approve → Envoi ~~via EmailEngine~~ [HISTORIQUE D25] via aiosmtplib (FR104)
 
 **Given** le Mainteneur clique sur [Approve]
 **When** le callback `approve_{receipt_id}` est traité
@@ -307,7 +309,7 @@ Status: done
 
 ---
 
-### Task 4 : EmailEngine Client - Envoi email (AC5)
+### Task 4 : ~~EmailEngine Client~~ [HISTORIQUE D25] SMTP Client - Envoi email (AC5)
 
 - [x] **Subtask 4.1** : Étendre `services/email_processor/emailengine_client.py`
   - Méthode `async def send_message(account_id, recipient_email, subject, body_text, body_html, in_reply_to, references) -> dict`

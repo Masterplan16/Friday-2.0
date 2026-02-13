@@ -12,10 +12,10 @@ api.friday.local {
 	reverse_proxy friday-gateway:8000
 }
 
-# EmailEngine reverse proxy
-email.friday.local {
-	reverse_proxy friday-emailengine:3000
-}
+# [DEPRECATED D25] EmailEngine retiré, remplacé par imap-fetcher (pas de reverse proxy nécessaire)
+# email.friday.local {
+# 	reverse_proxy friday-emailengine:3000
+# }
 
 # Default fallback - health endpoint
 :80 {

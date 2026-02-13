@@ -179,7 +179,7 @@
   - Job nightly : Détecter nœuds sans embedding → retry génération
 
 - [ ] **Subtask 2.4**: Test E2E Email → Embedding
-  - Envoyer email test via EmailEngine
+  - Envoyer email test via ~~EmailEngine~~ [HISTORIQUE D25] IMAP direct (imap-fetcher)
   - Vérifier : Email node créé dans knowledge.nodes
   - Vérifier : Embedding créé dans knowledge.embeddings avec node_id lié
   - Requête : `semantic_search("facture plombier")` → retrouve l'email
@@ -856,7 +856,7 @@ async def semantic_search(request: SemanticSearchRequest, req: Request):
 ### 🚨 CRITICAL Issues (Status: DOCUMENTED)
 
 #### **Issue #1 : Contamination cross-story (CRITICAL)**
-- **Problème** : 5 fichiers de **Story 2.1** (EmailEngine Integration) présents dans git modifié :
+- **Problème** : 5 fichiers de **Story 2.1** (~~EmailEngine~~ [HISTORIQUE D25] IMAP Direct Integration) présents dans git modifié :
   - `database/migrations/024_emailengine_accounts.sql`
   - `services/email-processor/consumer.py`
   - `services/gateway/routes/webhooks.py`

@@ -1,7 +1,14 @@
 # Plan de deploiement — Epic 2 Pipeline Email
 
+> **[SUPERSEDE D25]** : Ce plan reference EmailEngine (PostalSys) qui a ete remplace par IMAP direct
+> (aioimaplib + aiosmtplib) le 2026-02-13. Les sections relatives a EmailEngine (webhooks, API REST,
+> access token, setup comptes, validate_migration.py) ne sont plus applicables.
+> Voir : `_docs/plan-d25-emailengine-to-imap-direct.md` pour la nouvelle architecture.
+> **Sections impactees** : Phase C (C.1-C.3), flux pipeline, migrate_emails.py source, validate_migration.py,
+> extract_email_domains.py source, sequencement Story 2.9.
+
 **Date** : 2026-02-12
-**Statut** : Valide par Masterplan
+**Statut** : ~~Valide par Masterplan~~ **Partiellement supersede par D25** (sections EmailEngine obsoletes)
 **Contexte** : Epic 1 (Socle) stories critiques implementees (1.1 review, 1.10 review, stories ops en backlog). Epic 2 (Email) stories 2.1-2.7 code implementees, Story 2.8 non commitee. Epic 6 (Memoire) code implemente. Il reste a : corriger les trous identifies, deployer sur le VPS, et migrer les emails historiques.
 
 ---
@@ -50,7 +57,7 @@
 |---|------|----------|--------|
 | 1 | Doublon bot Telegram dans docker-compose.yml (`telegram-bot` + `friday-bot`) | CRITIQUE | Conflit polling Telegram en production |
 | 2 | `_is_from_mainteneur()` avec emails placeholder hardcodes | CRITIQUE | Protection donnees, emails fictifs dans le code |
-| 3 | Credentials en clair dans `docs/emailengine-setup-4accounts.md` (mot de passe ProtonMail Bridge) | CRITIQUE | Fuite credentials si committe |
+| 3 | ~~Credentials en clair dans `docs/emailengine-setup-4accounts.md`~~ [SUPERSEDE D25] | ~~CRITIQUE~~ | ~~Fuite credentials si committe~~ |
 | 4 | Pas de Dockerfile ni service Docker pour le consumer email (`services/email_processor/consumer.py`) | Haute | Pipeline email ne peut pas tourner en production |
 | 5 | Classifier Story 2.2 pas branche dans consumer.py (stub `category="inbox"` ligne 467) | Haute | Tous les emails classes "inbox", classification inutile |
 | 6 | Semantique sender_filter incorrecte (whitelist skip Claude, devrait analyser) | Haute | Comportement inverse de la vision Masterplan |
@@ -256,9 +263,9 @@ python scripts/migrate_emails.py --since 2025-01-01 --until 2025-12-31 --trust-p
 
 ### A.3 — CRITIQUE : Credentials en clair (30 min)
 
-**Probleme** : `docs/emailengine-setup-4accounts.md` contient le mot de passe ProtonMail Bridge en clair.
+~~**Probleme** : `docs/emailengine-setup-4accounts.md` contient le mot de passe ProtonMail Bridge en clair.~~ **[SUPERSEDE D25 : fichier EmailEngine plus utilise]**
 
-**Action** : Retirer tous les credentials du fichier. Remplacer par des references a `.env.email.enc`. Le fichier de documentation ne doit contenir que la procedure, pas les secrets.
+**Action** : ~~Retirer tous les credentials du fichier.~~ Fichier obsolete (EmailEngine retire D25). Credentials IMAP desormais dans `.env.email.enc` (variables `IMAP_ACCOUNT_*`).
 
 ### A.4 — Dockerfile + service email-processor (1h)
 
@@ -467,7 +474,7 @@ Committer :
 - Story 2.8 (15+ fichiers untracked)
 - Toutes les corrections A.1 a A.9
 - Migration 034 reecrite : table core.llm_usage (remplace core.api_usage inexistante)
-- Scripts utilitaires (setup_emailengine, generate-secrets, fix-tailscale-protonvpn, test_imap_connections)
+- Scripts utilitaires (~~setup_emailengine~~ [SUPERSEDE D25], generate-secrets, fix-tailscale-protonvpn, test_imap_connections)
 - bot/handlers/pipeline_control.py (kill switch)
 - `.env.email.enc` + `.env.email.README.md`
 
@@ -477,7 +484,7 @@ git commit -m "feat(epic2): corrections pre-deploiement + safety controls
 
 - Fix doublon bot Telegram (garder friday-bot)
 - Securiser _is_from_mainteneur() avec MAINTENEUR_EMAILS envvar
-- Retirer credentials docs/emailengine-setup-4accounts.md
+- ~~Retirer credentials docs/emailengine-setup-4accounts.md~~ [SUPERSEDE D25]
 - Dockerfile + service email-processor
 - Brancher classifier dans consumer.py
 - Nouvelle semantique sender_filter (VIP/whitelist/blacklist)
@@ -511,10 +518,10 @@ Afin de **donner a Friday la connaissance de mon historique email sans exploser 
 ### Reecriture migrate_emails.py (A FAIRE — Phase A)
 
 > **ETAT ACTUEL** : Le script existant (942 lignes) lit depuis `ingestion.emails_legacy`,
-> ne supporte pas `--since`/`--until`/`--unread-only`/`--trust-*`, et n'utilise pas l'API EmailEngine.
+> ne supporte pas `--since`/`--until`/`--unread-only`/`--trust-*`, ~~et n'utilise pas l'API EmailEngine~~.
 > Il doit etre ENTIEREMENT reecrit pour correspondre a cette specification.
 
-**Source de donnees cible** : API EmailEngine REST (remplace `ingestion.emails_legacy` qui n'est jamais peuplee)
+**Source de donnees cible** : ~~API EmailEngine REST~~ **[SUPERSEDE D25]** IMAP direct via aioimaplib (remplace `ingestion.emails_legacy` qui n'est jamais peuplee)
 
 **Parametres CLI** :
 ```bash
@@ -532,7 +539,7 @@ python scripts/migrate_emails.py \
 
 > **Note** : Pas de `--skip-first`. Le mecanisme `--resume` avec checkpoint
 > (fichier JSON contenant `last_processed_id`) garantit une reprise fiable
-> meme si l'ordre de retour de l'API EmailEngine change entre deux appels.
+> meme si l'ordre de retour de l'API ~~EmailEngine~~ [D25 : IMAP direct] change entre deux appels.
 > Workflow : `--limit 100` pour sample → valider → `--resume --trust-auto` pour le reste.
 
 **Comportement** :
@@ -540,7 +547,7 @@ python scripts/migrate_emails.py \
 - Checkpoint : fichier JSON `/tmp/migrate_checkpoint_{since}_{until}.json`
   - Contient : `last_processed_id`, `count_migrated`, `count_skipped`, `timestamp`
 - Progression : log toutes les 10 emails, checkpoint toutes les 100
-- Validation integrite : compare count EmailEngine API vs count PostgreSQL apres chaque batch 1000
+- Validation integrite : compare count ~~EmailEngine API~~ [D25 : IMAP direct] vs count PostgreSQL apres chaque batch 1000
 - Errors : retry 3x avec backoff exponentiel, skip email si echec permanent (log + alerte Telegram)
 
 **Sample check OBLIGATOIRE** (securite) :
@@ -558,9 +565,9 @@ if not os.path.exists(f"/tmp/sample_validated_{since}_{until}.flag"):
 > **ETAT ACTUEL** : Le script existant lit depuis `ingestion.emails` (table vide avant migration),
 > utilise des colonnes differentes (`category_distribution`, `suggested_filter_type`, etc.),
 > et genere `filter_type = "neutral"` incompatible avec la nouvelle migration 033.
-> Il doit etre reecrit pour utiliser l'API EmailEngine.
+> ~~Il doit etre reecrit pour utiliser l'API EmailEngine.~~ **[SUPERSEDE D25 : IMAP direct]**
 
-**Source de donnees cible** : API EmailEngine REST (headers seulement, 0 token)
+**Source de donnees cible** : ~~API EmailEngine REST~~ **[SUPERSEDE D25]** IMAP direct via aioimaplib (headers seulement, 0 token)
 
 **Format CSV strict** :
 ```csv
@@ -857,9 +864,9 @@ cd C:\Users\lopez\Desktop\Friday 2.0
 
 | # | Tache | Detail |
 |---|-------|--------|
-| C.1 | Services email | `docker compose -f docker-compose.yml -f docker-compose.services.yml up -d emailengine presidio-analyzer presidio-anonymizer` |
-| C.2 | Setup comptes | `python scripts/setup_emailengine_4accounts.py` (4 comptes IMAP) |
-| C.3 | Webhooks | `python scripts/configure_emailengine_webhooks.py` (EmailEngine → Gateway) |
+| C.1 | Services email | ~~`docker compose ... up -d emailengine`~~ **[SUPERSEDE D25]** → `docker compose up -d imap-fetcher presidio-analyzer presidio-anonymizer` |
+| C.2 | ~~Setup comptes~~ | ~~`python scripts/setup_emailengine_4accounts.py`~~ **[SUPERSEDE D25]** → Comptes configures via `IMAP_ACCOUNT_*` dans `.env.email` |
+| C.3 | ~~Webhooks~~ | ~~`python scripts/configure_emailengine_webhooks.py`~~ **[SUPERSEDE D25]** → imap-fetcher publie directement sur Redis Streams |
 | C.4 | Telegram | Creer supergroup + 5 topics, extraire thread IDs (script auto), configurer variables `TOPIC_*_ID` |
 | C.5 | Bot + Consumer | `docker compose up -d friday-bot email-processor` + verifier healthcheck |
 | C.6 | Test bot | `/help` dans Telegram |
@@ -999,7 +1006,7 @@ docker compose ps email-processor
 
 **CRITIQUE** : Mesurer throughput AVANT Phase D pour estimer durees realistes.
 
-**Methode** : Injection directe dans Redis Streams (bypass EmailEngine).
+**Methode** : Injection directe dans Redis Streams (bypass ~~EmailEngine~~ [D25 : imap-fetcher]).
 Cela teste le consumer isole sans polluer les vraies boites mail.
 
 > **LIMITATION** : Ce benchmark teste le throughput du consumer avec du contenu synthetique.
@@ -1271,7 +1278,7 @@ python scripts/migrate_emails.py --since 2026-01-01 --trust-auto --resume
 
 # Verification integrite
 python scripts/validate_migration.py --since 2026-01-01
-# Compare count EmailEngine API vs PostgreSQL
+# Compare count IMAP direct vs PostgreSQL [D25 : EmailEngine retire]
 
 # ========== ETAPE D.3 : 2025 (~12000 emails, ~20-40h) ==========
 # Sample check
@@ -1314,16 +1321,22 @@ docker compose stop email-processor
 
 **Script validation integrite** : `scripts/validate_migration.py`
 
+> **[SUPERSEDE D25]** : Ce script utilisait l'API REST EmailEngine. Il doit etre reecrit pour
+> utiliser IMAP direct (aioimaplib) afin de compter les messages par compte.
+
 ```python
 """
-Compare count EmailEngine API REST vs PostgreSQL pour periode donnee.
+[SUPERSEDE D25] — Ce code reference l'API EmailEngine (retiree).
+A reecrire pour utiliser IMAP direct (aioimaplib) pour compter les messages.
+
+Compare count IMAP direct vs PostgreSQL pour periode donnee.
 Detecte emails manquants (timeout reseau, crash, etc.)
-Note : EmailEngine n'a PAS de SDK Python — on utilise httpx sur l'API REST.
 
 Usage:
     python scripts/validate_migration.py --since 2026-01-01
     python scripts/validate_migration.py --since 2025-01-01 --until 2025-12-31
 """
+# [SUPERSEDE D25] Code EmailEngine ci-dessous obsolete — a reecrire avec aioimaplib
 import argparse
 import asyncio
 import os
@@ -1332,12 +1345,12 @@ import sys
 import asyncpg
 import httpx
 
-EMAILENGINE_URL = os.getenv("EMAILENGINE_URL", "http://localhost:3000")
-EMAILENGINE_TOKEN = os.getenv("EMAILENGINE_ACCESS_TOKEN")
+EMAILENGINE_URL = os.getenv("EMAILENGINE_URL", "http://localhost:3000")  # [SUPERSEDE D25]
+EMAILENGINE_TOKEN = os.getenv("EMAILENGINE_ACCESS_TOKEN")  # [SUPERSEDE D25]
 
 
 async def count_emailengine_messages(client: httpx.AsyncClient, since: str, until: str = None) -> int:
-    """Count messages via EmailEngine REST API (GET /v1/accounts/{id}/messages)."""
+    """[SUPERSEDE D25] Count messages via EmailEngine REST API — a remplacer par IMAP STATUS."""
     total = 0
     accounts_resp = await client.get(
         f"{EMAILENGINE_URL}/v1/accounts",
@@ -1366,7 +1379,7 @@ async def count_emailengine_messages(client: httpx.AsyncClient, since: str, unti
 
 async def validate_migration(since: str, until: str = None):
     async with httpx.AsyncClient(timeout=30) as client:
-        # Count EmailEngine API
+        # [SUPERSEDE D25] Count EmailEngine API → remplacer par IMAP SEARCH
         ee_count = await count_emailengine_messages(client, since, until)
 
     # Count PostgreSQL
@@ -1387,9 +1400,9 @@ async def validate_migration(since: str, until: str = None):
 
     print(f"\n=== Validation migration ===")
     print(f"Periode : {since} → {until or 'now'}")
-    print(f"EmailEngine API : {ee_count} emails")
-    print(f"PostgreSQL      : {pg_count} emails")
-    print(f"Difference      : {diff} emails ({diff_pct:.1f}%)")
+    print(f"IMAP direct : {ee_count} emails")  # [D25] Etiquette mise a jour
+    print(f"PostgreSQL  : {pg_count} emails")
+    print(f"Difference  : {diff} emails ({diff_pct:.1f}%)")
 
     if abs(diff_pct) > 5:
         print(f"\n WARNING: >5% difference - investigate!")
@@ -1452,14 +1465,14 @@ PHASE D (exec migration historique, 90-175h etales sur 2-3 semaines)
 
 > **CORRECTION** : Story 2.9 ne peut PAS se chevaucher avec Phase B.
 > La reecriture de `migrate_emails.py` et `extract_email_domains.py` utilise
-> l'API EmailEngine REST, accessible uniquement APRES Phase C.2 (setup comptes).
+> ~~l'API EmailEngine REST, accessible uniquement APRES Phase C.2 (setup comptes).~~ **[SUPERSEDE D25]**
 > Le developpement peut commencer en local (structure, CLI, tests mocks),
-> mais les tests d'integration necessitent l'API EmailEngine operationnelle.
+> mais les tests d'integration necessitent ~~l'API EmailEngine operationnelle~~ [D25 : imap-fetcher + comptes IMAP configures].
 
 **Dependances** :
 - Phase A → Phase B → Phase C : strictement sequentiel
 - Story 2.9 dev (structure + tests mocks) : PEUT commencer pendant Phase B/C
-- Story 2.9 integration (tests API EmailEngine) : NECESSITE Phase C.2 terminee
+- Story 2.9 integration (tests ~~API EmailEngine~~ [D25 : IMAP direct]) : NECESSITE Phase C.2 terminee
 - Phase D : NECESSITE Phase C terminee + Story 2.9 terminee
 
 **Planning suggere** :
@@ -1474,16 +1487,13 @@ PHASE D (exec migration historique, 90-175h etales sur 2-3 semaines)
 ## Flux complet du pipeline email (reference)
 
 ```
-EmailEngine (4 comptes IMAP)
-    ↓ webhook HTTP POST + HMAC-SHA256
-Gateway (FastAPI) — services/gateway/routes/webhooks.py
-    ├── Valider signature
-    ├── Anonymiser via Presidio (from, subject, body preview)
-    └── XADD → Redis Streams "emails:received"
+imap-fetcher daemon (4 comptes IMAP, IDLE + polling — D25)
+    ↓ XADD → Redis Streams "emails:received"
+    [D25 : plus de webhook, plus de Gateway pour ingestion email]
     ↓
 Consumer (email-processor) — services/email_processor/consumer.py
     ├── XREADGROUP
-    ├── Fetch email complet (EmailEngine API, 6 retries backoff)
+    ├── Fetch email complet (IMAP direct via aioimaplib — D25, 6 retries backoff)
     ├── check_sender_filter()
     │   ├── VIP → flag prioritaire + notification immediate
     │   ├── blacklist → skip analyse, stocker metadonnees → XACK → FIN
@@ -1531,7 +1541,7 @@ PostgreSQL
 - **C.7.5** : Test de charge 100 emails (benchmark throughput AVANT Phase D)
 - **C.9** : Activation manuelle pipeline (`PIPELINE_ENABLED=true`)
 - **B.3** : Supervision ProtonMail Bridge (`supervise-protonmail-bridge.ps1`)
-- **validate_migration.py** : Verification integrite (count EmailEngine vs PostgreSQL)
+- **validate_migration.py** : Verification integrite (count ~~EmailEngine~~ [D25 : IMAP direct] vs PostgreSQL)
 
 ### Specifications completes
 - **Migration 033** : VIP integre directement dans CHECK constraint (pas de migration 035 separee)
@@ -1563,15 +1573,15 @@ PostgreSQL
 
 ---
 
-**Version** : 2.3 (2026-02-12)
+**Version** : 2.3 (2026-02-12) — **Partiellement supersede par D25 (2026-02-13)**
 **Auteur** : BMad Master + Masterplan
 **Review** : Adversariale v4 completee (6 corrections finales)
-**Status** : PRET POUR IMPLEMENTATION
+**Status** : ~~PRET POUR IMPLEMENTATION~~ Sections EmailEngine supersedees par D25
 
 ### Corrections v2.1 (2026-02-12)
 1. **Migration 035 supprimee** : VIP integre directement dans migration 033 (non commitee, modifiable)
 2. **--skip-first supprime** : Remplace par `--resume` (checkpoint fiable meme si ordre API change)
-3. **validate_migration.py** : SDK inexistant remplace par httpx sur API REST EmailEngine
+3. **validate_migration.py** : ~~SDK inexistant remplace par httpx sur API REST EmailEngine~~ [SUPERSEDE D25 : a reecrire avec aioimaplib]
 4. **Benchmark consumer** : Injection Redis Streams au lieu d'envoi vrais emails (zero pollution boites mail)
 
 ### Corrections v2.2 (2026-02-12) — Review adversariale v3
@@ -1584,7 +1594,7 @@ PostgreSQL
 7. **validate_migration.py** : argparse au lieu de sys.argv positionnels (coherent avec commandes Phase D)
 8. **Rollback donnees** : Procedure complete (re-classification, nettoyage graphe, option nucleaire)
 9. **Benchmark ameliore** : Corps d'emails realistes (100-200 mots), limitation documentee, facteur correctif 0.6-0.8
-10. **Sequencement corrige** : Story 2.9 ne peut pas chevaucher Phase B (API EmailEngine requise)
+10. **Sequencement corrige** : Story 2.9 ne peut pas chevaucher Phase B (~~API EmailEngine~~ [D25 : IMAP direct] requise)
 11. **Healthcheck ameliore** : Detection consumer zombie (last_processed_at, throughput, pending queue)
 12. **Plan B Phase D** : 4 options si budget/duree depasse (blacklist agressif, skip entites, skip embeddings, stop & evaluate) — 100% Sonnet (D17)
 13. **IPs Tailscale** : Remplacees par DNS Tailscale (pc-mainteneur, vps-friday)

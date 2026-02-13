@@ -1,5 +1,7 @@
 # Story 2.9: Migration Emails Progressive & Deploiement Pipeline
 
+> **[SUPERSEDE D25]** EmailEngine remplacé par IMAP direct (aioimaplib + aiosmtplib). Voir _docs/plan-d25-emailengine-to-imap-direct.md.
+
 Status: in-progress
 
 <!-- Tech-spec detaille : _docs/plan-deploiement-epic2-email.md (1600 lignes, 5 phases) -->
@@ -29,8 +31,8 @@ Afin de **donner a Friday la connaissance de mon historique email sans exploser 
    - Migrations 001→034 appliquees
 
 3. **[AC3] Phase C — Pipeline email live** (PENDING)
-   - EmailEngine + 4 comptes IMAP configures
-   - Webhooks EmailEngine → Gateway → Redis Streams
+   - ~~EmailEngine~~ [HISTORIQUE D25] IMAP direct (imap-fetcher) + 4 comptes IMAP configures
+   - ~~Webhooks EmailEngine → Gateway → Redis Streams~~ [HISTORIQUE D25] IMAP IDLE + polling → Redis Streams
    - Bot Telegram + 5 topics operationnels
    - Consumer email-processor healthy
    - Test E2E : vrai email → classification → notification Telegram
@@ -45,9 +47,9 @@ Afin de **donner a Friday la connaissance de mon historique email sans exploser 
    - Validation integrite apres chaque etape annuelle
 
 5. **[AC5] Scripts Story 2.9 operationnels** (DONE)
-   - `migrate_emails.py` reecrit (API EmailEngine, 9 params CLI, checkpoint, graceful shutdown)
-   - `extract_email_domains.py` reecrit (API EmailEngine, CSV strict, --apply)
-   - `validate_migration.py` cree (compare EmailEngine vs PostgreSQL, seuil 5%)
+   - `migrate_emails.py` reecrit (~~API EmailEngine~~ [HISTORIQUE D25] IMAP direct, 9 params CLI, checkpoint, graceful shutdown)
+   - `extract_email_domains.py` reecrit (~~API EmailEngine~~ [HISTORIQUE D25] IMAP direct, CSV strict, --apply)
+   - `validate_migration.py` cree (compare ~~EmailEngine~~ [HISTORIQUE D25] IMAP vs PostgreSQL, seuil 5%)
    - `benchmark_consumer.py` cree (injection Redis Streams, mesure throughput)
    - `supervise-protonmail-bridge.ps1` cree (auto-restart + alertes Telegram)
 
@@ -121,9 +123,9 @@ Afin de **donner a Friday la connaissance de mon historique email sans exploser 
 
 ### Phase C — Pipeline email live (PENDING — requiert Phase B)
 
-- [ ] Task C.1: Services email (emailengine, presidio)
-- [ ] Task C.2: Setup 4 comptes IMAP (setup_emailengine_4accounts.py)
-- [ ] Task C.3: Webhooks EmailEngine
+- [ ] Task C.1: Services email (~~emailengine~~ [HISTORIQUE D25] imap-fetcher, presidio)
+- [ ] Task C.2: Setup 4 comptes IMAP (~~setup_emailengine_4accounts.py~~ [HISTORIQUE D25] config YAML imap-fetcher)
+- [ ] Task C.3: ~~Webhooks EmailEngine~~ [HISTORIQUE D25] IMAP IDLE + polling
 - [ ] Task C.4: Telegram supergroup + 5 topics
 - [ ] Task C.5: Bot + Consumer (docker compose up -d)
 - [ ] Task C.6: Test bot (/help)
@@ -143,20 +145,20 @@ Afin de **donner a Friday la connaissance de mon historique email sans exploser 
 ### Story 2.9 — Scripts (DONE)
 
 - [x] Task S1: Reecrire migrate_emails.py
-  - [x] S1.1 Source API EmailEngine REST (remplace ingestion.emails_legacy)
+  - [x] S1.1 Source ~~API EmailEngine REST~~ [HISTORIQUE D25] IMAP direct (remplace ingestion.emails_legacy)
   - [x] S1.2 9 params CLI (--since, --until, --unread-only, --limit, --trust-auto, --trust-propose, --resume, --reclassify, --account)
   - [x] S1.3 Checkpoint JSON (/tmp/migrate_checkpoint_{since}_{until}.json)
   - [x] S1.4 Graceful shutdown (SIGINT/SIGTERM → sauvegarde checkpoint)
   - [x] S1.5 Sample check obligatoire (100 emails propose avant bulk auto)
 
 - [x] Task S2: Reecrire extract_email_domains.py
-  - [x] S2.1 Source API EmailEngine REST (headers seulement, 0 token)
+  - [x] S2.1 Source ~~API EmailEngine REST~~ [HISTORIQUE D25] IMAP direct (headers seulement, 0 token)
   - [x] S2.2 Format CSV strict (domain, email_count, suggestion, action)
   - [x] S2.3 Mode --apply (valide CSV + INSERT core.sender_filters)
   - [x] S2.4 Validation CSV (headers, domain format, action valide)
 
 - [x] Task S3: Creer validate_migration.py
-  - [x] S3.1 Compare count EmailEngine API vs PostgreSQL
+  - [x] S3.1 Compare count ~~EmailEngine API~~ [HISTORIQUE D25] IMAP direct vs PostgreSQL
   - [x] S3.2 Seuil alerte 5% difference
   - [x] S3.3 argparse --since/--until
 
@@ -177,8 +179,8 @@ Afin de **donner a Friday la connaissance de mon historique email sans exploser 
 ### Architecture Pipeline Email
 
 ```
-EmailEngine (4 comptes IMAP)
-  → Webhook → Gateway (FastAPI)
+~~EmailEngine~~ [HISTORIQUE D25] IMAP direct / imap-fetcher (4 comptes IMAP)
+  → ~~Webhook → Gateway (FastAPI)~~ [HISTORIQUE D25] IMAP IDLE + polling
   → Redis Streams emails:received
   → Consumer (email-processor)
     → check_sender_filter()

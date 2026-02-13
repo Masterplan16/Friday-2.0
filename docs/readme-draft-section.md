@@ -33,7 +33,7 @@ Email reçu → Classification → Brouillon généré →
   ↓
   Telegram notification topic Actions [Approve][Reject][Edit]
   ↓
-  [Approve] → EmailEngine send + INSERT writing_example
+  [Approve] → aiosmtplib send + INSERT writing_example [D25 : SMTP direct]
 ```
 
 **Commandes Telegram** :

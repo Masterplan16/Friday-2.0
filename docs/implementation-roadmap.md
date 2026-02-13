@@ -258,7 +258,7 @@ Automatiser la maintenance "contenant" (OS, Docker, monitoring) pour réduire ch
 - [ ] Service `watchtower` dans `docker-compose.services.yml` (mode MONITOR_ONLY)
 - [ ] Script `scripts/tier2-docker/monitor-restarts.sh` (alerte si >2 restarts/heure)
 - [ ] Script `scripts/tier2-docker/auto-recover-ram.sh` (kill service lourd si RAM >90%)
-- [ ] Script `scripts/tier2-docker/check-external-apis.sh` (healthcheck Anthropic, EmailEngine, pgvector)
+- [ ] Script `scripts/tier2-docker/check-external-apis.sh` (healthcheck Anthropic, imap-fetcher, pgvector) [D25 : imap-fetcher remplace EmailEngine]
 - [ ] Crons :
   - `*/15 * * * *` : monitor-restarts
   - `*/5 * * * *` : auto-recover-ram
@@ -306,14 +306,15 @@ Pipeline email complet : ingestion → classification → extraction → brouill
 
 ### **Scope**
 
-#### **2.1 EmailEngine setup**
-- [ ] Docker service EmailEngine
-- [ ] Configuration 4 comptes IMAP Mainteneur
-- [ ] Webhook vers n8n : `/webhook/emailengine`
+#### **2.1 IMAP Direct setup [D25 : remplace EmailEngine]**
+- [ ] Container Docker `friday-imap-fetcher` (aioimaplib 2.0.1 IDLE)
+- [ ] Configuration 4 comptes IMAP Mainteneur via `IMAP_ACCOUNT_*` dans `.env.email.enc`
+- [ ] Adaptateur `agents/src/adapters/email.py` (IMAP FETCH + aiosmtplib envoi)
+- [ ] Publication Redis Streams `email.received`
 
-#### **2.2 n8n Workflow Email Ingestion**
-- [ ] `n8n-workflows/email-ingestion.json` (déjà spécifié)
-- [ ] Nodes : Webhook → Validation → Classification → Insert PostgreSQL → Redis event
+#### **2.2 Consumer Email + Classification**
+- [ ] Consumer Redis Streams `email.received`
+- [ ] Nodes : IMAP IDLE notification -> Redis Streams -> Consumer -> Classification -> Insert PostgreSQL -> Redis event
 - [ ] Tests workflow (email test → vérif classification + insert)
 
 #### **2.3 Agent Email (LangGraph)**
@@ -340,8 +341,8 @@ Pipeline email complet : ingestion → classification → extraction → brouill
 - AC5 : Presidio anonymise PII avant LLM cloud (test avec dataset PII) **REQUIS**
 
 ### **Livrables**
-- EmailEngine configuré (4 comptes)
-- Workflow n8n Email Ingestion
+- imap-fetcher daemon configure (4 comptes IMAP) [D25 : remplace EmailEngine]
+- Consumer Redis Streams Email
 - Agent Email LangGraph
 - Pipeline Presidio intégré
 - Tests passent (accuracy ≥85%)
@@ -471,7 +472,7 @@ Implémenter moteur de proactivité natif Friday (vs OpenClaw) : checks contextu
 **Script** : `scripts/migrate_emails.py` ✅ **CRÉÉ**
 
 **Contenu** :
-- 110 000 emails existants (4 comptes via EmailEngine)
+- 110 000 emails existants (4 comptes via IMAP FETCH bulk) [D25 : IMAP direct remplace EmailEngine]
 - Checkpointing tous les 100 emails
 - Retry exponentiel sur erreur
 - Resume depuis dernier checkpoint

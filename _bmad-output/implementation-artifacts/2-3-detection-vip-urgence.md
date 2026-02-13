@@ -1,5 +1,7 @@
 # Story 2.3: Detection VIP & Urgence
 
+> **[SUPERSEDE D25]** EmailEngine remplace par IMAP direct (aioimaplib + aiosmtplib). Voir _docs/plan-d25-emailengine-to-imap-direct.md.
+
 Status: done
 
 ---

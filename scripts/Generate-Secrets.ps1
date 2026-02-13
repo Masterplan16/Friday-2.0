@@ -134,7 +134,7 @@ if ([string]::IsNullOrEmpty($redisPassword) -or $redisPassword -like "changeme*"
 $envContent += "REDIS_PASSWORD=$redisPassword`n"
 
 # Générer passwords Redis par service
-$services = @("GATEWAY", "BOT", "EMAILENGINE", "ALERTING", "METRICS", "DOCUMENT_PROCESSOR")
+$services = @("GATEWAY", "BOT", "EMAIL", "ALERTING", "METRICS", "DOCUMENT_PROCESSOR")
 foreach ($service in $services) {
     $varName = "REDIS_${service}_PASSWORD"
     $currentValue = Get-EnvValue $varName
@@ -327,53 +327,30 @@ $tailscalePcHostname = Get-EnvValue "TAILSCALE_PC_HOSTNAME"
 if ([string]::IsNullOrEmpty($tailscalePcHostname)) { $tailscalePcHostname = "mainteneur-pc" }
 $envContent += "TAILSCALE_PC_HOSTNAME=$tailscalePcHostname`n"
 
-# EmailEngine
+# PGP Encryption (D25: renomme depuis EMAILENGINE_ENCRYPTION_KEY)
 $envContent += @"
 
 # ============================================
-# EmailEngine - Email IMAP/SMTP Interface (Story 2.1)
+# PGP Encryption - pgcrypto pour emails raw (D25)
 # ============================================
 
 "@
 
-$emailEngineSecret = Get-EnvValue "EMAILENGINE_SECRET"
-if ([string]::IsNullOrEmpty($emailEngineSecret) -or $emailEngineSecret -like "changeme*") {
-    $emailEngineSecret = Generate-HexKey
-    Write-Host "✓ Généré: EMAILENGINE_SECRET" -ForegroundColor Green
+$pgpEncryptionKey = Get-EnvValue "PGP_ENCRYPTION_KEY"
+# Fallback: essayer ancien nom si nouveau absent
+if ([string]::IsNullOrEmpty($pgpEncryptionKey)) {
+    $pgpEncryptionKey = Get-EnvValue "EMAILENGINE_ENCRYPTION_KEY"
+}
+if ([string]::IsNullOrEmpty($pgpEncryptionKey) -or $pgpEncryptionKey -like "changeme*") {
+    $pgpEncryptionKey = Generate-HexKey
+    Write-Host "✓ Généré: PGP_ENCRYPTION_KEY" -ForegroundColor Green
     $generatedCount++
 } else {
-    Write-Host "→ Préservé: EMAILENGINE_SECRET (existant)" -ForegroundColor Blue
+    Write-Host "→ Préservé: PGP_ENCRYPTION_KEY (existant)" -ForegroundColor Blue
 }
-$envContent += "EMAILENGINE_SECRET=$emailEngineSecret`n"
+$envContent += "PGP_ENCRYPTION_KEY=$pgpEncryptionKey`n"
 
-$emailEngineEncryptionKey = Get-EnvValue "EMAILENGINE_ENCRYPTION_KEY"
-if ([string]::IsNullOrEmpty($emailEngineEncryptionKey) -or $emailEngineEncryptionKey -like "changeme*") {
-    $emailEngineEncryptionKey = Generate-HexKey
-    Write-Host "✓ Généré: EMAILENGINE_ENCRYPTION_KEY" -ForegroundColor Green
-    $generatedCount++
-} else {
-    Write-Host "→ Préservé: EMAILENGINE_ENCRYPTION_KEY (existant)" -ForegroundColor Blue
-}
-$envContent += "EMAILENGINE_ENCRYPTION_KEY=$emailEngineEncryptionKey`n"
-
-# Webhook Security
-$envContent += @"
-
-# ============================================
-# Webhook Security (Story 2.1 - AC2)
-# ============================================
-
-"@
-
-$webhookSecret = Get-EnvValue "WEBHOOK_SECRET"
-if ([string]::IsNullOrEmpty($webhookSecret) -or $webhookSecret -like "changeme*") {
-    $webhookSecret = Generate-HexKey
-    Write-Host "✓ Généré: WEBHOOK_SECRET" -ForegroundColor Green
-    $generatedCount++
-} else {
-    Write-Host "→ Préservé: WEBHOOK_SECRET (existant)" -ForegroundColor Blue
-}
-$envContent += "WEBHOOK_SECRET=$webhookSecret`n"
+# [RETIRÉ D25] WEBHOOK_SECRET et EMAILENGINE_SECRET ne sont plus nécessaires
 
 # Attachments Storage
 $envContent += @"

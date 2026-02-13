@@ -56,7 +56,7 @@ inputDocuments:
   - services/metrics/nightly.py
   - services/email-processor/consumer.py
   - services/document-indexer/consumer.py
-  - services/monitoring/emailengine_health.py
+  - services/monitoring/emailengine_health.py  # [HISTORIQUE D25] EmailEngine → IMAP direct
   - tests/e2e/test_backup_restore.sh
 epicsCoverage:
   totalFRs: 151
@@ -210,7 +210,7 @@ Ce document fournit le decoupage complet en epics et stories pour Friday 2.0, de
 
 **Self-Healing Avance (FR71-FR73)**
 
-- FR71 : Friday peut detecter les connecteurs externes casses (EmailEngine, APIs tierces)
+- FR71 : Friday peut detecter les connecteurs externes casses (~~EmailEngine~~ serveurs IMAP `[HISTORIQUE D25]`, APIs tierces)
 - FR72 : Friday peut detecter le drift d'accuracy des modules IA
 - FR73 : Friday peut detecter les patterns de degradation et envoyer des alertes proactives
 
@@ -273,7 +273,7 @@ Ce document fournit le decoupage complet en epics et stories pour Friday 2.0, de
 
 - FR102 : Friday peut synchroniser Google Calendar de maniere bidirectionnelle (lecture + ecriture)
 - FR103 : Friday peut detecter les nouveaux fichiers dans un dossier surveille (watchdog)
-- FR104 : Friday peut envoyer les emails approuves par Mainteneur via EmailEngine
+- FR104 : Friday peut envoyer les emails approuves par Mainteneur via ~~EmailEngine~~ aiosmtplib `[HISTORIQUE D25]`
 - FR105 : Mainteneur peut gerer les correction_rules (lister, modifier, supprimer) via Telegram
 - FR106 : Mainteneur peut suivre le budget API en temps reel via /budget
 - FR107 : Friday peut purger automatiquement les donnees temporaires (mappings 30j, logs 7j, backups 30j)
@@ -301,7 +301,7 @@ Ce document fournit le decoupage complet en epics et stories pour Friday 2.0, de
 - FR129 : Friday peut apprendre le style redactionnel d'Mainteneur (table core.writing_examples, few-shot injection)
 - ~~FR130~~ : **RETIRE** — doublon de FR21 (digest soir)
 - FR131 : Friday peut surveiller les images Docker via Watchtower (MONITOR_ONLY, alerte sans auto-update)
-- FR132 : Friday peut verifier la sante des APIs externes (cron 30min, Anthropic, EmailEngine OAuth)
+- FR132 : Friday peut verifier la sante des APIs externes (cron 30min, Anthropic, ~~EmailEngine OAuth~~ serveurs IMAP `[HISTORIQUE D25]`)
 - FR133 : Friday peut collecter les metriques LLM par modele (table core.llm_metrics : accuracy, latence, cout)
 - FR134 : Friday peut basculer automatiquement de modele si le budget est depasse (cost-aware routing)
 - FR135 : Friday peut automatiser la prise de RDV Doctolib (Playwright, P2)
@@ -353,7 +353,7 @@ Ce document fournit le decoupage complet en epics et stories pour Friday 2.0, de
 **Integration (NFR17-NFR20)**
 
 - NFR17 : Anthropic API resilience — retry 3 tentatives, backoff exponentiel, alerte System
-- NFR18 : EmailEngine resilience — alerte immediate, adaptateur swappable IMAP direct
+- NFR18 : ~~EmailEngine~~ IMAP resilience `[HISTORIQUE D25]` — alerte immediate, IMAP direct (aioimaplib)
 - NFR19 : Telegram API resilience — queue messages, retry, log local
 - NFR20 : Google Docs API (post-MVP) — skip thesis review si indisponible, notifier Mainteneur
 

@@ -270,7 +270,7 @@ watchtower:
 ```
 
 **Recommandation Story 1.14** : **Option A** (tout surveiller sauf opt-out). Rationale :
-- Friday 2.0 = 15+ services (postgres, redis, n8n, emailengine, gateway, bot, etc.)
+- Friday 2.0 = 15+ services (postgres, redis, n8n, ~~emailengine~~ [HISTORIQUE D25] imap-fetcher, gateway, bot, etc.)
 - Surveiller tout par défaut = simplicité, pas besoin de labels sur chaque service
 - Opt-out sélectif pour services spécifiques (dev, test)
 

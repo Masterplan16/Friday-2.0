@@ -89,7 +89,7 @@ person_id = await memorystore.create_node(
 ---
 
 ### 2. Email
-**Utilisation** : Emails reçus/envoyés via EmailEngine
+**Utilisation** : Emails recus/envoyes via IMAP direct (aioimaplib + aiosmtplib) [D25 : remplace EmailEngine]
 
 **Propriétés** :
 - `metadata.message_id` : ID unique email (RFC822, déduplication)

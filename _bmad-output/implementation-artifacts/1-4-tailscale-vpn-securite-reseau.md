@@ -16,7 +16,7 @@ Afin que **le VPS soit accessible uniquement via VPN sécurisé (zéro expositio
 4. Key expiry configuré à 90 jours dans le dashboard Tailscale
 5. VPS hostname Tailscale = `friday-vps`
 6. Aucun port exposé sur IP publique (tous services sur `127.0.0.1` uniquement)
-7. Redis ACL opérationnelles : 6 users avec moindre privilège par service (gateway, agents, alerting, metrics, n8n, emailengine)
+7. Redis ACL opérationnelles : 6 users avec moindre privilège par service (gateway, agents, alerting, metrics, n8n, ~~emailengine~~ [HISTORIQUE D25] imap-fetcher)
 8. Workflow secrets age/SOPS fonctionnel : chiffrement/déchiffrement .env vérifié
 9. Tests de validation sécurité couvrant tous les ACs
 10. Script d'installation Tailscale VPS automatisé
@@ -41,7 +41,7 @@ Afin que **le VPS soit accessible uniquement via VPN sécurisé (zéro expositio
   - [x] 3.3 Vérifier que `friday_agents` a : streams + mapping Presidio (TTL éphémère)
   - [x] 3.4 Vérifier que `friday_alerting` a : consommer streams + publier alertes (read + pubsub, pas write arbitraire)
   - [x] 3.5 Vérifier que `friday_n8n` a : cache lecture + pub/sub
-  - [x] 3.6 Vérifier que `friday_emailengine` a : accès dédié DB Redis 2
+  - [x] 3.6 Vérifier que ~~`friday_emailengine`~~ [HISTORIQUE D25] `friday_imap_fetcher` a : accès dédié DB Redis 2
   - [x] 3.7 S'assurer que `user default off` (force auth, pas de connexion anonyme)
 
 - [x] Task 4 : Valider workflow secrets age/SOPS (AC: #8)
@@ -129,7 +129,7 @@ Tests déjà dans `tests/unit/infra/test_docker_compose.py` :
 | `friday_alerting` | `~stream:*` | XREADGROUP, XACK, XADD, XPENDING, SUBSCRIBE | Écriture cache:*, mapping Presidio |
 | `friday_metrics` | `~metrics:*` | GET, SET, INCRBY, EXPIRE | Streams, Pub/Sub publish |
 | `friday_n8n` | `~cache:*`, `~bull:*`, `~n8n:*` | GET, SET, SETEX, DEL, EXPIRE, LPUSH, RPUSH, LRANGE, PUBLISH, SUBSCRIBE, SELECT | Streams |
-| `friday_emailengine` | `~*` | @read, @write, @pubsub, @connection, SELECT | Limité DB Redis 2 |
+| ~~`friday_emailengine`~~ [HISTORIQUE D25] `friday_imap_fetcher` | `~*` | @read, @write, @pubsub, @connection, SELECT | Limité DB Redis 2 |
 | `admin` | `~*` | `+@all` (dev/debug only) | N/A (full access) |
 | `default` | N/A | **OFF** (aucune connexion anonyme) | TOUT |
 
@@ -323,7 +323,7 @@ Claude Opus 4.6 via BMAD create-story workflow
 - `docs/tailscale-setup.md` — Key expiry corrige 180j -> 90j (AC#4), checklist mise a jour
 
 **Modified files (review fixes):**
-- `config/redis.acl` — emailengine: ajout -flushall -flushdb -flushdbnosync (AC#7, H1 review)
+- `config/redis.acl` — ~~emailengine~~ [HISTORIQUE D25] imap-fetcher: ajout -flushall -flushdb -flushdbnosync (AC#7, H1 review)
 - `config/Caddyfile` — Domaines .friday.local (AC#6)
 - `.sops.yaml` — Template age valide (AC#8)
 - `.env.example` — Tous placeholders (AC#8)
@@ -336,7 +336,7 @@ Claude Opus 4.6 via BMAD create-story workflow
 **Outcome:** Approve (all issues fixed)
 
 **Issues found:** 12 (1 HIGH, 6 MEDIUM, 5 LOW) — all fixed
-- H1: emailengine Redis ACL `+@write` incluait FLUSHALL/FLUSHDB → ajout `-flushall -flushdb -flushdbnosync`
+- H1: ~~emailengine~~ [HISTORIQUE D25] Redis ACL `+@write` incluait FLUSHALL/FLUSHDB → ajout `-flushall -flushdb -flushdbnosync`
 - M1: setup-tailscale.sh codename Ubuntu hardcode → auto-detection via VERSION_CODENAME
 - M2: test_security.py regex fragile pour ports → remplacement par parsing YAML
 - M3: test_security.py assertion agents ACL no-op → regex precise pour bare `~*`

@@ -50,7 +50,7 @@ PROTECTED_SERVICES=(
     "friday-gateway"
     "friday-bot"
     "n8n"
-    "emailengine"
+    "imap-fetcher"
     "presidio"
 )
 

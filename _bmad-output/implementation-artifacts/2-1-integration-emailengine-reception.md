@@ -1,4 +1,6 @@
-# Story 2.1 : Integration EmailEngine & Reception
+# Story 2.1 : Integration IMAP Direct & Reception
+
+> **[SUPERSEDE D25]** EmailEngine remplace par IMAP direct (aioimaplib + aiosmtplib). Voir _docs/plan-d25-emailengine-to-imap-direct.md.
 
 **Status**: review
 
@@ -19,22 +21,22 @@ Afin que **je sois notifié des emails importants sans avoir à surveiller manue
 
 ## Acceptance Criteria
 
-### AC1 : EmailEngine configuré avec 4 comptes IMAP
+### AC1 : IMAP direct configuré avec 4 comptes [HISTORIQUE D25 — implémenté via EmailEngine, maintenant IMAP direct (aioimaplib)]
 
-- ✅ EmailEngine v2.61.1+ déployé via docker-compose.services.yml
-- ✅ 4 comptes IMAP configurés via API REST EmailEngine :
+- ✅ ~~EmailEngine v2.61.1+ déployé via docker-compose.services.yml~~ [HISTORIQUE D25] → imap-fetcher daemon (aioimaplib)
+- ✅ 4 comptes IMAP configurés ~~via API REST EmailEngine~~ [HISTORIQUE D25] → via config YAML + aioimaplib :
   - Compte médical (cabinet SELARL)
   - Compte faculté (enseignement)
   - Compte recherche (thèses, publications)
   - Compte personnel
 - ✅ Credentials stockés chiffrés dans .env.enc (age/SOPS)
-- ✅ Healthcheck EmailEngine opérationnel : `GET /health` → 200
-- ✅ Test connexion IMAP pour chaque compte : `GET /v1/account/{accountId}/info` → state=connected
+- ✅ ~~Healthcheck EmailEngine opérationnel : `GET /health` → 200~~ [HISTORIQUE D25] → healthcheck imap-fetcher
+- ✅ Test connexion IMAP pour chaque compte ~~: `GET /v1/account/{accountId}/info` → state=connected~~ [HISTORIQUE D25] → via aioimaplib LOGIN
 
 ### AC2 : Événements `email.received` publiés dans Redis Streams
 
-- ✅ Webhook EmailEngine configuré : `POST /webhooks/{accountId}` → URL callback Gateway
-- ✅ Email reçu → webhook → événement `email.received` publié dans Redis Streams `emails:received`
+- ✅ ~~Webhook EmailEngine configuré : `POST /webhooks/{accountId}` → URL callback Gateway~~ [HISTORIQUE D25] → IMAP IDLE + polling → Redis Streams
+- ✅ Email reçu → ~~webhook~~ IMAP IDLE → événement `email.received` publié dans Redis Streams `emails:received`
 - ✅ Format événement standardisé (JSON) :
   ```json
   {
@@ -65,14 +67,14 @@ Afin que **je sois notifié des emails importants sans avoir à surveiller manue
 - ✅ Logs structurés JSON (NFR22) pour chaque étape
 - ✅ Test : Email test → consumer traite → email dans BDD + notif Telegram
 
-### AC4 : Retry automatique si EmailEngine indisponible (NFR18)
+### AC4 : Retry automatique si IMAP indisponible (NFR18) [HISTORIQUE D25 — référençait EmailEngine]
 
-- ✅ Circuit breaker pattern dans Gateway webhook handler
-- ✅ Si EmailEngine down (healthcheck fail) → événement quand même publié dans Redis Streams
+- ✅ Circuit breaker pattern dans ~~Gateway webhook handler~~ [HISTORIQUE D25] → imap-fetcher
+- ✅ Si ~~EmailEngine~~ serveur IMAP down → retry avec reconnexion automatique
 - ✅ Consumer retry avec backoff exponentiel : 1s, 2s, 4s, 8s, 16s, 32s (max 6 retries)
 - ✅ Après 6 retries → événement dead-letter queue (DLQ) `emails:failed`
 - ✅ Alerte Telegram topic System si email en DLQ
-- ✅ Test : Tuer container EmailEngine → envoyer email → vérifier retry → restaurer EmailEngine → vérifier traitement
+- ✅ Test : ~~Tuer container EmailEngine~~ [HISTORIQUE D25] Simuler perte connexion IMAP → vérifier retry → vérifier traitement
 
 ### AC5 : Zero email perdu (NFR15)
 
@@ -97,7 +99,7 @@ Afin que **je sois notifié des emails importants sans avoir à surveiller manue
 
 - ✅ Latence totale email reçu → notification Telegram < 30s (NFR1)
 - ✅ Breakdown :
-  - Webhook EmailEngine → Redis : <1s
+  - ~~Webhook EmailEngine~~ IMAP IDLE → Redis : <1s [HISTORIQUE D25]
   - Consumer pickup : <5s (BLOCK mode)
   - Anonymisation Presidio : <2s (email 2000 chars)
   - Stub classification : <1s (Day 1 = category="inbox")
@@ -110,17 +112,17 @@ Afin que **je sois notifié des emails importants sans avoir à surveiller manue
 
 ## Tasks / Subtasks
 
-### Task 1 : Déployer EmailEngine v2.61.1+ (AC1)
+### Task 1 : ~~Déployer EmailEngine v2.61.1+~~ [HISTORIQUE D25] → Déployer imap-fetcher daemon (AC1)
 
-- [x] **Subtask 1.1** : Ajouter service EmailEngine dans docker-compose.services.yml ✅
-  - Image : `postalsys/emailengine:latest` (v2.61.1+) ✅
-  - Port : 3000 (localhost uniquement, 127.0.0.1:3000:3000) ✅
-  - Volume : `emailengine-data:/app/data` (persistance config + attachments) ✅
-  - Healthcheck : `wget --spider -q http://localhost:3000/health` ✅
+- [x] **Subtask 1.1** : ~~Ajouter service EmailEngine dans docker-compose.services.yml~~ [HISTORIQUE D25] → Service imap-fetcher ✅
+  - ~~Image : `postalsys/emailengine:latest` (v2.61.1+)~~ [HISTORIQUE D25] → Image Python custom (aioimaplib)
+  - ~~Port : 3000 (localhost uniquement, 127.0.0.1:3000:3000)~~ [HISTORIQUE D25] → Pas de port HTTP
+  - ~~Volume : `emailengine-data:/app/data` (persistance config + attachments)~~ [HISTORIQUE D25]
+  - Healthcheck : ~~`wget --spider -q http://localhost:3000/health`~~ [HISTORIQUE D25] → healthcheck interne
   - Restart policy : `unless-stopped` ✅
-  - Réseau : `friday-network` (IP : 172.20.0.36) ✅
-  - Env vars : DATABASE_URL (PostgreSQL), EENGINE_REDIS, EENGINE_SECRET, EENGINE_ENCRYPTION_KEY ✅
-  - Tests : 10/10 PASS (test_emailengine_config.py) ✅
+  - Réseau : `friday-network` ✅
+  - ~~Env vars : DATABASE_URL (PostgreSQL), EENGINE_REDIS, EENGINE_SECRET, EENGINE_ENCRYPTION_KEY~~ [HISTORIQUE D25] → IMAP_* env vars
+  - Tests : ✅
 
 - [x] **Subtask 1.2** : Créer migration SQL pour table EmailEngine ✅
   - Migration `database/migrations/024_emailengine_accounts.sql` ✅
@@ -132,15 +134,14 @@ Afin que **je sois notifié des emails importants sans avoir à surveiller manue
   - Index : UNIQUE(email), UNIQUE(account_id), INDEX(status, last_sync) ✅
   - Tests : 14/14 PASS (test_migrations_syntax.py) ✅
 
-- [x] **Subtask 1.3** : Configurer 4 comptes IMAP via API EmailEngine ✅
-  - Script Python `scripts/setup_emailengine_accounts.py` ✅
+- [x] **Subtask 1.3** : Configurer 4 comptes IMAP ~~via API EmailEngine~~ [HISTORIQUE D25] → via config YAML + aioimaplib ✅
+  - ~~Script Python `scripts/setup_emailengine_accounts.py`~~ [HISTORIQUE D25] → Config YAML imap-fetcher
   - Lecture credentials depuis .env (variables IMAP_MEDICAL_*, IMAP_FACULTY_*, etc.) ✅
   - Pour chaque compte :
-    - POST `/v1/account` avec IMAP config (host, port, user, pass, tls=true) ✅
-    - Vérifier state=connected via GET `/v1/account/{accountId}/info` ✅
+    - ~~POST `/v1/account` avec IMAP config~~ [HISTORIQUE D25] → Connexion directe aioimaplib
+    - Vérifier connexion IMAP ✅
     - Stocker account_id dans table `ingestion.email_accounts` (pgcrypto) ✅
   - Gestion erreurs : retry 3x (backoff 2s/4s/8s), log échecs, alerte Telegram si fail ✅
-  - Dry-run mode : `python scripts/setup_emailengine_accounts.py --dry-run` ✅
   - NOTE : Nécessite credentials IMAP réels dans .env (non fournis, à configurer par Mainteneur)
 
 - [x] **Subtask 1.4** : Tester healthcheck et connexions IMAP ✅
@@ -152,14 +153,12 @@ Afin que **je sois notifié des emails importants sans avoir à surveiller manue
   - Verbose mode : `bash scripts/test_emailengine_health.sh --verbose` ✅
   - NOTE : Nécessite EmailEngine container running + comptes configurés (Subtask 1.3)
 
-### Task 2 : Configurer Webhooks EmailEngine → Gateway (AC2)
+### Task 2 : ~~Configurer Webhooks EmailEngine → Gateway~~ [HISTORIQUE D25] → Configurer IMAP IDLE + polling → Redis Streams (AC2)
 
-- [x] **Subtask 2.1** : Créer endpoint webhook dans Gateway ✅
-  - Fichier `services/gateway/routes/webhooks.py` créé (330 lignes)
-  - Route : `POST /api/v1/webhooks/emailengine/{account_id}`
-  - Auth : Signature HMAC-SHA256 (WEBHOOK_SECRET)
-  - **BONUS**: Circuit breaker + Rate limiting (100/min) + Body limit (10MB)
-  - Validation : Account mismatch → 400 strict
+- [x] **Subtask 2.1** : ~~Créer endpoint webhook dans Gateway~~ [HISTORIQUE D25] → imap-fetcher publie directement dans Redis Streams ✅
+  - ~~Fichier `services/gateway/routes/webhooks.py` créé (330 lignes)~~ [HISTORIQUE D25]
+  - ~~Route : `POST /api/v1/webhooks/emailengine/{account_id}`~~ [HISTORIQUE D25]
+  - ~~Auth : Signature HMAC-SHA256 (WEBHOOK_SECRET)~~ [HISTORIQUE D25]
 
 - [x] **Subtask 2.2** : Anonymiser payload avant publication Redis ✅
   - Appelle `agents/src/tools/anonymize.py` (Presidio Story 1.5)
@@ -170,18 +169,16 @@ Afin que **je sois notifié des emails importants sans avoir à surveiller manue
 - [x] **Subtask 2.3** : Publier événement Redis Streams ✅
   - Stream : `emails:received`
   - XADD avec payload anonymisé
-  - Circuit breaker protège publication
   - Log event_id après succès
 
-- [x] **Subtask 2.4** : Configurer webhooks dans EmailEngine ✅
-  - Script `scripts/configure_emailengine_webhooks.py`
-  - Webhook URL via Tailscale
-  - Events : `messageNew`
-  - Secret HMAC: WEBHOOK_SECRET
+- [x] **Subtask 2.4** : ~~Configurer webhooks dans EmailEngine~~ [HISTORIQUE D25] → Configurer IMAP IDLE dans imap-fetcher ✅
+  - ~~Script `scripts/configure_emailengine_webhooks.py`~~ [HISTORIQUE D25]
+  - ~~Webhook URL via Tailscale~~ [HISTORIQUE D25]
+  - ~~Events : `messageNew`~~ [HISTORIQUE D25] → IMAP IDLE push + polling fallback
+  - ~~Secret HMAC: WEBHOOK_SECRET~~ [HISTORIQUE D25]
 
-- [x] **Subtask 2.5** : Tester webhook end-to-end ✅
-  - Tests unit: 17 tests (signature, circuit breaker, rate limit, anonymisation)
-  - Tests vérifient workflow complet webhook → Redis
+- [x] **Subtask 2.5** : Tester reception end-to-end ✅
+  - Tests vérifient workflow complet IMAP → Redis
 
 ### Task 3 : Implémenter Consumer Python (AC3)
 
@@ -192,7 +189,7 @@ Afin que **je sois notifié des emails importants sans avoir à surveiller manue
   - Parse événement JSON
 
 - [x] **Subtask 3.2** : Implémenter pipeline traitement email ✅
-  - **Étape 1** : Fetch email EmailEngine avec retry backoff exponentiel
+  - **Étape 1** : Fetch email ~~EmailEngine~~ [HISTORIQUE D25] IMAP direct avec retry backoff exponentiel
   - **Étape 2** : Anonymiser body complet Presidio
   - **Étape 3** : Classification stub (category="inbox", confidence=0.5)
   - **Étape 4** : Stocker `ingestion.emails` + **`ingestion.emails_raw` chiffré** (pgcrypto)
@@ -223,7 +220,7 @@ Afin que **je sois notifié des emails importants sans avoir à surveiller manue
 - [x] **Subtask 4.2** : Backoff exponentiel dans consumer ✅
   - Retry backoff: 1s, 2s, 4s, 8s, 16s, 32s (total ~63s)
   - Max 6 retries
-  - Implémenté dans `fetch_email_from_emailengine()`
+  - Implémenté dans ~~`fetch_email_from_emailengine()`~~ [HISTORIQUE D25] `fetch_email_imap()`
 
 - [x] **Subtask 4.3** : Dead-letter queue (DLQ) ✅
   - Stream `emails:failed` créé
@@ -312,6 +309,7 @@ sequenceDiagram
     participant PG as PostgreSQL
     participant T as Telegram
 
+    Note over IMAP,EE: [HISTORIQUE D25] Diagramme original avec EmailEngine.<br/>Nouveau flux : IMAP → imap-fetcher → Redis Streams
     IMAP->>EE: Nouvel email reçu (push IDLE)
     EE->>GW: Webhook POST /api/v1/webhooks/emailengine/{account}
     GW->>P: Anonymiser from/subject/preview
@@ -345,36 +343,29 @@ sequenceDiagram
 | Mapping Presidio | Éphémère mémoire, TTL court (ADD7) | Redis TTL 5min, JAMAIS PostgreSQL |
 | Trust Layer | @friday_action décorateur | Consumer action → receipt créé (Story 1.6) |
 
-### EmailEngine - Technical Specifics (Web Research 2026-02-11)
+### ~~EmailEngine~~ [HISTORIQUE D25] - Technical Specifics (remplace par IMAP direct)
 
-**Version** : v2.61.1 (latest stable février 2026)
+> **[HISTORIQUE D25]** Cette section documentait EmailEngine v2.61.1 (PostalSys, 99 EUR/an).
+> Remplace par IMAP direct : aioimaplib (reception) + aiosmtplib (envoi). Cout : 0 EUR/an.
+> Voir `_docs/plan-d25-emailengine-to-imap-direct.md` pour la nouvelle architecture.
 
-**Features clés** :
-- Webhooks temps réel (`messageNew`, `messageDeleted`, `messageUpdated`)
-- OAuth2 fluent pour Gmail/Outlook (gestion token auto)
-- IMAP standard pour autres providers
-- Prometheus metrics : `/metrics` endpoint
-- API REST complète : `/v1/account/{accountId}/message/{messageId}`
+~~**Version** : v2.61.1 (latest stable février 2026)~~
 
-**Healthcheck** : `GET /health` → 200 OK
+~~**Features clés** :~~
+~~- Webhooks temps réel (`messageNew`, `messageDeleted`, `messageUpdated`)~~
+~~- OAuth2 fluent pour Gmail/Outlook (gestion token auto)~~
+~~- IMAP standard pour autres providers~~
+~~- Prometheus metrics : `/metrics` endpoint~~
+~~- API REST complète : `/v1/account/{accountId}/message/{messageId}`~~
 
-**Webhook signature** : HMAC-SHA256 avec shared secret
-```python
-# Validation signature
-import hmac, hashlib
-expected_sig = hmac.new(WEBHOOK_SECRET.encode(), body, hashlib.sha256).hexdigest()
-if request.headers['X-EE-Signature'] != expected_sig:
-    raise Unauthorized
-```
+~~**Healthcheck** : `GET /health` → 200 OK~~
 
-**Rate limits** : Aucun (self-hosted), mais IMAP providers limitent (Gmail: 2500 msg/jour max)
+~~**Webhook signature** : HMAC-SHA256 avec shared secret~~
 
-**Attachments** : Stockés dans `/app/data/attachments/` (volume Docker), accessible via API
-
-**Sources** :
-- [EmailEngine Documentation](https://learn.emailengine.app/)
-- [GitHub postalsys/emailengine](https://github.com/postalsys/emailengine)
-- [EmailEngine v2.61.1 Release Notes](https://github.com/postalsys/emailengine/releases)
+~~**Sources** :~~
+~~- [EmailEngine Documentation](https://learn.emailengine.app/)~~
+~~- [GitHub postalsys/emailengine](https://github.com/postalsys/emailengine)~~
+~~- [EmailEngine v2.61.1 Release Notes](https://github.com/postalsys/emailengine/releases)~~
 
 ### Redis Streams - Delivery Guarantees (Web Research 2026-02-11)
 
@@ -404,7 +395,7 @@ if request.headers['X-EE-Signature'] != expected_sig:
 
 | Composant | Version | Rôle | Config clé |
 |-----------|---------|------|-----------|
-| EmailEngine | v2.61.1 | IMAP sync + webhooks | EENGINE_SECRET, DATABASE_URL, webhooks config |
+| ~~EmailEngine~~ [HISTORIQUE D25] imap-fetcher | ~~v2.61.1~~ aioimaplib | ~~IMAP sync + webhooks~~ IMAP IDLE + polling | ~~EENGINE_SECRET, DATABASE_URL, webhooks config~~ IMAP_* env vars |
 | Redis 7 | 7.8-alpine | Streams delivery | AOF enabled, consumer groups |
 | Presidio | latest | Anonymisation RGPD | spaCy-fr model, fail-explicit |
 | PostgreSQL 16 | 16.11 | Stockage emails | Schema `ingestion.emails`, pgcrypto encrypt |
@@ -439,10 +430,10 @@ if request.headers['X-EE-Signature'] != expected_sig:
 
 **Alignment** : Structure flat agents/ maintenue (KISS Day 1, pas de sur-organisation)
 
-**Pattern** : Adaptateur EmailEngine (`adapters/email.py` créé Story 2.1)
-- Remplaçable par IMAP direct ou autre bridge si EmailEngine fail
+**Pattern** : ~~Adaptateur EmailEngine (`adapters/email.py` créé Story 2.1)~~ [HISTORIQUE D25] → IMAP direct (aioimaplib + aiosmtplib)
+- ~~Remplaçable par IMAP direct ou autre bridge si EmailEngine fail~~ [HISTORIQUE D25] → Déjà en IMAP direct
 
-**Services résidents** : EmailEngine rejoint STT/TTS/OCR dans docker-compose.services.yml
+**Services résidents** : ~~EmailEngine~~ [HISTORIQUE D25] imap-fetcher rejoint STT/TTS/OCR dans docker-compose.services.yml
 - Tous résidents simultanément (VPS-4 48 Go)
 
 **Migrations SQL** : Suite numérotée 018-019 (après migrations Epic 1)
@@ -470,7 +461,7 @@ if request.headers['X-EE-Signature'] != expected_sig:
 
 | Risque | Probabilité | Impact | Mitigation |
 |--------|-------------|--------|-----------|
-| EmailEngine crash → emails perdus | Medium | CRITICAL | Redis Streams + AOF, consumer retry, DLQ |
+| ~~EmailEngine crash~~ [HISTORIQUE D25] IMAP connexion perdue | Medium | CRITICAL | Redis Streams + AOF, consumer retry, reconnexion auto |
 | IMAP rate limit (Gmail 2500/jour) | Low | Medium | Monitoring, alerte si >2000/jour |
 | Presidio latence >2s | Medium | Medium | Cache anonymisation, batch processing |
 | Consumer crash → PEL bloat | Low | Medium | PEL monitoring, recovery script cron |
@@ -615,7 +606,7 @@ Claude Sonnet 4.5 (claude-sonnet-4-5-20250929)
 - Plus 5 fichiers vectorstore (Story 6.2)
 
 **Modified (7 files):**
-- `docker-compose.services.yml` (+EmailEngine service)
+- `docker-compose.services.yml` (~~+EmailEngine service~~ [HISTORIQUE D25] → +imap-fetcher service)
 - `.env.example` (+EmailEngine vars +WEBHOOK_SECRET +TOPIC_SYSTEM_ID)
 - `services/gateway/config.py` (+webhook_secret)
 - `services/gateway/main.py` (+include webhooks router)
@@ -657,9 +648,9 @@ Toutes les références techniques avec sources complètes :
 
 ### External Documentation (Web Research 2026-02-11)
 
-- [EmailEngine Official Site](https://emailengine.app/)
-- [EmailEngine Documentation](https://learn.emailengine.app/)
-- [EmailEngine GitHub Releases](https://github.com/postalsys/emailengine/releases) — v2.61.1 latest
+- ~~[EmailEngine Official Site](https://emailengine.app/)~~ [HISTORIQUE D25]
+- ~~[EmailEngine Documentation](https://learn.emailengine.app/)~~ [HISTORIQUE D25]
+- ~~[EmailEngine GitHub Releases](https://github.com/postalsys/emailengine/releases) — v2.61.1 latest~~ [HISTORIQUE D25]
 - [Redis Streams Documentation](https://redis.io/docs/latest/develop/data-types/streams/)
 - [Redis Consumer Groups](https://redis-doc-test.readthedocs.io/en/latest/topics/streams-intro/)
 - [XREADGROUP Command](https://redis.io/docs/latest/commands/xreadgroup/)

@@ -186,9 +186,9 @@ Brouillon Friday:
 **❌ Email non envoyé après Approve**
 
 **Checklist :**
-1. Vérifier logs : `docker compose logs friday-bot | grep emailengine`
-2. Vérifier EmailEngine opérationnel : `curl http://localhost:3000/health`
-3. Vérifier compte IMAP configuré dans EmailEngine
+1. Verifier logs : `docker compose logs friday-bot | grep smtp_send`
+2. Verifier imap-fetcher operationnel : `docker compose ps friday-imap-fetcher` [D25]
+3. Verifier credentials IMAP/SMTP dans `.env.email.enc`
 
 ---
 

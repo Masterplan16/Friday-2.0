@@ -68,7 +68,7 @@ Le ton, le tutoiement/vouvoiement, l'humour, le style de communication sont conf
 
 | Source | Mode d'ingestion |
 |--------|-----------------|
-| 4 comptes mails | Via EmailEngine (auto-hébergé Docker) — Thunderbird reste interface lecture optionnelle |
+| 4 comptes mails | Via IMAP direct (aioimaplib + aiosmtplib, D25) — Thunderbird reste interface lecture optionnelle |
 | Documents scannés | Scanner physique |
 | Photos | Téléphone → BeeStation |
 | Transcriptions audio | Plaud Note |
@@ -322,7 +322,7 @@ Briefing ←─────(agrège tout)────→ Tous les modules
 | **Architecture IA** | 100% Claude Sonnet 4.5 (Anthropic API) — un seul modèle, zéro routing (D17). Ollama retiré (D12) |
 | **LLM** | Claude Sonnet 4.5 via Anthropic API ($3/$15 per 1M tokens). Anonymisation Presidio obligatoire avant tout appel |
 | **Interface principale** | Telegram bot (mobile-first, vocal natif bidirectionnel, meilleure confidentialité que Discord) - 100% Day 1 |
-| **Mails** | 4 comptes via EmailEngine (auto-hébergé Docker). Thunderbird reste interface utilisateur optionnelle |
+| **Mails** | 4 comptes via IMAP direct (imap-fetcher daemon, D25). Thunderbird reste interface utilisateur optionnelle |
 | **Thèses** | Google Docs partagés avec étudiants (API v1 - limitation : Suggestions au lieu de commentaires ancrés) |
 | **Données santé** | ~~Apple Watch Ultra~~ (hors scope Day 1 - pas d'API serveur, complexité excessive, réévaluation >12 mois si besoin réel) |
 | **Usage** | Strictement individuel, jamais commercialisé |

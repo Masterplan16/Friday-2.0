@@ -1,14 +1,16 @@
 """
-Module extraction pièces jointes emails via EmailEngine.
+Module extraction pièces jointes emails.
 
 Story 2.4 - Extraction Pièces Jointes
+[D25] : IMAP direct (aioimaplib) remplace EmailEngine pour l'accès emails.
+Le paramètre emailengine_client est conservé pour compatibilité (AdapterEmailCompat).
 
 Workflow :
-1. Query EmailEngine API pour liste attachments d'un email
+1. Query email adapter pour liste attachments d'un email
 2. Pour chaque attachment :
    - Valider MIME type (whitelist/blacklist)
    - Valider taille (configurable via env vars)
-   - Télécharger fichier via EmailEngine
+   - Télécharger fichier via adapter (IMAP FETCH)
    - Sanitizer nom fichier (sécurité path traversal)
    - Stocker en zone transit VPS
    - INSERT métadonnées dans ingestion.attachments
@@ -120,14 +122,14 @@ async def extract_attachments(
     **kwargs
 ) -> AttachmentExtractResult:
     """
-    Extrait pièces jointes d'un email via EmailEngine.
+    Extrait pièces jointes d'un email via adapter IMAP (D25).
 
     Workflow :
-    1. Query EmailEngine API /message/:id pour liste attachments
+    1. Query adapter pour liste attachments d'un email
     2. Pour chaque attachment :
        - Valider MIME type (whitelist/blacklist)
        - Valider taille (configurable via env vars)
-       - Télécharger via /attachment/:id
+       - Télécharger via adapter (IMAP FETCH)
        - Sanitizer filename
        - Stocker zone transit /var/friday/transit/attachments/YYYY-MM-DD/
        - INSERT ingestion.attachments
@@ -138,7 +140,7 @@ async def extract_attachments(
     Args:
         email_id: ID email source
         db_pool: Pool asyncpg
-        emailengine_client: Client EmailEngine (mock en tests)
+        emailengine_client: Email adapter compat (AdapterEmailCompat, D25)
         redis_client: Client Redis (pour publication événements)
         **kwargs: Args additionnels (fournis par @friday_action)
 
@@ -151,11 +153,11 @@ async def extract_attachments(
     log = logger.bind(email_id=email_id)
     log.info("attachment_extraction_started")
 
-    # 1. Query EmailEngine pour liste attachments
+    # 1. Query email adapter pour liste attachments
     try:
         email_data = await emailengine_client.get_message(email_id)
     except Exception as e:
-        log.error("emailengine_get_message_failed", error=str(e))
+        log.error("email_adapter_get_message_failed", error=str(e))
         raise
 
     attachments = email_data.get('attachments', [])
@@ -238,7 +240,7 @@ async def extract_attachments(
         # Sanitization nom fichier
         sanitized_filename = sanitize_filename(original_filename)
 
-        # Téléchargement via EmailEngine
+        # Téléchargement via email adapter (D25: IMAP FETCH)
         try:
             file_content = await emailengine_client.download_attachment(
                 email_id,

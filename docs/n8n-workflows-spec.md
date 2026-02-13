@@ -20,27 +20,27 @@ Ce document spécifie les **3 workflows n8n critiques** pour le Day 1 de Friday 
 
 **Fichier** : `n8n-workflows/email-ingestion.json`
 **Priorité** : **CRITIQUE** (socle du Moteur Vie)
-**Description** : Ingestion automatique des emails via EmailEngine → Classification → Stockage PostgreSQL → Événements Redis
+**Description** : Ingestion automatique des emails via IMAP IDLE (imap-fetcher) -> Redis Streams `email.received` -> Classification -> Stockage PostgreSQL [D25 : EmailEngine remplace par IMAP direct]
 
 ### Diagramme
 
 ```
-[EmailEngine Webhook] → [Validation] → [Appel FastAPI Gateway]
-                                            ↓
-                                    [Classification LLM]
-                                            ↓
-                                    [Insert PostgreSQL]
-                                            ↓
-                                    [Publish Redis event]
-                                            ↓
-                                    [Trigger agents downstream]
+[imap-fetcher IMAP IDLE] → [Redis Streams email.received] → [Consumer]
+                                                                ↓
+                                                        [Classification LLM]
+                                                                ↓
+                                                        [Insert PostgreSQL]
+                                                                ↓
+                                                        [Publish Redis event]
+                                                                ↓
+                                                        [Trigger agents downstream]
 ```
 
 ### Nodes détaillés
 
 | # | Node | Type | Configuration |
 |---|------|------|---------------|
-| 1 | **Email Received** | Webhook | Trigger : POST `/webhook/emailengine`<br>Authentification : Bearer token (env `N8N_WEBHOOK_SECRET`)<br>Payload : JSON EmailEngine |
+| 1 | **Email Received** | Redis Streams Consumer | Trigger : XREADGROUP sur stream `email.received` [D25 : remplace webhook EmailEngine]<br>Consumer group : `email-processor-group`<br>Payload : JSON imap-fetcher (account_id, message_id, from_anon, subject_anon, etc.) |
 | 2 | **Validate Payload** | Function | Valider structure : `{account, messageId, from, to, subject, text, html, attachments}`<br>Rejeter si invalide → Log error |
 | 3 | **Extract Attachments** | Code | Extraire liste PJ : `attachments.map(a => ({filename: a.filename, contentId: a.contentId}))`<br>Stocker paths temporaires |
 | 4 | **Call Classification API** | HTTP Request | POST `http://gateway:8000/api/v1/emails/classify`<br>Body : `{subject, text_preview: text.slice(0, 500), sender: from.address}`<br>Headers : `Authorization: Bearer ${FRIDAY_API_KEY}`<br>Response : `{category, priority, confidence, keywords}` |
@@ -55,24 +55,24 @@ Ce document spécifie les **3 workflows n8n critiques** pour le Day 1 de Friday 
 ### Variables d'environnement requises
 
 ```env
-N8N_WEBHOOK_SECRET=<secret_token>
 FRIDAY_API_KEY=<api_key>
-EMAILENGINE_WEBHOOK_URL=http://n8n:5678/webhook/emailengine
 POSTGRES_CONN=postgresql://friday:password@postgres:5432/friday
 REDIS_URL=redis://redis:6379
+# [D25] Les variables IMAP_ACCOUNT_* sont dans .env.email.enc (pour imap-fetcher)
+# N8N_WEBHOOK_SECRET et EMAILENGINE_WEBHOOK_URL supprimes (D25)
 ```
 
-### Configuration EmailEngine (externe à n8n)
+### Configuration imap-fetcher [D25 : remplace EmailEngine]
 
-EmailEngine doit envoyer un webhook pour chaque nouvel email :
+Le daemon `imap-fetcher` (container Docker `friday-imap-fetcher`) ecoute en IMAP IDLE sur les 4 comptes
+et publie les evenements dans Redis Streams `email.received`. Aucune configuration n8n webhook n'est necessaire.
+
 ```bash
-# Configurer EmailEngine pour appeler le webhook n8n
-curl -X POST http://emailengine:3000/v1/settings/webhooks \
-  -H "Authorization: Bearer $EMAILENGINE_TOKEN" \
-  -d '{
-    "url": "http://n8n:5678/webhook/emailengine",
-    "events": ["messageNew"]
-  }'
+# Verifier que imap-fetcher tourne
+docker compose ps friday-imap-fetcher
+
+# Verifier les evenements dans Redis Streams
+redis-cli XLEN email.received
 ```
 
 ---

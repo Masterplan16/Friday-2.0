@@ -47,7 +47,7 @@
 │ • Scans          │   │ • FastAPI        │   │ • PAS de       │
 │                  │   │ • Telegram Bot   │   │   packages     │
 │ Syncthing client │   │ • Presidio       │   │   tiers        │
-│ Zone transit     │   │ • EmailEngine    │   │                │
+│ Zone transit     │   │ • imap-fetcher   │   │                │
 │ /uploads/        │   │ • Faster-Whisper │   └────────────────┘
 │ /downloads/      │   │ • Kokoro TTS     │          │
 │                  │   │ • Surya OCR      │          │
@@ -80,21 +80,19 @@
 | **Index / métadonnées** | ❌ NON | ✅ OUI (PostgreSQL) | ❌ NON |
 | **Embeddings vectoriels** | ❌ NON | ✅ OUI (pgvector dans PostgreSQL) (D19) | ❌ NON |
 | **Graphe de connaissances** | ❌ NON | ✅ OUI (PostgreSQL knowledge.*) | ❌ NON |
-| **Emails bruts** | ❌ NON (dans EmailEngine) | ✅ OUI (PostgreSQL ingestion.emails) | ❌ NON |
+| **Emails bruts** | ❌ NON | ✅ OUI (PostgreSQL ingestion.emails) | ❌ NON |
 | **Photos** | ✅ OUI (copie via Synology Drive) | ❌ NON (transit éphémère) | ✅ OUI (stockage principal) |
 
 ### 2.2 Flux détaillés par source
 
-#### 2.2.1 Emails (EmailEngine)
+#### 2.2.1 Emails (IMAP direct — D25)
 
 ```
-Mail arrive (IMAP) → EmailEngine (VPS)
-                         ↓
-            n8n webhook détecte nouveau mail
-                         ↓
-            Insert PostgreSQL (ingestion.emails_raw)
+Mail arrive (IMAP) → imap-fetcher daemon (VPS, IMAP IDLE + polling)
                          ↓
             Publish Redis Stream event (email.received)
+                         ↓
+            Insert PostgreSQL (ingestion.emails_raw)
                          ↓
             Agent Email (LangGraph) traite :
               - Classification
@@ -314,7 +312,7 @@ Téléchargement CSV banque → PC (~/Documents/Finance/Import/)
 | **pgcrypto** | Colonnes sensibles chiffrées (données médicales, financières). | Chiffrement at-rest |
 | **Firewall VPS** | UFW configuré : DENY all, ALLOW 51820/udp (Tailscale), ALLOW 80/443 (Caddy interne). | Réduction surface d'attaque |
 | **Backup chiffré** | pg_dump quotidien chiffré avec age avant sync Tailscale vers PC. | Protection backup vol PC |
-| **EmailEngine isolation** | EmailEngine dans conteneur Docker séparé. Credentials IMAP chiffrés avec SOPS. | Isolation compte mails |
+| **imap-fetcher isolation (D25)** | imap-fetcher dans conteneur Docker séparé. Credentials IMAP chiffrés avec SOPS (`IMAP_ACCOUNT_*`). | Isolation compte mails |
 
 ### 3.2 Précautions vis-à-vis des erreurs et hallucinations (Trust Layer)
 
@@ -630,7 +628,7 @@ async def create_task_from_alert(alert: FinancialAlert) -> ActionResult:
 **Couche technique** : Ingestion + Intelligence
 
 **Composants** :
-1. **Pipeline Email** : 4 comptes IMAP (via EmailEngine)
+1. **Pipeline Email** : 4 comptes IMAP (via imap-fetcher, IMAP direct — D25)
    - ~20 mails/jour minimum (estimation conservatrice, 110k mails dans Thunderbird donc ~600/mois en réel)
    - Classification automatique (Cabinet, Personnel, Thèses, Administratif, etc.)
    - Extraction tâches
@@ -773,7 +771,7 @@ Mainteneur ouvre Thunderbird sur son PC :
 
 **En arrière-plan (invisible pour Mainteneur)** :
 ```
-EmailEngine (VPS) synchronise IMAP en temps réel
+imap-fetcher (VPS) synchronise IMAP via IDLE + polling (D25)
          ↓
 Friday détecte nouveaux mails
          ↓
@@ -899,13 +897,11 @@ Requête Mainteneur (Telegram) → Embedding query
 │                    EMAIL PIPELINE                        │
 └─────────────────────────────────────────────────────────┘
 
-4 comptes IMAP → EmailEngine (VPS, conteneur Docker)
-                      ↓
-         n8n webhook (email-ingestion.json)
-                      ↓
-         Insert PostgreSQL (ingestion.emails_raw)
+4 comptes IMAP → imap-fetcher daemon (VPS, IMAP IDLE + polling — D25)
                       ↓
          Publish Redis Stream (email.received)
+                      ↓
+         Insert PostgreSQL (ingestion.emails_raw)
                       ↓
          Agent Email (agents/src/agents/email/agent.py)
                       ↓
@@ -965,7 +961,7 @@ Requête Mainteneur (Telegram vocal) → Embedding query
 
 | Risque | Mesure | Implémentation |
 |--------|--------|----------------|
-| **Fuite credentials IMAP** | Chiffrement SOPS | `config/secrets/emailengine.enc.yaml` |
+| **Fuite credentials IMAP** | Chiffrement SOPS | `.env.email` chiffré SOPS (variables `IMAP_ACCOUNT_*`) — D25 |
 | **PII dans emails** | Presidio AVANT LLM cloud | `agents/src/tools/anonymize.py` |
 | **Classification erronée** | Trust Level PROPOSE Day 1 | Validation humaine systématique |
 | **Brouillon inapproprié** | Trust Level BLOCKED permanent | JAMAIS d'envoi auto sans validation |

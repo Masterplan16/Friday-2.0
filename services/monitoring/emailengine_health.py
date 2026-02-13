@@ -1,4 +1,6 @@
 # services/monitoring/emailengine_health.py
+# [DEPRECATED D25 - 2026-02-13] EmailEngine retiré. Ce fichier n'est plus utilisé.
+# Remplacé par: agents/src/adapters/email.py (IMAP direct)
 # Healthcheck actif EmailEngine pour détecter token expiration
 # Partie de Story 1.5 (fixe MOYEN #6 du code review adversarial)
 

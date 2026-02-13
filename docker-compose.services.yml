@@ -1,6 +1,6 @@
 # Friday 2.0 - Services lourds résidents (VPS-4 48 Go)
-# Faster-Whisper, Kokoro TTS, Surya OCR, Presidio, EmailEngine
-# Version: 1.1.0 (2026-02-08)
+# Faster-Whisper, Kokoro TTS, Surya OCR, Presidio
+# Version: 1.2.0 (2026-02-13) — D25: EmailEngine retiré (IMAP direct)
 #
 # Usage: docker compose -f docker-compose.yml -f docker-compose.services.yml up -d
 #
@@ -202,45 +202,10 @@ services:
       start_period: 30s
 
   # ============================================
-  # EmailEngine - Interface IMAP/SMTP
-  # RAM: ~500 Mo
-  # Story 2.1 - AC1: EmailEngine configuré avec 4 comptes IMAP
+  # [RETIRÉ D25] EmailEngine → IMAP Direct (aioimaplib)
+  # Raison: 99 EUR/an, latence IMAP IDLE 2-5s acceptable
+  # Voir: imap-fetcher dans docker-compose.yml
   # ============================================
-  emailengine:
-    image: postalsys/emailengine:latest
-    container_name: friday-emailengine
-    restart: unless-stopped
-    environment:
-      - EENGINE_HOST=0.0.0.0
-      - EENGINE_PORT=3000
-      - EENGINE_REDIS=redis://friday_emailengine:${REDIS_EMAILENGINE_PASSWORD}@redis:6379/2
-      - EENGINE_SECRET=${EMAILENGINE_SECRET}
-      - EENGINE_ENCRYPTION_KEY=${EMAILENGINE_ENCRYPTION_KEY}
-      - EENGINE_LOG_LEVEL=info
-    volumes:
-      - emailengine-data:/app/data
-    ports:
-      - "127.0.0.1:3000:3000"
-    networks:
-      friday-network:
-        ipv4_address: 172.20.0.36
-    depends_on:
-      redis:
-        condition: service_healthy
-      postgres:
-        condition: service_healthy
-    deploy:
-      resources:
-        limits:
-          memory: 1G
-        reservations:
-          memory: 512M
-    healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/v1/settings 2>&1 | grep -q 'Unauthorized'"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 30s
 
   # ============================================
   # Watchtower - Docker Image Monitoring
@@ -276,7 +241,4 @@ services:
 # ============================================
 # Volumes - Persistance données services
 # ============================================
-volumes:
-  emailengine-data:
-    driver: local
-    name: friday-emailengine-data
+# Pas de volumes additionnels (emailengine-data retiré D25)

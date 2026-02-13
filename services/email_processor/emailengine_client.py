@@ -1,7 +1,16 @@
 """
-EmailEngine API Client Wrapper
+[DEPRECATED D25] EmailEngine API Client Wrapper
 
-Wrapper complet pour EmailEngine API incluant:
+DEPRECATED (2026-02-13): Ce fichier est remplace par agents/src/adapters/email.py
+(IMAPDirectAdapter + get_email_adapter()). Garder temporairement pour reference
+et pour les tests existants qui l'importent. A supprimer dans cleanup final.
+
+Remplace par:
+    - agents/src/adapters/email.py (adapter IMAP direct)
+    - services/email_processor/smtp_sender.py (envoi SMTP)
+    - services/email_processor/imap_fetcher.py (detection nouveaux mails)
+
+Ancien wrapper pour EmailEngine API incluant:
 - Récupération emails (get_message)
 - Download pièces jointes (download_attachment)
 - Envoi emails (send_message) - Story 2.5

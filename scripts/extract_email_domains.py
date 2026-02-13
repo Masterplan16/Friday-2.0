@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
-Extraction top domains depuis API EmailEngine (headers seulement, 0 token Claude).
+[DEPRECATED D25] Extraction top domains depuis API EmailEngine (headers seulement, 0 token Claude).
+Ce script dependait de l'API REST EmailEngine, retiree par D25 (IMAP direct).
 
 Story 2.9 - Reecriture complete.
 Source de donnees : API EmailEngine REST (remplace ingestion.emails qui est vide avant migration).

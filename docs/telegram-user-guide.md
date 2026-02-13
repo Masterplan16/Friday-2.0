@@ -409,9 +409,9 @@ Santé du système et alertes critiques.
 
 **Alertes RAM :**
 ```
-⚠️ Alerte RAM
+Alerte RAM
 Utilisation : 87% (42 Go / 48 Go)
-Services actifs : Ollama, Whisper, Kokoro, Surya
+Services actifs : Whisper, Kokoro, Surya
 Recommandation : Vérifier si processus bloqué
 ```
 
@@ -754,42 +754,42 @@ Brouillon Friday:
 **❌ Email non envoyé après Approve**
 
 **Checklist :**
-1. Vérifier logs : `docker compose logs friday-bot | grep emailengine`
-2. Vérifier EmailEngine opérationnel : `curl http://localhost:3000/health`
-3. Vérifier compte IMAP configuré dans EmailEngine
+1. Verifier logs : `docker compose logs friday-bot | grep smtp_send`
+2. Verifier imap-fetcher operationnel : `docker compose ps friday-imap-fetcher` [D25]
+3. Verifier credentials IMAP/SMTP dans `.env.email.enc`
 
 ---
 
-### Métriques & Budget
+### Metriques & Budget
 
-**Coût par brouillon** : ~$0.03-0.05 (Claude Sonnet 4.5)
+**Cout par brouillon** : ~$0.03-0.05 (Claude Sonnet 4.5)
 
-**Budget mensuel estimé** (50 brouillons/mois) : ~$2-3
+**Budget mensuel estime** (50 brouillons/mois) : ~$2-3
 
-**Latence** : <10s (génération brouillon + notification Telegram)
+**Latence** : <10s (generation brouillon + notification Telegram)
 
 ---
 
-## ✉️ Envoi Emails Approuvés (Story 2.6)
+## Envoi Emails Approuves (Story 2.6)
 
-Friday envoie automatiquement les emails que vous avez approuvés via inline buttons Telegram, avec notifications complètes et historique consultable.
+Friday envoie automatiquement les emails que vous avez approuves via inline buttons Telegram, avec notifications completes et historique consultable.
 
-### Workflow Complet : Brouillon → Validation → Envoi
+### Workflow Complet : Brouillon -> Validation -> Envoi
 
-**Étape 1 : Brouillon prêt** (Story 2.5)
-- Email reçu → Classification → Brouillon généré
+**Etape 1 : Brouillon pret** (Story 2.5)
+- Email recu -> Classification -> Brouillon genere
 - Notification topic **Actions & Validations** avec inline buttons
 
-**Étape 2 : Validation Mainteneur** (Story 2.6)
-- Clic sur bouton **[✅ Approve]**
-- Receipt status : `pending` → `approved`
+**Etape 2 : Validation Mainteneur** (Story 2.6)
+- Clic sur bouton **[Approve]**
+- Receipt status : `pending` -> `approved`
 
-**Étape 3 : Envoi EmailEngine** (Story 2.6)
-- Friday envoie email via EmailEngine
-- Compte IMAP automatiquement sélectionné (professional/medical/academic/personal)
-- Threading correct : `inReplyTo` + `references` (conversation cohérente)
-- **Retry automatique** : 3 tentatives si échec (backoff exponentiel 1s, 2s)
-- Latence : **<5s** entre clic Approve → confirmation
+**Etape 3 : Envoi SMTP direct** (Story 2.6) [D25 : aiosmtplib remplace EmailEngine]
+- Friday envoie email via aiosmtplib (adaptateur `adapters/email.py`)
+- Compte IMAP/SMTP automatiquement selectionne (professional/medical/academic/personal)
+- Threading correct : `In-Reply-To` + `References` (conversation coherente)
+- **Retry automatique** : 3 tentatives si echec (backoff exponentiel 1s, 2s)
+- Latence : **<5s** entre clic Approve -> confirmation
 
 **Étape 4 : Confirmation** (Story 2.6)
 - Receipt status : `approved` → `executed`
@@ -919,25 +919,25 @@ Dr. Lopez
 
 ### Troubleshooting Envoi Emails
 
-#### ❌ Email non envoyé après clic [Approve]
+#### Email non envoye apres clic [Approve]
 
 **Checklist** :
 
-1. **Vérifier EmailEngine opérationnel** :
+1. **Verifier imap-fetcher operationnel** [D25 : remplace EmailEngine] :
    ```bash
-   docker compose ps | grep emailengine
+   docker compose ps | grep friday-imap-fetcher
    # Doit afficher "Up" (healthy)
    ```
 
-2. **Consulter logs EmailEngine** :
+2. **Consulter logs imap-fetcher** :
    ```bash
-   docker compose logs emailengine --tail=50
-   # Chercher erreurs 500, timeout, auth failed
+   docker compose logs friday-imap-fetcher --tail=50
+   # Chercher erreurs SMTP, timeout, auth failed
    ```
 
-3. **Vérifier compte IMAP configuré** :
-   - Dashboard EmailEngine : `http://localhost:3000`
-   - Vérifier compte listé et authenticated
+3. **Verifier credentials IMAP/SMTP** :
+   - Verifier `.env.email.enc` (dechiffrer via `sops -d`)
+   - Verifier App Passwords valides
 
 4. **Consulter receipt status** :
    ```
@@ -954,12 +954,12 @@ Dr. Lopez
 
 | Erreur | Cause | Solution |
 |--------|-------|----------|
-| `500 - Internal Server Error` | EmailEngine down ou bug | Relancer EmailEngine : `docker compose restart emailengine` |
-| `Account not found` | Compte IMAP non configuré | Ajouter compte dans EmailEngine dashboard |
-| `Authentication failed` | Credentials IMAP invalides | Vérifier credentials dans EmailEngine |
-| `Connection timeout` | Réseau SMTP inaccessible | Vérifier firewall + DNS |
+| `SMTP connection refused` | Serveur SMTP inaccessible | Verifier config SMTP dans `.env.email.enc` [D25] |
+| `Account not found` | Compte IMAP non configure | Ajouter variables `IMAP_ACCOUNT_*` dans `.env.email.enc` |
+| `Authentication failed` | Credentials IMAP/SMTP invalides | Regenerer App Password et mettre a jour `.env.email.enc` |
+| `Connection timeout` | Reseau SMTP inaccessible | Verifier firewall + DNS |
 
-**Retry** : Friday retente automatiquement 3 fois (1s, 2s backoff). Si échec persiste après 3 tentatives → alerte System.
+**Retry** : Friday retente automatiquement 3 fois (1s, 2s backoff). Si echec persiste apres 3 tentatives -> alerte System.
 
 #### 📋 Historique `/journal` vide ou incomplet
 
@@ -996,7 +996,7 @@ ORDER BY created_at DESC LIMIT 20;
 - Retry 3 tentatives automatiques
 - Taux de succès cible : >99% (si EmailEngine healthy)
 
-**Coût** : $0 (pas d'appel LLM, seulement envoi EmailEngine)
+**Cout** : $0 (pas d'appel LLM, envoi SMTP direct gratuit) [D25 : plus de licence EmailEngine]
 
 **Budget mensuel total** (avec Story 2.5 brouillons) : ~$2-3/mois (50 emails)
 

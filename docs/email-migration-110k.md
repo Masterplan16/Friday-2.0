@@ -24,7 +24,7 @@ Migration one-shot de 110 000 emails historiques existants vers Friday 2.0 avec 
 - PostgreSQL 16 + pgvector 0.6.0 opérationnel
 - Redis 7+ opérationnel (mapping Presidio + events)
 - Migrations 001-012 appliquées (`scripts/apply_migrations.py`)
-- Table `ingestion.emails_legacy` peuplée (110k emails via EmailEngine bulk export)
+- Table `ingestion.emails_legacy` peuplee (110k emails via IMAP FETCH bulk export) [D25 : IMAP direct remplace EmailEngine]
 
 ### Variables d'environnement
 ```bash

@@ -117,7 +117,7 @@ Composant transversal garantissant la confiance utilisateur. Chaque action de Fr
 **Workflow** :
 
 ```
-EmailEngine → Gateway → Presidio (RGPD) → Redis Stream → Consumer
+IMAP Fetcher → Redis Stream → Gateway → Presidio (RGPD) → Consumer
   ↓
   Fetch correction rules (max 50)
   ↓
@@ -175,7 +175,7 @@ Email reçu → Classification → Brouillon généré →
   ↓
   Telegram notification topic Actions [Approve][Reject][Edit]
   ↓
-  [Approve] → EmailEngine send + INSERT writing_example
+  [Approve] → SMTP send (aiosmtplib) + INSERT writing_example
 ```
 
 **Commandes Telegram** :
@@ -192,19 +192,19 @@ Email reçu → Classification → Brouillon généré →
 
 | Feature | Description |
 |---------|-------------|
-| **Envoi** | EmailEngine API v2 (threading correct inReplyTo + references) |
+| **Envoi** | SMTP direct via aiosmtplib (threading correct inReplyTo + references, D25) |
 | **Retry** | 3 tentatives automatiques avec backoff exponentiel |
 | **Notifications** | ✅ Confirmation (topic Email) + ⚠️ Échec (topic System) |
 | **Anonymisation** | Recipient + Subject anonymisés (Presidio) dans notifications |
 | **Historique** | `/journal` affiche emails envoyés, `/receipt [id]` détails complets |
 | **Trust Layer** | Receipt status transitions : pending → approved → executed/failed |
 | **Latence** | <5s (clic Approve → confirmation envoi) |
-| **Error Handling** | Gestion erreurs EmailEngine complète + alertes System |
+| **Error Handling** | Gestion erreurs SMTP/IMAP complète + alertes System |
 
 **Workflow** :
 
 ```
-Email reçu → Classification → Brouillon → [Approve] → Envoi EmailEngine → ✅ Confirmation
+Email reçu → Classification → Brouillon → [Approve] → Envoi SMTP (aiosmtplib) → ✅ Confirmation
                                                    ↓                      ↓
                                         Receipt approved → executed   Notification topic Email
                                                    ↓
@@ -312,9 +312,9 @@ Exemples:
 
 | Feature | Description |
 |---------|-------------|
-| **Extraction automatique** | Via EmailEngine API (liste + download attachments) |
+| **Extraction automatique** | Via IMAP FETCH (liste + download attachments, D25) |
 | **Validation MIME** | Whitelist 18 types autorisés / Blacklist 25+ types bloqués (sécurité) |
-| **Validation taille** | Limite 25 Mo par fichier (limite EmailEngine API) |
+| **Validation taille** | Limite 25 Mo par fichier |
 | **Sanitization** | Protection path traversal + command injection (8 étapes) |
 | **Zone transit** | `/var/friday/transit/attachments/YYYY-MM-DD/` (rétention 24h) |
 | **Base de données** | Table `ingestion.attachments` (métadonnées complètes) |
@@ -325,13 +325,13 @@ Exemples:
 
 **Workflow Pipeline** :
 ```
-EmailEngine → Consumer Email → Extraction PJ
+IMAP Fetcher → Redis Stream → Consumer Email → Extraction PJ
   ↓
   Validation MIME type (whitelist/blacklist)
   ↓
   Validation taille (<= 25 Mo)
   ↓
-  Download via EmailEngine API
+  Download via IMAP FETCH
   ↓
   Sanitization nom fichier (sécurité)
   ↓
@@ -401,7 +401,7 @@ Friday 2.0 intègre un système de **self-healing automatique** en 4 tiers pour 
 - 🔴 **91%** (43.7 Go) → Auto-recovery : kill services lourds (TTS → STT → OCR)
 - 🚨 **95%** (45.6 Go) → Emergency : kill tous services lourds
 
-**Services protégés** : postgres, redis, friday-gateway, friday-bot, n8n, emailengine, presidio
+**Services protégés** : postgres, redis, friday-gateway, friday-bot, n8n, imap-fetcher, presidio
 
 **Commande Telegram :** `/recovery` (liste événements) · `/recovery -v` (détails) · `/recovery stats` (métriques)
 

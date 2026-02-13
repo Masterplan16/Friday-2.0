@@ -29,9 +29,9 @@ Friday 2.0 classifie automatiquement les emails entrants en 8 catégories grâce
 
 ```mermaid
 graph LR
-    A[Email reçu] -->|EmailEngine| B[Webhook Gateway]
+    A[Email reçu] -->|IMAP IDLE| B[imap-fetcher daemon]
     B -->|Presidio| C[Anonymisation]
-    C -->|Redis Stream| D[Consumer]
+    C -->|Redis Stream email.received| D[Consumer]
     D -->|Fetch| E[Correction Rules DB]
     D -->|Build| F[Prompt + Rules]
     F -->|Claude API| G[Classification JSON]
@@ -48,7 +48,7 @@ graph LR
 ### 1. Réception email (Story 2.1)
 
 ```python
-# EmailEngine webhook → Gateway → Presidio → Redis Streams
+# IMAP IDLE notification (aioimaplib) → imap-fetcher → Presidio → Redis Streams email.received
 {
   "id": "email-abc123",
   "from": "compta@urssaf.fr",

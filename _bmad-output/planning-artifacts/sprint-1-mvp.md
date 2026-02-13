@@ -71,7 +71,7 @@ So that je puisse connaitre l'etat du systeme en un coup d'oeil.
 
 **Given** le FastAPI Gateway est demarre
 **When** j'appelle `GET /api/v1/health`
-**Then** je recois un JSON avec l'etat de 9 services (postgres, redis, n8n, emailengine, presidio, whisper, kokoro, surya, caddy) [D19 : Qdrant retire, pgvector integre a postgres]
+**Then** je recois un JSON avec l'etat de 9 services (postgres, redis, n8n, ~~emailengine~~ imap-fetcher `[HISTORIQUE D25]`, presidio, whisper, kokoro, surya, caddy) [D19 : Qdrant retire, pgvector integre a postgres]
 **And** 3 etats possibles : healthy (tous critical OK), degraded (non-critical down), unhealthy (critical down)
 
 **Given** un service non-critique (ex: Kokoro TTS) est arrete
@@ -413,7 +413,7 @@ So que les donnees personnelles ne persistent pas au-dela du necessaire.
 
 Le besoin #1 d'Mainteneur : emails tries, PJ archivees, reponses brouillonnees — sans intervention humaine.
 
-### Story 2.1 : Integration EmailEngine & Reception
+### Story 2.1 : Integration ~~EmailEngine~~ IMAP Direct & Reception `[HISTORIQUE D25]`
 
 As a systeme Friday,
 I want recevoir les emails des 4 comptes IMAP en temps reel,
@@ -421,12 +421,12 @@ So que chaque email soit traite des sa reception.
 
 **Acceptance Criteria:**
 
-**Given** EmailEngine est configure avec 4 comptes IMAP
+**Given** ~~EmailEngine~~ imap-fetcher (aioimaplib) `[HISTORIQUE D25]` est configure avec 4 comptes IMAP
 **When** un nouvel email arrive sur un des comptes
 **Then** un evenement `email.received` est publie dans Redis Streams
 **And** le consumer Python lit l'evenement et declenche le pipeline
 
-**Given** EmailEngine est temporairement indisponible
+**Given** ~~EmailEngine~~ le serveur IMAP `[HISTORIQUE D25]` est temporairement indisponible
 **When** le healthcheck detecte la panne
 **Then** une alerte est envoyee dans le topic System (NFR18)
 **And** les emails sont recuperes au retour du service (aucune perte — NFR15)
@@ -536,7 +536,7 @@ So que je n'aie pas a ouvrir mon client mail.
 
 **Given** Mainteneur clique [Send] sur un brouillon de reponse
 **When** le callback est traite
-**Then** l'email est envoye via EmailEngine depuis le bon compte IMAP (FR104)
+**Then** l'email est envoye via ~~EmailEngine~~ aiosmtplib `[HISTORIQUE D25]` depuis le bon compte IMAP (FR104)
 **And** un receipt est cree avec status="approved"
 **And** une confirmation d'envoi est affichee dans le topic Email
 

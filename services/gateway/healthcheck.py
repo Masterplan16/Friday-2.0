@@ -21,11 +21,11 @@ from schemas import HealthResponse, ServiceHealth, ServiceStatusType, SystemStat
 
 logger = structlog.get_logger()
 
-CRITICAL_SERVICES: frozenset[str] = frozenset({"postgresql", "redis", "emailengine"})
+CRITICAL_SERVICES: frozenset[str] = frozenset({"postgresql", "redis"})
 
 # Service check configuration: name -> (check_type, url_or_config)
+# D25: emailengine retiré, remplacé par imap-fetcher (healthcheck fichier, pas HTTP)
 SERVICE_CHECKS: dict[str, dict[str, str]] = {
-    "emailengine": {"type": "http", "url": "http://emailengine:3000/health"},
     "n8n": {"type": "http", "url": "http://n8n:5678/healthz"},
     "caddy": {"type": "http", "url": "http://caddy:80/health"},
     "presidio_analyzer": {"type": "http", "url": "http://presidio-analyzer:3000/health"},

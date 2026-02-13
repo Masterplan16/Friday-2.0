@@ -52,7 +52,7 @@ Email envoyé + Stockage exemple few-shot
 |-----------|---------|------|
 | **Agent principal** | `agents/src/agents/email/draft_reply.py` | Orchestration pipeline @friday_action |
 | **Prompts LLM** | `agents/src/agents/email/prompts_draft_reply.py` | Construction prompts few-shot |
-| **EmailEngine Client** | `services/email_processor/emailengine_client.py` | Envoi emails SMTP |
+| **Email Adapter (SMTP)** | `agents/src/adapters/email.py` | Envoi emails via aiosmtplib |
 | **Bot Notifications** | `bot/handlers/draft_reply_notifications.py` | Notifications Telegram |
 | **Action Executor** | `bot/action_executor_draft_reply.py` | Exécution après Approve |
 | **Commande /draft** | `bot/handlers/draft_commands.py` | Génération manuelle |
@@ -127,18 +127,18 @@ async def draft_email_reply(email_id, email_data, db_pool):
 await send_draft_ready_notification(bot, receipt_id, email_from_anon, subject_anon, draft_body)
 # Message avec inline buttons [Approve][Reject][Edit]
 
-# 5a. Si Approve → Envoi email + Stockage exemple
-await send_email_via_emailengine(receipt_id, db_pool)
+# 5a. Si Approve → Envoi email via aiosmtplib + Stockage exemple [D25]
+await send_email_via_smtp(receipt_id, db_pool)
 INSERT INTO core.writing_examples (email_type, subject, body) VALUES (...)
 
 # 5b. Si Reject → Email non envoyé, feedback implicite enregistré
 UPDATE core.action_receipts SET status='rejected'
 ```
 
-### Threading Email Correct
+### Threading Email Correct [D25 : via aiosmtplib]
 
 ```python
-await emailengine_client.send_message(
+await email_adapter.send_message(
     account_id="account_professional",
     recipient_email="john@example.com",
     subject="Re: Your question",
@@ -208,9 +208,12 @@ Exemple 2:
 ### Variables d'environnement
 
 ```bash
-# EmailEngine
-EMAILENGINE_BASE_URL=http://localhost:3000
-EMAILENGINE_SECRET=<bearer_token>
+# IMAP/SMTP (via adaptateur email.py) [D25 : remplace EmailEngine]
+IMAP_ACCOUNT_PRO_HOST=imap.gmail.com
+IMAP_ACCOUNT_PRO_PORT=993
+SMTP_ACCOUNT_PRO_HOST=smtp.gmail.com
+SMTP_ACCOUNT_PRO_PORT=465
+# ... (4 comptes configures dans .env.email.enc)
 
 # Telegram
 TELEGRAM_BOT_TOKEN=<token>
@@ -226,9 +229,9 @@ PRESIDIO_ANALYZER_URL=http://localhost:5001
 PRESIDIO_ANONYMIZER_URL=http://localhost:5002
 ```
 
-### Mapping Comptes IMAP (EmailEngine)
+### Mapping Comptes IMAP [D25 : via adaptateur email.py]
 
-Éditer `services/email_processor/emailengine_client.py` :
+Editer `agents/src/adapters/email.py` :
 
 ```python
 def determine_account_id(email_original: dict) -> str:
@@ -331,16 +334,14 @@ ActionResult(
 )
 ```
 
-### `send_email_via_emailengine(receipt_id, db_pool, ...)`
+### `send_email_via_smtp(receipt_id, db_pool, ...)` [D25 : remplace send_email_via_emailengine]
 
 **Signature :**
 ```python
-async def send_email_via_emailengine(
+async def send_email_via_smtp(
     receipt_id: str,
     db_pool: asyncpg.Pool,
-    http_client: httpx.AsyncClient,
-    emailengine_url: str,
-    emailengine_secret: str
+    email_adapter: EmailAdapter,  # adapters/email.py (aiosmtplib)
 ) -> Dict
 ```
 
@@ -349,7 +350,7 @@ async def send_email_via_emailengine(
 2. Extract draft_body + email_original_id
 3. Fetch email original
 4. Determine account_id
-5. Send via EmailEngine (threading correct)
+5. Send via aiosmtplib (threading correct : In-Reply-To + References)
 6. UPDATE receipt status='executed'
 7. INSERT writing_example
 
@@ -392,15 +393,15 @@ WHERE module='email' AND scope='draft_reply' AND active=true
 ORDER BY priority DESC;
 ```
 
-### EmailEngine Erreur 500
+### Erreur SMTP Envoi [D25]
 
-**Cause : Compte IMAP invalide**
+**Cause : Compte IMAP/SMTP invalide**
 
-Vérifier mapping `determine_account_id()` dans `emailengine_client.py`.
+Verifier mapping `determine_account_id()` dans `adapters/email.py`.
 
-**Cause : Token expiré**
+**Cause : Credentials expires**
 
-Regénérer `EMAILENGINE_SECRET` dans EmailEngine dashboard.
+Verifier App Password dans `.env.email.enc` et regenerer si necessaire.
 
 ### Presidio Indisponible (NotImplementedError)
 
@@ -417,13 +418,13 @@ Redémarrer si nécessaire :
 docker compose restart presidio-analyzer presidio-anonymizer
 ```
 
-### Brouillon Non Envoyé Après Approve
+### Brouillon Non Envoye Apres Approve
 
-**Cause : Exception EmailEngine non catchée**
+**Cause : Exception SMTP non catchee** [D25]
 
-Vérifier logs :
+Verifier logs :
 ```bash
-docker compose logs -f friday-bot | grep "emailengine_send_failed"
+docker compose logs -f friday-bot | grep "smtp_send_failed"
 ```
 
 **Cause : Receipt status != 'approved'**

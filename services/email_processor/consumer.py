@@ -2,15 +2,15 @@
 Email Processor Consumer - Story 2.1 Task 3
 Consumer Redis Streams pour traiter les événements email.received
 
-Pipeline:
-    1. Fetch email complet depuis EmailEngine
+Pipeline (D25: IMAP direct remplace EmailEngine):
+    1. Fetch email complet via adapter IMAP direct
     2. Anonymiser body complet via Presidio
-    3. Classification stub (Day 1 = category="inbox")
+    3. Classification Claude Sonnet 4.5
     4. Stocker email dans PostgreSQL ingestion.emails
     5. Notification Telegram topic Email
 
 Author: Claude Sonnet 4.5
-Date: 2026-02-11
+Date: 2026-02-11 (D25 refactor: 2026-02-13)
 """
 
 import asyncio
@@ -33,6 +33,7 @@ from telegram import Bot  # M5 fix: Bot pour notifications Story 2.7
 repo_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(repo_root))
 
+from agents.src.adapters.email import get_email_adapter, EmailAdapter, EmailAdapterError
 from agents.src.tools.anonymize import anonymize_text
 from agents.src.agents.email.vip_detector import (
     compute_email_hash,
@@ -75,13 +76,11 @@ logger = structlog.get_logger()
 
 REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379')
 DATABASE_URL = os.getenv('DATABASE_URL', 'postgresql://friday:friday@localhost:5432/friday')
-EMAILENGINE_URL = os.getenv('EMAILENGINE_BASE_URL', 'http://localhost:3000')
-EMAILENGINE_SECRET = os.getenv('EMAILENGINE_SECRET')
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 TELEGRAM_SUPERGROUP_ID = os.getenv('TELEGRAM_SUPERGROUP_ID')
 TOPIC_EMAIL_ID = os.getenv('TOPIC_EMAIL_ID')
 TOPIC_ACTIONS_ID = os.getenv('TOPIC_ACTIONS_ID')
-EMAILENGINE_ENCRYPTION_KEY = os.getenv('EMAILENGINE_ENCRYPTION_KEY')
+PGP_ENCRYPTION_KEY = os.getenv('PGP_ENCRYPTION_KEY')
 
 STREAM_NAME = 'email.received'
 STREAM_DLQ = 'email.failed'
@@ -90,88 +89,53 @@ CONSUMER_NAME = f'consumer-{os.getpid()}'
 
 
 # ============================================
-# EmailEngine Client Wrapper (Story 2.4)
+# Adapter Compat Wrapper (D25: pour extract_attachments)
 # ============================================
 
-class EmailEngineClient:
+class AdapterEmailCompat:
     """
-    Wrapper simple pour EmailEngine API (Story 2.4).
+    Wrapper de compatibilite autour de EmailAdapter.
+    Expose l'interface attendue par extract_attachments() (Story 2.4)
+    qui attend get_message(message_id) et download_attachment(email_id, attachment_id).
 
-    Expose méthodes requises par extract_attachments():
-    - get_message(email_id)
-    - download_attachment(email_id, attachment_id)
+    D25: Transitoire. A terme, extract_attachments sera refactore pour utiliser
+    l'adapter directement.
     """
 
-    def __init__(self, http_client: httpx.AsyncClient, base_url: str, secret: str):
-        self.http_client = http_client
-        self.base_url = base_url
-        self.secret = secret
+    def __init__(self, adapter: EmailAdapter, default_account_id: str = ""):
+        self._adapter = adapter
+        self._default_account = default_account_id
 
     async def get_message(self, message_id: str) -> Dict:
-        """
-        Récupère email complet via EmailEngine API.
-
-        Args:
-            message_id: ID message EmailEngine
-
-        Returns:
-            Dict avec email data + attachments list
-
-        Raises:
-            Exception si fetch échoue
-        """
-        # Extract account_id from message_id format (account_id/message_id)
-        # NOTE: En production, passer account_id explicitement
-        # Pour MVP, assume format "account/message"
+        """Compat: retourne un dict similaire a l'ancien format EmailEngine."""
         if '/' in message_id:
             account_id, msg_id = message_id.split('/', 1)
         else:
-            # Fallback: utiliser env var ou premier compte
-            account_id = "main"  # TODO: Config
+            account_id = self._default_account
             msg_id = message_id
 
-        response = await self.http_client.get(
-            f'{self.base_url}/v1/account/{account_id}/message/{msg_id}',
-            headers={'Authorization': f'Bearer {self.secret}'},
-            timeout=30.0
-        )
-
-        if response.status_code != 200:
-            raise Exception(f"EmailEngine get_message failed: {response.status_code} - {response.text[:200]}")
-
-        return response.json()
+        email_msg = await self._adapter.get_message(account_id, msg_id)
+        # Convertir EmailMessage -> dict (format EmailEngine-like)
+        return {
+            'id': email_msg.message_id,
+            'from': {'address': email_msg.from_address, 'name': email_msg.from_name},
+            'to': [{'address': addr} for addr in email_msg.to_addresses],
+            'subject': email_msg.subject,
+            'text': email_msg.body_text,
+            'html': email_msg.body_html,
+            'date': email_msg.date,
+            'attachments': email_msg.attachments,
+        }
 
     async def download_attachment(self, email_id: str, attachment_id: str) -> bytes:
-        """
-        Télécharge pièce jointe via EmailEngine API.
-
-        Args:
-            email_id: ID email source
-            attachment_id: ID attachment
-
-        Returns:
-            Bytes du fichier
-
-        Raises:
-            Exception si download échoue
-        """
-        # Extract account_id (voir get_message())
+        """Compat: telecharge PJ via adapter."""
         if '/' in email_id:
             account_id, msg_id = email_id.split('/', 1)
         else:
-            account_id = "main"  # TODO: Config
+            account_id = self._default_account
             msg_id = email_id
 
-        response = await self.http_client.get(
-            f'{self.base_url}/v1/account/{account_id}/attachment/{attachment_id}',
-            headers={'Authorization': f'Bearer {self.secret}'},
-            timeout=60.0  # Timeout plus long pour download
-        )
-
-        if response.status_code != 200:
-            raise Exception(f"EmailEngine download_attachment failed: {response.status_code}")
-
-        return response.content
+        return await self._adapter.download_attachment(account_id, msg_id, attachment_id)
 
 
 # ============================================
@@ -197,7 +161,8 @@ class EmailProcessorConsumer:
         self.redis: Optional[redis.Redis] = None
         self.db_pool: Optional[asyncpg.Pool] = None
         self.http_client: Optional[httpx.AsyncClient] = None
-        self.emailengine_client: Optional[EmailEngineClient] = None
+        self.email_adapter: Optional[EmailAdapter] = None
+        self.email_compat: Optional[AdapterEmailCompat] = None  # D25: compat wrapper
         self.bot: Optional[Bot] = None  # M5 fix: Bot Telegram pour notifications
 
     async def connect(self):
@@ -219,17 +184,14 @@ class EmailProcessorConsumer:
         init_trust_manager(db_pool=self.db_pool)
         logger.info("trust_manager_initialized")
 
-        # HTTP client
+        # HTTP client (pour Telegram notifications)
         self.http_client = httpx.AsyncClient(timeout=30.0)
         logger.info("http_client_created")
 
-        # EmailEngine client wrapper (Story 2.4)
-        self.emailengine_client = EmailEngineClient(
-            http_client=self.http_client,
-            base_url=EMAILENGINE_URL,
-            secret=EMAILENGINE_SECRET
-        )
-        logger.info("emailengine_client_initialized")
+        # Email adapter (D25: IMAP direct remplace EmailEngine)
+        self.email_adapter = get_email_adapter()
+        self.email_compat = AdapterEmailCompat(self.email_adapter)
+        logger.info("email_adapter_initialized", provider=os.getenv("EMAIL_PROVIDER", "imap_direct"))
 
         # M5 fix: Bot Telegram pour notifications Story 2.7 (AC3 + AC4)
         telegram_token = os.environ.get("TELEGRAM_BOT_TOKEN")
@@ -333,23 +295,21 @@ class EmailProcessorConsumer:
                 message_id=message_id
             )
 
-            # Étape 1: Fetch email complet depuis EmailEngine (avec retry backoff)
-            email_full = await self.fetch_email_from_emailengine(account_id, message_id, max_retries=6)
+            # Étape 1: Fetch email complet via adapter (D25: IMAP direct)
+            email_full = await self.fetch_email_with_retry(account_id, message_id, max_retries=6)
 
             if not email_full:
                 logger.error("email_fetch_failed_max_retries", message_id=message_id)
-                # Publier dans DLQ emails:failed
-                await self.send_to_dlq(event_id, payload, error="EmailEngine fetch failed after 6 retries")
-                # XACK pour retirer du PEL (échec définitif, en DLQ maintenant)
+                await self.send_to_dlq(event_id, payload, error="IMAP fetch failed after 6 retries")
                 await self.redis.xack(STREAM_NAME, CONSUMER_GROUP, event_id)
                 return
 
-            # Extraire données raw (AVANT anonymisation, pour stockage chiffré)
-            from_raw = email_full.get('from', {}).get('address', 'unknown')
-            from_name = email_full.get('from', {}).get('name', '')
-            to_raw = ', '.join([addr.get('address', '') for addr in email_full.get('to', [])])
-            subject_raw = email_full.get('subject', '(no subject)')
-            body_text_raw = email_full.get('text', email_full.get('html', ''))
+            # Extraire données raw depuis EmailMessage (AVANT anonymisation)
+            from_raw = email_full.from_address
+            from_name = email_full.from_name
+            to_raw = ', '.join(email_full.to_addresses)
+            subject_raw = email_full.subject or '(no subject)'
+            body_text_raw = email_full.body_text or email_full.body_html or ''
 
             # Etape 2: Filtrage sender AVANT anonymisation (A.6 nouvelle semantique)
             # Semantique: blacklist=skip analyse, whitelist=analyser, VIP=prioritaire
@@ -511,11 +471,11 @@ class EmailProcessorConsumer:
             attachment_result = None
             if has_attachments:
                 try:
-                    # Extraire pièces jointes via EmailEngine
+                    # Extraire pièces jointes via adapter (D25: compat wrapper)
                     attachment_result = await extract_attachments(
                         email_id=str(email_id),  # UUID email depuis DB
                         db_pool=self.db_pool,
-                        emailengine_client=self.emailengine_client,
+                        emailengine_client=self.email_compat,
                         redis_client=self.redis,
                     )
 
@@ -709,22 +669,22 @@ class EmailProcessorConsumer:
             )
             # Ne pas XACK → message reste dans PEL pour retry
 
-    async def fetch_email_from_emailengine(
+    async def fetch_email_with_retry(
         self,
         account_id: str,
         message_id: str,
         max_retries: int = 6
-    ) -> Optional[Dict]:
+    ) -> Optional[Any]:
         """
-        Fetch email complet depuis EmailEngine API avec retry backoff exponentiel
+        Fetch email complet via adapter IMAP avec retry backoff exponentiel (D25)
 
         Args:
-            account_id: ID compte EmailEngine
-            message_id: ID message
+            account_id: ID compte IMAP
+            message_id: UID IMAP
             max_retries: Nombre max de retries (défaut 6)
 
         Returns:
-            Email JSON ou None si échec après retries
+            EmailMessage ou None si échec après retries
 
         Retry policy:
             - Backoff: 1s, 2s, 4s, 8s, 16s, 32s (total ~63s)
@@ -732,50 +692,43 @@ class EmailProcessorConsumer:
         """
         for attempt in range(max_retries + 1):
             try:
-                response = await self.http_client.get(
-                    f'{EMAILENGINE_URL}/v1/account/{account_id}/message/{message_id}',
-                    headers={'Authorization': f'Bearer {EMAILENGINE_SECRET}'}
-                )
-
-                if response.status_code == 200:
-                    if attempt > 0:
-                        logger.info(
-                            "emailengine_fetch_success_after_retry",
-                            message_id=message_id,
-                            attempt=attempt + 1
-                        )
-                    return response.json()
-                else:
-                    logger.error(
-                        "emailengine_fetch_failed",
-                        account_id=account_id,
+                result = await self.email_adapter.get_message(account_id, message_id)
+                if attempt > 0:
+                    logger.info(
+                        "imap_fetch_success_after_retry",
                         message_id=message_id,
-                        status_code=response.status_code,
                         attempt=attempt + 1
                     )
+                return result
 
+            except EmailAdapterError as e:
+                logger.error(
+                    "imap_fetch_failed",
+                    account_id=account_id,
+                    message_id=message_id,
+                    error=str(e),
+                    attempt=attempt + 1
+                )
             except Exception as e:
                 logger.error(
-                    "emailengine_request_error",
+                    "imap_request_error",
                     message_id=message_id,
                     error=str(e),
                     attempt=attempt + 1
                 )
 
-            # Si pas encore au max retries, attendre avec backoff exponentiel
             if attempt < max_retries:
-                backoff_seconds = 2 ** attempt  # 1s, 2s, 4s, 8s, 16s, 32s
+                backoff_seconds = 2 ** attempt
                 logger.info(
-                    "emailengine_retry_backoff",
+                    "imap_retry_backoff",
                     message_id=message_id,
                     attempt=attempt + 1,
                     next_retry_seconds=backoff_seconds
                 )
                 await asyncio.sleep(backoff_seconds)
 
-        # Après max_retries tentatives, échec définitif
         logger.error(
-            "emailengine_fetch_max_retries_exceeded",
+            "imap_fetch_max_retries_exceeded",
             message_id=message_id,
             max_retries=max_retries
         )
@@ -916,7 +869,7 @@ class EmailProcessorConsumer:
             logger.info("email_stored_database", message_id=message_id, email_id=str(email_id), priority=priority)
 
             # Étape 2: Insérer email raw chiffré dans ingestion.emails_raw
-            # Chiffrement pgcrypto avec EMAILENGINE_ENCRYPTION_KEY
+            # Chiffrement pgcrypto avec PGP_ENCRYPTION_KEY
             await conn.execute(
                 """
                 INSERT INTO ingestion.emails_raw (
@@ -936,7 +889,7 @@ class EmailProcessorConsumer:
                 """,
                 email_id,
                 from_raw,
-                EMAILENGINE_ENCRYPTION_KEY,
+                PGP_ENCRYPTION_KEY,
                 to_raw,
                 subject_raw,
                 body_raw

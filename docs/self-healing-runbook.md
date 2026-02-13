@@ -115,7 +115,7 @@ bash scripts/monitor-ram.sh --telegram
 2. **Priority 2** : faster-whisper (STT, ~4 Go) — important mais différable
 3. **Priority 3** : surya-ocr (OCR, ~2 Go) — essentiel mais pas temps réel
 
-**Services protégés (jamais tués)** : postgres, redis, friday-gateway, friday-bot, n8n, emailengine, presidio
+**Services proteges (jamais tues)** : postgres, redis, friday-gateway, friday-bot, n8n, friday-imap-fetcher, presidio [D25 : friday-imap-fetcher remplace emailengine]
 
 **Safety guards** :
 - Max 3 services tués par recovery
@@ -337,6 +337,8 @@ PROTECTED_SERVICES=(
     "friday-gateway"
     "friday-bot"
     "n8n"
+    "friday-imap-fetcher"   # [D25] remplace emailengine
+    "presidio"
     "mon-service-critique"  # Ajouter ici
 )
 ```

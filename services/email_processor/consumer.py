@@ -403,7 +403,8 @@ class EmailProcessorConsumer:
                 return  # Short-circuit: skip rest of pipeline
 
             # Etape 3: Anonymiser body complet
-            body_anon = await anonymize_text(body_text_raw) if body_text_raw else ""
+            body_anon_result = await anonymize_text(body_text_raw) if body_text_raw else None
+            body_anon = body_anon_result.anonymized_text if body_anon_result else ""
 
             logger.info("email_anonymized", message_id=message_id, body_length=len(body_anon))
 

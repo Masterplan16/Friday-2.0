@@ -56,14 +56,13 @@ _http_client: Optional[httpx.AsyncClient] = None
 
 def _get_http_client() -> httpx.AsyncClient:
     """
-    Retourne un httpx.AsyncClient réutilisable (lazy-initialized).
+    Retourne un httpx.AsyncClient.
 
-    Fix Bug B6 : évite de recréer un client à chaque appel anonymize_text().
+    TEMPORARY FIX: Create new client each time to avoid connection pool issues.
+    Performance impact minimal (~5ms overhead vs connection errors).
     """
-    global _http_client
-    if _http_client is None or _http_client.is_closed:
-        _http_client = httpx.AsyncClient(timeout=PRESIDIO_TIMEOUT)
-    return _http_client
+    # Always create new client to avoid connection pool state issues
+    return httpx.AsyncClient(timeout=PRESIDIO_TIMEOUT)
 
 
 async def close_http_client():
@@ -149,21 +148,64 @@ async def anonymize_text(
 
     entities_to_detect = entities or FRENCH_ENTITIES
 
+    client = None
     try:
-        # Bug B6 fix: Réutiliser client HTTP module-level
+        # Create new client for this request
         client = _get_http_client()
 
-        # 1. Analyse: détection entités sensibles
-        analyze_response = await client.post(
-            f"{PRESIDIO_ANALYZER_URL}/analyze",
-            json={
-                "text": text,
-                "language": language,
-                "entities": entities_to_detect,
-            },
+        # DEBUG: Test connection first
+        try:
+            import socket
+            # Parse URL to get host and port
+            host = PRESIDIO_ANALYZER_URL.split("://")[1].split(":")[0]
+            port = 3000
+
+            # Resolve DNS
+            ip = socket.gethostbyname(host)
+            logger.info("presidio_dns_resolved", host=host, ip=ip)
+
+            # Test TCP connection
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(5)
+            result = sock.connect_ex((ip, port))
+            sock.close()
+            logger.info("presidio_tcp_test", ip=ip, port=port, result=result, connected=(result == 0))
+        except Exception as conn_test_error:
+            logger.warning("presidio_connection_test_failed", error=str(conn_test_error))
+
+        # DEBUG: Log connection attempt details
+        analyzer_url = f"{PRESIDIO_ANALYZER_URL}/analyze"
+        logger.info(
+            "presidio_analyze_attempt",
+            url=analyzer_url,
+            text_length=len(text),
+            language=language,
+            entities=entities_to_detect,
+            timeout=PRESIDIO_TIMEOUT,
         )
-        analyze_response.raise_for_status()
-        entities_found = analyze_response.json()
+
+        # 1. Analyse: détection entités sensibles
+        try:
+            analyze_response = await client.post(
+                analyzer_url,
+                json={
+                    "text": text,
+                    "language": language,
+                    "entities": entities_to_detect,
+                },
+            )
+            logger.info("presidio_analyze_response", status_code=analyze_response.status_code)
+            analyze_response.raise_for_status()
+            entities_found = analyze_response.json()
+        except Exception as analyze_error:
+            logger.error(
+                "presidio_analyze_failed",
+                error=str(analyze_error),
+                error_type=type(analyze_error).__name__,
+                url=analyzer_url,
+                exc_info=True,
+            )
+            raise
 
         if not entities_found:
             # Aucune PII détectée
@@ -237,6 +279,10 @@ async def anonymize_text(
     except Exception as e:
         logger.error("anonymization_failed", error=str(e), error_type=type(e).__name__)
         raise AnonymizationError(f"Anonymization failed: {e}") from e
+    finally:
+        # Close client to avoid resource leaks (new client per request)
+        if client is not None:
+            await client.aclose()
 
 
 async def deanonymize_text(anonymized_text: str, mapping: Dict[str, str]) -> str:

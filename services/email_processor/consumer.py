@@ -90,8 +90,8 @@ TOPIC_EMAIL_ID = os.getenv('TOPIC_EMAIL_ID')
 TOPIC_ACTIONS_ID = os.getenv('TOPIC_ACTIONS_ID')
 PGP_ENCRYPTION_KEY = os.getenv('PGP_ENCRYPTION_KEY')
 
-STREAM_NAME = 'email.received'
-STREAM_DLQ = 'email.failed'
+STREAM_NAME = 'emails:received'
+STREAM_DLQ = 'emails:failed'
 CONSUMER_GROUP = 'email-processor'
 CONSUMER_NAME = f'consumer-{os.getpid()}'
 
@@ -240,20 +240,29 @@ class EmailProcessorConsumer:
         # Default to env var PIPELINE_ENABLED if Redis key not set
         if enabled is None:
             return os.getenv("PIPELINE_ENABLED", "false").lower() == "true"
-        return enabled == "true"
+        # Redis returns bytes, decode before comparison
+        enabled_str = enabled.decode('utf-8') if isinstance(enabled, bytes) else enabled
+        return enabled_str == "true"
 
     async def start(self):
         """Start consumer loop"""
         logger.info("consumer_starting", group=CONSUMER_GROUP, consumer=CONSUMER_NAME)
 
+        logger.info("entering_main_loop")
+
         while True:
             try:
                 # Kill switch check (Phase A.0)
-                if not await self._is_pipeline_enabled():
+                pipeline_enabled = await self._is_pipeline_enabled()
+                logger.info("pipeline_enabled_check", enabled=pipeline_enabled)
+
+                if not pipeline_enabled:
+                    logger.info("pipeline_disabled_sleeping", sleep_seconds=10)
                     await asyncio.sleep(10)
                     continue
 
                 # XREADGROUP: Lire événements du stream
+                logger.info("xreadgroup_calling", stream=STREAM_NAME, group=CONSUMER_GROUP)
                 events = await self.redis.xreadgroup(
                     groupname=CONSUMER_GROUP,
                     consumername=CONSUMER_NAME,
@@ -262,11 +271,14 @@ class EmailProcessorConsumer:
                     block=5000  # Block 5s si aucun événement
                 )
 
+                logger.info("xreadgroup_result", events_count=len(events) if events else 0)
+
                 if not events:
                     continue  # Timeout, retry
 
                 # Process each event
                 for stream_name, messages in events:
+                    logger.info("processing_messages", count=len(messages))
                     for event_id, payload in messages:
                         await self.process_email_event(event_id, payload)
 

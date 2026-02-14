@@ -41,6 +41,7 @@ async def classify_email(
     email_id: str,
     email_text: str,
     db_pool: asyncpg.Pool,
+    **kwargs,  # Accept decorator-injected args (_correction_rules, _rules_prompt)
 ) -> ActionResult:
     """
     Classifie un email en utilisant Claude Sonnet 4.5.
@@ -49,6 +50,7 @@ async def classify_email(
         email_id: ID de l'email dans ingestion.emails
         email_text: Texte de l'email anonymisé (from + subject + body)
         db_pool: Pool de connexions PostgreSQL
+        **kwargs: Decorator-injected arguments (e.g., _correction_rules)
 
     Returns:
         ActionResult avec catégorie, confidence, reasoning

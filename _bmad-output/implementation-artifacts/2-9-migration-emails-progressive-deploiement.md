@@ -233,6 +233,7 @@ Specification complete : `_docs/plan-deploiement-epic2-email.md` (v2.3, 1600 lig
 ## File List
 
 - `bot/handlers/pipeline_control.py` — /pipeline [stop|start|status], /budget (NEW)
+- `tests/unit/bot/handlers/test_pipeline_control.py` — 17 tests unitaires pipeline_control (NEW)
 - `bot/main.py` — Import pipeline_control, handler /pipeline, Redis client (MODIFIED)
 - `docker-compose.yml` — Suppression telegram-bot, ajout email-processor (MODIFIED)
 - `services/email_processor/consumer.py` — Kill switch, classifier, filter semantics (MODIFIED)

@@ -28,6 +28,10 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # Copier code bot (agents imports sont lazy/optionnels)
 COPY bot/ ./bot/
 
+# Copier services nécessaires (email_healthcheck pour monitoring)
+COPY services/email_healthcheck/ ./services/email_healthcheck/
+COPY services/__init__.py ./services/
+
 # Copier config
 COPY config/telegram.yaml ./config/
 

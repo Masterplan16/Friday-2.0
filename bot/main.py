@@ -21,6 +21,7 @@ from bot.handlers import (
     backup_commands,
     commands,
     draft_commands,
+    email_status_commands,
     messages,
     pipeline_control,
     recovery_commands,
@@ -49,7 +50,9 @@ class FridayBot:
         self.db_pool: asyncpg.Pool | None = None
         self.is_running = False
         self.heartbeat_task = None
+        self.email_monitoring_task = None
         self.last_heartbeat_success = time.time()
+        self.last_email_health_status = None
 
     async def init(self) -> None:
         """
@@ -171,6 +174,9 @@ class FridayBot:
         # Commandes Phase A.0 - Pipeline Control & Kill Switch
         self.application.add_handler(CommandHandler("pipeline", pipeline_control.pipeline_command))
 
+        # Commande Email Pipeline Status Monitoring
+        self.application.add_handler(CommandHandler("email_status", email_status_commands.email_status_command))
+
         # Story 1.10 - Inline buttons callbacks (Approve/Reject/Correct)
         from bot.action_executor import ActionExecutor
         from bot.handlers.callbacks import register_callbacks_handlers
@@ -268,6 +274,72 @@ class FridayBot:
             # Attendre intervalle heartbeat
             await asyncio.sleep(self.config.heartbeat_interval_sec)
 
+    async def email_monitoring_loop(self) -> None:
+        """
+        Boucle de monitoring du pipeline email toutes les 5 minutes.
+
+        Vérifie l'état de tous les services et envoie des alertes si problème.
+        """
+        from services.email_healthcheck.monitor import check_email_pipeline_health, format_status_message
+
+        # Attendre 30s avant le premier check (laisser le temps aux services de démarrer)
+        await asyncio.sleep(30)
+
+        while self.is_running:
+            try:
+                # Check pipeline health
+                health = await check_email_pipeline_health()
+
+                # Détecter changements de statut (pour éviter spam)
+                status_changed = (
+                    self.last_email_health_status is None
+                    or self.last_email_health_status != health.overall_status
+                )
+
+                # Envoyer alerte si problème ou changement de statut
+                if health.overall_status != "healthy" or (status_changed and health.overall_status == "healthy"):
+                    # Format message
+                    message = format_status_message(health)
+
+                    # Envoyer au topic System
+                    system_topic_id = int(os.getenv("TOPIC_SYSTEM_ID", "0"))
+                    supergroup_id = int(os.getenv("TELEGRAM_SUPERGROUP_ID", "0"))
+
+                    if system_topic_id and supergroup_id:
+                        try:
+                            await self.application.bot.send_message(
+                                chat_id=supergroup_id,
+                                message_thread_id=system_topic_id,
+                                text=message,
+                                parse_mode="Markdown"
+                            )
+                            logger.info(
+                                "Email pipeline status sent to Telegram",
+                                status=health.overall_status,
+                                alerts_count=len(health.alerts)
+                            )
+                        except Exception as send_err:
+                            logger.error(
+                                "Failed to send email pipeline alert to Telegram",
+                                error=str(send_err)
+                            )
+
+                # Mettre à jour last status
+                self.last_email_health_status = health.overall_status
+
+                # Log status en debug
+                logger.debug(
+                    "Email pipeline monitoring check",
+                    status=health.overall_status,
+                    alerts=len(health.alerts)
+                )
+
+            except Exception as e:
+                logger.error("Email monitoring loop error", error=str(e), error_type=type(e).__name__)
+
+            # Attendre 5 minutes avant prochain check
+            await asyncio.sleep(300)  # 5 minutes
+
     async def run(self) -> None:
         """Démarre le bot et la boucle heartbeat."""
         if not self.application:
@@ -278,6 +350,10 @@ class FridayBot:
         # Démarrer heartbeat en arrière-plan
         self.heartbeat_task = asyncio.create_task(self.heartbeat_loop())
         logger.info("Heartbeat démarré", interval_sec=self.config.heartbeat_interval_sec)
+
+        # Démarrer email pipeline monitoring en arrière-plan
+        self.email_monitoring_task = asyncio.create_task(self.email_monitoring_loop())
+        logger.info("Email pipeline monitoring démarré", interval_sec=300)
 
         # Passer db_pool via bot_data pour handlers (H1 fix)
         if self.db_pool:
@@ -318,6 +394,14 @@ class FridayBot:
             self.heartbeat_task.cancel()
             try:
                 await self.heartbeat_task
+            except asyncio.CancelledError:
+                pass
+
+        # Arrêter email monitoring
+        if self.email_monitoring_task:
+            self.email_monitoring_task.cancel()
+            try:
+                await self.email_monitoring_task
             except asyncio.CancelledError:
                 pass
 

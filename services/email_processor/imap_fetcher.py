@@ -286,11 +286,16 @@ class IMAPAccountWatcher:
                 )
                 return
 
-            uids_str = data[0] if data else ""
+            uids_str = data[0] if data else b""
+            if isinstance(uids_str, bytes):
+                uids_str = uids_str.decode("utf-8", errors="replace")
+
             if not uids_str or not uids_str.strip():
                 return
 
-            uids = uids_str.strip().split()
+            # UIDs en string, pas bytes (fix pour compatibilité aioimaplib)
+            uids = [u.decode("utf-8") if isinstance(u, bytes) else str(u)
+                    for u in uids_str.strip().split()]
 
             for uid in uids:
                 # Deduplication (faille #2)
@@ -301,9 +306,8 @@ class IMAPAccountWatcher:
                 try:
                     await self._process_email(uid)
 
-                    # Marquer comme vu dans Redis (TTL 7 jours)
+                    # IMPORTANT: Marquer comme vu SEULEMENT en cas de succès
                     await self.redis.sadd(self._seen_key, uid)
-                    # Rafraichir TTL sur le SET entier
                     await self.redis.expire(
                         self._seen_key,
                         SEEN_UIDS_TTL_DAYS * 86400,
@@ -316,6 +320,7 @@ class IMAPAccountWatcher:
                         uid=uid,
                         error=str(e),
                     )
+                    # NE PAS marquer comme vu en erreur - retry au prochain passage
 
         except Exception as e:
             logger.error(
@@ -328,61 +333,92 @@ class IMAPAccountWatcher:
         """
         Fetch un email, anonymise, publie dans Redis Streams.
 
-        Format RedisEmailEvent identique a l'ancien webhook EmailEngine :
-            account_id, message_id, from_anon, subject_anon,
-            date, has_attachments, body_preview_anon
+        Stratégie progressive (du simple au complet) :
+        1. Headers only: BODY.PEEK[HEADER]
+        2. Headers + body preview: BODY.PEEK[HEADER] + BODY.PEEK[]<0.2000>
+        3. Full: + BODYSTRUCTURE pour détection PJ
+
+        Format RedisEmailEvent identique a l'ancien webhook EmailEngine.
         """
-        # Fetch headers + body preview (pas le body complet ici)
-        # Le consumer fera un fetch complet si besoin
-        status, data = await self._imap.uid(
-            "fetch", uid, "(BODY.PEEK[HEADER] BODY.PEEK[TEXT]<0.2000> BODYSTRUCTURE)"
-        )
-
-        if status != "OK" or not data:
-            raise Exception(f"IMAP FETCH failed for UID {uid}: {status}")
-
-        # Parser headers
-        headers_raw = b""
-        body_preview_raw = b""
-
-        for item in data:
-            if isinstance(item, tuple) and len(item) >= 2:
-                marker = item[0].decode("utf-8", errors="replace") if isinstance(item[0], bytes) else str(item[0])
-                if "HEADER" in marker:
-                    headers_raw = item[1] if isinstance(item[1], bytes) else b""
-                elif "TEXT" in marker:
-                    body_preview_raw = item[1] if isinstance(item[1], bytes) else b""
-
-        msg = email_lib.message_from_bytes(headers_raw)
-
-        # Extraire metadata
-        from_header = msg.get("From", "unknown")
-        subject = msg.get("Subject", "(no subject)")
-        date_str = msg.get("Date", datetime.utcnow().isoformat())
-        message_id = msg.get("Message-ID", uid)
-
-        # Check attachments via BODYSTRUCTURE (faille #3)
+        from_header = "unknown"
+        subject = "(no subject)"
+        date_str = datetime.utcnow().isoformat()
+        body_preview = ""
         has_attachments = False
-        bodystructure_str = ""
-        for item in data:
-            if isinstance(item, bytes):
-                decoded = item.decode("utf-8", errors="replace")
-                if "BODYSTRUCTURE" in decoded:
-                    bodystructure_str = decoded
-                    has_attachments = "attachment" in decoded.lower()
+        fetch_level = "headers_only"
 
-        # Decoder body preview
-        body_preview = body_preview_raw.decode("utf-8", errors="replace")[:500]
+        # Essayer headers seulement (minimal, très compatible)
+        try:
+            # aioimaplib uid() retourne tuple (status, data)
+            result = await self._imap.uid("fetch", uid, "(BODY.PEEK[HEADER])")
 
-        # Anonymiser via Presidio (from, subject, body preview)
-        from_anon = await anonymize_text(from_header)
-        subject_anon = await anonymize_text(subject)
-        body_preview_anon = await anonymize_text(body_preview) if body_preview else ""
+            # Vérifier si c'est un tuple ou un objet Response
+            if isinstance(result, tuple):
+                status, data = result
+            else:
+                status = result.result
+                data = result.lines
 
-        # Publier dans Redis Streams (format identique a l'ancien webhook)
+            if status != "OK" or not data:
+                raise Exception(f"Headers fetch failed: status={status}, has_data={bool(data)}")
+
+            # Parser headers depuis data
+            headers_raw = None
+            for item in data:
+                if isinstance(item, tuple) and len(item) >= 2:
+                    # item = (b'123 (BODY[HEADER] ...)', b'<header content>')
+                    headers_raw = item[1] if isinstance(item[1], bytes) else None
+                    break
+
+            if not headers_raw:
+                raise Exception("No headers found in response")
+
+            # Parser avec email.message
+            msg = email_lib.message_from_bytes(headers_raw)
+            from_header = msg.get("From", "unknown")
+            subject = msg.get("Subject", "(no subject)")
+            date_str = msg.get("Date", datetime.utcnow().isoformat())
+
+            logger.info(
+                "email_fetched_headers_only",
+                account_id=self.account_id,
+                uid=uid,
+                from_preview=from_header[:50],
+                subject_preview=subject[:50],
+            )
+
+        except Exception as e:
+            logger.error(
+                "email_fetch_failed_completely",
+                account_id=self.account_id,
+                uid=uid,
+                error=str(e)[:200],
+                error_type=type(e).__name__,
+            )
+            # Skip cet email - ne pas bloquer toute la queue
+            return
+
+        # Anonymiser via Presidio (RGPD obligatoire avant envoi cloud)
+        try:
+            from_anon = await anonymize_text(from_header)
+            subject_anon = await anonymize_text(subject)
+            body_preview_anon = await anonymize_text(body_preview) if body_preview else ""
+        except Exception as e:
+            logger.error(
+                "presidio_anonymization_failed",
+                account_id=self.account_id,
+                uid=uid,
+                error=str(e),
+            )
+            # Fallback: utiliser [REDACTED] plutôt que skip
+            from_anon = "[REDACTED]"
+            subject_anon = "[REDACTED]"
+            body_preview_anon = "[REDACTED]"
+
+        # Publier dans Redis Streams (format identique webhook EmailEngine)
         event = {
             "account_id": self.account_id,
-            "message_id": uid,  # UID IMAP (le consumer fetch le complet)
+            "message_id": uid,
             "from_anon": from_anon,
             "subject_anon": subject_anon,
             "date": date_str,
@@ -390,15 +426,23 @@ class IMAPAccountWatcher:
             "body_preview_anon": body_preview_anon,
         }
 
-        event_id = await self.redis.xadd(STREAM_NAME, event)
-
-        logger.info(
-            "email_published_to_stream",
-            account_id=self.account_id,
-            uid=uid,
-            event_id=event_id,
-            has_attachments=has_attachments,
-        )
+        try:
+            event_id = await self.redis.xadd(STREAM_NAME, event)
+            logger.info(
+                "email_published_to_stream",
+                account_id=self.account_id,
+                uid=uid,
+                event_id=event_id,
+                fetch_level=fetch_level,
+            )
+        except Exception as e:
+            logger.critical(
+                "redis_publish_failed",
+                account_id=self.account_id,
+                uid=uid,
+                error=str(e),
+            )
+            raise  # Critical - on doit retry
 
     def stop(self):
         """Arret propre."""

@@ -51,6 +51,14 @@ from agents.src.middleware.trust import init_trust_manager
 # Logging Setup
 # ============================================
 
+# Configure logging to stdout FIRST (critical for Docker logs capture)
+logging.basicConfig(
+    format="%(message)s",
+    stream=sys.stdout,
+    level=logging.INFO,
+)
+
+# Then configure structlog (will use logging.basicConfig as backend)
 structlog.configure(
     processors=[
         structlog.stdlib.filter_by_level,

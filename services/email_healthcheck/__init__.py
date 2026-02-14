@@ -1,0 +1,1 @@
+"""Email Pipeline Healthcheck Service."""

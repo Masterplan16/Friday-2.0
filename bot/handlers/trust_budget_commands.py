@@ -31,7 +31,7 @@ from telegram.ext import ContextTypes
 logger = structlog.get_logger(__name__)
 
 # Configuration
-_OWNER_USER_ID = int(os.getenv("OWNER_USER_ID", "0"))
+_OWNER_USER_ID = int(os.getenv("OWNER_USER_ID") or "0")
 
 # Tarification Claude Sonnet 4.5 (D17)
 _USD_INPUT_PER_1M = 3.0

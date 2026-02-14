@@ -362,6 +362,16 @@ class IMAPAccountWatcher:
             if status != "OK" or not data:
                 raise Exception(f"Headers fetch failed: status={status}, has_data={bool(data)}")
 
+            # DEBUG: Logger la structure de data
+            logger.debug(
+                "imap_fetch_response_structure",
+                account_id=self.account_id,
+                uid=uid,
+                data_type=type(data).__name__,
+                data_len=len(data) if data else 0,
+                first_item_type=type(data[0]).__name__ if data and len(data) > 0 else "none",
+            )
+
             # Parser headers depuis data
             headers_raw = None
             for item in data:
@@ -369,8 +379,18 @@ class IMAPAccountWatcher:
                     # item = (b'123 (BODY[HEADER] ...)', b'<header content>')
                     headers_raw = item[1] if isinstance(item[1], bytes) else None
                     break
+                elif isinstance(item, bytes):
+                    # Peut-être que data est juste [b'headers...']
+                    headers_raw = item
+                    break
 
             if not headers_raw:
+                logger.error(
+                    "no_headers_debug",
+                    account_id=self.account_id,
+                    uid=uid,
+                    data_repr=repr(data)[:500] if data else "none",
+                )
                 raise Exception("No headers found in response")
 
             # Parser avec email.message

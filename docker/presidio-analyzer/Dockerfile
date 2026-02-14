@@ -23,9 +23,16 @@ RUN apt-get purge -y gcc g++ build-essential && \
     apt-get autoremove -y && \
     rm -rf /var/lib/apt/lists/*
 
+# Copier configuration Presidio pour recognizers français
+COPY analyzer_conf.json /usr/src/app/conf/
+
+# Copier app custom qui charge la configuration FR
+COPY app_custom.py /usr/bin/presidio-analyzer/app_custom.py
+
 # Variables d'environnement par défaut
 ENV SPACY_MODEL=fr_core_news_lg
 ENV LOG_LEVEL=INFO
+ENV NLP_CONF_FILE=/usr/src/app/conf/analyzer_conf.json
 
 # Exposer le port Analyzer
 EXPOSE 3000
@@ -34,4 +41,6 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 --start-period=60s \
   CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:3000/health')" || exit 1
 
-# CMD hérité de l'image parente (presidio-analyzer)
+# Lancer app_custom.py au lieu de app.py pour charger config FR
+WORKDIR /usr/bin/presidio-analyzer
+CMD ["sh", "-c", "pipenv run python app_custom.py --host 0.0.0.0"]

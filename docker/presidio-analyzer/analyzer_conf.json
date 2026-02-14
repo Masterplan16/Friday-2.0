@@ -1,0 +1,24 @@
+{
+  "nlp_engine_name": "spacy",
+  "models": [
+    {
+      "lang_code": "fr",
+      "model_name": "fr_core_news_lg"
+    },
+    {
+      "lang_code": "en",
+      "model_name": "en_core_web_lg"
+    }
+  ],
+  "ner_model_configuration": {
+    "labels_to_ignore": ["DATE", "TIME", "CARDINAL", "ORDINAL", "QUANTITY"],
+    "model_to_presidio_entity_mapping": {
+      "PER": "PERSON",
+      "PERSON": "PERSON",
+      "LOC": "LOCATION",
+      "GPE": "LOCATION",
+      "ORG": "ORGANIZATION"
+    },
+    "low_score_entity_names": ["ORG", "ORGANIZATION"]
+  }
+}

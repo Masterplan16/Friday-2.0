@@ -31,22 +31,20 @@ from config.exceptions import PipelineError
 from pydantic import BaseModel, Field
 
 # Configuration Presidio (via env vars)
-PRESIDIO_ANALYZER_URL = os.getenv("PRESIDIO_ANALYZER_URL", "http://presidio-analyzer:5001")
-PRESIDIO_ANONYMIZER_URL = os.getenv("PRESIDIO_ANONYMIZER_URL", "http://presidio-anonymizer:5002")
+# Note: Port 3000 = port interne container (5001/5002 = ports HOST)
+PRESIDIO_ANALYZER_URL = os.getenv("PRESIDIO_ANALYZER_URL", "http://presidio-analyzer:3000")
+PRESIDIO_ANONYMIZER_URL = os.getenv("PRESIDIO_ANONYMIZER_URL", "http://presidio-anonymizer:3000")
 PRESIDIO_TIMEOUT = int(os.getenv("PRESIDIO_TIMEOUT", "30"))
 
 # Entités sensibles à détecter (France)
+# Note: Utilise seulement les recognizers supportés par Presidio + spaCy FR
+# Les entités custom (IBAN_CODE, FR_NIR, etc.) nécessiteraient des recognizers custom
 FRENCH_ENTITIES = [
-    "PERSON",  # Noms, prénoms
-    "EMAIL_ADDRESS",  # Emails
-    "PHONE_NUMBER",  # Téléphones
-    "IBAN_CODE",  # IBAN bancaires
-    "NRP",  # Numéro INSEE (Numéro de Sécurité Sociale)
-    "LOCATION",  # Adresses, villes
-    "DATE_TIME",  # Dates
-    "MEDICAL_LICENSE",  # Numéros RPPS médecins
-    "FR_NIR",  # NIR Sécurité Sociale
-    "CREDIT_CARD",  # Numéros de carte bancaire (requis par pii_samples.json sample 004)
+    "PERSON",  # Noms, prénoms (spaCy FR)
+    "EMAIL_ADDRESS",  # Emails (built-in Presidio)
+    "PHONE_NUMBER",  # Téléphones (built-in Presidio)
+    # Entités FR custom désactivées temporairement (nécessitent recognizers custom):
+    # "IBAN_CODE", "NRP", "LOCATION", "DATE_TIME", "MEDICAL_LICENSE", "FR_NIR", "CREDIT_CARD"
 ]
 
 logger = structlog.get_logger(__name__)

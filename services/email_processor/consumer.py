@@ -262,11 +262,13 @@ class EmailProcessorConsumer:
                     continue
 
                 # XREADGROUP: Lire événements du stream
+                # TEMPORARY: Using '0' instead of '>' to reprocess 189 pending emails
+                # After pending queue is empty, change back to '>' for new messages only
                 logger.info("xreadgroup_calling", stream=STREAM_NAME, group=CONSUMER_GROUP)
                 events = await self.redis.xreadgroup(
                     groupname=CONSUMER_GROUP,
                     consumername=CONSUMER_NAME,
-                    streams={STREAM_NAME: '>'},
+                    streams={STREAM_NAME: '0'},  # '0' = read pending + new, '>' = new only
                     count=10,
                     block=5000  # Block 5s si aucun événement
                 )

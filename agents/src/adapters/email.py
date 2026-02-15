@@ -85,6 +85,17 @@ class IMAPConnectionError(EmailAdapterError):
     pass
 
 
+class IMAPUIDNotFoundError(EmailAdapterError):
+    """UID IMAP introuvable (email supprime/deplace cote serveur).
+
+    Erreur NON-RETRYABLE : le serveur retourne OK mais aucun contenu,
+    ce qui signifie que l'UID n'existe plus dans le mailbox courant.
+    Re-essayer ne changera rien.
+    """
+
+    pass
+
+
 class SMTPSendError(EmailAdapterError):
     """Erreur envoi SMTP"""
 
@@ -291,10 +302,11 @@ class IMAPDirectAdapter(EmailAdapter):
             )
             await imap.wait_hello_from_server()
             await imap.login(account["imap_user"], account["imap_password"])
+            # SELECT pour ouvrir INBOX (état SELECTED requis pour UID FETCH)
+            # BODY.PEEK[] garantit que \Seen n'est PAS posé (RFC 3501)
             await imap.select("INBOX")
 
-            # Fetch par UID (BODY.PEEK[] pour ne PAS marquer comme \Seen)
-            # IMPORTANT: RFC822 = alias BODY[] = marque \Seen. PEEK evite ca.
+            # Fetch par UID avec BODY.PEEK[] (ne marque PAS \Seen)
             status, data = await imap.uid(
                 "fetch", message_id, "(BODY.PEEK[])"
             )
@@ -331,13 +343,29 @@ class IMAPDirectAdapter(EmailAdapter):
                 if len(data) > 1 and isinstance(data[1], (bytes, bytearray)):
                     raw_bytes = bytes(data[1])
                 else:
+                    # Detecter "UID introuvable" : status OK mais data ne contient
+                    # que la ligne completion (ex: [b'UID FETCH completed']).
+                    # C'est une erreur NON-RETRYABLE — l'email a ete supprime/deplace
+                    # cote serveur entre le moment ou le fetcher l'a vu et le consumer.
+                    data_preview = [repr(d)[:100] for d in data[:5]]
+                    is_uid_not_found = (
+                        len(data) == 1
+                        and isinstance(data[0], (bytes, bytearray))
+                        and b"completed" in bytes(data[0])
+                    )
                     logger.error(
                         "imap_no_content_in_response",
                         account_id=account_id,
                         message_id=message_id,
                         data_types=[type(d).__name__ for d in data[:5]],
-                        data_preview=[repr(d)[:100] for d in data[:5]],
+                        data_preview=data_preview,
+                        uid_not_found=is_uid_not_found,
                     )
+                    if is_uid_not_found:
+                        raise IMAPUIDNotFoundError(
+                            f"UID {message_id} not found in INBOX for {account_id} "
+                            f"(email likely moved/deleted server-side)"
+                        )
                     raise EmailAdapterError(
                         f"No email content found in IMAP response for {account_id}/{message_id}"
                     )
@@ -450,9 +478,10 @@ class IMAPDirectAdapter(EmailAdapter):
             )
             await imap.wait_hello_from_server()
             await imap.login(account["imap_user"], account["imap_password"])
+            # SELECT INBOX (BODY.PEEK[] empêche le marquage \Seen)
             await imap.select("INBOX")
 
-            # Fetch la partie specifique (PEEK pour ne pas marquer \Seen)
+            # Fetch la partie specifique (PEEK = ne marque PAS \Seen)
             status, data = await imap.uid(
                 "fetch", message_id, f"(BODY.PEEK[{part_id}])"
             )

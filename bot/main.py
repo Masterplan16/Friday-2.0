@@ -212,6 +212,11 @@ class FridayBot:
             register_callbacks_handlers(self.application, db_pool, action_executor=action_executor)
             register_corrections_handlers(self.application, db_pool)
             logger.info("Story 1.10 callback handlers registered with ActionExecutor")
+
+            # Story 7.1 - Event callbacks (AC3)
+            from bot.handlers.event_callbacks_register import register_event_callbacks_handlers
+            register_event_callbacks_handlers(self.application, db_pool)
+            logger.info("Story 7.1 event callback handlers registered")
         else:
             logger.warning("db_pool not available, callback handlers not registered")
 

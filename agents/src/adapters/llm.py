@@ -252,13 +252,16 @@ class ClaudeAdapter:
 
 # Factory helper
 def get_llm_adapter(
-    provider: str = "anthropic", anonymize_by_default: bool = True
+    provider: str = "anthropic",
+    model: Optional[str] = None,
+    anonymize_by_default: bool = True,
 ) -> ClaudeAdapter:
     """
     Factory pour créer un adapter LLM.
 
     Args:
         provider: Provider LLM (seul 'anthropic' supporté Day 1)
+        model: Modèle Claude spécifique (défaut: claude-sonnet-4-5-20250929)
         anonymize_by_default: Force anonymisation (DOIT rester True en prod)
 
     Returns:
@@ -273,4 +276,8 @@ def get_llm_adapter(
             f"Seul 'anthropic' (Claude Sonnet 4.5) disponible Day 1."
         )
 
-    return ClaudeAdapter(anonymize_by_default=anonymize_by_default)
+    kwargs: dict = {"anonymize_by_default": anonymize_by_default}
+    if model:
+        kwargs["model"] = model
+
+    return ClaudeAdapter(**kwargs)

@@ -13,6 +13,7 @@ import json
 import os
 import re
 import sys
+import uuid as uuid_mod
 
 import asyncpg
 import structlog
@@ -86,12 +87,21 @@ class CorrectionsHandler:
 
         # Story 2.2 AC5: Charger receipt pour déterminer module/action
         try:
+            # Conversion str→UUID pour asyncpg (colonne UUID)
+            try:
+                receipt_uuid = uuid_mod.UUID(receipt_id)
+            except ValueError:
+                await query.message.reply_text(
+                    f"Format receipt_id invalide: {receipt_id[:8]}..."
+                )
+                return
+
             async with self.db_pool.acquire() as conn:
                 row = await conn.fetchrow(
                     "SELECT id, module, action_type, input_summary, output_summary "
                     "FROM core.action_receipts "
                     "WHERE id = $1",
-                    receipt_id,
+                    receipt_uuid,
                 )
 
             if not row:
@@ -146,7 +156,9 @@ class CorrectionsHandler:
         for i in range(0, len(categories), 2):
             row_buttons = []
             for cat_key, cat_label in categories[i:i + 2]:
-                callback_data = f"correct_email_cat_{cat_key}_{receipt_id}"
+                # Prefix court "cc_" pour rester sous 64 bytes Telegram
+                # (ancien "correct_email_cat_" depassait avec universite/recherche)
+                callback_data = f"cc_{cat_key}_{receipt_id}"
                 row_buttons.append(
                     InlineKeyboardButton(cat_label, callback_data=callback_data)
                 )
@@ -184,14 +196,14 @@ class CorrectionsHandler:
         query = update.callback_query
         await query.answer()
 
-        # Parse callback_data: "correct_email_cat_{category}_{receipt_id}"
+        # Parse callback_data: "cc_{category}_{receipt_id}"
         parts = query.data.split("_")
-        if len(parts) < 5:
+        if len(parts) < 3:
             logger.error("Invalid callback_data format", data=query.data)
             return
 
-        new_category = parts[3]  # "correct_email_cat_finance_..." → "finance"
-        receipt_id = "_".join(parts[4:])  # Rejoindre au cas où receipt_id contient "_"
+        new_category = parts[1]  # "cc_finance_..." → "finance"
+        receipt_id = "_".join(parts[2:])  # Rejoindre au cas où receipt_id contient "_"
 
         logger.info(
             "Correction catégorie email reçue",
@@ -201,13 +213,20 @@ class CorrectionsHandler:
         )
 
         try:
+            # Conversion str→UUID pour asyncpg
+            try:
+                receipt_uuid = uuid_mod.UUID(receipt_id)
+            except ValueError:
+                await query.answer("Receipt ID invalide", show_alert=True)
+                return
+
             async with self.db_pool.acquire() as conn:
                 # Charger receipt pour extraire catégorie originale
                 row = await conn.fetchrow(
                     "SELECT id, module, action_type, output_summary "
                     "FROM core.action_receipts "
                     "WHERE id = $1",
-                    receipt_id,
+                    receipt_uuid,
                 )
 
                 if not row:
@@ -237,7 +256,7 @@ class CorrectionsHandler:
                     """,
                     correction_json,
                     f"Email reclassified by owner: {original_category} → {new_category}",
-                    receipt_id,
+                    receipt_uuid,
                 )
 
             # Confirmer à owner (AC5)
@@ -355,6 +374,8 @@ class CorrectionsHandler:
                 anonymized_correction = correction_text
 
             # Mettre à jour receipt dans BDD (AC2)
+            # Conversion str→UUID pour asyncpg
+            receipt_uuid = uuid_mod.UUID(receipt_id)
             async with self.db_pool.acquire() as conn:
                 result = await conn.execute(
                     """
@@ -367,7 +388,7 @@ class CorrectionsHandler:
                     """,
                     anonymized_correction,  # HIGH-2 fix: anonymized
                     f"Corrected by owner (user_id={user_id})",
-                    receipt_id,
+                    receipt_uuid,
                 )
 
                 # Vérifier que l'UPDATE a réussi
@@ -427,10 +448,11 @@ def register_corrections_handlers(application, db_pool: asyncpg.Pool) -> Correct
     )
 
     # Story 2.2 AC5: Handler sélection catégorie email
+    # Pattern "cc_" = prefix court pour rester sous 64 bytes Telegram
     application.add_handler(
         CallbackQueryHandler(
             handler.handle_category_correction,
-            pattern=r"^correct_email_cat_[a-z_]+_[a-f0-9\-]+$",
+            pattern=r"^cc_[a-z_]+_[a-f0-9\-]+$",
         )
     )
 

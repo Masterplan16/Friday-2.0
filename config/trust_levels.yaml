@@ -34,7 +34,7 @@ ecos_generator:
   generate_grading_grid: propose
   generate_station: propose
 email:
-  classify: propose
+  classify: auto
   draft_reply: blocked
   extract_attachments: auto
   extract_tasks: propose
@@ -72,7 +72,7 @@ menus:
   generate_shopping_list: propose
 modules:
   email:
-    classify: propose
+    classify: auto
   finance:
     classify_transaction: blocked
 photos:

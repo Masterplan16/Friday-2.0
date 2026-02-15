@@ -195,6 +195,9 @@ class IMAPAccountWatcher:
             cert_path = Path("/app/config/certs/protonmail_bridge.pem")
             if cert_path.exists():
                 ssl_context.load_verify_locations(cafile=str(cert_path))
+                # Désactiver vérification hostname car certificat émis pour 127.0.0.1
+                # mais connexion via Tailscale (100.100.4.31)
+                ssl_context.check_hostname = False
                 logger.info(
                     "ssl_cert_loaded",
                     account_id=self.account_id,
@@ -299,7 +302,7 @@ class IMAPAccountWatcher:
         """
         try:
             # Chercher messages UNSEEN
-            status, data = await self._imap.search("UNSEEN")
+            status, data = await self._imap.uid("search", "UNSEEN")
             if status != "OK":
                 logger.warning(
                     "imap_search_failed",
@@ -353,28 +356,19 @@ class IMAPAccountWatcher:
 
     async def _process_email(self, uid: str):
         """
-        Fetch un email, anonymise, publie dans Redis Streams.
-
-        Stratégie progressive (du simple au complet) :
-        1. Headers only: BODY.PEEK[HEADER]
-        2. Headers + body preview: BODY.PEEK[HEADER] + BODY.PEEK[]<0.2000>
-        3. Full: + BODYSTRUCTURE pour détection PJ
-
+        Fetch un email complet (headers + body), anonymise, publie dans Redis Streams.
         Format RedisEmailEvent identique a l'ancien webhook EmailEngine.
         """
         from_header = "unknown"
         subject = "(no subject)"
         date_str = datetime.utcnow().isoformat()
-        body_preview = ""
+        body_text = ""
         has_attachments = False
-        fetch_level = "headers_only"
 
-        # Essayer headers seulement (minimal, très compatible)
+        # Fetch email complet (headers + body, sans marquer lu)
         try:
-            # aioimaplib uid() retourne tuple (status, data)
-            result = await self._imap.uid("fetch", uid, "(BODY.PEEK[HEADER])")
+            result = await self._imap.uid("fetch", uid, "(BODY.PEEK[])")
 
-            # Vérifier si c'est un tuple ou un objet Response
             if isinstance(result, tuple):
                 status, data = result
             else:
@@ -382,51 +376,57 @@ class IMAPAccountWatcher:
                 data = result.lines
 
             if status != "OK" or not data:
-                raise Exception(f"Headers fetch failed: status={status}, has_data={bool(data)}")
+                raise Exception(f"Email fetch failed: status={status}, has_data={bool(data)}")
 
-            # DEBUG: Logger la structure de data
-            logger.debug(
-                "imap_fetch_response_structure",
-                account_id=self.account_id,
-                uid=uid,
-                data_type=type(data).__name__,
-                data_len=len(data) if data else 0,
-                first_item_type=type(data[0]).__name__ if data and len(data) > 0 else "none",
-            )
-
-            # Parser headers depuis data
-            headers_raw = None
+            # Parser les données brutes de la réponse aioimaplib
+            # Gère bytes et bytearray (ProtonMail Bridge retourne parfois bytearray)
+            raw_email = None
             for item in data:
                 if isinstance(item, tuple) and len(item) >= 2:
-                    # item = (b'123 (BODY[HEADER] ...)', b'<header content>')
-                    headers_raw = item[1] if isinstance(item[1], bytes) else None
-                    break
-                elif isinstance(item, bytes):
-                    # Peut-être que data est juste [b'headers...']
-                    headers_raw = item
+                    candidate = item[1]
+                    if isinstance(candidate, (bytes, bytearray)):
+                        raw_email = bytes(candidate)
+                        break
+                elif isinstance(item, (bytes, bytearray)):
+                    item_bytes = bytes(item)
+                    # Ignorer lignes de status IMAP
+                    if item_bytes.strip() == b')' or b'FETCH' in item_bytes or b'completed' in item_bytes:
+                        continue
+                    raw_email = item_bytes
                     break
 
-            if not headers_raw:
-                logger.error(
-                    "no_headers_debug",
-                    account_id=self.account_id,
-                    uid=uid,
-                    data_repr=repr(data)[:500] if data else "none",
-                )
-                raise Exception("No headers found in response")
+            if not raw_email:
+                if len(data) > 1 and isinstance(data[1], (bytes, bytearray)):
+                    raw_email = bytes(data[1])
+                else:
+                    logger.error(
+                        "no_email_content",
+                        account_id=self.account_id,
+                        uid=uid,
+                        data_repr=repr(data)[:500] if data else "none",
+                    )
+                    raise Exception("No email content found in response")
 
-            # Parser avec email.message
-            msg = email_lib.message_from_bytes(headers_raw)
+            # Parser email complet avec email.message
+            msg = email_lib.message_from_bytes(raw_email)
             from_header = msg.get("From", "unknown")
             subject = msg.get("Subject", "(no subject)")
             date_str = msg.get("Date", datetime.utcnow().isoformat())
 
+            # Extraire body text
+            body_text = self._extract_body_text(msg)
+
+            # Détecter pièces jointes
+            has_attachments = self._has_attachments(msg)
+
             logger.info(
-                "email_fetched_headers_only",
+                "email_fetched",
                 account_id=self.account_id,
                 uid=uid,
                 from_preview=from_header[:50],
                 subject_preview=subject[:50],
+                body_length=len(body_text),
+                has_attachments=has_attachments,
             )
 
         except Exception as e:
@@ -439,6 +439,9 @@ class IMAPAccountWatcher:
             )
             # Skip cet email - ne pas bloquer toute la queue
             return
+
+        # Tronquer body pour le stream (max 2000 chars)
+        body_preview = body_text[:2000] if body_text else ""
 
         # Anonymiser via Presidio (RGPD obligatoire avant envoi cloud)
         try:
@@ -475,7 +478,6 @@ class IMAPAccountWatcher:
                 account_id=self.account_id,
                 uid=uid,
                 event_id=event_id,
-                fetch_level=fetch_level,
             )
         except Exception as e:
             logger.critical(
@@ -485,6 +487,43 @@ class IMAPAccountWatcher:
                 error=str(e),
             )
             raise  # Critical - on doit retry
+
+    def _extract_body_text(self, msg) -> str:
+        """Extrait le texte brut d'un email (multipart ou simple)."""
+        if msg.is_multipart():
+            # Chercher text/plain d'abord
+            for part in msg.walk():
+                content_type = part.get_content_type()
+                content_disposition = str(part.get("Content-Disposition", ""))
+                if content_type == "text/plain" and "attachment" not in content_disposition:
+                    payload = part.get_payload(decode=True)
+                    if payload:
+                        charset = part.get_content_charset() or "utf-8"
+                        return payload.decode(charset, errors="replace")
+            # Fallback: text/html
+            for part in msg.walk():
+                if part.get_content_type() == "text/html":
+                    payload = part.get_payload(decode=True)
+                    if payload:
+                        charset = part.get_content_charset() or "utf-8"
+                        return payload.decode(charset, errors="replace")
+        else:
+            payload = msg.get_payload(decode=True)
+            if payload:
+                charset = msg.get_content_charset() or "utf-8"
+                return payload.decode(charset, errors="replace")
+        return ""
+
+    @staticmethod
+    def _has_attachments(msg) -> bool:
+        """Detecte si l'email a des pieces jointes."""
+        if not msg.is_multipart():
+            return False
+        for part in msg.walk():
+            content_disposition = str(part.get("Content-Disposition", ""))
+            if "attachment" in content_disposition:
+                return True
+        return False
 
     def stop(self):
         """Arret propre."""

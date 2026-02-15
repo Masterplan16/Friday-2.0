@@ -843,7 +843,7 @@ class EmailProcessorConsumer:
         category: str,
         confidence: float,
         priority: str,
-        received_at: str,
+        received_at: Optional[str],
         has_attachments: bool,
         # Données raw pour stockage chiffré
         from_raw: str,
@@ -883,7 +883,7 @@ class EmailProcessorConsumer:
                 category,
                 confidence,
                 priority,
-                datetime.fromisoformat(received_at.replace('Z', '+00:00')),
+                datetime.fromisoformat(received_at.replace('Z', '+00:00')) if received_at else datetime.utcnow(),
                 has_attachments
             )
 

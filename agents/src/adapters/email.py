@@ -258,12 +258,36 @@ class IMAPDirectAdapter(EmailAdapter):
         """Fetch email complet via IMAP FETCH."""
         try:
             import aioimaplib
+            import ssl
+            from pathlib import Path
 
             account = self._get_account(account_id)
+
+            # Créer contexte SSL personnalisé pour ProtonMail Bridge (comme fetcher)
+            ssl_context = None
+            if "protonmail" in account_id.lower():
+                ssl_context = ssl.create_default_context()
+                cert_path = Path("/app/config/certs/protonmail_bridge.pem")
+                if cert_path.exists():
+                    ssl_context.load_verify_locations(cafile=str(cert_path))
+                    # Désactiver vérification hostname (certificat 127.0.0.1 vs Tailscale IP)
+                    ssl_context.check_hostname = False
+                    logger.info(
+                        "ssl_cert_loaded",
+                        account_id=account_id,
+                        cert_path=str(cert_path),
+                    )
+                else:
+                    logger.warning(
+                        "ssl_cert_missing",
+                        account_id=account_id,
+                        cert_path=str(cert_path),
+                    )
 
             imap = aioimaplib.IMAP4_SSL(
                 host=account["imap_host"],
                 port=account["imap_port"],
+                ssl_context=ssl_context,
             )
             await imap.wait_hello_from_server()
             await imap.login(account["imap_user"], account["imap_password"])
@@ -274,15 +298,48 @@ class IMAPDirectAdapter(EmailAdapter):
                 "fetch", message_id, "(RFC822)"
             )
 
-            if status != "OK" or not data or not data[0]:
+            if status != "OK" or not data:
                 raise EmailAdapterError(
                     f"IMAP fetch failed for {account_id}/{message_id}: {status}"
                 )
 
             # Parser le message RFC822
-            raw_bytes = data[0]
-            if isinstance(raw_bytes, tuple):
-                raw_bytes = raw_bytes[1]
+            # aioimaplib retourne data sous forme de liste:
+            # - data[0] = bytes header IMAP (ex: b'6117 FETCH (RFC822 {12365}')
+            # - data[1] = bytearray contenu email brut (NOTE: bytearray, pas bytes!)
+            # - data[2] = bytes ')' (fin)
+            # - data[3] = bytes 'UID FETCH completed'
+            raw_bytes = None
+            for item in data:
+                if isinstance(item, tuple) and len(item) >= 2:
+                    # Format tuple: (b'header...', b'content...')
+                    candidate = item[1] if isinstance(item[1], (bytes, bytearray)) else None
+                    if candidate:
+                        raw_bytes = bytes(candidate)
+                        break
+                elif isinstance(item, (bytes, bytearray)):
+                    item_bytes = bytes(item)
+                    # Ignorer les lignes de status IMAP
+                    if item_bytes.strip() == b')' or b'FETCH' in item_bytes or b'completed' in item_bytes:
+                        continue
+                    raw_bytes = item_bytes
+                    break
+
+            if not raw_bytes:
+                # Fallback: data[1] est souvent le contenu (bytearray)
+                if len(data) > 1 and isinstance(data[1], (bytes, bytearray)):
+                    raw_bytes = bytes(data[1])
+                else:
+                    logger.error(
+                        "imap_no_content_in_response",
+                        account_id=account_id,
+                        message_id=message_id,
+                        data_types=[type(d).__name__ for d in data[:5]],
+                        data_preview=[repr(d)[:100] for d in data[:5]],
+                    )
+                    raise EmailAdapterError(
+                        f"No email content found in IMAP response for {account_id}/{message_id}"
+                    )
 
             msg = email.message_from_bytes(raw_bytes)
 
@@ -399,14 +456,33 @@ class IMAPDirectAdapter(EmailAdapter):
                 "fetch", message_id, f"(BODY[{part_id}])"
             )
 
-            if status != "OK" or not data or not data[0]:
+            if status != "OK" or not data:
                 raise EmailAdapterError(
                     f"IMAP attachment fetch failed: {status}"
                 )
 
-            raw_bytes = data[0]
-            if isinstance(raw_bytes, tuple):
-                raw_bytes = raw_bytes[1]
+            # Parser response aioimaplib (meme logique que get_message)
+            raw_bytes = None
+            for item in data:
+                if isinstance(item, tuple) and len(item) >= 2:
+                    candidate = item[1] if isinstance(item[1], (bytes, bytearray)) else None
+                    if candidate:
+                        raw_bytes = bytes(candidate)
+                        break
+                elif isinstance(item, (bytes, bytearray)):
+                    item_bytes = bytes(item)
+                    if item_bytes.strip() == b')' or b'FETCH' in item_bytes or b'completed' in item_bytes:
+                        continue
+                    raw_bytes = item_bytes
+                    break
+
+            if not raw_bytes and len(data) > 1 and isinstance(data[1], (bytes, bytearray)):
+                raw_bytes = bytes(data[1])
+
+            if not raw_bytes:
+                raise EmailAdapterError(
+                    f"No attachment content in IMAP response"
+                )
 
             await imap.logout()
             return raw_bytes

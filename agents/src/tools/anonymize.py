@@ -148,44 +148,45 @@ async def anonymize_text(
 
     entities_to_detect = entities or FRENCH_ENTITIES
 
+    print(f"[DEBUG] anonymize_text called, text_length={len(text)}", flush=True)
+
     client = None
     try:
+        print("[DEBUG] Creating HTTP client...", flush=True)
         # Create new client for this request
         client = _get_http_client()
+        print(f"[DEBUG] HTTP client created: {client}", flush=True)
 
         # DEBUG: Test connection first
+        print("[DEBUG] Testing Presidio connection...", flush=True)
         try:
             import socket
             # Parse URL to get host and port
             host = PRESIDIO_ANALYZER_URL.split("://")[1].split(":")[0]
             port = 3000
 
+            print(f"[DEBUG] Resolving DNS for {host}...", flush=True)
             # Resolve DNS
             ip = socket.gethostbyname(host)
-            logger.info("presidio_dns_resolved", host=host, ip=ip)
+            print(f"[DEBUG] DNS resolved: {host} -> {ip}", flush=True)
 
             # Test TCP connection
+            print(f"[DEBUG] Testing TCP connection to {ip}:{port}...", flush=True)
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.settimeout(5)
             result = sock.connect_ex((ip, port))
             sock.close()
-            logger.info("presidio_tcp_test", ip=ip, port=port, result=result, connected=(result == 0))
+            print(f"[DEBUG] TCP test result: {result} (0=success)", flush=True)
         except Exception as conn_test_error:
-            logger.warning("presidio_connection_test_failed", error=str(conn_test_error))
+            print(f"[DEBUG] Connection test failed: {conn_test_error}", flush=True)
 
         # DEBUG: Log connection attempt details
         analyzer_url = f"{PRESIDIO_ANALYZER_URL}/analyze"
-        logger.info(
-            "presidio_analyze_attempt",
-            url=analyzer_url,
-            text_length=len(text),
-            language=language,
-            entities=entities_to_detect,
-            timeout=PRESIDIO_TIMEOUT,
-        )
+        print(f"[DEBUG] About to POST to {analyzer_url}...", flush=True)
 
         # 1. Analyse: détection entités sensibles
         try:
+            print("[DEBUG] Calling client.post()...", flush=True)
             analyze_response = await client.post(
                 analyzer_url,
                 json={
@@ -194,17 +195,11 @@ async def anonymize_text(
                     "entities": entities_to_detect,
                 },
             )
-            logger.info("presidio_analyze_response", status_code=analyze_response.status_code)
+            print(f"[DEBUG] POST response: {analyze_response.status_code}", flush=True)
             analyze_response.raise_for_status()
             entities_found = analyze_response.json()
         except Exception as analyze_error:
-            logger.error(
-                "presidio_analyze_failed",
-                error=str(analyze_error),
-                error_type=type(analyze_error).__name__,
-                url=analyzer_url,
-                exc_info=True,
-            )
+            print(f"[DEBUG] POST failed: {type(analyze_error).__name__}: {analyze_error}", flush=True)
             raise
 
         if not entities_found:

@@ -16,7 +16,7 @@ creation_rules:
     age: age17zcpkgjxdyk6g34anhymukncq49dtf6k4f3vgp5fchsv04a8quzq7rjn8t  # Clé publique mainteneur
 
   # Fichiers .env.test (pour tests E2E)
-  - path_regex: \.env\.(test|dec)$
+  - path_regex: \.env\.(test|dec|decrypted)$
     age: age17zcpkgjxdyk6g34anhymukncq49dtf6k4f3vgp5fchsv04a8quzq7rjn8t  # Clé publique mainteneur
 
   # Fichiers .env chiffrés (pour édition in-place)

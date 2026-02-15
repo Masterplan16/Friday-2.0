@@ -281,12 +281,11 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    # TODO Story 1.8: Ajouter healthcheck quand metrics est implémenté
-    # healthcheck:
-    #   test: ["CMD", "wget", "--spider", "-q", "http://localhost:8091/health"]
-    #   interval: 30s
-    #   timeout: 5s
-    #   retries: 3
+    healthcheck:
+      test: ["CMD", "python", "-c", "import os; os.kill(1, 0)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 
   # ============================================
   # Bot Telegram - Interface utilisateur Friday

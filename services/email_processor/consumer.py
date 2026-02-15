@@ -533,6 +533,7 @@ class EmailProcessorConsumer:
                 from_anon=from_anon,
                 subject_anon=subject_anon,
                 category=category,
+                received_at=date_str,
                 is_urgent=is_urgent,
                 urgency_reasoning=urgency_result.reasoning if is_urgent else None
             )
@@ -927,6 +928,7 @@ class EmailProcessorConsumer:
         from_anon: str,
         subject_anon: str,
         category: str,
+        received_at: Optional[str] = None,
         is_urgent: bool = False,
         urgency_reasoning: Optional[str] = None
     ):
@@ -953,11 +955,21 @@ class EmailProcessorConsumer:
 
         try:
             # Format message notification (sans emojis)
+            # Formater date lisible
+            date_display = ""
+            if received_at:
+                try:
+                    dt = self._parse_email_date(received_at)
+                    date_display = dt.strftime("%d/%m/%Y %H:%M")
+                except Exception:
+                    date_display = received_at[:16] if len(received_at) > 16 else received_at
+
             if is_urgent:
                 notification_text = (
                     f"EMAIL URGENT detecte\n\n"
                     f"Sujet : {subject_anon}\n"
                     f"De : {from_anon}\n"
+                    f"Date : {date_display}\n"
                     f"Categorie : {category}\n"
                     f"Compte : {account_id}\n\n"
                     f"Raison urgence : {urgency_reasoning}"
@@ -966,6 +978,7 @@ class EmailProcessorConsumer:
                 notification_text = (
                     f"Nouvel email : {subject_anon}\n"
                     f"De : {from_anon}\n"
+                    f"Date : {date_display}\n"
                     f"Categorie : {category}\n"
                     f"Compte : {account_id}"
                 )

@@ -265,11 +265,14 @@ services:
     restart: unless-stopped
     environment:
       - POSTGRES_DSN=postgresql://${POSTGRES_USER:-friday}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-friday}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-friday}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-friday}
       - REDIS_URL=redis://friday_metrics:${REDIS_METRICS_PASSWORD}@redis:6379/0
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
       - CRON_SCHEDULE=${METRICS_CRON_SCHEDULE:-0 2 * * *}
+      - PYTHONPATH=/opt
     volumes:
       - ./services/metrics:/app:ro
+      - ./services:/opt/services:ro
     networks:
       friday-network:
         ipv4_address: 172.20.0.23
@@ -347,7 +350,7 @@ services:
     environment:
       # Database & Redis
       - DATABASE_URL=postgresql://${POSTGRES_USER:-friday}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-friday}
-      - REDIS_URL=redis://redis:6379/0
+      - REDIS_URL=redis://friday_email:${REDIS_EMAIL_PASSWORD}@redis:6379/0
       # Email adapter (D25: IMAP direct remplace EmailEngine)
       - EMAIL_PROVIDER=${EMAIL_PROVIDER:-imap_direct}
       # Encryption (pgcrypto pour emails raw)
@@ -429,7 +432,7 @@ services:
     restart: unless-stopped
     environment:
       # Redis (meme user que email-processor)
-      - REDIS_URL=redis://redis:6379/0
+      - REDIS_URL=redis://friday_email:${REDIS_EMAIL_PASSWORD}@redis:6379/0
       # IMAP accounts (4 comptes configures)
       - IMAP_ACCOUNT_GMAIL1_EMAIL=${IMAP_ACCOUNT_GMAIL1_EMAIL}
       - IMAP_ACCOUNT_GMAIL1_IMAP_HOST=${IMAP_ACCOUNT_GMAIL1_IMAP_HOST:-imap.gmail.com}

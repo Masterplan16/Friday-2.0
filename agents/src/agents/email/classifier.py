@@ -36,7 +36,7 @@ class EmailClassifierError(Exception):
     pass
 
 
-@friday_action(module="email", action="classify", trust_default="propose")
+@friday_action(module="email", action="classify", trust_default="auto")
 async def classify_email(
     email_id: str,
     email_text: str,
@@ -286,8 +286,18 @@ async def _call_claude_with_retry(
 
             response = llm_response.content
 
-            # Parse JSON response (L3 fix: Pydantic valide le JSON, pas besoin de check manuel)
+            # Parse JSON response (L3 fix: Pydantic valide le JSON)
+            # Strip markdown code blocks si Claude wrappe la reponse
             json_text = response.strip()
+            if json_text.startswith("```"):
+                # Retirer ```json\n...\n```
+                lines = json_text.split("\n")
+                # Retirer premiere ligne (```json) et derniere (```)
+                if lines[-1].strip() == "```":
+                    lines = lines[1:-1]
+                elif lines[0].startswith("```"):
+                    lines = lines[1:]
+                json_text = "\n".join(lines).strip()
             classification = EmailClassification.model_validate_json(json_text)
 
             logger.info(
@@ -361,6 +371,20 @@ async def _update_email_category(
         EmailClassifierError: Si UPDATE échoue
     """
     try:
+        # Verifier si email_id est un UUID valide
+        # Le consumer passe parfois un IMAP UID (ex: "6118") au lieu d'un UUID DB
+        # Dans ce cas, skip l'update (le consumer fait le store lui-meme)
+        import uuid as uuid_mod
+        try:
+            uuid_mod.UUID(email_id)
+        except ValueError:
+            logger.debug(
+                "email_update_skipped_not_uuid",
+                email_id=email_id,
+                message="email_id is not a valid UUID, skipping DB update (consumer handles store)",
+            )
+            return
+
         async with db_pool.acquire() as conn:
             result = await conn.execute(
                 """
@@ -376,8 +400,11 @@ async def _update_email_category(
             # Vérifier qu'au moins 1 ligne a été mise à jour
             rows_updated = int(result.split()[-1])
             if rows_updated == 0:
-                raise EmailClassifierError(
-                    f"Email {email_id} introuvable dans ingestion.emails"
+                logger.warning(
+                    "email_update_no_rows",
+                    email_id=email_id,
+                    category=category,
+                    message="Email not found for update, may not be stored yet",
                 )
 
             logger.debug(

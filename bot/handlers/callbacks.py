@@ -13,6 +13,7 @@ Security:
 
 import os
 import time
+import uuid as uuid_mod
 from typing import Optional
 
 import asyncpg
@@ -122,11 +123,16 @@ class CallbacksHandler:
 
     async def _load_and_lock_receipt(self, conn, receipt_id: str) -> dict | None:
         """Charge et verrouille un receipt par ID (BUG-1.10.2: race condition)."""
+        # Conversion str→UUID pour asyncpg
+        try:
+            receipt_uuid = uuid_mod.UUID(receipt_id)
+        except ValueError:
+            return None
         return await conn.fetchrow(
             "SELECT id, status, module, action_type, input_summary, output_summary "
             "FROM core.action_receipts "
             "WHERE id = $1 FOR UPDATE",
-            receipt_id,
+            receipt_uuid,
         )
 
     async def _notify_metrics_topic(self, context: ContextTypes.DEFAULT_TYPE, text: str) -> None:
@@ -227,9 +233,10 @@ class CallbacksHandler:
             else:
                 status_text = "Approuve"
 
+            # Pas de parse_mode: le texte original peut contenir des
+            # caracteres speciaux qui cassent le Markdown Telegram
             await query.edit_message_text(
-                original_text + f"\n\n{status_text}",
-                parse_mode="Markdown",
+                original_text + f"\n\n✅ {status_text}",
             )
 
             # 7. Notifier topic Metrics & Logs (AC2)
@@ -321,9 +328,10 @@ class CallbacksHandler:
             # 5. Editer message Telegram (AC5)
             original_text = query.message.text or ""
             await query.edit_message_reply_markup(reply_markup=None)
+            # Pas de parse_mode: le texte original peut contenir des
+            # caracteres speciaux qui cassent le Markdown Telegram
             await query.edit_message_text(
-                original_text + "\n\nRejete",
-                parse_mode="Markdown",
+                original_text + "\n\n❌ Rejete",
             )
 
             # 6. Notifier topic Metrics & Logs (AC3)

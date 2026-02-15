@@ -442,9 +442,9 @@ class IMAPAccountWatcher:
 
         # Anonymiser via Presidio (RGPD obligatoire avant envoi cloud)
         try:
-            from_anon = await anonymize_text(from_header)
-            subject_anon = await anonymize_text(subject)
-            body_preview_anon = await anonymize_text(body_preview) if body_preview else ""
+            from_anon = (await anonymize_text(from_header)).anonymized_text
+            subject_anon = (await anonymize_text(subject)).anonymized_text
+            body_preview_anon = (await anonymize_text(body_preview)).anonymized_text if body_preview else ""
         except Exception as e:
             logger.error(
                 "presidio_anonymization_failed",

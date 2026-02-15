@@ -418,6 +418,19 @@ class IMAPAccountWatcher:
             if status != "OK" or not data:
                 raise Exception(f"Email fetch failed: status={status}, has_data={bool(data)}")
 
+            # Detection UID invalide : serveur retourne OK mais data = [b'UID FETCH completed']
+            # (email supprime/deplace cote serveur). Return sans raise = marque vu dans Redis.
+            if len(data) == 1 and isinstance(data[0], (bytes, bytearray)):
+                item_check = bytes(data[0]).lower()
+                if b"completed" in item_check or b"fetch" in item_check:
+                    logger.warning(
+                        "imap_uid_not_found_skipping",
+                        account_id=self.account_id,
+                        uid=uid,
+                        data_preview=bytes(data[0])[:100].decode("utf-8", errors="replace"),
+                    )
+                    return  # Return (pas raise) → UID sera marque vu → pas de retry inutile
+
             # Parser les données brutes de la réponse aioimaplib
             # Gère bytes et bytearray (ProtonMail Bridge retourne parfois bytearray)
             raw_email = None
@@ -657,10 +670,20 @@ class IMAPFetcherDaemon:
             await self._redis.close()
 
     async def _healthcheck_loop(self):
-        """Touch fichier healthcheck toutes les 30s."""
+        """Touch fichier healthcheck + Redis heartbeat toutes les 30s."""
         while self._running:
             try:
                 Path(HEALTHCHECK_FILE).touch()
+            except Exception:
+                pass
+            # Redis heartbeat pour monitoring depuis le bot container
+            try:
+                if self._redis:
+                    await self._redis.set(
+                        "heartbeat:imap-fetcher",
+                        str(int(time.time())),
+                        ex=90,  # expire apres 90s (3x interval)
+                    )
             except Exception:
                 pass
             await asyncio.sleep(HEALTHCHECK_INTERVAL)

@@ -2,11 +2,15 @@
 """
 Friday 2.0 - Email Pipeline Health Monitor
 
-Vérifie l'état de tous les composants du pipeline email :
-- IMAP Fetcher (4 comptes)
-- Presidio (Analyzer + Anonymizer)
-- Redis Stream
-- Consumer
+Verifie l'etat de tous les composants du pipeline email :
+- IMAP Fetcher (4 comptes) — via Redis heartbeat
+- Presidio (Analyzer + Anonymizer) — via HTTP /health
+- Redis Stream — via XPENDING
+- Consumer — via Redis heartbeat
+
+Les checks IMAP Fetcher et Consumer utilisent des cles Redis heartbeat
+(posees par chaque service) au lieu de `docker inspect`, car ce monitor
+tourne dans le container friday-bot qui n'a pas le binaire Docker.
 
 Usage:
     from services.email_healthcheck.monitor import check_email_pipeline_health
@@ -16,11 +20,13 @@ Usage:
 """
 
 import asyncio
-from dataclasses import dataclass
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional
+import os
+import time
+from datetime import datetime
+from typing import Dict, List
 
 import httpx
+import redis.asyncio as aioredis
 from pydantic import BaseModel
 
 
@@ -34,7 +40,7 @@ class ServiceStatus(BaseModel):
 
 
 class PipelineHealth(BaseModel):
-    """État global du pipeline email."""
+    """Etat global du pipeline email."""
     overall_status: str  # "healthy", "degraded", "down"
     services: List[ServiceStatus]
     alerts: List[str] = []
@@ -42,32 +48,53 @@ class PipelineHealth(BaseModel):
     checked_at: datetime = datetime.now()
 
 
+# Redis client partage pour eviter ouverture/fermeture repetees
+_redis_client: aioredis.Redis | None = None
+
+
+async def _get_redis() -> aioredis.Redis:
+    """Retourne un client Redis partage (lazy init)."""
+    global _redis_client
+    if _redis_client is None:
+        redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+        _redis_client = await aioredis.from_url(redis_url, decode_responses=True)
+    return _redis_client
+
+
 async def check_imap_fetcher() -> ServiceStatus:
     """
-    Vérifie le statut du IMAP fetcher.
+    Verifie le statut du IMAP fetcher via Redis heartbeat.
 
-    Méthode: Check les logs Docker pour détecter les erreurs récentes.
+    Le fetcher ecrit `heartbeat:imap-fetcher` (TTL 90s) toutes les 30s.
+    Si la cle existe, le fetcher est vivant.
     """
     try:
-        # TODO: Remplacer par appel à une API de monitoring ou check Redis
-        # Pour l'instant, on simule avec un check basique
+        r = await _get_redis()
+        heartbeat_ts = await r.get("heartbeat:imap-fetcher")
 
-        # Dans la vraie implémentation, on devrait :
-        # 1. Vérifier que le container tourne
-        # 2. Parser les logs pour voir la dernière fetch par compte
-        # 3. Détecter les erreurs de connexion
-
-        return ServiceStatus(
-            name="IMAP Fetcher",
-            status="healthy",
-            message="4 comptes configurés",
-            details={
-                "gmail1": "connected",
-                "gmail2": "connected",
-                "proton": "timeout (ProtonMail Bridge)",
-                "universite": "connected"
-            }
-        )
+        if heartbeat_ts is not None:
+            age = int(time.time()) - int(heartbeat_ts)
+            if age < 120:
+                return ServiceStatus(
+                    name="IMAP Fetcher",
+                    status="healthy",
+                    message=f"4 comptes actifs (heartbeat {age}s)",
+                    details={"heartbeat_age_s": age}
+                )
+            else:
+                return ServiceStatus(
+                    name="IMAP Fetcher",
+                    status="degraded",
+                    message=f"Heartbeat stale ({age}s)",
+                    details={"heartbeat_age_s": age}
+                )
+        else:
+            return ServiceStatus(
+                name="IMAP Fetcher",
+                status="down",
+                message="Pas de heartbeat Redis",
+                details={}
+            )
     except Exception as e:
         return ServiceStatus(
             name="IMAP Fetcher",
@@ -79,9 +106,9 @@ async def check_imap_fetcher() -> ServiceStatus:
 
 async def check_presidio() -> ServiceStatus:
     """
-    Vérifie le statut de Presidio (Analyzer + Anonymizer).
+    Verifie le statut de Presidio (Analyzer + Anonymizer).
 
-    Méthode: Appel aux endpoints /health de chaque service.
+    Methode: Appel aux endpoints /health de chaque service.
     """
     try:
         async with httpx.AsyncClient(timeout=5) as client:
@@ -94,14 +121,14 @@ async def check_presidio() -> ServiceStatus:
             anonymizer_ok = anonymizer_resp.status_code == 200
 
             if analyzer_ok and anonymizer_ok:
-                # Vérifier que le modèle FR est chargé
+                # Verifier que le modele FR est charge
                 entities_resp = await client.get("http://presidio-analyzer:3000/supportedentities?language=fr")
                 entities_ok = entities_resp.status_code == 200
 
                 return ServiceStatus(
                     name="Presidio",
                     status="healthy",
-                    message="Analyzer + Anonymizer opérationnels (FR+EN)",
+                    message="Analyzer + Anonymizer operationnels (FR+EN)",
                     details={
                         "analyzer": "OK",
                         "anonymizer": "OK",
@@ -137,37 +164,44 @@ async def check_presidio() -> ServiceStatus:
 
 async def check_redis_stream() -> ServiceStatus:
     """
-    Vérifie l'état du Redis Stream emails:received.
+    Verifie l'etat du Redis Stream emails:received.
 
-    Méthode: Connect à Redis et check XLEN.
+    Methode: XPENDING pour verifier le consumer group.
     """
     try:
-        # TODO: Utiliser redis-py async pour se connecter
-        # Pour l'instant, on simule
+        r = await _get_redis()
+        await r.ping()
 
-        # Dans la vraie implémentation :
-        # import redis.asyncio as redis
-        # r = await redis.from_url("redis://friday-redis:6379")
-        # length = await r.xlen("emails:received")
+        stream_name = "emails:received"
+        group_name = "email-processor"
 
-        # Simulation avec valeur hardcodée (sera remplacé)
-        length = 189  # Valeur observée plus tôt
+        pending_info = await r.xpending(stream_name, group_name)
+        pending_count = pending_info.get('pending', 0) if pending_info else 0
 
-        if length < 100:
+        threshold = 100
+
+        if pending_count < threshold:
             return ServiceStatus(
                 name="Redis Stream",
                 status="healthy",
-                message=f"{length} emails en attente",
-                details={"pending": length, "threshold": 100}
+                message=f"{pending_count} emails en attente",
+                details={"pending": pending_count, "threshold": threshold}
             )
         else:
             return ServiceStatus(
                 name="Redis Stream",
                 status="degraded",
-                message=f"Backlog élevé: {length} emails",
-                details={"pending": length, "threshold": 100}
+                message=f"Backlog eleve: {pending_count} emails",
+                details={"pending": pending_count, "threshold": threshold}
             )
 
+    except aioredis.ConnectionError as e:
+        return ServiceStatus(
+            name="Redis Stream",
+            status="down",
+            message=f"Cannot connect to Redis: {e}",
+            details={}
+        )
     except Exception as e:
         return ServiceStatus(
             name="Redis Stream",
@@ -179,24 +213,37 @@ async def check_redis_stream() -> ServiceStatus:
 
 async def check_consumer() -> ServiceStatus:
     """
-    Vérifie que le consumer traite bien les emails.
+    Verifie que le consumer traite bien les emails via Redis heartbeat.
 
-    Méthode: Check si le container tourne et a des logs récents.
+    Le consumer ecrit `heartbeat:email-consumer` (TTL 30s) a chaque iteration.
     """
     try:
-        # TODO: Vérifier vraiment l'activité du consumer
-        # Méthodes possibles:
-        # 1. Check container health
-        # 2. Query PostgreSQL pour voir dernier email traité
-        # 3. Metric compteur dans Redis
+        r = await _get_redis()
+        heartbeat_ts = await r.get("heartbeat:email-consumer")
 
-        return ServiceStatus(
-            name="Email Consumer",
-            status="healthy",
-            message="Container running",
-            details={"container": "friday-email-processor", "status": "running"}
-        )
-
+        if heartbeat_ts is not None:
+            age = int(time.time()) - int(heartbeat_ts)
+            if age < 60:
+                return ServiceStatus(
+                    name="Email Consumer",
+                    status="healthy",
+                    message=f"Actif (heartbeat {age}s)",
+                    details={"heartbeat_age_s": age}
+                )
+            else:
+                return ServiceStatus(
+                    name="Email Consumer",
+                    status="degraded",
+                    message=f"Heartbeat stale ({age}s)",
+                    details={"heartbeat_age_s": age}
+                )
+        else:
+            return ServiceStatus(
+                name="Email Consumer",
+                status="down",
+                message="Pas de heartbeat Redis",
+                details={}
+            )
     except Exception as e:
         return ServiceStatus(
             name="Email Consumer",
@@ -208,12 +255,12 @@ async def check_consumer() -> ServiceStatus:
 
 async def check_email_pipeline_health() -> PipelineHealth:
     """
-    Vérifie l'état complet du pipeline email.
+    Verifie l'etat complet du pipeline email.
 
     Returns:
-        PipelineHealth avec status global + détails par service
+        PipelineHealth avec status global + details par service
     """
-    # Check tous les services en parallèle
+    # Check tous les services en parallele
     results = await asyncio.gather(
         check_imap_fetcher(),
         check_presidio(),
@@ -221,11 +268,10 @@ async def check_email_pipeline_health() -> PipelineHealth:
         check_consumer()
     )
 
-    # Analyser les résultats
     services = list(results)
     alerts = []
 
-    # Déterminer status global
+    # Determiner status global
     down_count = sum(1 for s in services if s.status == "down")
     degraded_count = sum(1 for s in services if s.status == "degraded")
 
@@ -236,18 +282,18 @@ async def check_email_pipeline_health() -> PipelineHealth:
     else:
         overall_status = "healthy"
 
-    # Générer alertes
+    # Generer alertes
     for service in services:
         if service.status == "down":
             alerts.append(f"🔴 {service.name}: {service.message}")
         elif service.status == "degraded":
             alerts.append(f"⚠️ {service.name}: {service.message}")
 
-    # Générer summary
+    # Generer summary
     if overall_status == "healthy":
-        summary = "✅ Pipeline email opérationnel"
+        summary = "✅ Pipeline email operationnel"
     elif overall_status == "degraded":
-        summary = f"⚠️ Pipeline dégradé ({degraded_count} problème(s))"
+        summary = f"⚠️ Pipeline degrade ({degraded_count} probleme(s))"
     else:
         summary = f"🔴 Pipeline en panne ({down_count} service(s) down)"
 
@@ -267,7 +313,7 @@ def format_status_message(health: PipelineHealth) -> str:
         health: PipelineHealth object
 
     Returns:
-        Message formaté pour Telegram
+        Message formate pour Telegram
     """
     lines = [
         "📊 **Friday Email Pipeline Status**",
@@ -281,7 +327,7 @@ def format_status_message(health: PipelineHealth) -> str:
         icon = "✅" if service.status == "healthy" else "⚠️" if service.status == "degraded" else "🔴"
         lines.append(f"{icon} **{service.name}**: {service.message}")
 
-        # Ajouter détails si pertinent
+        # Ajouter details si pertinent
         if service.details and service.status != "healthy":
             for key, value in service.details.items():
                 lines.append(f"  └ {key}: {value}")
@@ -293,6 +339,6 @@ def format_status_message(health: PipelineHealth) -> str:
             lines.append(alert)
 
     lines.append("")
-    lines.append(f"_Vérifié: {health.checked_at.strftime('%H:%M:%S')}_")
+    lines.append(f"_Verifie: {health.checked_at.strftime('%H:%M:%S')}_")
 
     return "\n".join(lines)

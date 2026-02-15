@@ -111,7 +111,7 @@ async def classify_email(
                 "category": classification.category,
                 "keywords": classification.keywords,
                 "suggested_priority": classification.suggested_priority,
-                "model": "claude-sonnet-4-5-20250929",
+                "model": "claude-haiku-4-5-20251001",
                 "latency_ms": round(latency_ms, 2),
                 "rules_applied_count": len(correction_rules),
             },
@@ -260,7 +260,7 @@ async def _call_claude_with_retry(
         - Backoff exponentiel : 1s, 2s, 4s
         - Si JSON parsing fail → retry 1x avec prompt ajusté
     """
-    llm_adapter: ClaudeAdapter = get_llm_adapter()  # H4 fix: Explicit type hint
+    llm_adapter: ClaudeAdapter = get_llm_adapter(model="claude-haiku-4-5-20251001")
     backoff_delays = [1, 2, 4]  # secondes
     start_time = time.time()  # M2 fix: Track latency
 

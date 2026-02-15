@@ -58,10 +58,9 @@ development_status:
   # PHASES DE PARALLÉLISME:
   # ═══════════════════════
   #
-  # PHASE 1 - MAINTENANT (Épics indépendants):
-  #   Epic 2 (Email)   ═══════════════ } EN PARALLÈLE
-  #   Epic 6 (Mémoire) ═══════════════ }
-  #   Durée estimée: 2-3 semaines (Epic 2=L, Epic 6=L, 6.1 déjà done)
+  # PHASE 1 - OK
+  #   Epic 2 (Email)   ═══════════════ } OK
+  #   Epic 6 (Mémoire) ═══════════════ } OK
   #
   # PHASE 2 - Après Epic 2 terminé (Dépendants de Epic 2):
   #   Epic 3 (Archiviste) ════════════ } EN PARALLÈLE (possible)
@@ -100,7 +99,7 @@ development_status:
   epic-1-retrospective: done  # 2026-02-11: Retrospective Epic 1 completee - 431 lignes, 17 stories analysees, learnings documentes
 
   # Epic 2: Pipeline Email Intelligent (7 stories | 10 FRs)
-  epic-2: in-progress
+  epic-2: done
   2-1-integration-imap-direct-reception: done  # [D25] Anciennement 2-1-integration-emailengine-reception. EmailEngine remplacé par IMAP direct (aioimaplib + aiosmtplib). 2026-02-11: CODE REVIEW COMPLETE - 17 issues fixes (6C+5H+4M+2L), 55/55 tests PASS. Consumer (retry backoff + DLQ + emails_raw chiffre + Telegram real). 7 AC valides, 30 fichiers (26+4 tests), docs 600+. Zero regressions.
   2-2-classification-email-llm: done  # 2026-02-11: CODE REVIEW COMPLETE ✅ - 15 issues fixés (3C+5H+4M+3L), 45/45 tests PASS + 7 skipped integration. Fixes: C1 RGPD anonymisation, C2 credentials warning, C3 race condition atomic UPDATE, H2 circuit breaker, H3 accuracy calculation, H4 type hints, H5 migration trigger validation, M1-M4 perf+logging+config+docs, L1-L3 imports+typo+optim. Claude Sonnet 4.5 classification, cold start tracking, 8 catégories, 21 fichiers créés (classifier, prompts, migration 026, tests), correction_rules injection, trust=propose Day 1.
   2-3-detection-vip-urgence: done  # 2026-02-11: CODE REVIEW ADVERSARIAL COMPLETE ✅ - 12 issues fixés (3C+3H+5M+1L). C1: Status ready-for-dev→done. C2: Tasks 5.1-5.3, 6.1-6.4, 4.4 marquées [x]. C3: File List complété (test_vip_urgency_pipeline_e2e.py). H1: DB pool refactoré (bot/main.py + vip_commands.py, anti-pattern connexions directes). H2: Test E2E latence VIP <5s créé (test_vip_notification_latency_e2e.py, AC3 validé). H3: Migration 029 CHECK constraint priority (urgent/high/normal). M1: Rate limiting 10/min ajouté (rate_limiter.py, protection DoS). M2: Tests vip_commands créés (6 tests). M3: Tests consumer VIP+urgency créés (5 tests). M4: Docs mises à jour (telegram-user-guide.md + README.md sections VIP). M5: Doc déplacée vers docs/ (vip-urgency-detection.md). L1: Subtask 4.4 SKIPPED marquée [x]. TOTAL: 75+ tests (69 existants + 6 M2 + 5 M3 + 3 H2). Code quality: EXCELLENT. Zero régression. 9 fichiers créés (migration 029, rate_limiter.py, 3 test files), 6 modifiés (story, bot/main.py, vip_commands.py, docs).
@@ -109,12 +108,12 @@ development_status:
   2-6-envoi-emails-approuves: done  # 2026-02-11: CODE REVIEW COMPLETE ✅ - 11 issues fixés (5M+6L), 18/18 tests Story 2.5 PASS (AC6 ✅). Envoi emails via EmailEngine. Notifications (Email+System topics), /journal email filter, /receipt Email Details. Code quality: structlog params, ACCOUNT_NAME_MAPPING constant, html.escape(), conftest.py PYTHONPATH. Docs: 650+ lignes (workflow+guide). File List complet. TODOs documentés (structlog M4, E2E infra). S (4-6h dev + 2h review). [Review completed 2026-02-11]
   2-7-extraction-taches-depuis-emails: done  # 2026-02-11: CODE REVIEW COMPLETE ✅ - 15 issues fixés (3C+5H+5M+2L). Extraction tâches emails Claude Sonnet 4.5 + Trust Layer propose + dual-topic notifications. 7 AC TOUS VALIDÉS ✅. 35 tests (17U extraction + 8U notifications + 6I + 4E2E) PASS ✅. Fixes: C1 callbacks pattern, C2 bot async, C3 API key validation, H1 email_id check, H2 date error handling, H3 topic IDs, H4 retry Claude NFR17, M1 logging sanitize, M2 rollback script, M3 prompt injection, M4 tests notifs, M5 notifications called. Few-shot 5 exemples, dates ISO 8601, priorité auto, RGPD Presidio. 16 fichiers (12 créés + 4 modifiés). Zero régression. PRODUCTION READY.
   2-8-filtrage-sender-intelligent-economie-tokens: done  # 2026-02-12: CODE REVIEW ADVERSARIAL COMPLETE ✅ - 11 issues fixés (3C+4H+3M+1L), 51/51 tests PASS (18 migration + 12 sender_filter + 13 commands + 5 intégration + 3 E2E). Fixes: C1 commandes non enregistrées bot/main.py, C2 OWNER_USER_ID fail-closed, C3 index unique partiel ON CONFLICT, H1 Redis event emails:filtered, H2 notification whitelist VIP, H3 tests intégration/E2E créés, H4 log_api_usage tracking, M1 filtre AVANT anonymisation, M2 sys.path hack supprimé, M3 /filters delete ajouté, L1 File List complétée. Filtrage sender/domain AVANT classification LLM. Migration 033+034. Module check_sender_filter() circuit breaker. Bot /blacklist /whitelist /filters /filters delete. Script extract_email_domains.py 110k emails. ROI: $187/an. 15 fichiers (11 créés + 4 modifiés).
-  2-9-migration-emails-progressive-deploiement: in-progress  # [D25: EmailEngine→IMAP direct] 2026-02-12: Phase A COMPLETE (A.0-A.9) — safety controls (kill switch, /pipeline, budget tracking), corrections code (doublon bot, credentials, classifier branche, semantique filtres VIP/blacklist/whitelist, taille PJ 50/200MB), migrations 033+034 reecrites, scripts Story 2.9 crees (migrate_emails.py reecrit IMAP direct 9 params CLI, extract_email_domains.py reecrit CSV strict, validate_migration.py, benchmark_consumer.py, supervise-protonmail-bridge.ps1). Phases B/C/D attendent VPS. 19 fichiers (11 modifies + 8 crees + 2 supprimes).
-  epic-2-retrospective: optional
+  2-9-migration-emails-progressive-deploiement: done  # [D25: EmailEngine→IMAP direct] 2026-02-15: STORY COMPLETE ✅ - Phase A safety controls, Phase B VPS deployment DONE, Phase C pipeline validation DONE, Phase D.1 (UNSEEN 89 emails) + D.2 (2026 1601 emails) DONE. Haiku 4.5 migration (claude-haiku-4-5-20251001 remplace deprecated 3.5). Résultats D.2: 1124 migrés, 437 blacklistés, 39 doublons, 4 échecs (0.25%), 48min, confidence 0.86, coût ~$1.80. Bugs corrigés: aioimaplib parsing (liste plate), sender_filter dict access, modèle deprecated. 1660 emails en DB (9 catégories). D.3/D.4 différés post-Epic 3 (décision pragmatique). 22 fichiers (scripts migrate_emails.py rewrite, classifier/task_extractor Haiku 4.5, llm.py model param, imap_fetcher UID detection).
+  epic-2-retrospective: done  # 2026-02-15: Retrospective Epic 2 completee - Pipeline email 9/9 stories, ROI $187/an, Decision D25 success, 2 action items
 
   # Epic 3: Archiviste & Recherche Documentaire (8 stories | 11+ FRs)
   epic-3: in-progress
-  3-1-ocr-renommage-intelligent: backlog
+  3-1-ocr-renommage-intelligent: done  # 2026-02-15: CODE REVIEW ADVERSARIAL COMPLETE ✅ - 14 issues fixés (4C+4H+3M+3L). C1 PG INSERT, C2 3 fichiers tests, C4 datetime crash, H1 rename fail-explicit, H4 double sanitization, M1 dot notation Redis. 55 tests (9+9+11+6+11+7+2), 20 fichiers (16 créés + 4 modifiés). 7/7 AC validés.
   3-2-classement-arborescence: backlog
   3-3-recherche-semantique-documents: backlog
   3-4-suivi-garanties: backlog
@@ -152,8 +151,8 @@ development_status:
   epic-6-retrospective: done  # 2026-02-11: Retrospective Epic 6 completee - 1850 lignes, 4 stories analysees (6.1-6.4), Decision D19 documented, Action majeure: Story 2.8 creee (filtrage intelligent, ROI $187/an), Learnings: budget LLM estimation checklist, pattern domain-based filtering. Document: epic-6-retrospective.md
 
   # Epic 7: Agenda & Calendrier Multi-casquettes (3 stories | 4 FRs)
-  epic-7: backlog
-  7-1-detection-evenements: backlog
+  epic-7: in-progress
+  7-1-detection-evenements: review  # 2026-02-15: IMPLEMENTATION COMPLETE ✅ - Détection événements emails via Claude Sonnet 4.5 + knowledge.entities EVENT + Trust=propose + notifications Telegram Topic Actions. 7/7 AC VALIDÉS, 21 tests PASS (11 models + 7 detector + 3 integration), 680+ lignes docs. Few-shot 5 exemples, dates relatives→absolues, multi-casquettes (médecin/enseignant/chercheur), RGPD Presidio anonymisation, confidence ≥0.75, inline buttons [Ajouter/Modifier/Ignorer]. 24 fichiers (16 créés + 4 modifiés). READY FOR CODE REVIEW (Opus 4.6 recommandé). M (12-18h).
   7-2-sync-google-calendar: backlog
   7-3-multi-casquettes-conflits: backlog
   epic-7-retrospective: optional

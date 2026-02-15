@@ -204,4 +204,55 @@ Brouillon Friday:
 
 ---
 
-**Note :** Insérer cette section dans telegram-user-guide.md après les topics, avant la section FAQ.
+---
+
+## Archiviste OCR & Renommage (Story 3.1)
+
+### Qu'est-ce que c'est ?
+
+Friday scanne automatiquement vos documents (PDF, images) via OCR Surya, extrait les metadonnees (date, type, emetteur, montant) via Claude, et renomme les fichiers selon une convention standardisee.
+
+**Workflow :**
+```
+Document recu -> OCR Surya -> Presidio anonymisation ->
+Claude extraction metadata -> Renommage intelligent ->
+Topic Actions (inline buttons) -> [Approve] -> Fichier renomme
+```
+
+### Convention de Nommage
+
+**Format :** `YYYY-MM-DD_Type_Emetteur_MontantEUR.ext`
+
+**Exemples :**
+- `2026-02-08_Facture_Laboratoire-Cerba_145EUR.pdf`
+- `2026-01-15_Courrier_ARS_0EUR.pdf`
+- `2025-12-20_Garantie_Boulanger_599EUR.pdf`
+
+### Notifications Telegram
+
+| Topic | Contenu |
+|-------|---------|
+| **Actions** | Proposition de renommage avec [Approve] [Reject] [Correct] |
+| **Metrics** | Document traite (confidence, latence, type) |
+| **System** | Erreur OCR Surya, timeout >45s, crash Presidio |
+
+### Trust Layer
+
+- **extract_metadata** : `propose` (Day 1) — validation Telegram requise
+- **rename** : `propose` (Day 1) — validation Telegram requise
+- **ocr** : `auto` — pas de decision, extraction pure
+
+### Performance
+
+- Latence totale : <45s (seuil, alerte si >35s)
+- OCR 1 page : ~5-15s CPU
+- OCR 3-5 pages : ~20-30s CPU
+- Extraction metadata Claude : ~2-5s
+
+### Securite RGPD
+
+Le texte OCR est **anonymise via Presidio** AVANT tout appel a Claude. Si Presidio est indisponible, le pipeline refuse de traiter le document (fail-explicit). Aucune donnee personnelle n'est envoyee a l'API Claude.
+
+---
+
+**Note :** Inserer ces sections dans telegram-user-guide.md apres les topics, avant la section FAQ.

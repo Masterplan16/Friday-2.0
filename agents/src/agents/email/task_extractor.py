@@ -8,18 +8,19 @@ AC7 : Priorisation automatique depuis mots-clés
 
 import asyncio
 import json
-import logging
 import os
+import re
 from datetime import datetime, timedelta
 from typing import Any, Dict, Optional
 
+import structlog
 from anthropic import AsyncAnthropic, APIError, RateLimitError
 
 from agents.src.agents.email.models import TaskExtractionResult
 from agents.src.agents.email.prompts import TASK_EXTRACTION_PROMPT
 from agents.src.tools.anonymize import anonymize_text
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 # C3 fix: Validation ANTHROPIC_API_KEY au démarrage (fail-fast)
 _ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY")
@@ -167,11 +168,12 @@ Retourner JSON structuré avec confidence par tâche.
     for attempt in range(1, max_retries + 1):
         try:
             response = await anthropic_client.messages.create(
-                model="claude-sonnet-4-5-20250929",
+                model="claude-haiku-4-5-20251001",
                 max_tokens=500,  # Tâches courtes attendues
                 temperature=0.1,  # Déterministe
+                system=prompt,
                 messages=[
-                    {"role": "user", "content": prompt + "\n\n" + user_prompt}
+                    {"role": "user", "content": user_prompt}
                 ],
             )
 
@@ -226,8 +228,21 @@ Retourner JSON structuré avec confidence par tâche.
     # =========================================================================
 
     try:
+        # Strip markdown code fences si Claude enveloppe en ```json...```
+        cleaned = response_text.strip()
+        cleaned = re.sub(r'^```(?:json)?\s*', '', cleaned)
+        cleaned = re.sub(r'\s*```$', '', cleaned)
+        cleaned = cleaned.strip()
+
+        if not cleaned:
+            logger.warning(
+                "claude_task_extraction_empty_response",
+                email_id=email_metadata.get("email_id"),
+            )
+            return TaskExtractionResult(tasks_detected=[], confidence_overall=0.0)
+
         # Parser JSON response
-        result_json = json.loads(response_text)
+        result_json = json.loads(cleaned)
 
         # Convertir dates string → datetime (H2 fix: error handling)
         if "tasks_detected" in result_json:

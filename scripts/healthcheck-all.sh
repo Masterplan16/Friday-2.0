@@ -17,11 +17,11 @@ NC='\033[0m'
 # Configuration
 TIMEOUT_SECONDS=60  # Timeout total pour healthcheck
 CRITICAL_SERVICES=(
-    "postgres"
-    "redis"
+    "friday-postgres"
+    "friday-redis"
     "friday-gateway"
     "friday-bot"
-    "n8n"
+    "friday-n8n"
 )
 
 echo "🔍 Friday 2.0 - Healthcheck All Services"

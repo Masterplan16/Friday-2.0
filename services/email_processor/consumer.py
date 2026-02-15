@@ -34,7 +34,7 @@ from telegram import Bot  # M5 fix: Bot pour notifications Story 2.7
 repo_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(repo_root))
 
-from agents.src.adapters.email import get_email_adapter, EmailAdapter, EmailAdapterError
+from agents.src.adapters.email import get_email_adapter, EmailAdapter, EmailAdapterError, IMAPUIDNotFoundError
 from agents.src.tools.anonymize import anonymize_text
 from agents.src.agents.email.vip_detector import (
     compute_email_hash,
@@ -253,6 +253,16 @@ class EmailProcessorConsumer:
 
         while True:
             try:
+                # Heartbeat Redis pour monitoring depuis le bot container
+                try:
+                    await self.redis.set(
+                        "heartbeat:email-consumer",
+                        str(int(time.time())),
+                        ex=30,  # expire apres 30s (6x block timeout)
+                    )
+                except Exception:
+                    pass
+
                 # Kill switch check (Phase A.0)
                 pipeline_enabled = await self._is_pipeline_enabled()
                 logger.info("pipeline_enabled_check", enabled=pipeline_enabled)
@@ -316,28 +326,65 @@ class EmailProcessorConsumer:
                 message_id=message_id
             )
 
-            # Étape 1: Fetch email complet via adapter (D25: IMAP direct)
-            email_full = await self.fetch_email_with_retry(account_id, message_id, max_retries=6)
-
-            if not email_full:
-                logger.error("email_fetch_failed_max_retries", message_id=message_id)
-                await self.send_to_dlq(event_id, payload, error="IMAP fetch failed after 6 retries")
+            # Dédup côté consumer : si cet email (account_id + message_id) est déjà en DB,
+            # skip le traitement complet (évite retraitement x4+ lors des restarts consumer)
+            existing = await self.db_pool.fetchval(
+                "SELECT id FROM ingestion.emails WHERE account_id = $1 AND message_id = $2 LIMIT 1",
+                account_id, message_id
+            )
+            if existing:
+                logger.info(
+                    "email_already_processed_skipping",
+                    event_id=event_id,
+                    account_id=account_id,
+                    message_id=message_id,
+                    existing_id=str(existing),
+                )
                 await self.redis.xack(STREAM_NAME, CONSUMER_GROUP, event_id)
                 return
 
-            # Extraire données raw depuis EmailMessage (AVANT anonymisation)
-            from_raw = email_full.from_address
-            from_name = email_full.from_name
-            to_raw = ', '.join(email_full.to_addresses)
-            subject_raw = email_full.subject or '(no subject)'
-            body_text_raw = email_full.body_text or email_full.body_html or ''
+            # Étape 1: Fetch email complet via adapter (D25: IMAP direct)
+            email_full = await self.fetch_email_with_retry(account_id, message_id, max_retries=6)
+
+            # Mode dégradé : si IMAP fetch échoue (UID supprimé/déplacé côté serveur),
+            # utiliser les données anonymisées du Redis event pour classification.
+            # On perd les données raw (pas de stockage chiffré) mais on traite l'email.
+            degraded_mode = False
+            if not email_full:
+                body_preview_anon = payload.get('body_preview_anon', '')
+                if body_preview_anon and body_preview_anon != '[REDACTED]':
+                    logger.warning(
+                        "email_processing_degraded_mode",
+                        message_id=message_id,
+                        account_id=account_id,
+                        reason="IMAP UID not found, using Redis body_preview_anon",
+                    )
+                    degraded_mode = True
+                    from_raw = from_anon or 'unknown'
+                    from_name = ''
+                    to_raw = ''
+                    subject_raw = subject_anon or '(no subject)'
+                    body_text_raw = body_preview_anon
+                else:
+                    logger.error("email_fetch_failed_max_retries", message_id=message_id)
+                    await self.send_to_dlq(event_id, payload, error="IMAP fetch failed after 6 retries")
+                    await self.redis.xack(STREAM_NAME, CONSUMER_GROUP, event_id)
+                    return
+
+            if not degraded_mode:
+                # Extraire données raw depuis EmailMessage (AVANT anonymisation)
+                from_raw = email_full.from_address
+                from_name = email_full.from_name
+                to_raw = ', '.join(email_full.to_addresses)
+                subject_raw = email_full.subject or '(no subject)'
+                body_text_raw = email_full.body_text or email_full.body_html or ''
 
             # Etape 2: Filtrage sender AVANT anonymisation (A.6 nouvelle semantique)
             # Semantique: blacklist=skip analyse, whitelist=analyser, VIP=prioritaire
             filter_result = await check_sender_filter(
                 email_id=message_id,
                 sender_email=from_raw,
-                sender_domain=from_raw.split("@")[1] if "@" in from_raw else None,
+                sender_domain=from_raw.split("@")[1].lower() if "@" in from_raw else None,
                 db_pool=self.db_pool,
             )
 
@@ -490,8 +537,9 @@ class EmailProcessorConsumer:
 
             # Étape 5.3: Extraction pièces jointes (Story 2.4 - Phase 4)
             # NOTE: Extraction APRÈS stockage DB pour avoir UUID email correct
+            # Skip en mode dégradé (pas d'accès IMAP pour download PJ)
             attachment_result = None
-            if has_attachments:
+            if has_attachments and not degraded_mode:
                 try:
                     # Extraire pièces jointes via adapter (D25: compat wrapper)
                     attachment_result = await extract_attachments(
@@ -618,12 +666,75 @@ class EmailProcessorConsumer:
                     )
                     # Ne pas bloquer le traitement email si extraction échoue
 
+            # Étape 6.8: Détection événements depuis email (Story 7.1 - Phase 6.8)
+            # Conditions:
+            # 1. Email classifié (category != spam ni blacklisted)
+            # 2. Événements détectés avec confidence >=0.75
+            # 3. Trust level = propose → Validation Telegram requise
+            if category not in ("spam", "blacklisted", "inconnu"):
+                try:
+                    from agents.src.agents.calendar.event_detector import extract_events_from_email
+
+                    # Extraire événements via Claude Sonnet 4.5
+                    event_detection_result = await extract_events_from_email(
+                        email_text=body_text_raw,
+                        email_id=str(email_id),
+                        metadata={
+                            'sender': from_raw,
+                            'subject': subject_raw,
+                            'category': category,
+                            'received_at': date_str
+                        },
+                        current_date=None  # Auto-detect current date
+                    )
+
+                    if event_detection_result.events_detected:
+                        logger.info(
+                            "events_detected_in_email",
+                            email_id=str(email_id),
+                            message_id=message_id,
+                            events_count=len(event_detection_result.events_detected),
+                            confidence_overall=event_detection_result.confidence_overall
+                        )
+
+                        # Créer entités EVENT dans knowledge.entities (AC2)
+                        await self.create_event_entities(
+                            events=event_detection_result.events_detected,
+                            email_id=str(email_id),
+                            source_type="email",
+                            source_id=str(email_id)
+                        )
+
+                        logger.info(
+                            "event_entities_created",
+                            email_id=str(email_id),
+                            events_count=len(event_detection_result.events_detected)
+                        )
+                    else:
+                        logger.debug(
+                            "email_no_event_detected",
+                            email_id=str(email_id),
+                            message_id=message_id,
+                            confidence_overall=event_detection_result.confidence_overall
+                        )
+
+                except Exception as e:
+                    logger.error(
+                        "event_detection_failed",
+                        email_id=str(email_id),
+                        message_id=message_id,
+                        error=str(e),
+                        exc_info=True
+                    )
+                    # Ne pas bloquer le traitement email si extraction échoue
+
             # Étape 7: Génération brouillon réponse optionnel (Story 2.5 - Phase 7)
             # Conditions déclenchement :
             # 1. Email classifié professional/medical/academic (pas spam, pas perso urgent)
             # 2. Email pas de Mainteneur lui-même (éviter boucle)
             # 3. Optionnel Day 1 : peut être déclenché manuellement via /draft
             should_draft = (
+                not degraded_mode and
                 category in ('professional', 'medical', 'academic') and
                 not self._is_from_mainteneur(from_raw)
             )
@@ -712,6 +823,7 @@ class EmailProcessorConsumer:
         Retry policy:
             - Backoff: 1s, 2s, 4s, 8s, 16s, 32s (total ~63s)
             - Max 6 retries
+            - IMAPUIDNotFoundError = non-retryable (abandon immédiat)
         """
         for attempt in range(max_retries + 1):
             try:
@@ -723,6 +835,17 @@ class EmailProcessorConsumer:
                         attempt=attempt + 1
                     )
                 return result
+
+            except IMAPUIDNotFoundError as e:
+                # Non-retryable : UID n'existe plus cote serveur
+                # (email deplace/supprime entre fetcher et consumer)
+                logger.warning(
+                    "imap_uid_not_found_no_retry",
+                    account_id=account_id,
+                    message_id=message_id,
+                    error=str(e),
+                )
+                return None
 
             except EmailAdapterError as e:
                 logger.error(
@@ -1152,6 +1275,117 @@ class EmailProcessorConsumer:
             fallback="utcnow",
         )
         return datetime.now(timezone.utc)
+
+    async def create_event_entities(
+        self,
+        events: list,
+        email_id: str,
+        source_type: str,
+        source_id: str
+    ):
+        """
+        Créer entités EVENT dans knowledge.entities (Story 7.1 AC2)
+
+        Pour chaque événement détecté:
+        1. Créer entité EVENT dans knowledge.entities
+        2. Créer relations EVENT → EMAIL, EVENT → PARTICIPANT, EVENT → LOCATION
+        3. Publier événement calendar.event.detected dans Redis Streams
+
+        Args:
+            events: Liste Event (Pydantic models) détectés
+            email_id: UUID email source (ingestion.emails.id)
+            source_type: Type source ("email")
+            source_id: ID source (UUID email)
+        """
+        try:
+            async with self.db_pool.acquire() as conn:
+                async with conn.transaction():
+                    for event in events:
+                        # AC2: Créer entité EVENT dans knowledge.entities
+                        event_properties = {
+                            "start_datetime": event.start_datetime.isoformat(),
+                            "end_datetime": event.end_datetime.isoformat() if event.end_datetime else None,
+                            "location": event.location,
+                            "participants": event.participants,
+                            "event_type": event.event_type.value,
+                            "casquette": event.casquette.value,
+                            "email_id": email_id,
+                            "confidence": event.confidence,
+                            "status": "proposed",  # AC2: Day 1 = proposed, confirmé après validation
+                            "calendar_id": None,  # Story 7.2: sync Google Calendar
+                        }
+
+                        event_id = await conn.fetchval(
+                            """
+                            INSERT INTO knowledge.entities (
+                                name, entity_type, properties, confidence,
+                                source_type, source_id
+                            ) VALUES ($1, 'EVENT', $2, $3, $4, $5)
+                            RETURNING id
+                            """,
+                            event.title,
+                            json.dumps(event_properties),
+                            event.confidence,
+                            source_type,
+                            source_id
+                        )
+
+                        logger.info(
+                            "event_entity_created",
+                            event_id=str(event_id),
+                            event_title=event.title,
+                            casquette=event.casquette.value,
+                            start_datetime=event.start_datetime.isoformat()
+                        )
+
+                        # AC2: Créer relations EVENT → EMAIL
+                        email_entity_id = await conn.fetchval(
+                            "SELECT id FROM knowledge.entities WHERE source_type='email' AND source_id=$1 LIMIT 1",
+                            email_id
+                        )
+
+                        if email_entity_id:
+                            await conn.execute(
+                                """
+                                INSERT INTO knowledge.entity_relations (
+                                    source_entity_id, target_entity_id, relation_type, confidence
+                                ) VALUES ($1, $2, 'MENTIONED_IN', $3)
+                                ON CONFLICT (source_entity_id, target_entity_id, relation_type) DO NOTHING
+                                """,
+                                event_id,
+                                email_entity_id,
+                                event.confidence
+                            )
+
+                        # AC2: Créer relations EVENT → PARTICIPANT
+                        # TODO: Implémenter extraction PERSON entities depuis participants
+                        # Story 7.1 simplification: Stocker participants dans properties uniquement
+
+                        # AC3: Publier événement calendar.event.detected dans Redis Streams
+                        await self.redis.xadd('calendar:event.detected', {
+                            'event_id': str(event_id),
+                            'email_id': email_id,
+                            'status': 'proposed',
+                            'title': event.title,
+                            'casquette': event.casquette.value,
+                            'start_datetime': event.start_datetime.isoformat(),
+                            'confidence': str(event.confidence)
+                        })
+
+                        logger.info(
+                            "calendar_event_published",
+                            event_id=str(event_id),
+                            stream="calendar:event.detected"
+                        )
+
+        except Exception as e:
+            logger.error(
+                "event_entity_creation_failed",
+                email_id=email_id,
+                error=str(e),
+                exc_info=True
+            )
+            raise
 
     def _is_from_mainteneur(self, from_email: str) -> bool:
         """

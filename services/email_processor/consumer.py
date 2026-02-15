@@ -20,7 +20,8 @@ import os
 import sys
 from pathlib import Path
 from typing import Any, Dict, Optional
-from datetime import datetime
+from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 import time
 
 import asyncpg
@@ -883,7 +884,7 @@ class EmailProcessorConsumer:
                 category,
                 confidence,
                 priority,
-                datetime.fromisoformat(received_at.replace('Z', '+00:00')) if received_at else datetime.utcnow(),
+                self._parse_email_date(received_at),
                 has_attachments
             )
 
@@ -1103,6 +1104,41 @@ class EmailProcessorConsumer:
                 message_id=message_id,
                 error=str(e),
             )
+
+    def _parse_email_date(self, date_str: Optional[str]) -> datetime:
+        """
+        Parse date email (RFC 2822 ou ISO 8601) en datetime UTC.
+
+        Les headers Date des emails utilisent RFC 2822 (ex: 'Fri, 13 Feb 2026 22:40:19 +0100')
+        tandis que certaines sources envoient ISO 8601. Cette methode gere les deux.
+
+        Args:
+            date_str: Date string depuis le payload Redis (RFC 2822 ou ISO 8601)
+
+        Returns:
+            datetime aware UTC, ou datetime.utcnow() si parsing echoue
+        """
+        if not date_str:
+            return datetime.now(timezone.utc)
+
+        # Tentative 1: RFC 2822 (format standard email Date header)
+        try:
+            return parsedate_to_datetime(date_str)
+        except (ValueError, TypeError):
+            pass
+
+        # Tentative 2: ISO 8601
+        try:
+            return datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+        except (ValueError, TypeError):
+            pass
+
+        logger.warning(
+            "email_date_parse_failed",
+            date_str=date_str,
+            fallback="utcnow",
+        )
+        return datetime.now(timezone.utc)
 
     def _is_from_mainteneur(self, from_email: str) -> bool:
         """

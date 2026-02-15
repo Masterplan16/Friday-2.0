@@ -24,6 +24,7 @@ import asyncio
 import email as email_lib
 import os
 import signal
+import ssl
 import sys
 import time
 from datetime import datetime
@@ -186,9 +187,30 @@ class IMAPAccountWatcher:
         """Connexion IMAP SSL."""
         import aioimaplib
 
+        # Créer contexte SSL personnalisé pour ProtonMail Bridge
+        ssl_context = None
+        if "protonmail" in self.account_id.lower():
+            ssl_context = ssl.create_default_context()
+            # Charger certificat auto-signé ProtonMail Bridge
+            cert_path = Path("/app/config/certs/protonmail_bridge.pem")
+            if cert_path.exists():
+                ssl_context.load_verify_locations(cafile=str(cert_path))
+                logger.info(
+                    "ssl_cert_loaded",
+                    account_id=self.account_id,
+                    cert_path=str(cert_path),
+                )
+            else:
+                logger.warning(
+                    "ssl_cert_missing",
+                    account_id=self.account_id,
+                    cert_path=str(cert_path),
+                )
+
         self._imap = aioimaplib.IMAP4_SSL(
             host=self.config["imap_host"],
             port=self.config["imap_port"],
+            ssl_context=ssl_context,
         )
         await self._imap.wait_hello_from_server()
 

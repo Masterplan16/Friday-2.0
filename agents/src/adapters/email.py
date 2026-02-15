@@ -293,9 +293,10 @@ class IMAPDirectAdapter(EmailAdapter):
             await imap.login(account["imap_user"], account["imap_password"])
             await imap.select("INBOX")
 
-            # Fetch par UID
+            # Fetch par UID (BODY.PEEK[] pour ne PAS marquer comme \Seen)
+            # IMPORTANT: RFC822 = alias BODY[] = marque \Seen. PEEK evite ca.
             status, data = await imap.uid(
-                "fetch", message_id, "(RFC822)"
+                "fetch", message_id, "(BODY.PEEK[])"
             )
 
             if status != "OK" or not data:
@@ -451,9 +452,9 @@ class IMAPDirectAdapter(EmailAdapter):
             await imap.login(account["imap_user"], account["imap_password"])
             await imap.select("INBOX")
 
-            # Fetch la partie specifique
+            # Fetch la partie specifique (PEEK pour ne pas marquer \Seen)
             status, data = await imap.uid(
-                "fetch", message_id, f"(BODY[{part_id}])"
+                "fetch", message_id, f"(BODY.PEEK[{part_id}])"
             )
 
             if status != "OK" or not data:

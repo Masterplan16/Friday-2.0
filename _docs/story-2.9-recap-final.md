@@ -4,7 +4,7 @@
 > Ce document reflète l'état final post-déploiement du pipeline email.
 
 **Date** : 2026-02-15
-**Status** : **Opérationnel** — 3/4 comptes connectés, pipeline fonctionnel
+**Status** : **Opérationnel** — 4/4 comptes connectés, pipeline fonctionnel, Phase B complète
 
 ---
 
@@ -46,7 +46,7 @@ Container Docker dédié `friday-imap-fetcher` avec :
 | gmail1 | Gmail Pro | **Connecté** | IDLE | App Password |
 | gmail2 | Gmail Perso | **Connecté** | IDLE | App Password |
 | universite | Zimbra UM | **Connecté** | IDLE | Credentials directs |
-| proton | ProtonMail Bridge | **Non connecté** | Polling | Bridge hors ligne (PC éteint) |
+| proton | ProtonMail Bridge | **Connecté** | Polling | Port 1144 SSL, cert PEM monté, Tailscale IP 100.100.4.31 |
 
 ### 3. Bugs Corrigés (2026-02-15)
 
@@ -106,13 +106,18 @@ Container Docker dédié `friday-imap-fetcher` avec :
 
 | Service | Status | Notes |
 |---------|--------|-------|
-| friday-postgres | Healthy | PostgreSQL 16 + pgvector |
-| friday-redis | Healthy | ACL appliqués, Streams configurés |
-| friday-imap-fetcher | Healthy | 3/4 comptes IDLE |
-| friday-email-processor | Healthy | Consumer group actif |
-| friday-presidio-analyzer | Healthy | spaCy FR |
-| friday-presidio-anonymizer | Healthy | - |
+| friday-postgres | Healthy | PostgreSQL 16 + pgvector, migrations 001→035 |
+| friday-redis | Healthy | ACL 10 users, Streams configurés |
+| friday-imap-fetcher | Healthy | 4/4 comptes (3 IDLE + 1 polling ProtonMail) |
+| friday-email-processor | Healthy | Consumer group actif, trust=auto |
+| friday-presidio-anonymizer | Healthy | spaCy FR |
 | friday-bot | Healthy | 5 topics Telegram |
+| friday-gateway | Healthy | FastAPI /api/v1/health OK |
+| friday-caddy | Healthy | Reverse proxy |
+| friday-alerting | Healthy | 6 streams events écoutés |
+| friday-metrics | Healthy | Scheduler nightly 03:00 UTC |
+| friday-n8n | Healthy | Workflows |
+| friday-document-processor-stub | Healthy | Stub Story 3 |
 
 ### Redis Streams
 
@@ -141,31 +146,23 @@ Container Docker dédié `friday-imap-fetcher` avec :
 
 ## Actions Restantes
 
-### ProtonMail Bridge (non bloquant)
+### Phase C — Complète (2026-02-15)
 
-**Status** : Bridge hors ligne — le PC Mainteneur doit être allumé avec ProtonMail Bridge actif pour que le compte `proton` se connecte.
+- C.7.5 Throughput mesuré en production : **0.64 emails/min (~38/h)**. Script benchmark synthétique incompatible (consumer re-fetch IMAP).
+- C.8 Commandes filtres enregistrées (`/blacklist`, `/vip`, `/whitelist`, `/filters`). Table `core.sender_filters` prête.
 
-**Debug** :
-```bash
-# Vérifier connectivité depuis VPS
-ssh friday-vps "nc -zv <bridge_tailscale_ip> 1143"
+### Phase D - Migration Historique
 
-# Si timeout → Bridge pas démarré ou Tailscale déconnecté sur PC
-# Si connexion OK → vérifier logs imap-fetcher
-ssh friday-vps "docker logs friday-imap-fetcher --tail 50 | grep proton"
-```
+- D.0 Scanner domaines (`scripts/extract_email_domains.py`)
+- D.1 Migrer non-lus (~139 emails)
+- D.2 Migrer 2026 (~1500 emails)
+- D.3 Migrer 2025 (~12000 emails)
+- D.4+ Années suivantes selon budget ($700 recommandé)
 
-### Git Push (non bloquant)
+### ProtonMail Bridge
 
-Le commit local `f5eac88` n'a pas pu être pushé (DNS GitHub inaccessible). À pusher manuellement :
-```bash
-git push origin master
-```
-
-### Phase D - Migration Historique (Phase 2)
-
-- Migration 108k emails (`scripts/migrate_emails.py`)
-- Nécessite pipeline E2E validé sur quelques emails réels
+**Status** : **Connecté** (port 1144 SSL, Tailscale IP 100.100.4.31, cert PEM monté).
+Nécessite que le PC Mainteneur soit allumé avec ProtonMail Bridge actif.
 
 ---
 
@@ -189,4 +186,4 @@ f6c96a5 - fix(imap-fetcher): add ProtonMail Bridge SSL certificate support
 ---
 
 **Dernière mise à jour** : 2026-02-15
-**Pipeline** : Opérationnel (3/4 comptes, en attente ProtonMail Bridge)
+**Pipeline** : Opérationnel (4/4 comptes, 12 services healthy, Phases A+B+C complètes, prêt Phase D)

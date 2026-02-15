@@ -26,7 +26,7 @@ fi
 # Vérifier que .env.enc existe
 if [ ! -f "$ENV_ENC_FILE" ]; then
     echo -e "${RED}❌ Fichier chiffré introuvable: $ENV_ENC_FILE${NC}"
-    echo -e "${YELLOW}💡 Chiffre d'abord .env avec: sops -e .env > .env.enc${NC}"
+    echo -e "${YELLOW}💡 Chiffre d'abord .env avec: ./scripts/encrypt-env.sh${NC}"
     exit 1
 fi
 

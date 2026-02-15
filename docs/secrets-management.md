@@ -1,8 +1,13 @@
 # Secrets Management - Friday 2.0
 
-**Date** : 2026-02-05
-**Version** : 1.0.0
+**Date** : 2026-02-15
+**Version** : 1.1.0
 **Objectif** : Guide complet pour chiffrer/déchiffrer les secrets avec age/SOPS
+
+> **ATTENTION CRITIQUE** : Ne JAMAIS utiliser `sops -d .env.enc` directement !
+> L'extension `.enc` fait que SOPS assume du JSON et crash sur les commentaires `#`.
+> Toujours utiliser les wrapper scripts `./scripts/decrypt-env.sh` et `./scripts/encrypt-env.sh`
+> ou ajouter explicitement `--input-type dotenv --output-type dotenv`.
 
 ---
 
@@ -183,29 +188,24 @@ export $(sops --input-type dotenv --output-type dotenv -d .env.enc | xargs)
 echo $DATABASE_URL
 ```
 
-### **Méthode 3 : Script automatique**
+### **Méthode 3 : Wrapper scripts (RECOMMANDE)**
 
-Créer `scripts/load-secrets.sh` :
+Utiliser les scripts dédiés qui gèrent automatiquement les flags SOPS :
 
 ```bash
-#!/bin/bash
-# scripts/load-secrets.sh
+# Déchiffrer
+./scripts/decrypt-env.sh              # .env.enc -> .env
+./scripts/decrypt-env.sh --check      # Vérifier sans écrire
+./scripts/decrypt-env.sh --to-vps     # Déchiffrer et SCP sur VPS
 
-if [ ! -f .env.enc ]; then
-    echo "❌ .env.enc not found. Run: sops -e .env > .env.enc"
-    exit 1
-fi
-
-echo "🔓 Déchiffrement des secrets..."
-sops -d .env.enc > .env
-
-echo "✅ Secrets déchiffrés dans .env (temporaire)"
-echo "⚠️  N'oubliez pas de supprimer .env après usage !"
+# Chiffrer
+./scripts/encrypt-env.sh              # .env -> .env.enc
+./scripts/encrypt-env.sh --from-vps   # Récupérer .env du VPS et chiffrer
 ```
 
 Usage :
 ```bash
-./scripts/load-secrets.sh
+./scripts/decrypt-env.sh
 docker compose up -d
 rm .env  # Nettoyer après
 ```
@@ -235,17 +235,14 @@ rm .env  # Nettoyer après
 3. **Admin re-chiffre les secrets** avec les nouvelles clés :
    ```bash
    # Déchiffrer (avec ancienne config)
-   sops -d .env.enc > .env
+   ./scripts/decrypt-env.sh
 
    # Re-chiffrer (avec nouvelle config incluant nouveau dev)
-   sops -e .env > .env.enc
+   ./scripts/encrypt-env.sh
 
    # Commit
    git add .env.enc .sops.yaml
    git commit -m "Add dev key to secrets"
-
-   # Cleanup
-   rm .env
    ```
 
 ---
@@ -265,21 +262,20 @@ age-keygen -o ~/.age/friday-key-new.txt
 
 # 2. Déchiffrer avec ancienne clé
 export SOPS_AGE_KEY_FILE=~/.age/friday-key.txt
-sops -d .env.enc > .env
+./scripts/decrypt-env.sh
 
 # 3. Mettre à jour .sops.yaml avec nouvelle clé publique
 # (éditer manuellement)
 
 # 4. Re-chiffrer avec nouvelle clé
 export SOPS_AGE_KEY_FILE=~/.age/friday-key-new.txt
-sops -e .env > .env.enc
+./scripts/encrypt-env.sh
 
 # 5. Commit
 git add .env.enc .sops.yaml
 git commit -m "Rotate age encryption keys"
 
-# 6. Cleanup
-rm .env
+# 6. Cleanup (encrypt-env.sh supprime .env automatiquement)
 mv ~/.age/friday-key.txt ~/.age/friday-key-old.txt.bak
 mv ~/.age/friday-key-new.txt ~/.age/friday-key.txt
 ```
@@ -293,24 +289,24 @@ mv ~/.age/friday-key-new.txt ~/.age/friday-key.txt
 ```bash
 # scripts/test_secrets.sh
 
-echo "🧪 Test secrets management..."
+echo "Test secrets management..."
 
 # 1. Créer fichier test
 echo "TEST_SECRET=hello123" > .env.test
 
-# 2. Chiffrer
-sops -e .env.test > .env.test.enc
-echo "✅ Chiffrement OK"
+# 2. Chiffrer (--input-type requis car .env.test n'est pas auto-detecte)
+sops --input-type dotenv --output-type dotenv -e .env.test > .env.test.enc
+echo "Chiffrement OK"
 
-# 3. Déchiffrer
-sops -d .env.test.enc > .env.test.dec
-echo "✅ Déchiffrement OK"
+# 3. Dechiffrer (--input-type OBLIGATOIRE pour .enc)
+sops --input-type dotenv --output-type dotenv -d .env.test.enc > .env.test.dec
+echo "Dechiffrement OK"
 
-# 4. Vérifier contenu identique
+# 4. Verifier contenu identique
 if diff .env.test .env.test.dec > /dev/null; then
-    echo "✅ Contenu identique - Setup SOPS valide !"
+    echo "Contenu identique - Setup SOPS valide !"
 else
-    echo "❌ Erreur - Contenu différent"
+    echo "ERREUR - Contenu different"
     exit 1
 fi
 
@@ -322,12 +318,25 @@ rm .env.test .env.test.enc .env.test.dec
 
 ## 🚨 Troubleshooting
 
+### **Erreur : "invalid character '#' looking for beginning of value"**
+
+SOPS pense que `.env.enc` est du JSON (a cause de l'extension `.enc`).
+```bash
+# MAUVAIS (ne PAS faire) :
+sops -d .env.enc
+
+# CORRECT :
+./scripts/decrypt-env.sh
+# ou :
+sops --input-type dotenv --output-type dotenv -d .env.enc > .env
+```
+
 ### **Erreur : "no age identity found"**
 
 ```bash
-# Solution: Spécifier le chemin de la clé
+# Solution: Specifier le chemin de la cle
 export SOPS_AGE_KEY_FILE=~/.age/friday-key.txt
-sops -d .env.enc
+./scripts/decrypt-env.sh
 ```
 
 ### **Erreur : "MAC mismatch"**
@@ -364,7 +373,7 @@ git filter-branch --force --index-filter \
 - [ ] Clé age générée (`~/.age/friday-key.txt`)
 - [ ] Clé publique partagée avec admin
 - [ ] `.sops.yaml` présent dans le projet
-- [ ] `.env.enc` déchiffrable (`sops -d .env.enc`)
+- [ ] `.env.enc` déchiffrable (`./scripts/decrypt-env.sh --check`)
 - [ ] Test secrets réussi (`./scripts/test_secrets.sh`)
 
 ---

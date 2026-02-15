@@ -1,227 +1,192 @@
-# Story 2.9 - Configuration Pipeline Email - Récapitulatif Final
+# Story 2.9 - Pipeline Email IMAP Direct - Récapitulatif Final
 
-> **[SUPERSEDE D25]** : EmailEngine a été remplacé par IMAP direct (aioimaplib + aiosmtplib) le 2026-02-13.
-> Ce document est conservé comme référence historique. Les sections relatives à EmailEngine (webhooks, access token, UI config) ne sont plus applicables.
-> Voir : `_docs/plan-d25-emailengine-to-imap-direct.md` pour le nouveau plan.
+> **D25 (2026-02-13)** : EmailEngine retiré, remplacé par IMAP direct (aioimaplib).
+> Ce document reflète l'état final post-déploiement du pipeline email.
 
-**Date** : 2026-02-13
-**Status** : ~~95% complété~~ **[SUPERSEDE D25]** — EmailEngine retiré, remplacé par imap-fetcher daemon
-
----
-
-## ✅ Réalisations
-
-### 1. ~~Configuration EmailEngine~~ [SUPERSEDE D25 : remplacé par imap-fetcher] (3/4 comptes)
-
-| Compte | Email | Status | Notes |
-|--------|-------|--------|-------|
-| account_faculty | antonio.lopez@umontpellier.fr | ✅ Connected | Zimbra Université |
-| account_personal | contact.antoniolopez@gmail.com | ✅ Connected | Gmail 2 |
-| account_professional | lopez.tonio@gmail.com | ✅ Connected | Gmail 1 |
-| account_protonmail | contact.antoniolopez@proton.me | ❌ Auth Error | Bridge configuré mais "no such user" depuis VPS |
-
-~~**Access Token** : `[REDACTED - was exposed in git history, rotate immediately]`~~ **[SUPERSEDE D25 : token EmailEngine obsolète]**
-
-### 2. Sécurité & Secrets
-
-#### Rotation Redis ACL (10 utilisateurs)
-- ✅ Nouveaux mots de passe 32 caractères générés
-- ✅ ACL appliqués via `redis-cli ACL SETUSER`
-- ✅ Tous services redémarrés avec nouveaux credentials
-- ✅ Scripts créés :
-  - `scripts/Generate-NewRedisPasswords.ps1` (génération)
-  - `scripts/rotate-redis-passwords.sh` (rotation VPS)
-
-#### Secrets Management
-- ✅ `WEBHOOK_SECRET` généré : `REVOKED_WEBHOOK_SECRET`
-- ~~✅ `EMAILENGINE_SECRET` et `EMAILENGINE_ENCRYPTION_KEY` configurés~~ **[SUPERSEDE D25 : variables retirées]**
-- ✅ `.env` et `.env.email` chiffrés avec SOPS
-- ✅ `.gitignore` mis à jour (config/redis.acl, run_migrations_temp.py, .env.decrypted)
-
-### 3. ~~Infrastructure Webhook~~ [SUPERSEDE D25 : webhooks EmailEngine retirés, remplacés par IMAP IDLE + polling → Redis Streams]
-
-#### ~~Gateway modifications~~ [SUPERSEDE D25]
-- ~~✅ Support webhook global EmailEngine (`/emailengine/all`)~~
-- ~~✅ Extraction `account_id` depuis payload (source de vérité)~~
-- ~~✅ Signature HMAC-SHA256 optionnelle (sécurisé par réseau Docker)~~
-- ~~✅ Fichier : `services/gateway/routes/webhooks.py`~~
-- ~~✅ Commit : `43990e7` - feat(webhooks): support EmailEngine global webhook URL~~
-
-#### Redis Streams
-- ✅ Consumer group `email-processor` créé sur stream `emails:received`
-- ✅ Tous services healthy après redémarrage
-
-### 4. Pipeline Email
-
-- ✅ `PIPELINE_ENABLED=true` configuré
-- ⚠️ `ANTHROPIC_API_KEY` = placeholder (à remplacer)
-- ✅ Service `friday-email-processor` healthy
-- ✅ Presidio anonymization prêt
+**Date** : 2026-02-15
+**Status** : **Opérationnel** — 3/4 comptes connectés, pipeline fonctionnel
 
 ---
 
-## ⚠️ Actions Manuelles Requises
+## Architecture Pipeline Email
 
-### ~~Action 1 : Configurer Webhooks EmailEngine~~ [SUPERSEDE D25 : plus nécessaire, imap-fetcher publie directement sur Redis Streams]
-
-~~**Problème** : L'API `/v1/settings` ne persiste pas la configuration~~
-
-~~**Solution** : Configuration via interface web~~
-
-~~**Steps** :~~
-~~1. Interface web : `http://localhost:3001` (tunnel SSH ouvert)~~
-~~2. Menu → **Configuration** → **Webhooks**~~
-~~3. Webhooks Enabled = `true`~~
-~~4. Webhook URL = `http://friday-gateway:8000/api/v1/webhooks/emailengine/all`~~
-~~5. Save~~
-
-~~**Guide détaillé** : `scripts/configure-emailengine-webhooks.md`~~
-
-### Action 2 : Configurer ANTHROPIC_API_KEY (CRITIQUE)
-
-**Fichier** : `/opt/friday/.env` sur VPS
-
-**Steps** :
-```bash
-ssh friday-vps
-cd /opt/friday
-nano .env  # Remplacer placeholder_will_set_later par vraie API key
-sops -e .env > .env.enc
-docker restart friday-email-processor friday-gateway
 ```
-
-### Action 3 : ProtonMail Bridge (OPTIONNEL)
-
-**Problème** : "no such user" depuis VPS malgré Bridge configuré
-
-**Hypothèses** :
-- Firewall Tailscale bloque 100.100.4.31:1143
-- Bridge nécessite restart après ajout compte
-- Rate limiting actif
-
-**Credentials** : [REDACTED - credentials removed, were exposed in git history]
-- Username: voir .env.enc (chiffré age/SOPS)
-- Password: [REDACTED - ROTATE IMMEDIATELY on ProtonMail Bridge]
-- Host: ProtonMail Bridge via Tailscale
-- Security: STARTTLS
-
-**Debug** :
-```bash
-# Test connexion depuis VPS
-ssh friday-vps "nc -zv 100.100.4.31 1143"
-
-# Si timeout → vérifier Tailscale sur PC
-# Si connexion OK mais auth fail → restart Bridge + attendre 5 min
+IMAP Servers (Gmail, Zimbra, ProtonMail Bridge)
+    │
+    ▼
+friday-imap-fetcher (aioimaplib, IDLE + polling)
+    │  UID SEARCH UNSEEN → BODY.PEEK[] → Presidio anonymize → Redis XADD
+    ▼
+Redis Streams: emails:received
+    │  Consumer group: email-processor
+    ▼
+friday-email-processor (consumer.py)
+    │  IMAP re-fetch → anonymize → classify (LLM) → PostgreSQL → Telegram
+    ▼
+Telegram Topic 📬 Email & Communications
 ```
 
 ---
 
-## 🧪 Test E2E
+## Réalisations
 
-### Prérequis
-1. ~~✅ Webhooks EmailEngine configurés (Action 1)~~ [SUPERSEDE D25]
-2. ✅ ANTHROPIC_API_KEY configurée (Action 2)
+### 1. IMAP Fetcher Daemon (D25)
 
-### Procédure Test
+Container Docker dédié `friday-imap-fetcher` avec :
+- **aioimaplib** 2.0.1 pour connexions IMAP async
+- **IMAP IDLE** pour Gmail/Zimbra (notification push)
+- **Polling** pour ProtonMail Bridge (pas de support IDLE)
+- **Déduplication** via Redis SETs `seen_uids:{account_id}` (TTL 7j)
+- **Anonymisation Presidio** avant publication dans Redis Streams
 
-**Script automatisé** : `scripts/test-email-pipeline-e2e.sh`
+### 2. Comptes IMAP Connectés
 
-```bash
-ssh friday-vps 'bash -s' < scripts/test-email-pipeline-e2e.sh
-```
+| Compte | Label | Status | Mode | Notes |
+|--------|-------|--------|------|-------|
+| gmail1 | Gmail Pro | **Connecté** | IDLE | App Password |
+| gmail2 | Gmail Perso | **Connecté** | IDLE | App Password |
+| universite | Zimbra UM | **Connecté** | IDLE | Credentials directs |
+| proton | ProtonMail Bridge | **Non connecté** | Polling | Bridge hors ligne (PC éteint) |
 
-**Test manuel** :
-1. Envoyer email test → `antonio.lopez@umontpellier.fr`
-2. Vérifier logs :
-   ```bash
-   # Gateway (webhook reçu)
-   ssh friday-vps "docker logs friday-gateway --tail 50 | grep webhook"
-   
-   # Redis Streams (événement publié)
-   ssh friday-vps bash <<'EOF'
-   cd /opt/friday && source .env
-   docker exec friday-redis redis-cli --user admin --pass "$REDIS_ADMIN_PASSWORD" \
-     XREAD COUNT 1 STREAMS emails:received 0
-   EOF
-   
-   # Email-processor (traitement)
-   ssh friday-vps "docker logs friday-email-processor --tail 50"
-   ```
+### 3. Bugs Corrigés (2026-02-15)
+
+#### Bug 1 : UID Search (critique)
+
+**Problème** : `self._imap.search("UNSEEN")` retournait des **numéros de séquence** (instables) au lieu d'UIDs (stables). Après reconnexion IMAP, les numéros de séquence changent → la déduplication Redis échoue → republication de tous les emails non lus.
+
+**Fix** : `self._imap.uid("search", "UNSEEN")` — retourne des UIDs stables persistant entre sessions.
+
+**Fichier** : `services/email_processor/imap_fetcher.py`
+
+#### Bug 2 : Body manquant (critique)
+
+**Problème** : `BODY.PEEK[HEADER]` ne récupérait que les en-têtes, pas le corps de l'email. Le classifier recevait un body vide → "0% caviardé" → catégorie "inconnu" systématique.
+
+**Fix** :
+- `BODY.PEEK[HEADER]` → `BODY.PEEK[]` (email complet headers + body)
+- Ajout de `_extract_body_text(msg)` : extraction text/plain puis fallback text/html
+- Ajout de `_has_attachments(msg)` : détection pièces jointes
+- Troncature body à 2000 chars avant publication Redis Streams
+
+**Fichier** : `services/email_processor/imap_fetcher.py`
+
+#### Bug 3 : Notifications excessives (mineur)
+
+**Problème** : 3 notifications Telegram par email (validation trust=propose sur Actions topic + receipt sur Metrics + notification consumer sur Email topic).
+
+**Fix** : `email.classify` trust level changé de `propose` → `auto`. Le middleware trust crée un receipt sans notification Telegram. Seul le consumer envoie 1 notification sur le topic Email.
+
+**Fichiers** :
+- `agents/src/agents/email/classifier.py` : `trust_default="auto"`
+- `config/trust_levels.yaml` : `email.classify: auto` (deux entrées)
+
+### 4. Problèmes Déploiement VPS Résolus
+
+| Problème | Cause | Fix |
+|----------|-------|-----|
+| Redis ACL crash au démarrage | Commentaires `#` non supportés dans fichiers ACL | `grep -v '^#'` pour nettoyer |
+| Redis URL parsing error | `#` dans mot de passe interprété comme fragment URL | Variable `REDIS_EMAIL_PASSWORD_ENCODED` avec `%23` |
+| IMAP credentials manquants | Variables `IMAP_ACCOUNT_*` absentes de `.env` | Mapping depuis `.env.email` (GMAIL_PRO_* → IMAP_ACCOUNT_GMAIL1_*, etc.) |
+| Redis ACL permissions | `sismember`/`sadd` manquants pour user `friday_email` | Ajout `+sadd +sismember +srem +smembers` |
+| Docker network overlap | Conflit réseau au `docker compose up` | `--project-name friday-20` pour matcher réseau existant |
+| 189 emails backlog | Anciens messages spam dans le stream | `XTRIM MAXLEN 0` + `DEL seen_uids:*` + reset consumer group |
+
+### 5. Sécurité & Secrets
+
+- Redis ACL : 10 utilisateurs avec mots de passe 32 caractères
+- `.env` et `.env.email` chiffrés SOPS/age
+- Presidio anonymisation opérationnel (obligatoire avant tout appel LLM)
+- Mapping Presidio éphémère en mémoire (jamais persisté)
 
 ---
 
-## 📊 État Système Actuel
+## État Système Actuel (2026-02-15)
 
 ### Services Docker
 
-| Service | Status | Port | Notes |
-|---------|--------|------|-------|
-| friday-postgres | ✅ Healthy | 5432 | - |
-| friday-redis | ✅ Healthy | 6379 | ACL rotated |
-| friday-gateway | ✅ Healthy | 8000 | Webhook endpoint ready |
-| ~~friday-emailengine~~ | ~~✅ Healthy~~ | ~~3000~~ | ~~3/4 comptes connected~~ **[SUPERSEDE D25 : retiré, remplacé par friday-imap-fetcher]** |
-| friday-email-processor | ✅ Healthy | - | Consumer group created |
-| friday-presidio-analyzer | ✅ Healthy | 5001 | - |
-| friday-presidio-anonymizer | ✅ Healthy | 5002 | - |
+| Service | Status | Notes |
+|---------|--------|-------|
+| friday-postgres | Healthy | PostgreSQL 16 + pgvector |
+| friday-redis | Healthy | ACL appliqués, Streams configurés |
+| friday-imap-fetcher | Healthy | 3/4 comptes IDLE |
+| friday-email-processor | Healthy | Consumer group actif |
+| friday-presidio-analyzer | Healthy | spaCy FR |
+| friday-presidio-anonymizer | Healthy | - |
+| friday-bot | Healthy | 5 topics Telegram |
 
-### Configuration Files
+### Redis Streams
 
-| Fichier | Status | Location |
-|---------|--------|----------|
-| `.env` | ✅ Chiffré | VPS `/opt/friday/.env.enc` |
-| `.env.email` | ✅ Chiffré | VPS `/opt/friday/.env.email.enc` |
-| `config/redis.acl` | ✅ Généré | VPS `/opt/friday/config/redis.acl` (gitignored) |
+- Stream : `emails:received`
+- Consumer group : `email-processor`
+- Backlog : **0** (nettoyé 2026-02-15)
+- Dédup SETs : recréés proprement avec UIDs
 
-### Commits
+### Fichiers Modifiés (session 2026-02-15)
 
-```
-43990e7 - feat(webhooks): support EmailEngine global webhook URL + optional HMAC signature
-f5b5b10 - security: remove default Redis password fallbacks from docker-compose
-6561d36 - security: add redis.acl.template and generation scripts
-```
+| Fichier | Modification |
+|---------|-------------|
+| `services/email_processor/imap_fetcher.py` | UID search + BODY.PEEK[] + helpers extraction |
+| `agents/src/agents/email/classifier.py` | trust_default propose → auto |
+| `config/trust_levels.yaml` | email.classify propose → auto |
 
----
+### Fichiers VPS Modifiés
 
-## 📝 Fichiers Créés/Modifiés
-
-### Nouveaux fichiers
-- `scripts/Generate-NewRedisPasswords.ps1` - Génération passwords Redis
-- `scripts/rotate-redis-passwords.sh` - Rotation ACL Redis
-- ~~`scripts/configure-emailengine-webhooks.md` - Guide config webhooks~~ [SUPERSEDE D25]
-- `scripts/test-email-pipeline-e2e.sh` - Test E2E automatisé
-- `config/redis.acl.template` - Template ACL Redis
-- `scripts/generate-redis-acl.sh` - Génération redis.acl
-
-### Fichiers modifiés
-- ~~`services/gateway/routes/webhooks.py` - Support webhook global~~ [SUPERSEDE D25 : endpoint webhook EmailEngine retiré]
-- `docker-compose.yml` - Suppression default passwords
-- `docker-compose.services.yml` - Suppression default passwords
-- `.gitignore` - Ajout config/redis.acl, run_migrations_temp.py
+| Fichier VPS | Modification |
+|-------------|-------------|
+| `/opt/friday/config/redis.acl` | Commentaires supprimés, commandes SET ajoutées |
+| `/opt/friday/.env` | `REDIS_EMAIL_PASSWORD_ENCODED` + `IMAP_ACCOUNT_*` variables |
+| `/opt/friday/docker-compose.yml` | `REDIS_EMAIL_PASSWORD` → `REDIS_EMAIL_PASSWORD_ENCODED` dans REDIS_URL |
 
 ---
 
-## 🚀 Prochaines Étapes
+## Actions Restantes
 
-### ~~Phase C.6 - Finalisation Webhooks~~ [SUPERSEDE D25]
-1. ~~☐ Configurer webhooks EmailEngine via UI (Action 1)~~ [SUPERSEDE D25]
-2. ☐ Configurer ANTHROPIC_API_KEY (Action 2) — toujours requis
-3. ☐ Test E2E : envoyer email → vérifier logs complets
-4. ~~☐ Valider flux : EmailEngine → Gateway → Redis → Processor~~ → Nouveau flux : imap-fetcher → Redis Streams → Processor
+### ProtonMail Bridge (non bloquant)
+
+**Status** : Bridge hors ligne — le PC Mainteneur doit être allumé avec ProtonMail Bridge actif pour que le compte `proton` se connecte.
+
+**Debug** :
+```bash
+# Vérifier connectivité depuis VPS
+ssh friday-vps "nc -zv <bridge_tailscale_ip> 1143"
+
+# Si timeout → Bridge pas démarré ou Tailscale déconnecté sur PC
+# Si connexion OK → vérifier logs imap-fetcher
+ssh friday-vps "docker logs friday-imap-fetcher --tail 50 | grep proton"
+```
+
+### Git Push (non bloquant)
+
+Le commit local `f5eac88` n'a pas pu être pushé (DNS GitHub inaccessible). À pusher manuellement :
+```bash
+git push origin master
+```
 
 ### Phase D - Migration Historique (Phase 2)
-- ☐ Migration 108k emails (Story 2.9 Phase D)
-- ☐ Script : `scripts/migrate_emails.py` (déjà existant)
-- ☐ Nécessite : Webhooks + API key configurés
+
+- Migration 108k emails (`scripts/migrate_emails.py`)
+- Nécessite pipeline E2E validé sur quelques emails réels
 
 ---
 
-## 📞 Support
+## Commits Associés
 
-~~**Tunnel SSH EmailEngine** : `http://localhost:3001`~~ [SUPERSEDE D25]
-**Logs en temps réel** : `ssh friday-vps "docker logs -f friday-email-processor"`
-**Redis CLI** : `ssh friday-vps "docker exec -it friday-redis redis-cli --user admin --pass <PASSWORD>"`
+```
+f5eac88 - fix(imap-fetcher): UID search + full body fetch + reduce notifications
+8e8a453 - fix(imap-fetcher): extract anonymized_text from AnonymizationResult
+f6c96a5 - fix(imap-fetcher): add ProtonMail Bridge SSL certificate support
+```
 
 ---
 
-**Dernière mise à jour** : 2026-02-13 (D25 : annotations ajoutées, EmailEngine retiré)
-**Prochaine action** : ~~Configuration webhooks EmailEngine via interface web~~ → Validation imap-fetcher daemon
+## Leçons Apprises
+
+1. **IMAP UID vs séquence** : Toujours utiliser `uid("search", ...)` et `uid("fetch", ...)` avec aioimaplib. Les numéros de séquence sont instables entre sessions.
+2. **Redis ACL** : Les fichiers `.acl` ne supportent PAS les commentaires `#` (contrairement à `redis.conf`).
+3. **URL encoding** : Les caractères spéciaux (`#`, `@`, etc.) dans les mots de passe Redis doivent être URL-encodés quand utilisés dans une URI.
+4. **Trust level calibration** : `propose` sur une action haute fréquence (classify) génère trop de notifications. Utiliser `auto` pour les actions de classification, réserver `propose` pour les actions modificatrices.
+
+---
+
+**Dernière mise à jour** : 2026-02-15
+**Pipeline** : Opérationnel (3/4 comptes, en attente ProtonMail Bridge)

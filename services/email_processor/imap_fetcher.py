@@ -188,26 +188,28 @@ class IMAPAccountWatcher:
         import aioimaplib
 
         # Créer contexte SSL personnalisé pour ProtonMail Bridge
+        # Le Bridge utilise un certificat auto-signé émis pour 127.0.0.1
+        # mais on se connecte via Tailscale (100.x.x.x) — accepter le cert
         ssl_context = None
         if "protonmail" in self.account_id.lower():
             ssl_context = ssl.create_default_context()
-            # Charger certificat auto-signé ProtonMail Bridge
+            ssl_context.check_hostname = False
             cert_path = Path("/app/config/certs/protonmail_bridge.pem")
             if cert_path.exists():
                 ssl_context.load_verify_locations(cafile=str(cert_path))
-                # Désactiver vérification hostname car certificat émis pour 127.0.0.1
-                # mais connexion via Tailscale (100.100.4.31)
-                ssl_context.check_hostname = False
                 logger.info(
                     "ssl_cert_loaded",
                     account_id=self.account_id,
                     cert_path=str(cert_path),
                 )
             else:
-                logger.warning(
-                    "ssl_cert_missing",
+                # Pas de cert PEM : accepter le cert auto-signé du Bridge
+                # Sécurité OK car connexion via Tailscale (VPN chiffré)
+                ssl_context.verify_mode = ssl.CERT_NONE
+                logger.info(
+                    "ssl_cert_none_tailscale",
                     account_id=self.account_id,
-                    cert_path=str(cert_path),
+                    message="Accepting self-signed cert (Tailscale VPN)",
                 )
 
         self._imap = aioimaplib.IMAP4_SSL(
@@ -299,10 +301,16 @@ class IMAPAccountWatcher:
         """
         Cherche nouveaux mails non vus dans INBOX.
         Deduplique via Redis SET seen_uids:{account_id}.
+
+        Approche en 2 étapes (aioimaplib ne supporte pas UID SEARCH):
+        1. SEARCH UNSEEN → numéros de séquence (instables)
+        2. FETCH seq (UID) → UIDs stables pour dédup
         """
+        import re
+
         try:
-            # Chercher messages UNSEEN
-            status, data = await self._imap.uid("search", "UNSEEN")
+            # Étape 1: SEARCH UNSEEN → numéros de séquence
+            status, data = await self._imap.search("UNSEEN")
             if status != "OK":
                 logger.warning(
                     "imap_search_failed",
@@ -311,16 +319,48 @@ class IMAPAccountWatcher:
                 )
                 return
 
-            uids_str = data[0] if data else b""
-            if isinstance(uids_str, bytes):
-                uids_str = uids_str.decode("utf-8", errors="replace")
+            seq_str = data[0] if data else b""
+            if isinstance(seq_str, (bytes, bytearray)):
+                seq_str = seq_str.decode("utf-8", errors="replace")
 
-            if not uids_str or not uids_str.strip():
+            if not seq_str or not seq_str.strip():
                 return
 
-            # UIDs en string, pas bytes (fix pour compatibilité aioimaplib)
-            uids = [u.decode("utf-8") if isinstance(u, bytes) else str(u)
-                    for u in uids_str.strip().split()]
+            seq_nums = seq_str.strip().split()
+
+            # Étape 2: FETCH (UID) pour chaque séquence → UIDs stables
+            uids = []
+            for seq in seq_nums:
+                try:
+                    result = await self._imap.fetch(seq, "(UID)")
+                    if isinstance(result, tuple):
+                        fetch_status, fetch_data = result
+                    else:
+                        fetch_status = result.result
+                        fetch_data = result.lines
+
+                    for item in fetch_data:
+                        item_str = item.decode("utf-8", errors="replace") if isinstance(item, (bytes, bytearray)) else str(item)
+                        match = re.search(r"UID\s+(\d+)", item_str)
+                        if match:
+                            uids.append(match.group(1))
+                            break
+                except Exception as e:
+                    logger.warning(
+                        "uid_fetch_failed",
+                        account_id=self.account_id,
+                        seq=seq,
+                        error=str(e),
+                    )
+
+            if not uids:
+                return
+
+            logger.info(
+                "unseen_emails_found",
+                account_id=self.account_id,
+                count=len(uids),
+            )
 
             for uid in uids:
                 # Deduplication (faille #2)

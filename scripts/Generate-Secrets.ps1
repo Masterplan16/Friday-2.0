@@ -10,7 +10,7 @@
 #   4. Crée .env.new avec toutes les valeurs complètes
 #
 # SÉCURITÉ: Le fichier .env généré contient des secrets sensibles.
-# Chiffrer avec SOPS avant commit: sops -e .env > .env.enc
+# Chiffrer avec SOPS avant commit: ./scripts/encrypt-env.sh
 
 param(
     [string]$EnvFile = ".env"
@@ -87,7 +87,7 @@ $envContent = @"
 # Date: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss UTC')
 #
 # ⚠️  IMPORTANT: Ce fichier contient des secrets sensibles
-# Chiffrer avant commit: sops -e .env > .env.enc
+# Chiffrer avant commit: ./scripts/encrypt-env.sh
 
 # ============================================
 # PostgreSQL Database
@@ -406,6 +406,6 @@ Write-Host "  1. Ouvrir .env.new : notepad .env.new" -ForegroundColor Blue
 Write-Host "  2. Ajouter les clés manquantes manuellement" -ForegroundColor Blue
 Write-Host "  3. Remplacer .env : Move-Item .env.new .env -Force" -ForegroundColor Blue
 Write-Host "  4. Vérifier : bash scripts/verify_env.sh --env-file .env" -ForegroundColor Blue
-Write-Host "  5. Chiffrer : sops -e .env > .env.enc" -ForegroundColor Blue
+Write-Host "  5. Chiffrer : ./scripts/encrypt-env.sh" -ForegroundColor Blue
 Write-Host ""
 Write-Host "═══════════════════════════════════════════════════════════" -ForegroundColor Blue

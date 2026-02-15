@@ -118,6 +118,13 @@ result = await presidio_deanonymize(response)
 - Redis ACL : moindre privilège par service (voir addendum section 9.2)
 - Mapping Presidio : éphémère en mémoire uniquement, JAMAIS stocké en clair (voir addendum section 9.1)
 
+**SOPS — Piège critique `.env.enc` :**
+- **Ne JAMAIS utiliser `sops -d .env.enc`** sans flags explicites. L'extension `.enc` fait que SOPS assume du JSON et crash sur les commentaires `#` du format dotenv
+- **Toujours utiliser** les wrapper scripts : `./scripts/decrypt-env.sh` et `./scripts/encrypt-env.sh`
+- **Ou ajouter les flags** : `sops --input-type dotenv --output-type dotenv -d .env.enc`
+- **Docker restart vs up -d** : `docker compose restart` ne relit PAS le `.env`. Toujours utiliser `docker compose --project-name friday-20 up -d` pour appliquer un nouveau `.env`
+- **Redis passwords** : JAMAIS de caractères spéciaux (`#`, `@`, `%`) dans les mots de passe Redis (casse le shell, les URLs et SOPS). Uniquement `[a-zA-Z0-9-_]`
+
 ---
 
 ### 5. Observability & Trust Layer - OBLIGATOIRE

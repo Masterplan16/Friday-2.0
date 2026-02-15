@@ -82,10 +82,11 @@ scp .env.enc ubuntu@54.37.231.98:~/Friday-2.0/.env.enc
 # 8. Sur VPS, recréer .env depuis .env.enc
 ssh ubuntu@54.37.231.98
 cd Friday-2.0
-sops -d .env.enc > .env
+sops --input-type dotenv --output-type dotenv -d .env.enc > .env
 
-# 9. Redémarrer les services Docker
-docker compose restart
+# 9. Redemarrer les services Docker (IMPORTANT: up -d, PAS restart)
+# restart ne relit PAS le .env, il faut recreer les containers
+docker compose --project-name friday-20 up -d
 ```
 
 ### Étape 2 : Vérifier que ça fonctionne
@@ -185,8 +186,9 @@ Doit afficher `pending: 0` après traitement.
 # Vérifier que .env contient la vraie clé
 ssh ubuntu@54.37.231.98 "cat ~/Friday-2.0/.env | grep ANTHROPIC"
 
-# Si toujours placeholder, refaire Étape 1 complète
-# Ne pas oublier le "sops -d .env.enc > .env" sur le VPS
+# Si toujours placeholder, refaire Etape 1 complete
+# Ne pas oublier: sops --input-type dotenv --output-type dotenv -d .env.enc > .env
+# IMPORTANT: puis "docker compose --project-name friday-20 up -d" (PAS restart)
 ```
 
 ### Problème : classify_email() échoue toujours

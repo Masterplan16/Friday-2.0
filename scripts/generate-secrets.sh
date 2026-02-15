@@ -11,7 +11,7 @@
 #   4. Crée .env.new avec toutes les valeurs complètes
 #
 # SÉCURITÉ: Le fichier .env généré contient des secrets sensibles.
-# Chiffrer avec SOPS avant commit: sops -e .env > .env.enc
+# Chiffrer avec SOPS avant commit: ./scripts/encrypt-env.sh
 
 set -euo pipefail
 
@@ -81,7 +81,7 @@ cat > "$ENV_NEW" << 'EOF'
 # Date: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
 #
 # ⚠️  IMPORTANT: Ce fichier contient des secrets sensibles
-# Chiffrer avant commit: sops -e .env > .env.enc
+# Chiffrer avant commit: ./scripts/encrypt-env.sh
 
 # ============================================
 # PostgreSQL Database
@@ -406,6 +406,6 @@ echo -e "  1. Vérifier .env.new : ${BLUE}cat .env.new${NC}"
 echo -e "  2. Ajouter les clés manquantes manuellement"
 echo -e "  3. Remplacer .env : ${BLUE}mv .env.new .env${NC}"
 echo -e "  4. Vérifier : ${BLUE}bash scripts/verify_env.sh --env-file .env${NC}"
-echo -e "  5. Chiffrer : ${BLUE}sops -e .env > .env.enc${NC}"
+echo -e "  5. Chiffrer : ${BLUE}./scripts/encrypt-env.sh${NC}"
 echo ""
 echo -e "${BLUE}═══════════════════════════════════════════════════════════${NC}"

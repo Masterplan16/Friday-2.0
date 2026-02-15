@@ -740,11 +740,15 @@ age-keygen -y ~/.config/sops/age/keys.txt
 **Chiffrer `.env` (voir [docs/secrets-management.md](docs/secrets-management.md) pour détails) :**
 
 ```bash
-# Créer .env.enc depuis .env template
-sops -e .env.example > .env.enc
+# Chiffrer .env -> .env.enc (wrapper script recommande)
+./scripts/encrypt-env.sh
 
-# Déchiffrer avant lancement (automatique via docker-compose avec init script)
-sops -d .env.enc > .env
+# Dechiffrer .env.enc -> .env
+./scripts/decrypt-env.sh
+
+# ATTENTION: Ne JAMAIS utiliser "sops -d .env.enc" directement !
+# L'extension .enc fait que SOPS assume du JSON. Utiliser les scripts ci-dessus
+# ou ajouter: sops --input-type dotenv --output-type dotenv -d .env.enc > .env
 ```
 
 **Variables d'environnement requises** (structure complète dans [`.env.example`](.env.example)) :

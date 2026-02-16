@@ -126,6 +126,73 @@ def is_valid_file_type(mime_type: str, filename: str) -> bool:
     return True
 
 
+def validate_magic_number(file_path: Path) -> bool:
+    """
+    Valide magic number du fichier après téléchargement (AC#4).
+
+    Vérifie que les premiers bytes correspondent au type déclaré par l'extension.
+    CSV n'a pas de magic number (texte pur) → toujours valide.
+
+    Args:
+        file_path: Chemin fichier téléchargé
+
+    Returns:
+        True si magic number valide ou extension sans magic number, False sinon
+    """
+    extension = file_path.suffix.lower()
+    expected_magic = MAGIC_NUMBERS.get(extension)
+
+    # Pas de magic number pour cette extension (ex: .csv)
+    if expected_magic is None:
+        return True
+
+    try:
+        with open(file_path, "rb") as f:
+            header = f.read(len(expected_magic))
+
+        if header.startswith(expected_magic):
+            return True
+
+        logger.warning(
+            "file_validation.magic_number_mismatch",
+            file_path=str(file_path),
+            extension=extension,
+            expected=expected_magic.hex(),
+            actual=header.hex() if header else "empty",
+        )
+        return False
+
+    except OSError as e:
+        logger.error("file_validation.magic_number_read_error", error=str(e))
+        return False
+
+
+def _move_to_errors_dir(file_path: Path, reason: str) -> None:
+    """
+    Déplace un fichier invalide vers le dossier errors/ (AC#6).
+
+    Args:
+        file_path: Chemin fichier à déplacer
+        reason: Raison du déplacement (pour le log)
+    """
+    try:
+        ERRORS_DIR.mkdir(parents=True, exist_ok=True)
+        dest = ERRORS_DIR / file_path.name
+        shutil.move(str(file_path), str(dest))
+        logger.info(
+            "file_moved_to_errors",
+            source=str(file_path),
+            destination=str(dest),
+            reason=reason,
+        )
+    except OSError as e:
+        logger.error(
+            "file_move_to_errors_failed",
+            file_path=str(file_path),
+            error=str(e),
+        )
+
+
 def sanitize_filename(filename: str) -> str:
     """
     Sanitize filename pour sécurité filesystem.
@@ -419,9 +486,27 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             context.bot, document.file_id, destination_path, max_retries=MAX_RETRIES
         )
 
+        # Validation magic number post-download (AC#4)
+        if not validate_magic_number(destination_path):
+            _move_to_errors_dir(destination_path, "magic_number_mismatch")
+            await update.message.reply_text(
+                f"❌ Fichier suspect : {document.file_name}\n"
+                f"Le contenu du fichier ne correspond pas au type déclaré."
+            )
+            logger.warning(
+                "file_upload.magic_number_failed",
+                filename=document.file_name,
+                mime_type=document.mime_type,
+            )
+            return
+
     except Exception as e:
+        # Déplacer fichier vers errors/ si téléchargé partiellement
+        if destination_path.exists():
+            _move_to_errors_dir(destination_path, "download_error")
         await update.message.reply_text(
-            f"❌ Erreur lors du téléchargement du fichier.\n" f"Veuillez réessayer plus tard."
+            "❌ Erreur lors du téléchargement du fichier.\n"
+            "Veuillez réessayer plus tard."
         )
         logger.error(
             "file_upload.download_error",
@@ -466,12 +551,13 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         return
 
     # ========================================================================
-    # Notification Succès (AC#1)
+    # Notification Succès (AC#1, AC#5 topic Email & Communications)
     # ========================================================================
     await update.message.reply_text(
         f"✅ Fichier reçu: {document.file_name}\n"
         f"Taille: {document.file_size / 1024:.1f} Ko\n"
-        f"Traitement en cours par le pipeline Archiviste..."
+        f"Traitement en cours par le pipeline Archiviste...",
+        message_thread_id=TOPIC_EMAIL_COMMUNICATIONS or None,
     )
 
     logger.info(
@@ -533,6 +619,21 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     largest_photo = photos[-1]
 
     # ========================================================================
+    # Validation Taille Photo (AC#7)
+    # ========================================================================
+    if largest_photo.file_size and largest_photo.file_size > MAX_FILE_SIZE_BYTES:
+        await update.message.reply_text(
+            f"❌ Photo trop volumineuse: {largest_photo.file_size / 1024 / 1024:.1f} Mo\n"
+            f"Limite: {MAX_FILE_SIZE_MB} Mo (Telegram Bot API)"
+        )
+        logger.warning(
+            "photo_upload.too_large",
+            file_size_mb=largest_photo.file_size / 1024 / 1024,
+            max_size_mb=MAX_FILE_SIZE_MB,
+        )
+        return
+
+    # ========================================================================
     # Téléchargement Photo (AC#1, AC#6)
     # ========================================================================
     try:
@@ -549,9 +650,21 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
             context.bot, largest_photo.file_id, destination_path, max_retries=MAX_RETRIES
         )
 
+        # Validation magic number post-download (AC#4)
+        if not validate_magic_number(destination_path):
+            _move_to_errors_dir(destination_path, "magic_number_mismatch")
+            await update.message.reply_text(
+                "❌ Photo suspecte : le contenu ne correspond pas au type déclaré."
+            )
+            logger.warning("photo_upload.magic_number_failed")
+            return
+
     except Exception as e:
+        if destination_path.exists():
+            _move_to_errors_dir(destination_path, "download_error")
         await update.message.reply_text(
-            f"❌ Erreur lors du téléchargement de la photo.\n" f"Veuillez réessayer plus tard."
+            "❌ Erreur lors du téléchargement de la photo.\n"
+            "Veuillez réessayer plus tard."
         )
         logger.error(
             "photo_upload.download_error",
@@ -594,12 +707,13 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         return
 
     # ========================================================================
-    # Notification Succès (AC#1)
+    # Notification Succès (AC#1, AC#5 topic Email & Communications)
     # ========================================================================
     await update.message.reply_text(
         f"✅ Photo reçue\n"
         f"Taille: {largest_photo.file_size / 1024:.1f} Ko\n"
-        f"Traitement en cours par le pipeline Archiviste..."
+        f"Traitement en cours par le pipeline Archiviste...",
+        message_thread_id=TOPIC_EMAIL_COMMUNICATIONS or None,
     )
 
     logger.info(

@@ -148,7 +148,8 @@
     }
   },
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "notes": "IMPORTANT: POST /api/v1/calendar/sync endpoint requires Story 1.3 (FastAPI Gateway). Do NOT activate this workflow until Gateway is deployed."
   },
   "staticData": null,
   "tags": [

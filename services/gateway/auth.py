@@ -8,7 +8,7 @@ import structlog
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-from config import GatewaySettings, get_settings
+from services.gateway.config import GatewaySettings, get_settings
 
 logger = structlog.get_logger()
 

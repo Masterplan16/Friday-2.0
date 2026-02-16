@@ -26,6 +26,7 @@ from typing import Dict, Any, List
 
 import structlog
 from anthropic import AsyncAnthropic
+from pydantic import BaseModel
 from redis.asyncio import Redis
 
 from agents.src.core.heartbeat_models import (
@@ -40,6 +41,20 @@ logger = structlog.get_logger(__name__)
 # ============================================================================
 # Models
 # ============================================================================
+
+
+class LLMDecisionResult(BaseModel):
+    """
+    Result model for LLM Decider decision.
+
+    Attributes:
+        checks_to_run: List of check IDs to execute
+        reasoning: Justification for the decision
+    """
+
+    checks_to_run: List[str]
+    reasoning: str
+
 
 class LLMDecider:
     """

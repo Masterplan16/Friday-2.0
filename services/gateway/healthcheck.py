@@ -17,7 +17,12 @@ import httpx
 import structlog
 from redis.asyncio import Redis
 
-from schemas import HealthResponse, ServiceHealth, ServiceStatusType, SystemStatusType
+from services.gateway.schemas import (
+    HealthResponse,
+    ServiceHealth,
+    ServiceStatusType,
+    SystemStatusType,
+)
 
 logger = structlog.get_logger()
 

@@ -5,7 +5,7 @@ python-telegram-bot==21.0  # Telegram Bot API wrapper
 python-telegram-bot[job-queue]==21.0  # Job queue for scheduled tasks
 
 # Core
-pydantic==2.6.0  # Data validation
+pydantic==2.12.5  # Data validation
 structlog==24.1.0  # Structured logging
 python-dotenv==1.0.0  # Environment variables
 

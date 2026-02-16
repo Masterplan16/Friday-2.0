@@ -1,6 +1,6 @@
 # Story 7.4: Création Événements via Message Naturel Telegram
 
-Status: review
+Status: done
 
 ---
 
@@ -720,18 +720,22 @@ bot/handlers/
 tests/
 ├── unit/agents/calendar/
 │   ├── test_message_event_detector.py     # 18 tests extraction
-│   └── test_message_prompts.py             # 5 tests prompts
+│   ├── test_message_prompts.py             # 5 tests prompts
+│   └── test_context_integration.py         # 6 tests ContextManager
 ├── unit/bot/
 │   ├── test_natural_event_creation.py      # 12 tests handler
 │   ├── test_event_creation_callbacks.py    # 14 tests callbacks
-│   └── test_create_event_command.py        # 16 tests commande guidée
+│   ├── test_create_event_command.py        # 24 tests commande guidée
+│   └── test_event_modification_callbacks.py # 12 tests modification
 ├── integration/calendar/
 │   └── test_natural_event_pipeline.py      # 8 tests pipeline
+├── fixtures/
+│   └── natural_event_messages.json         # 10 messages variés
 └── e2e/calendar/
     └── test_natural_event_creation_e2e.py  # 5 tests E2E critiques
 
 docs/
-├── natural-event-creation-spec.md          # 400 lignes spec complète
+├── natural-event-creation-spec.md          # Spec technique
 └── telegram-user-guide.md                  # +100 lignes section création
 ```
 
@@ -748,7 +752,7 @@ docs/
 - Keys : `state:create_event:{user_id}`, `state:modify_event:{user_id}`
 
 **Claude Sonnet 4.5 (D17)** :
-- Extraction événement message : Temperature 0.7 (créativité parsing dates)
+- Extraction événement message : Temperature 0.1 (extraction structurée précise)
 - Few-shot 7 exemples (5 Story 7.1 + 2 nouveaux)
 - Injection contexte casquette (AC5)
 - Retry 3x si RateLimitError
@@ -760,7 +764,7 @@ docs/
 - Conflits détectés → **Topic System** (🚨 System & Alerts, Story 7.3 AC4)
 
 **Tests** :
-- Unitaires : 79 tests (18+12+14+16+13+6)
+- Unitaires : 91 tests (18+5+6+12+14+24+12)
 - Intégration : 8 tests pipeline complet
 - E2E : 5 tests critiques (Telegram réel + Google Calendar réel)
 - Coverage : ≥85% message_event_detector.py, ≥80% handlers
@@ -918,7 +922,7 @@ N/A
 ### Completion Notes List
 
 - Story 7.4 implémentée : 8/8 tasks complètes, 7/7 ACs validés
-- 91 tests PASS (18 extraction + 12 handler + 14 callbacks + 24 commande + 12 modification + 6 contexte + 5 E2E)
+- 104 tests (91 unit + 5 prompts + 8 integration pipeline)
 - Réutilise 80% du code Stories 7.1-7.3 (event_detector, sync_manager, context_manager, conflict_detector)
 - 2 flows : Message naturel (AC1) + Commande /creer_event guidée (AC4)
 - Influence contexte casquette subtile via ContextManager (AC5)
@@ -926,6 +930,19 @@ N/A
 - Google Calendar sync réutilise Story 7.2 (AC3)
 - Modification événement proposé via inline buttons navigation (AC6)
 - Documentation : spec technique + telegram-user-guide + CLAUDE.md + README.md
+- Code review adversariale : 13 issues fixées (2C+4H+4M+3L) :
+  - C1: Circuit breaker time-based reset (half-open apres 60s)
+  - C2: date/time modifications persistees en PostgreSQL
+  - H1: Casquette auto-detect via ContextManager en mode guidé
+  - H2: Dates relatives (demain, lundi, etc.) supportées dans /creer_event
+  - H3: ActionResult créé dans handle_event_create_callback
+  - H4: 3 fichiers manquants créés (test_message_prompts, test_natural_event_pipeline, natural_event_messages.json)
+  - M2: Emojis dans notifications Telegram (AC2/AC3)
+  - M3: Timezone Europe/Paris dans _build_datetime
+  - M4: Protection prompt injection renforcée dans sanitize_message_text
+  - L1: Temperature doc corrigée (0.1, pas 0.7)
+  - L2: Noop replace corrigé (re.escape)
+  - L3: Entity rollback si notification Telegram échoue
 
 ### Change Log
 
@@ -933,6 +950,7 @@ N/A
 |------|-----------|--------|
 | 2026-02-16 | Story créée via BMAD create-story | Claude Sonnet 4.5 |
 | 2026-02-16 | Tasks 1-8 implémentées, 91/91 tests PASS, Status → review | Claude Opus 4.6 |
+| 2026-02-16 | Code review adversariale : 13 issues (2C+4H+4M+3L) — tous fixes | Claude Opus 4.6 |
 
 ### File List
 
@@ -952,12 +970,17 @@ N/A
 - `CLAUDE.md` — Story 7.4 section ajoutée, Epic 7 header mis à jour (4 stories | 19 FRs)
 - `README.md` — Story 7.4 section ajoutée dans Features Implémentées
 
-**Tests** (8 fichiers, 91 tests) :
+**Tests** (10 fichiers, 104 tests) :
 - `tests/unit/agents/calendar/test_message_event_detector.py` (18 tests) — Extraction, intention, dates, Presidio, circuit breaker
+- `tests/unit/agents/calendar/test_message_prompts.py` (5 tests) — Few-shot prompts, sanitization, injection filter
+- `tests/unit/agents/calendar/test_context_integration.py` (6 tests) — ContextManager integration, fallback
 - `tests/unit/bot/test_natural_event_creation.py` (12 tests) — Handler message, ActionResult, notifications
 - `tests/unit/bot/test_event_creation_callbacks.py` (14 tests) — Callbacks création, Google sync, conflits
 - `tests/unit/bot/test_create_event_command.py` (24 tests) — Commande guidée, validation, state machine
 - `tests/unit/bot/test_event_modification_callbacks.py` (12 tests) — Menu modification, champs, validation
-- `tests/unit/agents/calendar/test_context_integration.py` (6 tests) — ContextManager integration, fallback
+- `tests/integration/calendar/test_natural_event_pipeline.py` (8 tests) — Pipeline complet integration
 - `tests/e2e/calendar/__init__.py` — Package init
 - `tests/e2e/calendar/test_natural_event_creation_e2e.py` (5 tests) — E2E pipeline complet
+
+**Fixtures** :
+- `tests/fixtures/natural_event_messages.json` — 10 messages variés (positifs + négatifs + ambigus)

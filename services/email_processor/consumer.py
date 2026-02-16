@@ -46,6 +46,7 @@ from agents.src.agents.email.attachment_extractor import extract_attachments
 from agents.src.agents.email.classifier import classify_email  # A.5: Branche classifier
 from agents.src.agents.email.draft_reply import draft_email_reply
 from agents.src.agents.email.sender_filter import check_sender_filter  # Story 2.8 Task 5
+from agents.src.agents.calendar.event_detector import extract_events_from_email  # Story 7.1: Event detection
 from agents.src.middleware.trust import init_trust_manager
 
 # ============================================
@@ -574,6 +575,23 @@ class EmailProcessorConsumer:
                     db_pool=self.db_pool
                 )
                 logger.info("vip_stats_updated", vip_id=vip_data["id"])
+
+            # Étape 5.7: Extraction événements calendrier (Story 7.1)
+            # TODO Story 7.1: Implémenter insertion événements dans core.events + trigger conflits
+            # if category != "spam":
+            #     try:
+            #         events_result = await extract_events_from_email(
+            #             email_text=body_anon,
+            #             email_id=str(email_id),
+            #             metadata={"sender": from_anon, "subject": subject_anon, "date": date_str},
+            #             current_date=datetime.utcnow().strftime("%Y-%m-%d"),
+            #             db_pool=self.db_pool,
+            #         )
+            #         if events_result.events_detected:
+            #             logger.info("events_detected", email_id=str(email_id), count=len(events_result.events_detected))
+            #             # TODO: INSERT INTO core.events + trigger conflict detection
+            #     except Exception as e:
+            #         logger.warning("event_extraction_failed", email_id=str(email_id), error=str(e))
 
             # Étape 6: Notification Telegram email
             await self.send_telegram_notification(

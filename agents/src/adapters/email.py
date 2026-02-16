@@ -100,7 +100,6 @@ class SMTPSendError(EmailAdapterError):
 # Interface abstraite
 # ============================================================================
 
-
 class EmailAdapter(ABC):
     """
     Interface abstraite pour provider email.

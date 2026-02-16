@@ -123,7 +123,6 @@ class EmbeddingProviderError(VectorStoreError):
 # Interface Abstraite
 # ============================================================
 
-
 class VectorStoreAdapter(ABC):
     """
     Interface abstraite pour providers embeddings.

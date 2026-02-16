@@ -6,6 +6,6 @@ When the container mounts ./services/gateway into /app, this directory IS the ga
 """
 
 # Direct import from current package (we ARE in the gateway package)
-from main import app  # noqa: F401
+from .main import app  # noqa: F401
 
 __all__ = ["app"]

@@ -12,17 +12,17 @@ from typing import AsyncGenerator
 
 import asyncpg
 import structlog
-from auth import get_current_user
 from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from healthcheck import HealthChecker
-from logging_config import setup_logging
 from redis.asyncio import Redis
-from routes import heartbeat, webhooks
-from schemas import AuthUser, HealthResponse
 
-from config import GatewaySettings, get_settings
+from .auth import get_current_user
+from .config import GatewaySettings, get_settings
+from .healthcheck import HealthChecker
+from .logging_config import setup_logging
+from .routes import heartbeat, webhooks
+from .schemas import AuthUser, HealthResponse
 
 logger = structlog.get_logger()
 

@@ -93,14 +93,10 @@ class MessageEventResult(BaseModel):
 
     event_detected: bool = Field(..., description="True si evenement detecte")
     event: Optional[Event] = Field(None, description="Evenement extrait (si detecte)")
-    confidence: float = Field(
-        0.0, ge=0.0, le=1.0, description="Confidence extraction"
-    )
+    confidence: float = Field(0.0, ge=0.0, le=1.0, description="Confidence extraction")
     processing_time_ms: int = Field(0, ge=0, description="Temps traitement LLM ms")
     model_used: str = Field(default=LLM_MODEL, description="Model LLM utilise")
-    source_message: Optional[str] = Field(
-        None, description="Message source (tronque pour logs)"
-    )
+    source_message: Optional[str] = Field(None, description="Message source (tronque pour logs)")
 
 
 # ============================================================================
@@ -289,9 +285,7 @@ async def extract_event_from_message(
             if attempt == MAX_RETRIES:
                 async with _circuit_breaker_lock:
                     _circuit_breaker_failures += 1
-                raise EventExtractionError(
-                    f"RateLimitError apres {MAX_RETRIES} tentatives"
-                )
+                raise EventExtractionError(f"RateLimitError apres {MAX_RETRIES} tentatives")
             await asyncio.sleep(2**attempt)
 
         except APIError as e:
@@ -396,9 +390,7 @@ async def extract_event_from_message(
 
     # Deanonymiser participants si Presidio mapping existe
     if presidio_mapping and event.participants:
-        event.participants = _deanonymize_participants(
-            event.participants, presidio_mapping
-        )
+        event.participants = _deanonymize_participants(event.participants, presidio_mapping)
 
     logger.info(
         "Message event extraction terminee",
@@ -427,9 +419,7 @@ async def extract_event_from_message(
 # ============================================================================
 
 
-@friday_action(
-    module="calendar", action="create_event_from_message", trust_default="propose"
-)
+@friday_action(module="calendar", action="create_event_from_message", trust_default="propose")
 async def create_event_from_message_action(
     message: str,
     user_id: Optional[int] = None,
@@ -535,13 +525,11 @@ async def _fetch_current_casquette(
     """
     try:
         async with db_pool.acquire() as conn:
-            row = await conn.fetchrow(
-                """
+            row = await conn.fetchrow("""
                 SELECT current_casquette, updated_by
                 FROM core.user_context
                 WHERE id = 1
-                """
-            )
+                """)
 
             if not row or row["current_casquette"] is None:
                 return None

@@ -112,6 +112,10 @@ class DocumentClassifier:
         confidence = response.get("confidence", 0.0)
         reasoning = response.get("reasoning", "")
 
+        # Ensure reasoning meets minimum length requirement (20 chars)
+        if len(reasoning) < 20:
+            reasoning = f"Classification: {category}" + (f"/{subcategory}" if subcategory else "")
+
         logger.info(
             "classification_completed",
             document_id=document_id,

@@ -133,9 +133,12 @@ async def test_atomic_move_creates_parent_dirs(file_mover, temp_source_file, sam
 @pytest.mark.asyncio
 async def test_update_database_called_with_document_id(temp_source_file, sample_classification, tmp_path):
     """Test update BDD appelé si document_id fourni."""
-    mock_pool = AsyncMock()
+    mock_pool = MagicMock()
     mock_conn = AsyncMock()
-    mock_pool.acquire.return_value.__aenter__.return_value = mock_conn
+    mock_acquire = MagicMock()
+    mock_acquire.__aenter__ = AsyncMock(return_value=mock_conn)
+    mock_acquire.__aexit__ = AsyncMock(return_value=None)
+    mock_pool.acquire.return_value = mock_acquire
 
     file_mover = FileMover(db_pool=mock_pool)
     mock_config = MagicMock()

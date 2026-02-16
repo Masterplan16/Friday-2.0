@@ -93,7 +93,9 @@ class GoogleCalendarConfig(BaseModel):
     calendars: List[CalendarSettings] = Field(
         ..., min_length=1, description="List of calendars to sync"
     )
-    sync_range: SyncRange = Field(default_factory=SyncRange, description="Sync time range")
+    sync_range: SyncRange | None = Field(
+        default=None, description="Sync time range (None = unlimited history)"
+    )
     default_reminders: List[DefaultReminder] = Field(
         default_factory=lambda: [DefaultReminder()], description="Default reminders"
     )

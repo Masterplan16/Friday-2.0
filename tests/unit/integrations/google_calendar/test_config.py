@@ -44,6 +44,25 @@ google_calendar:
 
 
 @pytest.fixture
+def unlimited_history_yaml():
+    """Create YAML with unlimited history (sync_range: null)."""
+    return """
+google_calendar:
+  enabled: true
+  sync_interval_minutes: 30
+  calendars:
+    - id: "primary"
+      name: "Calendrier Friday"
+      casquette: "personnel"
+      color: "#4285F4"
+  sync_range: null
+  default_reminders:
+    - method: "popup"
+      minutes: 30
+"""
+
+
+@pytest.fixture
 def invalid_casquette_yaml():
     """Create YAML with invalid casquette."""
     return """
@@ -237,3 +256,22 @@ google_calendar:
             CalendarConfig.from_yaml(str(config_file))
 
         assert "reminder method" in str(exc_info.value).lower()
+
+    def test_unlimited_history_sync_range_null(self, tmp_path, unlimited_history_yaml):
+        """Test that sync_range: null (unlimited history) is accepted.
+
+        Per Google Calendar API docs, timeMin/timeMax are optional.
+        If not provided, API returns all events without time filtering.
+        """
+        # Arrange
+        config_file = tmp_path / "calendar_config.yaml"
+        config_file.write_text(unlimited_history_yaml, encoding='utf-8')
+
+        # Act
+        config = CalendarConfig.from_yaml(str(config_file))
+
+        # Assert - sync_range is None (unlimited)
+        assert config.google_calendar.sync_range is None
+        assert config.google_calendar.enabled is True
+        assert len(config.google_calendar.calendars) == 1
+        assert config.google_calendar.calendars[0].id == "primary"

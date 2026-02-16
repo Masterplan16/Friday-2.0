@@ -126,25 +126,27 @@ class GoogleCalendarSync:
         Returns:
             List of GoogleCalendarEvent models
         """
-        # H4 fix: use timezone-aware datetime
+        # Build API params - timeMin/timeMax are OPTIONAL per Google Calendar API docs
+        # If not specified, API returns ALL events without time filtering
+        api_params = {
+            "calendarId": calendar_id,
+            "singleEvents": True,
+            "orderBy": "startTime",
+            "maxResults": 2500,
+        }
+
+        # Only add time filters if sync_range is configured
         sync_range = self.config.google_calendar.sync_range
-        time_min = (datetime.now(timezone.utc) - timedelta(days=sync_range.past_days)).isoformat()
-        time_max = (datetime.now(timezone.utc) + timedelta(days=sync_range.future_days)).isoformat()
+        if sync_range is not None:
+            now = datetime.now(timezone.utc)
+            if sync_range.past_days is not None:
+                api_params["timeMin"] = (now - timedelta(days=sync_range.past_days)).isoformat()
+            if sync_range.future_days is not None:
+                api_params["timeMax"] = (now + timedelta(days=sync_range.future_days)).isoformat()
 
         # C5 fix: wrap sync Google API .execute() in asyncio.to_thread
         def _list_events():
-            return (
-                service.events()
-                .list(
-                    calendarId=calendar_id,
-                    timeMin=time_min,
-                    timeMax=time_max,
-                    singleEvents=True,
-                    orderBy="startTime",
-                    maxResults=2500,
-                )
-                .execute()
-            )
+            return service.events().list(**api_params).execute()
 
         events_result = await asyncio.to_thread(_list_events)
         google_events = events_result.get("items", [])

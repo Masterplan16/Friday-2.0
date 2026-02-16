@@ -517,3 +517,39 @@ class TestGoogleCalendarSync:
         assert len(modifications) > 0
         assert modifications[0]["google_updated"] == google_updated
         assert modifications[0]["local_updated"] == local_updated
+
+    @pytest.mark.asyncio
+    async def test_unlimited_history_no_time_filters(self, mock_db_pool, mock_google_service):
+        """Test that sync_range=None does NOT pass timeMin/timeMax (unlimited history).
+
+        Per Google Calendar API docs: timeMin/timeMax are optional.
+        If not provided, API returns all events without time filtering.
+        """
+        # Arrange - Config with sync_range=None (unlimited)
+        config_dict = INLINE_CONFIG.copy()
+        config_dict["google_calendar"]["sync_range"] = None
+        mock_config = CalendarConfig(**config_dict)
+
+        sync_manager = GoogleCalendarSync(mock_config, mock_db_pool)
+        sync_manager.service = mock_google_service
+
+        mock_list = Mock()
+        mock_list.execute.return_value = {"items": []}
+        mock_google_service.events().list.return_value = mock_list
+
+        async def fake_to_thread(fn, *args, **kwargs):
+            return fn(*args, **kwargs)
+
+        # Act
+        with patch(
+            "agents.src.integrations.google_calendar.sync_manager.asyncio.to_thread",
+            side_effect=fake_to_thread,
+        ):
+            await sync_manager._fetch_calendar_events(mock_google_service, "primary", "medecin")
+
+        # Assert - timeMin and timeMax were NOT passed
+        call_kwargs = mock_google_service.events().list.call_args[1]
+        assert "timeMin" not in call_kwargs, "timeMin should NOT be passed when sync_range is None"
+        assert "timeMax" not in call_kwargs, "timeMax should NOT be passed when sync_range is None"
+        assert call_kwargs["singleEvents"] is True
+        assert call_kwargs["orderBy"] == "startTime"

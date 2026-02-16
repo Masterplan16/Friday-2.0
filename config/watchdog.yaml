@@ -1,0 +1,31 @@
+# Configuration Watchdog Friday 2.0
+# Surveille plusieurs dossiers pour nouveaux fichiers
+# Hot-reload supporte (modification detectee <10s)
+
+watchdog:
+  enabled: true
+  polling_interval_seconds: 1  # Check filesystem every 1s
+  stabilization_delay_seconds: 1.0  # Attente stabilisation fichier (ecriture complete)
+  error_directory: "C:\\Users\\lopez\\BeeStation\\Friday\\Transit\\Errors"  # Fichiers en erreur (AC5)
+
+  paths:
+    # Scanner physique (PDFs, images)
+    - path: "C:\\Users\\lopez\\BeeStation\\Friday\\Transit\\Scans\\"
+      recursive: false
+      extensions: [".pdf", ".png", ".jpg", ".jpeg"]
+      source_label: "scanner_physique"
+      workflow_target: "ocr_pipeline"
+
+    # Import CSV bancaires
+    - path: "C:\\Users\\lopez\\BeeStation\\Friday\\Transit\\Finance\\"
+      recursive: false
+      extensions: [".csv", ".xlsx"]
+      source_label: "csv_bancaire"
+      workflow_target: "csv_processing"
+
+    # Dossier generique (documents divers)
+    - path: "C:\\Users\\lopez\\BeeStation\\Friday\\Transit\\Documents\\"
+      recursive: true  # Sous-dossiers inclus
+      extensions: [".pdf", ".png", ".jpg", ".jpeg", ".docx", ".xlsx"]
+      source_label: "import_manuel"
+      workflow_target: "default"

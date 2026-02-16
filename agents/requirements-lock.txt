@@ -131,3 +131,4 @@ wrapt==2.1.1
 xxhash==3.6.0
 zstandard==0.25.0
 voyageai>=1.0.0  # Story 6.2 - Voyage AI embeddings provider
+watchdog==6.0.0  # Story 3.5 - Filesystem events monitoring (cross-platform)

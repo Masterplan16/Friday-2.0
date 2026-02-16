@@ -70,7 +70,9 @@ class CheckPriority:
     - LOW: Exécuté si temps disponible (stats générales, veille technologique)
 
     Story 7.3: calendar_conflicts = MEDIUM priority
+    Story 3.4: warranty_expiry CRITICAL for <7 days
     """
+    CRITICAL = "critical"
     HIGH = "high"
     MEDIUM = "medium"
     LOW = "low"

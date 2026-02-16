@@ -11,12 +11,15 @@ Voir pytest.ini pour la configuration.
 
 import os
 import sys
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import AsyncGenerator
 from unittest.mock import AsyncMock, MagicMock
 
 import asyncpg
 import pytest
+
+from agents.src.middleware.trust import init_trust_manager
 
 # ==========================================
 # PYTHONPATH Setup (Fix LOW-3 à LOW-6)
@@ -27,6 +30,42 @@ import pytest
 repo_root = Path(__file__).parent.parent
 if str(repo_root) not in sys.path:
     sys.path.insert(0, str(repo_root))
+
+
+# ==========================================
+# TrustManager Mock (shared across unit + e2e)
+# ==========================================
+
+
+class MockAsyncPool:
+    """Mock d'un pool asyncpg pour tests nécessitant TrustManager."""
+
+    def __init__(self):
+        self.mock_conn = AsyncMock()
+        self.mock_conn.fetch.return_value = []
+        self.mock_conn.fetchval.return_value = None
+        self.mock_conn.execute.return_value = None
+
+    @asynccontextmanager
+    async def acquire(self):
+        """Context manager async pour acquire()."""
+        yield self.mock_conn
+
+    async def fetchval(self, query, *args):
+        """Mock fetchval direct sur pool."""
+        return "auto"
+
+
+@pytest.fixture(scope="session", autouse=True)
+def initialize_trust_manager():
+    """
+    Initialise TrustManager en mode mock pour tous les tests.
+
+    Nécessaire pour les fonctions utilisant @friday_action decorator.
+    """
+    mock_pool = MockAsyncPool()
+    init_trust_manager(db_pool=mock_pool)
+    yield
 
 
 # ==========================================

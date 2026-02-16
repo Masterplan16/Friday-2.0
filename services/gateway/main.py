@@ -22,7 +22,7 @@ from config import GatewaySettings, get_settings
 from healthcheck import HealthChecker
 from logging_config import setup_logging
 from schemas import AuthUser, HealthResponse
-from routes import webhooks
+from routes import webhooks, heartbeat
 
 logger = structlog.get_logger()
 
@@ -163,8 +163,9 @@ def create_app(settings: GatewaySettings | None = None) -> FastAPI:
         """Protected route requiring bearer token authentication."""
         return {"username": current_user["username"]}
 
-    # Include routers (Story 2.1)
-    app.include_router(webhooks.router)
+    # Include routers
+    app.include_router(webhooks.router)  # Story 2.1
+    app.include_router(heartbeat.router)  # Story 4.1
 
     return app
 

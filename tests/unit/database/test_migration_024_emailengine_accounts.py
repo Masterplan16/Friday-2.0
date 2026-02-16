@@ -11,18 +11,22 @@ from pathlib import Path
 
 @pytest.fixture
 async def db_connection():
-    """Connexion test database"""
+    """Connexion test database - Skip si PostgreSQL non disponible"""
     # En dev, utiliser connection string de test ou défaut
     database_url = os.getenv(
         'TEST_DATABASE_URL',
         'postgresql://friday:friday@localhost:5432/friday_test'
     )
 
+    conn = None
     try:
-        conn = await asyncpg.connect(database_url)
+        conn = await asyncpg.connect(database_url, timeout=5)
         yield conn
+    except (OSError, Exception) as e:
+        pytest.skip(f"PostgreSQL not available: {e}")
     finally:
-        await conn.close()
+        if conn is not None:
+            await conn.close()
 
 
 @pytest.mark.asyncio

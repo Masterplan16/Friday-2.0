@@ -97,7 +97,7 @@ async def test_rename_document_emitter_with_special_chars(renamer):
     """
     Test AC2 : Émetteur avec caractères spéciaux interdits Windows → supprimés.
 
-    Caractères interdits: \ / : * ? " < > |
+    Caractères interdits: \\ / : * ? " < > |
     Exemple: "Labo / Tests*?" → "Labo-Tests"
     """
     # Arrange

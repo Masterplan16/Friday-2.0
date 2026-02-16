@@ -28,6 +28,9 @@ docstring_parser==0.17.0
 fastapi==0.128.5
 filelock==3.20.3
 flake8==7.3.0
+google-api-python-client==2.162.0
+google-auth==2.38.0
+google-auth-oauthlib==1.2.1
 grpcio==1.78.0
 h11==0.16.0
 h2==4.3.0

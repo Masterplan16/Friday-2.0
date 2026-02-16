@@ -16,6 +16,9 @@ import asyncpg
 import redis.asyncio as aioredis
 import structlog
 import yaml
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram.ext import ContextTypes
+
 from bot.handlers.formatters import (
     format_confidence,
     format_eur,
@@ -25,8 +28,6 @@ from bot.handlers.formatters import (
     truncate_text,
 )
 from bot.handlers.messages import send_message_with_split
-from telegram import Update
-from telegram.ext import ContextTypes
 
 logger = structlog.get_logger(__name__)
 
@@ -371,7 +372,20 @@ async def receipt_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             lines.append(f"Updated: {format_timestamp(row['updated_at'], verbose=True)}")
 
         text = "\n".join(lines)
-        await send_message_with_split(update, text)
+
+        # Si action pending, proposer boutons d'action
+        if row["status"] == "pending":
+            reply_markup = InlineKeyboardMarkup(
+                [
+                    [
+                        InlineKeyboardButton("✅ Approuver", callback_data=f"approve_{rid}"),
+                        InlineKeyboardButton("❌ Rejeter", callback_data=f"reject_{rid}"),
+                    ]
+                ]
+            )
+            await update.message.reply_text(text, reply_markup=reply_markup)
+        else:
+            await send_message_with_split(update, text)
 
     except ValueError as e:
         await update.message.reply_text(f"Configuration erreur: {e}")
@@ -648,9 +662,7 @@ async def budget_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
         # Alerte si >80% budget
         if pct_budget > 80:
-            lines.append(
-                f"\n\u26a0\ufe0f ALERTE: Budget consomme a {pct_budget:.1f}% (seuil 80%)"
-            )
+            lines.append(f"\n\u26a0\ufe0f ALERTE: Budget consomme a {pct_budget:.1f}% (seuil 80%)")
 
         # Detail par module (M4 fix: verbose only)
         if verbose and rows:
@@ -896,8 +908,7 @@ async def pending_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             lines.append("")
 
         # Footer
-        lines.append("💡 Utilisez /receipt <id> pour voir le detail complet")
-        lines.append("🔘 Validez via les inline buttons dans le topic Actions & Validations")
+        lines.append("💡 /receipt <id> pour detail | Boutons ci-dessous pour agir")
 
         # Si limite atteinte, avertir (H1 fix: respecter filtre module dans count)
         if count >= 20:
@@ -916,11 +927,75 @@ async def pending_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
                 lines.insert(2, "")
 
         text = "\n".join(lines)
-        # M1 fix: pas de parse_mode Markdown (contenu utilisateur non echappe)
-        await send_message_with_split(update, text)
+
+        # Inline buttons: une ligne par action [Rejeter] + ligne finale [Tout rejeter]
+        keyboard_rows = []
+        for row in rows:
+            rid = str(row["id"])
+            id_short = rid[:8]
+            module_action = f"{row['module']}.{row['action_type']}"
+            keyboard_rows.append(
+                [
+                    InlineKeyboardButton(f"✅ {id_short}", callback_data=f"approve_{rid}"),
+                    InlineKeyboardButton(f"❌ {id_short}", callback_data=f"reject_{rid}"),
+                ]
+            )
+        # Bouton bulk en bas
+        keyboard_rows.append(
+            [
+                InlineKeyboardButton(
+                    f"🗑️ Tout rejeter ({count})", callback_data="reject_all_pending"
+                ),
+            ]
+        )
+        reply_markup = InlineKeyboardMarkup(keyboard_rows)
+
+        await update.message.reply_text(text, reply_markup=reply_markup)
 
     except ValueError as e:
         await update.message.reply_text(f"Configuration erreur: {e}")
     except Exception as e:
         logger.error("/pending command failed", error=str(e), exc_info=True)
         await update.message.reply_text(_ERR_DB)
+
+
+# ────────────────────────────────────────────────────────────
+# Callback: reject_all_pending (bulk reject)
+# ────────────────────────────────────────────────────────────
+
+
+async def reject_all_pending_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Callback pour bouton [Tout rejeter] de /pending.
+
+    Rejette toutes les actions pending en une seule requete DB.
+    """
+    query = update.callback_query
+    user_id = query.from_user.id if query.from_user else None
+
+    if not _check_owner(user_id):
+        await query.answer("Non autorise", show_alert=True)
+        return
+
+    await query.answer()
+
+    try:
+        pool = await _get_pool()
+        async with pool.acquire() as conn:
+            result = await conn.execute(
+                "UPDATE core.action_receipts "
+                "SET status = 'rejected', validated_by = $1, updated_at = NOW() "
+                "WHERE status = 'pending'",
+                user_id,
+            )
+        # result = "UPDATE N"
+        count = int(result.split()[-1]) if result else 0
+
+        await query.edit_message_text(
+            f"🗑️ {count} action(s) pending rejetee(s).\n" f"Utilisez /pending pour verifier."
+        )
+
+        logger.info("Bulk reject all pending", user_id=user_id, count=count)
+
+    except Exception as e:
+        logger.error("reject_all_pending failed", error=str(e), exc_info=True)
+        await query.edit_message_text(f"Erreur lors du rejet: {str(e)[:200]}")

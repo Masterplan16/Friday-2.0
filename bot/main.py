@@ -176,6 +176,15 @@ class FridayBot:
         self.application.add_handler(
             CommandHandler("pending", trust_budget_commands.pending_command)
         )
+        # Callback: bouton [Tout rejeter] de /pending
+        from telegram.ext import CallbackQueryHandler as _CQH
+
+        self.application.add_handler(
+            _CQH(
+                trust_budget_commands.reject_all_pending_callback,
+                pattern=r"^reject_all_pending$",
+            )
+        )
 
         # Commande Story 1.12 - Backup & Sync
         self.application.add_handler(CommandHandler("backup", backup_commands.backup_command))

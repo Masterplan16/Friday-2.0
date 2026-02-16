@@ -40,9 +40,7 @@ from agents.src.adapters.email import (
     IMAPUIDNotFoundError,
     get_email_adapter,
 )
-from agents.src.agents.calendar.event_detector import (  # Story 7.1: Event detection
-    extract_events_from_email,
-)
+# Event detection import removed - now done inline to avoid circular dependency
 from agents.src.agents.email.attachment_extractor import extract_attachments
 from agents.src.agents.email.classifier import classify_email  # A.5: Branche classifier
 from agents.src.agents.email.draft_reply import draft_email_reply

@@ -335,4 +335,3 @@ class EmailEngineError(Exception):
 
     Raised quand une opération EmailEngine échoue après tous les retries.
     """
-

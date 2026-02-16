@@ -203,24 +203,27 @@ async def pending_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         lines.append("💡 Utilisez /receipt <id> pour voir le détail complet")
         lines.append("🔘 Validez via les inline buttons dans le topic Actions & Validations")
 
-        # Si limite atteinte, avertir
+        # Si limite atteinte, avertir (count query respecte le filtre module)
         if count >= 20:
+            count_query = "SELECT COUNT(*) FROM core.action_receipts WHERE status = 'pending'"
+            count_params: list = []
+            if filter_module:
+                count_query += " AND module = $1"
+                count_params.append(filter_module)
             async with pool.acquire() as conn:
-                total = await conn.fetchval(
-                    "SELECT COUNT(*) FROM core.action_receipts WHERE status = 'pending'"
-                )
+                total = await conn.fetchval(count_query, *count_params)
             if total > 20:
-                lines.insert(1, f"⚠️ Affichage limité aux 20 plus récentes ({total} total). Utilisez /pending <module> pour filtrer.")
+                lines.insert(1, f"⚠️ Affichage limite aux 20 plus recentes ({total} total). Utilisez /pending <module> pour filtrer.")
                 lines.insert(2, "")
 
         text = "\n".join(lines)
-        await send_message_with_split(update, text, parse_mode="Markdown")
+        await send_message_with_split(update, text)
 
     except ValueError as e:
-        await update.message.reply_text(f"Configuration erreur: {e}", parse_mode="Markdown")
+        await update.message.reply_text(f"Configuration erreur: {e}")
     except Exception as e:
         logger.error("/pending command failed", error=str(e), exc_info=True)
-        await update.message.reply_text(_ERR_DB, parse_mode="Markdown")
+        await update.message.reply_text(_ERR_DB)
 ```
 
 ### Fichiers à modifier
@@ -424,8 +427,11 @@ Ajouter dans la liste des commandes :
 | `test_pending_command_unauthorized_user` | Unit | AC6 - Autorisation |
 | `test_pending_command_db_error` | Unit | Edge - Erreur DB |
 | `test_pending_command_combined_module_verbose` | Unit | Edge - Module + verbose |
+| `test_pending_command_pagination_with_module_filter` | Unit | Review - H1 count filtre module |
+| `test_pending_command_long_verbose_flag_not_parsed_as_module` | Unit | Review - H2 --verbose flag |
+| `test_pending_command_confidence_none` | Unit | Review - L1 confidence None |
 
-**Total : 10 tests unitaires**
+**Total : 13 tests unitaires** (10 originaux + 3 ajoutés code review)
 
 ---
 
@@ -494,12 +500,12 @@ Ajouter dans la liste des commandes :
 
 - [x] Handler `pending_command()` implémenté dans `trust_budget_commands.py`
 - [x] Handler enregistré dans `bot/main.py`
-- [x] 10 tests unitaires PASS ✅
+- [x] 13 tests unitaires PASS ✅ (10 originaux + 3 ajoutés review)
 - [x] Documentation utilisateur mise à jour (telegram-user-guide.md)
 - [x] Documentation bot mise à jour (bot/README.md)
-- [ ] Code review Opus 4.6 (0 issue critique, 0 régression) — À faire
+- [x] Code review adversariale (Sonnet 4.5) — 9 issues (2H+4M+3L) trouvées, TOUTES fixées ✅
 - [x] Testé manuellement en local avec mock DB (tests automatisés)
-- [x] Story 1.18 marquée `review` dans sprint-status.yaml
+- [x] Story 1.18 marquée `done` dans sprint-status.yaml
 
 ---
 
@@ -551,11 +557,30 @@ Ajouter dans la liste des commandes :
 
 **Durée réelle** : ~2.5h (estimation XS 3-4h respectée)
 
-**Prêt pour code review** : Oui ✅
+### Code Review Record
+
+**Reviewer** : Sonnet 4.5 (adversarial)
+**Date review** : 2026-02-16
+**Issues trouvées** : 9 (2H + 4M + 3L) — TOUTES FIXÉES ✅
+
+| ID | Sévérité | Description | Fix |
+|----|----------|-------------|-----|
+| H1 | HIGH | Pagination count ignorait filtre module | Count query filtre par module si présent |
+| H2 | HIGH | `--verbose` parsé comme nom de module | `arg.startswith("-")` au lieu de `arg != "-v"` |
+| M1 | MEDIUM | Pas d'échappement Markdown contenu utilisateur | Supprimé `parse_mode="Markdown"` + formatting chars |
+| M2 | MEDIUM | Test manquant pagination + module | Ajouté `test_pending_command_pagination_with_module_filter` |
+| M3 | MEDIUM | Test manquant `--verbose` handling | Ajouté `test_pending_command_long_verbose_flag_not_parsed_as_module` |
+| M4 | MEDIUM | Incohérence ligne count (235 vs 581) | Corrigé → 581 |
+| L1 | LOW | Test manquant confidence=None | Ajouté `test_pending_command_confidence_none` |
+| L2 | LOW | Second DB roundtrip count sans filtre | Fusionné avec H1 (count filtre correctement) |
+| L3 | LOW | Header "Fichiers à créer" trompeur | Corrigé → "Fichiers à modifier" |
+
+**Tests post-review** : 13/13 PASS ✅ (10 originaux + 3 nouveaux)
 
 ---
 
 **Créé par** : BMad Master 🧙
 **Date** : 2026-02-16
 **Implémenté le** : 2026-02-16
-**Status** : Review (prêt pour code review Opus 4.6)
+**Code review** : 2026-02-16 — 9 issues fixées, 13/13 tests PASS
+**Status** : Done ✅

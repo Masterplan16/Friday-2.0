@@ -26,7 +26,7 @@ Usage:
 from typing import List, Optional
 
 import structlog
-from agents.src.core.heartbeat_models import Check, CheckPriority
+from agents.src.core.heartbeat_models import Check
 
 logger = structlog.get_logger(__name__)
 

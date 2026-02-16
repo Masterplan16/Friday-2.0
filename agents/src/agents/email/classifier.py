@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import time
 from json import JSONDecodeError  # L1 fix: Import specific exception
-from typing import TYPE_CHECKING, Optional, Sequence
+from typing import TYPE_CHECKING, Optional
 
 import asyncpg
 import structlog
@@ -22,7 +22,7 @@ from agents.src.middleware.trust import friday_action
 from agents.src.models.email_classification import EmailClassification
 
 if TYPE_CHECKING:
-    from typing import Any
+    pass
 
     from agents.src.core.models import Casquette
 
@@ -36,7 +36,6 @@ _circuit_breaker_failures: dict[str, int] = {}
 class EmailClassifierError(Exception):
     """Erreur dans le processus de classification d'email."""
 
-    pass
 
 
 @friday_action(module="email", action="classify", trust_default="auto")

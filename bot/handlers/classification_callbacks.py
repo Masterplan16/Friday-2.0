@@ -10,7 +10,7 @@ import os
 import uuid
 
 import asyncpg
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram import Update
 from telegram.ext import ContextTypes
 
 logger = logging.getLogger(__name__)

@@ -20,11 +20,10 @@ Workflow :
 
 import asyncio
 import os
-from datetime import datetime, timezone
+import sys
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
-import asyncpg
 import structlog
 from agents.src.agents.archiviste.pipeline import OCRPipeline
 from redis.asyncio import Redis

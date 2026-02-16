@@ -12,7 +12,6 @@ Trust Layer: @friday_action avec trust=propose (Day 1).
 
 import json
 from datetime import datetime
-from typing import Optional
 
 import structlog
 from agents.src.adapters.llm import get_llm_adapter

@@ -43,7 +43,6 @@ import structlog
 from agents.src.tools.anonymize import (
     AnonymizationError,
     anonymize_text,
-    deanonymize_text,
 )
 from pydantic import BaseModel, Field
 
@@ -113,13 +112,11 @@ class SearchResult(BaseModel):
 class VectorStoreError(PipelineError):
     """Erreur vectorstore"""
 
-    pass
 
 
 class EmbeddingProviderError(VectorStoreError):
     """Erreur provider embeddings (Voyage AI, OpenAI, etc.)"""
 
-    pass
 
 
 # ============================================================
@@ -150,7 +147,6 @@ class VectorStoreAdapter(ABC):
             EmbeddingProviderError: Si provider API down ou erreur
             AnonymizationError: Si Presidio down et anonymize=True
         """
-        pass
 
     @abstractmethod
     async def store(
@@ -167,7 +163,6 @@ class VectorStoreAdapter(ABC):
         Raises:
             VectorStoreError: Si échec stockage
         """
-        pass
 
     @abstractmethod
     async def search(
@@ -190,7 +185,6 @@ class VectorStoreAdapter(ABC):
         Raises:
             VectorStoreError: Si échec recherche
         """
-        pass
 
     @abstractmethod
     async def delete(self, node_id: str) -> None:
@@ -203,12 +197,10 @@ class VectorStoreAdapter(ABC):
         Note:
             Normalement géré par CASCADE DELETE (FK constraint)
         """
-        pass
 
     @abstractmethod
     async def close(self) -> None:
         """Fermer connexions proprement"""
-        pass
 
 
 # ============================================================

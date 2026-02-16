@@ -32,7 +32,6 @@ Story: 3.3 - Task 1
 
 import asyncio
 import time
-from datetime import datetime
 from typing import Optional
 from uuid import UUID
 

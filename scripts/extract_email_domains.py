@@ -27,7 +27,6 @@ Date: 2026-02-15 (D25 rewrite)
 import argparse
 import asyncio
 import csv
-import email as email_lib
 import os
 import re
 import ssl

@@ -20,6 +20,7 @@ from email.utils import formatdate, make_msgid
 from typing import List, Optional, Tuple
 
 import structlog
+from agents.src.adapters.email import SendResult
 
 logger = structlog.get_logger(__name__)
 
@@ -81,8 +82,6 @@ async def send_email(
     Raises:
         SMTPSendError: Si envoi echoue apres retries
     """
-    from agents.src.adapters.email import SendResult
-
     # Construire le message MIME
     msg = _build_mime_message(
         from_addr=from_addr,

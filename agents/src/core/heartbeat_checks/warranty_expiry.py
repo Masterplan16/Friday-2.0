@@ -15,7 +15,7 @@ Quiet hours : 22h-8h (skip sauf CRITICAL <7 jours)
 """
 
 import os
-from datetime import datetime, time
+from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 import asyncpg

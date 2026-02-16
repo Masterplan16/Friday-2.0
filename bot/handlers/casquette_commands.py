@@ -12,11 +12,8 @@ Inline buttons: [Médecin] [Enseignant] [Chercheur] [Auto]
 """
 
 import os
-from datetime import datetime, timedelta
-from typing import Optional
 
 import asyncpg
-import redis.asyncio as redis
 import structlog
 from agents.src.core.context_manager import ContextManager
 from agents.src.core.models import (

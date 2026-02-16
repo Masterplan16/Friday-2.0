@@ -155,9 +155,8 @@ class EmailEngineClient:
                 account_id, msg_id = email_id.split("/", 1)
             else:
                 account_id = "main"  # TODO: Config
-                msg_id = email_id
         else:
-            msg_id = email_id
+            pass
 
         response = await self.http_client.get(
             f"{self.base_url}/v1/account/{account_id}/attachment/{attachment_id}",
@@ -337,4 +336,3 @@ class EmailEngineError(Exception):
     Raised quand une opération EmailEngine échoue après tous les retries.
     """
 
-    pass

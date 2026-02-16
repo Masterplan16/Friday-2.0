@@ -11,7 +11,6 @@ Commandes d'urgence pour controler le pipeline email :
 import os
 from datetime import datetime, timezone
 
-import asyncpg
 import structlog
 from telegram import Update
 from telegram.ext import ContextTypes

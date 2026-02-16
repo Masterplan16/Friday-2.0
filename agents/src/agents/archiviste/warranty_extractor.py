@@ -14,13 +14,12 @@ Trust Layer: @friday_action avec trust=propose (Day 1).
 import json
 from datetime import date
 from decimal import Decimal
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 import structlog
 from agents.src.adapters.llm import get_llm_adapter
 from agents.src.agents.archiviste.warranty_models import (
     WarrantyCategory,
-    WarrantyExtractionResult,
     WarrantyInfo,
 )
 from agents.src.agents.archiviste.warranty_prompts import (

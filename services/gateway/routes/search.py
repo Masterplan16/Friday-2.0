@@ -21,7 +21,6 @@ from typing import Optional
 import structlog
 from agents.src.adapters.vectorstore import (
     EmbeddingProviderError,
-    SearchResult,
     VectorStoreError,
     get_vectorstore_adapter,
 )

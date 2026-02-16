@@ -32,7 +32,6 @@ IMPORTANT - Anti-patterns à éviter:
 
 import asyncio
 from typing import Optional
-from uuid import UUID
 
 import asyncpg
 from agents.src.adapters.llm import get_llm_adapter

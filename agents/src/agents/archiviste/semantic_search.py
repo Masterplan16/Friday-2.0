@@ -24,7 +24,6 @@ Story: 3.3 - Task 4
 """
 
 import time
-from datetime import datetime
 from typing import Optional
 
 import asyncpg

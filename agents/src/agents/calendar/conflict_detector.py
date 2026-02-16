@@ -11,7 +11,7 @@ Fonctionnalités:
 - Transaction atomique INSERT conflict + notification Telegram
 """
 
-from datetime import date, datetime, timedelta
+from datetime import date
 from typing import Optional
 
 import asyncpg

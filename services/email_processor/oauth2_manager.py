@@ -22,7 +22,6 @@ Version: 1.0.0 (stub)
 
 import os
 import time
-from typing import Optional
 
 import structlog
 from pydantic import BaseModel

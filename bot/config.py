@@ -18,7 +18,6 @@ logger = structlog.get_logger(__name__)
 class ConfigurationError(Exception):
     """Exception levée si la configuration est invalide ou incomplète."""
 
-    pass
 
 
 def load_bot_config() -> BotConfig:

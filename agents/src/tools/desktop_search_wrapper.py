@@ -19,7 +19,6 @@ Story: 3.3 - Task 6
 import asyncio
 import json
 import os
-from typing import Optional
 
 import structlog
 

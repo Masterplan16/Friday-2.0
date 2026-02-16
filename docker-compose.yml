@@ -545,6 +545,7 @@ services:
       - GOOGLE_CALENDAR_TOKEN_PATH=/app/config/google_token.json
       - GOOGLE_CALENDAR_TOKEN_ENC_PATH=/app/config/google_token.json.enc
       - GOOGLE_CLIENT_SECRET_PATH=/app/config/google_client_secret.json
+      - GOOGLE_CALENDAR_OAUTH_MODE=console  # Use console mode for headless VPS
 
       # Logging
       - LOG_LEVEL=${LOG_LEVEL:-INFO}

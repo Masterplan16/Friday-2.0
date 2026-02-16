@@ -28,7 +28,6 @@ logger = structlog.get_logger(__name__)
 class UrgencyDetectorError(Exception):
     """Erreur dans le processus de detection urgence."""
 
-    pass
 
 
 @friday_action(module="email", action="detect_urgency", trust_default="auto")

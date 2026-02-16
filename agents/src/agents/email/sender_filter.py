@@ -31,7 +31,6 @@ CIRCUIT_BREAKER_THRESHOLD = 3
 class SenderFilterError(Exception):
     """Erreur dans le processus de filtrage sender."""
 
-    pass
 
 
 async def check_sender_filter(

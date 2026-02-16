@@ -72,7 +72,6 @@ class EmbeddingAdapter(ABC):
         Raises:
             Exception: Si erreur generation embeddings
         """
-        pass
 
 
 # ============================================================

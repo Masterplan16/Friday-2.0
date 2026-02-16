@@ -157,7 +157,6 @@ class EventExtractionError(AgentError):
     Usage: erreurs parsing JSON Claude, RateLimitError retry epuise, circuit breaker
     """
 
-    pass
 
 
 class EventValidationError(PipelineError):
@@ -167,7 +166,6 @@ class EventValidationError(PipelineError):
     Usage: start_datetime invalide, confidence hors range, casquette invalide
     """
 
-    pass
 
 
 # ============================================================================

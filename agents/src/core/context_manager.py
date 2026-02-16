@@ -18,9 +18,8 @@ Le contexte influence:
 """
 
 import json
-from datetime import datetime, time, timedelta, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Optional
-from uuid import UUID
 
 import asyncpg
 import redis.asyncio as redis

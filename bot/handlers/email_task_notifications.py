@@ -7,14 +7,13 @@ AC4 : Notification topic Email avec lien receipt
 
 import logging
 import os
-from datetime import datetime
 from typing import List
 
 try:
     from agents.src.agents.email.models import TaskDetected
 except ImportError:
     TaskDetected = None  # type: ignore[assignment,misc]
-from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 logger = logging.getLogger(__name__)
 

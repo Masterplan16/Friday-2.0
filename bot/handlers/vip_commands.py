@@ -11,7 +11,6 @@ import os
 import sys
 from pathlib import Path
 
-import asyncpg
 import structlog
 from telegram import Update
 from telegram.ext import ContextTypes

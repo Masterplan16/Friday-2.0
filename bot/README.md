@@ -109,7 +109,7 @@ Algorithme séquentiel (ordre prioritaire):
 ### AC5: Commandes
 - `/help` - Liste complète des commandes
 - `/start` - Alias de /help
-- `/status`, `/journal`, `/receipt`, `/confiance`, `/stats`, `/budget` - Voir Story 1.11 ci-dessous
+- `/status`, `/journal`, `/pending`, `/receipt`, `/confiance`, `/stats`, `/budget` - Voir Story 1.11/1.18 ci-dessous
 
 ### AC6: Onboarding
 - Message d'accueil envoyé au propriétaire la première fois
@@ -169,6 +169,12 @@ Toutes les commandes supportent le flag `-v` (verbose) pour afficher des détail
 **`/journal`** - 20 dernières actions (AC3)
 - Liste chronologique inversée avec status emoji, module, action, confidence
 - `-v` : ajoute input_summary et reasoning
+
+**`/pending`** — Lister actions en attente (Story 1.18)
+- Liste uniquement les actions avec status="pending"
+- `/pending email` : filtre par module
+- `-v` : affiche input_summary complet
+- Résout gap UX: `/status` affiche count mais pas de liste directe
 
 **`/status`** - Dashboard temps réel (AC4)
 - Health checks : PostgreSQL (ping), Redis (PING), Bot (uptime)

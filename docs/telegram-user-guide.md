@@ -877,6 +877,44 @@ Receipt ID: uuid-123
 
 **Utile pour** : Consulter rapidement historique envois sans autres actions (classification, archiviste, etc.)
 
+#### `/pending` — Lister actions en attente de validation
+
+**Usage** :
+```
+/pending              # Toutes les actions pending
+/pending email        # Filtre par module
+/pending -v           # Mode verbose (affiche input)
+/pending email -v     # Combinaison
+```
+
+**Description** :
+Liste uniquement les actions qui attendent votre validation (status = "pending"). Résout le gap UX où `/status` affiche "7 actions pending" mais pas de moyen direct de les lister.
+
+**Exemple sortie** :
+```
+📋 **Actions en attente de validation** (7)
+
+⏳ `abc12345` | email.classify | il y a 2h
+   → Email "Dr Martin - Consultation patient"
+   → Catégorie proposée: pro (0.89)
+   Confidence: ██████████ 89.0% | [Voir détail: /receipt abc12345]
+
+⏳ `def67890` | calendar.detect_event | il y a 1h
+   → "Réunion service demain 14h"
+   → Événement proposé: 2026-02-17 14:00
+   Confidence: ██████████ 92.0% | [Voir détail: /receipt def67890]
+
+💡 Utilisez /receipt <id> pour voir le détail complet
+🔘 Validez via les inline buttons dans le topic Actions & Validations
+```
+
+**Cas d'usage** :
+- `/status` vous indique "7 actions pending" → utilisez `/pending` pour les voir
+- Valider rapidement toutes les actions en attente
+- Filtrer par module pour prioriser (ex: `/pending email`)
+
+**Note** : Les actions pending ont aussi des **inline buttons** dans le topic "🤖 Actions & Validations". Vous pouvez valider directement via les boutons [Approve] [Reject] [Correct].
+
 #### `/receipt [id]` — Détail complet action
 
 **Usage** :

@@ -35,7 +35,7 @@ CREATE INDEX IF NOT EXISTS idx_attachments_processed_at ON ingestion.attachments
 CREATE TRIGGER trg_attachments_updated_at
     BEFORE UPDATE ON ingestion.attachments
     FOR EACH ROW
-    EXECUTE FUNCTION core.update_updated_at_column();
+    EXECUTE FUNCTION core.update_updated_at();
 
 COMMENT ON TABLE ingestion.attachments IS 'Métadonnées pièces jointes emails extraites via EmailEngine. Zone transit VPS éphémère (cleanup 24h).';
 COMMENT ON COLUMN ingestion.attachments.filename IS 'Nom original sanitisé (max 200 chars, caractères dangereux supprimés)';

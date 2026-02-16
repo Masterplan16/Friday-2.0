@@ -802,3 +802,132 @@ async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     except Exception as e:
         logger.error("/stats command failed", error=str(e), exc_info=True)
         await update.message.reply_text(_ERR_DB, parse_mode="Markdown")
+
+
+# ────────────────────────────────────────────────────────────
+# /pending (Story 1.18)
+# ────────────────────────────────────────────────────────────
+
+
+async def pending_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handler /pending - Liste uniquement les actions en attente de validation.
+
+    Affiche chronologiquement les actions avec status='pending'.
+
+    Args:
+        update: Update Telegram
+        context: Context bot
+
+    Flags:
+        -v : Mode verbose (affiche input_summary complet)
+
+    Filtrage:
+        /pending email : Filtre par module
+
+    Exemples:
+        /pending              # Toutes les actions pending
+        /pending email        # Uniquement module email
+        /pending -v           # Mode verbose
+        /pending email -v     # Combinaison
+    """
+    user_id = update.effective_user.id if update.effective_user else None
+    if not _check_owner(user_id):
+        await update.message.reply_text(_ERR_UNAUTHORIZED)
+        return
+
+    verbose = parse_verbose_flag(context.args)
+
+    # Filtrage module optionnel
+    filter_module = None
+    if context.args:
+        for arg in context.args:
+            if arg != "-v":
+                filter_module = arg
+                break
+
+    logger.info(
+        "/pending command received",
+        user_id=user_id,
+        verbose=verbose,
+        filter_module=filter_module,
+    )
+
+    try:
+        pool = await _get_pool()
+        async with pool.acquire() as conn:
+            # Query avec filtrage optionnel
+            query = """
+                SELECT id, module, action_type, created_at,
+                       input_summary, output_summary, confidence
+                FROM core.action_receipts
+                WHERE status = 'pending'
+            """
+            params = []
+
+            if filter_module:
+                query += " AND module = $1"
+                params.append(filter_module)
+
+            query += " ORDER BY created_at DESC LIMIT 20"
+
+            rows = await conn.fetch(query, *params)
+
+        if not rows:
+            msg = "✅ Aucune action en attente de validation. Tout est à jour !"
+            await update.message.reply_text(msg)
+            return
+
+        # Formater output
+        count = len(rows)
+        header = f"📋 **Actions en attente de validation** ({count})"
+        if filter_module:
+            header = f"📋 **Actions en attente - Module: {filter_module}** ({count})"
+
+        lines = [header, ""]
+
+        for row in rows:
+            id_short = str(row["id"])[:8]
+            timestamp = format_timestamp(row["created_at"])
+            module_action = f"{row['module']}.{row['action_type']}"
+            confidence = (
+                format_confidence(row["confidence"]) if row["confidence"] else "N/A"
+            )
+
+            lines.append(f"⏳ `{id_short}` | {module_action} | {timestamp}")
+
+            if verbose and row["input_summary"]:
+                input_trunc = truncate_text(row["input_summary"], 150)
+                lines.append(f"   📥 Input: {input_trunc}")
+
+            if row["output_summary"]:
+                output_trunc = truncate_text(row["output_summary"], 150)
+                lines.append(f"   → {output_trunc}")
+
+            lines.append(f"   Confidence: {confidence} | [Voir détail: /receipt {id_short}]")
+            lines.append("")
+
+        # Footer
+        lines.append("💡 Utilisez /receipt <id> pour voir le détail complet")
+        lines.append("🔘 Validez via les inline buttons dans le topic Actions & Validations")
+
+        # Si limite atteinte, avertir
+        if count >= 20:
+            async with pool.acquire() as conn:
+                total = await conn.fetchval(
+                    "SELECT COUNT(*) FROM core.action_receipts WHERE status = 'pending'"
+                )
+            if total > 20:
+                lines.insert(
+                    1,
+                    f"⚠️ Affichage limité aux 20 plus récentes ({total} total). Utilisez /pending <module> pour filtrer.",
+                )
+                lines.insert(2, "")
+
+        text = "\n".join(lines)
+        await send_message_with_split(update, text, parse_mode="Markdown")
+
+    except ValueError as e:
+        await update.message.reply_text(f"Configuration erreur: {e}", parse_mode="Markdown")
+    except Exception as e:
+        logger.error("/pending command failed", error=str(e), exc_info=True)
+        await update.message.reply_text(_ERR_DB, parse_mode="Markdown")

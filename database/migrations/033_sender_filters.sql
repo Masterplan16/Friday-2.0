@@ -72,7 +72,7 @@ CREATE INDEX IF NOT EXISTS idx_sender_filters_vip
 CREATE TRIGGER trg_sender_filters_updated_at
     BEFORE UPDATE ON core.sender_filters
     FOR EACH ROW
-    EXECUTE FUNCTION core.update_updated_at_column();
+    EXECUTE FUNCTION core.update_updated_at();
 
 -- =====================================================================
 -- Documentation

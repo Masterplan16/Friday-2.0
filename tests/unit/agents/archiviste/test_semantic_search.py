@@ -350,17 +350,16 @@ async def test_search_action_success(
 
 @pytest.mark.asyncio
 async def test_search_action_failure(searcher):
-    """Test search_action retourne ActionResult erreur si exception."""
+    """Test search_action raise exception après avoir créé un receipt d'erreur."""
     with patch(
         "agents.src.agents.archiviste.semantic_search.anonymize_text",
         side_effect=Exception("Presidio down"),
     ):
-        result = await searcher.search_action(query="test")
+        with pytest.raises(Exception, match="Presidio down"):
+            await searcher.search_action(query="test")
 
-    assert isinstance(result, ActionResult)
-    assert result.confidence == 0.0
-    assert "FAILED" in result.output_summary
-    assert "Presidio down" in result.payload["error"]
+    # Le décorateur @friday_action a créé un receipt d'erreur avant de re-raise
+    # (vérifié par le log "Receipt created" dans les tests)
 
 
 # ============================================================

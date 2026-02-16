@@ -45,8 +45,9 @@ from agents.src.tools.anonymize import (
     anonymize_text,
     deanonymize_text,
 )
-from config.exceptions import PipelineError
 from pydantic import BaseModel, Field
+
+from config.exceptions import PipelineError
 
 logger = structlog.get_logger(__name__)
 
@@ -252,8 +253,8 @@ class VoyageAIAdapter:
 
         # Import voyageai client (lazy import pour tests mocks)
         try:
-            import voyageai
             import httpx
+            import voyageai
 
             # Configure timeout 30s (specs Story 6.2 Subtask 1.3)
             timeout = httpx.Timeout(30.0, connect=5.0)

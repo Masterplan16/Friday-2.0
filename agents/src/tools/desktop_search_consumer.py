@@ -26,7 +26,6 @@ from datetime import datetime, timezone
 
 import redis.asyncio as aioredis
 import structlog
-
 from agents.src.tools.desktop_search_wrapper import search_desktop
 
 logger = structlog.get_logger(__name__)

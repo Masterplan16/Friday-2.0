@@ -14,11 +14,10 @@ Story: 3.3 - Task 5
 
 from uuid import UUID
 
+import structlog
+from agents.src.agents.archiviste.semantic_search import SemanticSearcher
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import CallbackContext, CommandHandler, ContextTypes
-import structlog
-
-from agents.src.agents.archiviste.semantic_search import SemanticSearcher
 
 logger = structlog.get_logger(__name__)
 

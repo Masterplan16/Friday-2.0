@@ -11,12 +11,12 @@ Fonctionnalités:
 - Transaction atomique INSERT conflict + notification Telegram
 """
 
-import asyncpg
-import structlog
 from datetime import date, datetime, timedelta
 from typing import Optional
 
-from agents.src.agents.calendar.models import CalendarEvent, CalendarConflict, Casquette
+import asyncpg
+import structlog
+from agents.src.agents.calendar.models import CalendarConflict, CalendarEvent, Casquette
 
 logger = structlog.get_logger(__name__)
 

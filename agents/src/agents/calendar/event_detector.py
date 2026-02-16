@@ -8,20 +8,18 @@ Story 7.1 AC7: Few-shot learning (5 exemples)
 Story 7.3 Task 9.2: Injection contexte casquette actuel (bias subtil)
 """
 
-import json
-import structlog
 import asyncio
+import json
 import time
-from typing import Dict, Any, Optional, TYPE_CHECKING
 from datetime import datetime, timezone
+from typing import TYPE_CHECKING, Any, Dict, Optional
+
+import structlog
 
 if TYPE_CHECKING:
     from agents.src.core.models import Casquette
 
-from anthropic import AsyncAnthropic, RateLimitError, APIError
-from pydantic import ValidationError
 import asyncpg
-
 from agents.src.agents.calendar.models import (
     Event,
     EventDetectionResult,
@@ -33,9 +31,11 @@ from agents.src.agents.calendar.prompts import (
     build_event_detection_prompt,
     sanitize_email_text,
 )
-from agents.src.tools.anonymize import anonymize_text
-from agents.src.middleware.trust import friday_action
 from agents.src.middleware.models import ActionResult
+from agents.src.middleware.trust import friday_action
+from agents.src.tools.anonymize import anonymize_text
+from anthropic import APIError, AsyncAnthropic, RateLimitError
+from pydantic import ValidationError
 
 # ============================================================================
 # CONFIGURATION

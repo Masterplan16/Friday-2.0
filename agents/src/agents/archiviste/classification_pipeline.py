@@ -9,10 +9,10 @@ import asyncio
 import json
 import time
 from collections import deque
-import structlog
+
 import asyncpg
 import redis.asyncio as redis
-
+import structlog
 from agents.src.agents.archiviste.classifier import DocumentClassifier
 from agents.src.agents.archiviste.file_mover import FileMover
 from agents.src.agents.archiviste.models import ClassificationResult

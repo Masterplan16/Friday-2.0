@@ -4,14 +4,14 @@ Callbacks inline buttons événements (Story 7.1 AC3)
 Gère les actions : Approve, Modify, Ignore pour événements détectés
 """
 
-import logging
 import json
+import logging
 import uuid
 from datetime import datetime
 
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ContextTypes
 import asyncpg
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram.ext import ContextTypes
 
 logger = logging.getLogger(__name__)
 
@@ -361,7 +361,7 @@ async def handle_event_back(
             event_props = event_row["properties"]
 
         # Reconstruire message original
-        from bot.handlers.event_notifications import _format_event_message, _create_event_keyboard
+        from bot.handlers.event_notifications import _create_event_keyboard, _format_event_message
 
         event_data = {
             "event_id": event_id,

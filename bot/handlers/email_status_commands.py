@@ -12,10 +12,9 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
+from services.email_healthcheck.monitor import check_email_pipeline_health, format_status_message
 from telegram import Update
 from telegram.ext import ContextTypes
-
-from services.email_healthcheck.monitor import check_email_pipeline_health, format_status_message
 
 
 async def email_status_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:

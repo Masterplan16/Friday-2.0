@@ -30,11 +30,10 @@ from typing import Any
 import aiofiles
 import asyncpg
 import structlog
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
-
 from agents.src.config.mime_types import validate_mime_type
 from agents.src.middleware.trust import friday_action
-from agents.src.models.attachment import AttachmentExtractResult, MAX_ATTACHMENT_SIZE_BYTES
+from agents.src.models.attachment import MAX_ATTACHMENT_SIZE_BYTES, AttachmentExtractResult
+from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 logger = structlog.get_logger(__name__)
 

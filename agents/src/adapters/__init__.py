@@ -17,8 +17,8 @@ from agents.src.adapters.email import (
     EmailMessage,
     IMAPConnectionError,
     IMAPDirectAdapter,
-    SMTPSendError,
     SendResult,
+    SMTPSendError,
     get_email_adapter,
 )
 from agents.src.adapters.llm import ClaudeAdapter, LLMError, LLMResponse

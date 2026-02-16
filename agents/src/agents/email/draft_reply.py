@@ -31,14 +31,14 @@ IMPORTANT - Anti-patterns à éviter:
 """
 
 import asyncio
-import asyncpg
 from typing import Optional
 from uuid import UUID
 
-from agents.src.middleware.trust import friday_action
-from agents.src.middleware.models import ActionResult, StepDetail
-from agents.src.tools.anonymize import anonymize_text, deanonymize_text
+import asyncpg
 from agents.src.adapters.llm import get_llm_adapter
+from agents.src.middleware.models import ActionResult, StepDetail
+from agents.src.middleware.trust import friday_action
+from agents.src.tools.anonymize import anonymize_text, deanonymize_text
 
 # ============================================================================
 # Configuration

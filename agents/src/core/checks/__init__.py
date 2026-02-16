@@ -18,9 +18,9 @@ Usage:
 from agents.src.core.check_registry import CheckRegistry
 from agents.src.core.heartbeat_models import CheckPriority
 
-from .urgent_emails import check_urgent_emails
 from .financial_alerts import check_financial_alerts
 from .thesis_reminders import check_thesis_reminders
+from .urgent_emails import check_urgent_emails
 
 
 def register_all_checks(registry: CheckRegistry) -> None:

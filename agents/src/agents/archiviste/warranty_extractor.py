@@ -17,8 +17,7 @@ from decimal import Decimal
 from typing import Any, Dict, List, Optional
 
 import structlog
-from dateutil.relativedelta import relativedelta
-
+from agents.src.adapters.llm import get_llm_adapter
 from agents.src.agents.archiviste.warranty_models import (
     WarrantyCategory,
     WarrantyExtractionResult,
@@ -28,10 +27,10 @@ from agents.src.agents.archiviste.warranty_prompts import (
     WARRANTY_EXTRACTION_SYSTEM_PROMPT,
     build_warranty_extraction_prompt,
 )
-from agents.src.adapters.llm import get_llm_adapter
 from agents.src.middleware.models import ActionResult
 from agents.src.middleware.trust import friday_action
 from agents.src.tools.anonymize import anonymize_text, deanonymize_text
+from dateutil.relativedelta import relativedelta
 
 logger = structlog.get_logger(__name__)
 

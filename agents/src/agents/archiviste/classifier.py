@@ -12,14 +12,15 @@ Architecture:
 """
 
 import json
+from typing import Any, Dict, List, Optional
+
 import structlog
-from typing import Dict, Any, List, Optional
-from agents.src.middleware.trust import friday_action
-from agents.src.middleware.models import ActionResult
 from agents.src.adapters.llm import get_llm_adapter
-from agents.src.tools.anonymize import anonymize_text
 from agents.src.agents.archiviste.models import ClassificationResult
 from agents.src.config.arborescence_config import get_arborescence_config
+from agents.src.middleware.models import ActionResult
+from agents.src.middleware.trust import friday_action
+from agents.src.tools.anonymize import anonymize_text
 
 logger = structlog.get_logger(__name__)
 

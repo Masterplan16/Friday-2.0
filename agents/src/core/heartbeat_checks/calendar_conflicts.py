@@ -8,16 +8,16 @@ Priority: MEDIUM (pas CRITICAL)
 Quiet hours: 22h-8h (skip), sauf conflit urgent (<6h)
 """
 
-import asyncpg
-from datetime import datetime, date, timedelta
-from typing import Dict, Any, Optional
-import structlog
+from datetime import date, datetime, timedelta
+from typing import Any, Dict, Optional
 
-from agents.src.core.heartbeat_models import CheckResult, CheckPriority
+import asyncpg
+import structlog
 from agents.src.agents.calendar.conflict_detector import (
     detect_calendar_conflicts,
     get_conflicts_range,
 )
+from agents.src.core.heartbeat_models import CheckPriority, CheckResult
 
 logger = structlog.get_logger(__name__)
 

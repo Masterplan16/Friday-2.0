@@ -12,7 +12,7 @@ Templates Markdown pour briefings avec:
 from datetime import date, datetime
 from typing import Optional
 
-from agents.src.core.models import Casquette, CASQUETTE_EMOJI_MAPPING, CASQUETTE_LABEL_MAPPING
+from agents.src.core.models import CASQUETTE_EMOJI_MAPPING, CASQUETTE_LABEL_MAPPING, Casquette
 
 # ============================================================================
 # Constants

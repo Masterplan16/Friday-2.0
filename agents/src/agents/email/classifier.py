@@ -11,11 +11,10 @@ from __future__ import annotations
 
 import time
 from json import JSONDecodeError  # L1 fix: Import specific exception
-from typing import TYPE_CHECKING, Sequence, Optional
+from typing import TYPE_CHECKING, Optional, Sequence
 
 import asyncpg
 import structlog
-
 from agents.src.adapters.llm import ClaudeAdapter, get_llm_adapter  # H4 fix: Import type for hints
 from agents.src.agents.email.prompts import build_classification_prompt
 from agents.src.middleware.models import ActionResult, CorrectionRule
@@ -24,6 +23,7 @@ from agents.src.models.email_classification import EmailClassification
 
 if TYPE_CHECKING:
     from typing import Any
+
     from agents.src.core.models import Casquette
 
 logger = structlog.get_logger(__name__)

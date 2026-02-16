@@ -5,15 +5,14 @@ Enregistre les CallbackQueryHandlers pour les inline buttons événements
 """
 
 import asyncpg
-from telegram.ext import Application, CallbackQueryHandler
 import structlog
-
 from bot.handlers.event_callbacks import (
     handle_event_approve,
-    handle_event_modify,
-    handle_event_ignore,
     handle_event_back,
+    handle_event_ignore,
+    handle_event_modify,
 )
+from telegram.ext import Application, CallbackQueryHandler
 
 logger = structlog.get_logger(__name__)
 

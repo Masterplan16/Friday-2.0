@@ -6,7 +6,8 @@ Story 4.1: Implémentation complète Heartbeat Engine (HeartbeatContext, Check)
 """
 
 from datetime import datetime
-from typing import Optional, Dict, Any, Callable, Awaitable
+from typing import Any, Awaitable, Callable, Dict, Optional
+
 from pydantic import BaseModel, Field
 
 

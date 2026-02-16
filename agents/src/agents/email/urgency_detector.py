@@ -15,7 +15,6 @@ from typing import TYPE_CHECKING, Any, Optional
 
 import asyncpg
 import structlog
-
 from agents.src.middleware.models import ActionResult
 from agents.src.middleware.trust import friday_action
 from agents.src.models.vip_detection import UrgencyResult

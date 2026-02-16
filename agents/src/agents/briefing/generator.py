@@ -10,13 +10,13 @@ Fonctionnalités AC3:
 - Filtrage optionnel par casquette (/briefing medecin)
 """
 
-import asyncpg
-import structlog
 from datetime import date, datetime
 from typing import Optional
 
-from agents.src.core.models import Casquette, CASQUETTE_EMOJI_MAPPING, CASQUETTE_LABEL_MAPPING
+import asyncpg
+import structlog
 from agents.src.agents.briefing.templates import format_briefing_message
+from agents.src.core.models import CASQUETTE_EMOJI_MAPPING, CASQUETTE_LABEL_MAPPING, Casquette
 
 logger = structlog.get_logger(__name__)
 

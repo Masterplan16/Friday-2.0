@@ -26,15 +26,14 @@ Usage:
 import asyncio
 import os
 from datetime import datetime, timezone
-from typing import Optional, Dict, Any, List
+from typing import Any, Dict, List, Optional
 
 import asyncpg
 import structlog
-from redis.asyncio import Redis
-
 from agents.src.core.check_registry import CheckRegistry
 from agents.src.core.context_provider import ContextProvider
-from agents.src.core.heartbeat_models import HeartbeatContext, CheckResult, CheckPriority, Check
+from agents.src.core.heartbeat_models import Check, CheckPriority, CheckResult, HeartbeatContext
+from redis.asyncio import Redis
 
 logger = structlog.get_logger(__name__)
 
@@ -294,9 +293,9 @@ class HeartbeatEngine:
 
         # Importer helper Telegram
         from agents.src.core.telegram_helper import (
-            send_to_chat_proactive,
-            format_heartbeat_message,
             create_action_keyboard,
+            format_heartbeat_message,
+            send_to_chat_proactive,
         )
 
         # Extraire check_id depuis payload (si disponible)

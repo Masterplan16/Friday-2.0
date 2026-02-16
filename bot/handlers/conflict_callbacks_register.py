@@ -6,14 +6,13 @@ Enregistre les CallbackQueryHandlers et MessageHandlers pour résolution conflit
 
 import asyncpg
 import redis.asyncio as redis
-from telegram.ext import Application, CallbackQueryHandler, MessageHandler, filters
 import structlog
-
 from bot.handlers.conflict_callbacks import (
     handle_conflict_button,
     handle_move_date_response,
     handle_move_time_response,
 )
+from telegram.ext import Application, CallbackQueryHandler, MessageHandler, filters
 
 logger = structlog.get_logger(__name__)
 

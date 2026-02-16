@@ -12,11 +12,10 @@ from pathlib import Path
 from typing import Optional
 
 import structlog
+from bot.handlers.rate_limiter import SimpleRateLimiter
 from redis import asyncio as aioredis
 from telegram import Update
 from telegram.ext import ContextTypes
-
-from bot.handlers.rate_limiter import SimpleRateLimiter
 
 logger = structlog.get_logger(__name__)
 

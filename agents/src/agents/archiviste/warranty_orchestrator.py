@@ -24,8 +24,6 @@ from typing import Any, Dict, Optional
 
 import asyncpg
 import structlog
-from dateutil.relativedelta import relativedelta
-
 from agents.src.agents.archiviste.warranty_db import insert_warranty
 from agents.src.agents.archiviste.warranty_extractor import (
     CONFIDENCE_THRESHOLD,
@@ -33,6 +31,7 @@ from agents.src.agents.archiviste.warranty_extractor import (
 )
 from agents.src.agents.archiviste.warranty_models import WarrantyInfo
 from agents.src.middleware.models import ActionResult
+from dateutil.relativedelta import relativedelta
 
 logger = structlog.get_logger(__name__)
 

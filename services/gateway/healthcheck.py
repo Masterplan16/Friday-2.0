@@ -16,7 +16,6 @@ import asyncpg
 import httpx
 import structlog
 from redis.asyncio import Redis
-
 from services.gateway.schemas import (
     HealthResponse,
     ServiceHealth,

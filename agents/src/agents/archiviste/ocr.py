@@ -10,11 +10,11 @@ Usage:
     print(result.text, result.confidence)
 """
 
+import asyncio
 import os
 import time
 from pathlib import Path
-from typing import Optional, List
-import asyncio
+from typing import List, Optional
 
 from agents.src.agents.archiviste.models import OCRResult
 
@@ -145,9 +145,9 @@ class SuryaOCREngine:
 
         try:
             # Import dynamique
-            from surya.ocr import run_ocr
-            from PIL import Image
             import fitz  # PyMuPDF pour PDF
+            from PIL import Image
+            from surya.ocr import run_ocr
 
             # Charger document
             path = Path(file_path)

@@ -15,7 +15,6 @@ from uuid import UUID
 
 import asyncpg
 import structlog
-
 from agents.src.agents.archiviste.warranty_models import WarrantyInfo
 
 logger = structlog.get_logger(__name__)

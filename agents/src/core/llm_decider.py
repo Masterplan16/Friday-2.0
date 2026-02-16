@@ -22,14 +22,13 @@ Usage:
 import asyncio
 import json
 from datetime import datetime, timezone
-from typing import Dict, Any, List
+from typing import Any, Dict, List
 
 import structlog
+from agents.src.core.heartbeat_models import Check, CheckPriority, HeartbeatContext
 from anthropic import AsyncAnthropic
 from pydantic import BaseModel
 from redis.asyncio import Redis
-
-from agents.src.core.heartbeat_models import HeartbeatContext, Check, CheckPriority
 
 logger = structlog.get_logger(__name__)
 

@@ -35,8 +35,9 @@ from agents.src.tools.anonymize import (
     deanonymize_text,
 )
 from anthropic import AsyncAnthropic
-from config.exceptions import PipelineError
 from pydantic import BaseModel, Field
+
+from config.exceptions import PipelineError
 
 logger = structlog.get_logger(__name__)
 

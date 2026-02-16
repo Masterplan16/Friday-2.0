@@ -17,7 +17,8 @@ Prérequis:
 import asyncio
 import os
 import sys
-from typing import Dict, Any
+from typing import Any, Dict
+
 import httpx
 from dotenv import load_dotenv
 

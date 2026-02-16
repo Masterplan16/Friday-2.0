@@ -20,7 +20,6 @@ from typing import Any, Dict, List, Optional
 
 import asyncpg
 import structlog
-
 from agents.src.agents.archiviste.warranty_db import (
     check_alert_sent,
     get_expiring_warranties,

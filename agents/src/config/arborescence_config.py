@@ -7,7 +7,8 @@ Charge et valide config/arborescence.yaml
 
 import os
 from pathlib import Path
-from typing import Dict, Any, Set
+from typing import Any, Dict, Set
+
 import yaml
 from pydantic import BaseModel, Field, field_validator
 

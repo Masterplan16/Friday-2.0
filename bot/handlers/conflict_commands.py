@@ -11,19 +11,18 @@ Affiche :
 """
 
 import os
+from datetime import date, datetime, timedelta, timezone
+from typing import Any, Dict, Tuple
 
 import asyncpg
 import structlog
-from datetime import datetime, date, timedelta, timezone
-from telegram import Update
-from telegram.ext import ContextTypes
-from typing import Any, Dict, Tuple
-
 from agents.src.core.models import (
-    Casquette,
     CASQUETTE_EMOJI_MAPPING,
     CASQUETTE_LABEL_MAPPING,
+    Casquette,
 )
+from telegram import Update
+from telegram.ext import ContextTypes
 
 logger = structlog.get_logger(__name__)
 

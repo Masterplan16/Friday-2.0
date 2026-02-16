@@ -29,10 +29,10 @@ Usage:
     await populate_email_graph(email_data, memorystore_adapter)
 """
 
-import structlog
 from datetime import datetime
 from typing import Any, Optional
 
+import structlog
 from agents.src.adapters.memorystore_interface import MemoryStore, NodeType, RelationType
 from agents.src.adapters.vectorstore import get_vectorstore_adapter
 from agents.src.tools.anonymize import anonymize_text

@@ -48,10 +48,10 @@ repo_root = Path(__file__).parent.parent
 sys.path.insert(0, str(repo_root))
 sys.path.insert(0, str(repo_root / "agents" / "src"))
 
-from agents.src.tools.anonymize import anonymize_text
-from agents.src.agents.email.sender_filter import check_sender_filter
 from agents.src.agents.email.prompts import build_classification_prompt
+from agents.src.agents.email.sender_filter import check_sender_filter
 from agents.src.models.email_classification import EmailClassification
+from agents.src.tools.anonymize import anonymize_text
 
 logger = structlog.get_logger("migrate_emails")
 

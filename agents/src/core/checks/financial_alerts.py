@@ -10,9 +10,8 @@ Trust level : auto (notification seule).
 
 import asyncpg
 import structlog
-
-from agents.src.middleware.trust import friday_action
 from agents.src.core.heartbeat_models import CheckResult
+from agents.src.middleware.trust import friday_action
 
 logger = structlog.get_logger(__name__)
 

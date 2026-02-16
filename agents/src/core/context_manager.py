@@ -17,20 +17,20 @@ Le contexte influence:
 - Briefing matinal (filtrage par casquette)
 """
 
-import asyncpg
 import json
-import redis.asyncio as redis
-import structlog
 from datetime import datetime, time, timedelta, timezone
 from typing import Optional
 from uuid import UUID
 
+import asyncpg
+import redis.asyncio as redis
+import structlog
 from agents.src.core.models import (
-    UserContext,
-    ContextSource,
-    Casquette,
-    OngoingEvent,
     TIME_BASED_CASQUETTE_MAPPING,
+    Casquette,
+    ContextSource,
+    OngoingEvent,
+    UserContext,
 )
 
 logger = structlog.get_logger(__name__)

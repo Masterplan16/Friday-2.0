@@ -8,22 +8,22 @@ Date: 2026-02-16
 """
 
 import os
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
 
 import asyncpg
 import structlog
-from fastapi import APIRouter, Depends, Request, HTTPException
-from redis.asyncio import Redis
+from agents.src.core.check_executor import CheckExecutor
+from agents.src.core.check_registry import CheckRegistry
+from agents.src.core.checks import register_all_checks
+from agents.src.core.context_manager import ContextManager
+from agents.src.core.context_provider import ContextProvider
+from agents.src.core.heartbeat_engine import HeartbeatEngine
+from agents.src.core.llm_decider import LLMDecider
 from anthropic import AsyncAnthropic
+from fastapi import APIRouter, Depends, HTTPException, Request
+from redis.asyncio import Redis
 
 from ..auth import get_current_user
-from agents.src.core.heartbeat_engine import HeartbeatEngine
-from agents.src.core.context_provider import ContextProvider
-from agents.src.core.context_manager import ContextManager
-from agents.src.core.check_registry import CheckRegistry
-from agents.src.core.llm_decider import LLMDecider
-from agents.src.core.check_executor import CheckExecutor
-from agents.src.core.checks import register_all_checks
 
 logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/api/v1/heartbeat", tags=["heartbeat"])

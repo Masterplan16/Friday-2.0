@@ -22,14 +22,15 @@ Sortie:
 """
 
 import asyncio
-import asyncpg
-import httpx
+import json
+import logging
 import os
 import sys
 from pathlib import Path
 from typing import Dict, Optional
-import logging
-import json
+
+import asyncpg
+import httpx
 
 # Ajouter repo root au PYTHONPATH pour imports
 repo_root = Path(__file__).parent.parent

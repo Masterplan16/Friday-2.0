@@ -119,8 +119,14 @@ class GoogleCalendarAuth:
                 flow = InstalledAppFlow.from_client_secrets_file(
                     str(self.client_secret_path), CALENDAR_SCOPES
                 )
-                # OAuth2 flow is interactive (opens browser) — run in thread
-                creds = await asyncio.to_thread(flow.run_local_server, port=0)
+                # OAuth2 flow: use console mode on headless servers, local_server otherwise
+                oauth_mode = os.getenv("GOOGLE_CALENDAR_OAUTH_MODE", "local_server")
+                if oauth_mode == "console":
+                    # Console mode: prints URL, user pastes auth code
+                    creds = await asyncio.to_thread(flow.run_console)
+                else:
+                    # Local server mode: opens browser automatically
+                    creds = await asyncio.to_thread(flow.run_local_server, port=0)
 
                 await self.save_credentials(creds)
 

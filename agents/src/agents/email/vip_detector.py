@@ -8,7 +8,7 @@ Support designation manuelle (/vip add) et apprentissage futur.
 from __future__ import annotations
 
 import hashlib
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 
 import asyncpg
 import structlog
@@ -25,7 +25,6 @@ logger = structlog.get_logger(__name__)
 class VIPDetectorError(Exception):
     """Erreur dans le processus de détection VIP."""
 
-    pass
 
 
 def compute_email_hash(email: str) -> str:

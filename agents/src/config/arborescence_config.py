@@ -5,9 +5,8 @@ Story 3.2 - Task 2.5 et 2.6
 Charge et valide config/arborescence.yaml
 """
 
-import os
 from pathlib import Path
-from typing import Any, Dict, Set
+from typing import Any, Dict
 
 import yaml
 from pydantic import BaseModel, Field, field_validator

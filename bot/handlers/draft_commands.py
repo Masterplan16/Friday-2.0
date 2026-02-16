@@ -9,7 +9,6 @@ Story: 2.5 Brouillon Réponse Email - Task 6 Subtask 6.2
 # TODO(M4 - Story future): Migrer vers structlog pour logs structurés JSON
 import logging
 
-import asyncpg
 from telegram import Update
 from telegram.ext import ContextTypes
 

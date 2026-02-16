@@ -8,9 +8,9 @@ TIMESTAMPTZ pour dates.
 Patterns réutilisés: Stories 3.1-3.3 (asyncpg, gen_random_uuid).
 """
 
-from datetime import date, timedelta
+from datetime import date
 from decimal import Decimal
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 from uuid import UUID
 
 import asyncpg

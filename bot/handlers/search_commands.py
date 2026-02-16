@@ -17,7 +17,7 @@ from uuid import UUID
 import structlog
 from agents.src.agents.archiviste.semantic_search import SemanticSearcher
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
-from telegram.ext import CallbackContext, CommandHandler, ContextTypes
+from telegram.ext import CommandHandler, ContextTypes
 
 logger = structlog.get_logger(__name__)
 

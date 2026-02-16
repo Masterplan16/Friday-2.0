@@ -9,7 +9,6 @@ Callbacks:
 Pattern: Story 1.10 (Inline Buttons) + Story 3.2 (Classification Callbacks)
 """
 
-import os
 from typing import Optional
 
 import asyncpg

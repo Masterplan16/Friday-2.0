@@ -140,7 +140,6 @@ class MemoryStore(ABC):
                 metadata={"email": "antonio@example.com", "role": "Mainteneur"},
             )
         """
-        pass
 
     @abstractmethod
     async def get_or_create_node(
@@ -174,7 +173,6 @@ class MemoryStore(ABC):
                 metadata={"email": "antonio@example.com"},
             )
         """
-        pass
 
     @abstractmethod
     async def get_node_by_id(self, node_id: str) -> Optional[dict[str, Any]]:
@@ -192,7 +190,6 @@ class MemoryStore(ABC):
             if node:
                 print(node["name"])
         """
-        pass
 
     @abstractmethod
     async def get_nodes_by_type(self, node_type: str, limit: int = 100) -> list[dict[str, Any]]:
@@ -209,7 +206,6 @@ class MemoryStore(ABC):
         Example:
             emails = await adapter.get_nodes_by_type("email", limit=50)
         """
-        pass
 
     # ============================================================
     # Edge Operations
@@ -247,7 +243,6 @@ class MemoryStore(ABC):
                 metadata={"confidence": 0.98},
             )
         """
-        pass
 
     @abstractmethod
     async def get_edges_by_type(self, relation_type: str, limit: int = 100) -> list[dict[str, Any]]:
@@ -264,7 +259,6 @@ class MemoryStore(ABC):
         Example:
             sent_edges = await adapter.get_edges_by_type("sent_by", limit=50)
         """
-        pass
 
     @abstractmethod
     async def get_related_nodes(
@@ -297,7 +291,6 @@ class MemoryStore(ABC):
                 relation_type="sent_by",
             )
         """
-        pass
 
     @abstractmethod
     async def get_node_with_relations(self, node_id: str, depth: int = 1) -> dict[str, Any]:
@@ -322,7 +315,6 @@ class MemoryStore(ABC):
             print(result["node"]["name"])
             print(f"Envoyé par: {result['edges_in']}")
         """
-        pass
 
     # ============================================================
     # Graph Query Operations
@@ -351,7 +343,6 @@ class MemoryStore(ABC):
             #     {from_node_id: "email-uuid", to_node_id: "document-uuid", relation_type: "attached_to"}
             # ]
         """
-        pass
 
     @abstractmethod
     async def query_temporal(
@@ -383,7 +374,6 @@ class MemoryStore(ABC):
                 node_type="email",
             )
         """
-        pass
 
     # ============================================================
     # Semantic Search (pgvector integration)
@@ -419,4 +409,3 @@ class MemoryStore(ABC):
                 source_type="document",
             )
         """
-        pass

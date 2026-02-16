@@ -9,7 +9,7 @@ Templates Markdown pour briefings avec:
 - Formatage heures français (09h00-12h00)
 """
 
-from datetime import date, datetime
+from datetime import date
 from typing import Optional
 
 from agents.src.core.models import CASQUETTE_EMOJI_MAPPING, CASQUETTE_LABEL_MAPPING, Casquette

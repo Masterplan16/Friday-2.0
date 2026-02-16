@@ -8,7 +8,6 @@ Story: 2.5 Brouillon Réponse Email - Task 5 Subtask 5.1
 """
 
 import logging
-from typing import Optional
 
 from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup
 

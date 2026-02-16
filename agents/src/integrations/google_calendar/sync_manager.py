@@ -7,7 +7,6 @@ from typing import List, Optional
 
 import asyncpg
 import structlog
-from google.auth.exceptions import RefreshError
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 

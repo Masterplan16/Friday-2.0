@@ -10,7 +10,6 @@ Pattern: Story 1.11 (Commands) + Story 2.3 (VIP Commands)
 """
 
 import os
-from datetime import date
 
 import asyncpg
 import structlog

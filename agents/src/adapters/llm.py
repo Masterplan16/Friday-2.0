@@ -54,7 +54,6 @@ class LLMResponse(BaseModel):
 class LLMError(PipelineError):
     """Erreur appel LLM"""
 
-    pass
 
 
 class ClaudeAdapter:

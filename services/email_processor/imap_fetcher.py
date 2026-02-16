@@ -338,7 +338,7 @@ class IMAPAccountWatcher:
                     if isinstance(result, tuple):
                         fetch_status, fetch_data = result
                     else:
-                        fetch_status = result.result
+                        result.result
                         fetch_data = result.lines
 
                     for item in fetch_data:

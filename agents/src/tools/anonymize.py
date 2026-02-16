@@ -98,7 +98,6 @@ class AnonymizationResult(BaseModel):
 class AnonymizationError(PipelineError):
     """Erreur pipeline anonymisation (hérite de PipelineError selon hiérarchie Story 1.2)"""
 
-    pass
 
 
 async def anonymize_text(

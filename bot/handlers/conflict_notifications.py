@@ -14,7 +14,6 @@ from agents.src.agents.calendar.models import CalendarConflict
 from agents.src.core.models import (
     CASQUETTE_EMOJI_MAPPING,
     CASQUETTE_LABEL_MAPPING,
-    Casquette,
 )
 from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.error import TelegramError

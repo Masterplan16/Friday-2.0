@@ -9,7 +9,6 @@ Deplacement vers error_directory si echec persistant (AC5).
 """
 
 import asyncio
-import json
 import shutil
 import time
 from datetime import date, datetime, timezone

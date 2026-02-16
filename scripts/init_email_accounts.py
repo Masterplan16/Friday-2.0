@@ -20,7 +20,6 @@ Date: 2026-02-14
 import asyncio
 import os
 import sys
-from datetime import datetime
 
 import asyncpg
 from dotenv import load_dotenv

@@ -32,7 +32,7 @@ import asyncpg
 import structlog
 from agents.src.core.check_registry import CheckRegistry
 from agents.src.core.context_provider import ContextProvider
-from agents.src.core.heartbeat_models import Check, CheckPriority, CheckResult, HeartbeatContext
+from agents.src.core.heartbeat_models import CheckPriority, CheckResult, HeartbeatContext
 from redis.asyncio import Redis
 
 logger = structlog.get_logger(__name__)

@@ -24,7 +24,6 @@ from agents.src.agents.calendar.models import (
     Event,
     EventDetectionResult,
     EventExtractionError,
-    EventValidationError,
 )
 from agents.src.agents.calendar.prompts import (
     EVENT_DETECTION_SYSTEM_PROMPT,

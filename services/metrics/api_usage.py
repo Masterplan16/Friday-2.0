@@ -11,7 +11,6 @@ Story: 6.2 - Task 6 (stub)
 """
 
 import logging
-from datetime import datetime
 from typing import Literal
 
 logger = logging.getLogger(__name__)

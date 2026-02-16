@@ -14,7 +14,7 @@ import asyncio
 import os
 import time
 from pathlib import Path
-from typing import List, Optional
+from typing import Optional
 
 from agents.src.agents.archiviste.models import OCRResult
 

@@ -228,7 +228,6 @@ def build_event_detection_prompt(
     if current_casquette is not None:
         from agents.src.core.models import (
             CASQUETTE_LABEL_MAPPING,
-            Casquette,
         )
 
         label = CASQUETTE_LABEL_MAPPING.get(current_casquette, current_casquette.value)

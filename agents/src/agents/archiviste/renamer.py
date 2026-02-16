@@ -15,7 +15,6 @@ Trust Layer: @friday_action avec trust=propose (Day 1).
 
 import re
 from pathlib import Path
-from typing import Optional
 
 import structlog
 from agents.src.agents.archiviste.models import MetadataExtraction, RenameResult

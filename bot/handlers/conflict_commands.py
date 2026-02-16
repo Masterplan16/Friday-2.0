@@ -11,8 +11,8 @@ Affiche :
 """
 
 import os
-from datetime import date, datetime, timedelta, timezone
-from typing import Any, Dict, Tuple
+from datetime import datetime, timedelta, timezone
+from typing import Any, Dict
 
 import asyncpg
 import structlog

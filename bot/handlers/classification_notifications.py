@@ -7,7 +7,6 @@ Notifications Metrics (succès) et System (erreurs/low confidence).
 """
 
 import logging
-import os
 from typing import Any, Dict, Optional
 
 from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup

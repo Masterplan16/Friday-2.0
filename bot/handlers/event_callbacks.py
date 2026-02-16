@@ -4,7 +4,6 @@ Callbacks inline buttons événements (Story 7.1 AC3)
 Gère les actions : Approve, Modify, Ignore pour événements détectés
 """
 
-import json
 import logging
 import uuid
 from datetime import datetime

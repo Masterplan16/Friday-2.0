@@ -13,14 +13,12 @@ State machine Redis pour dialogue déplacement :
 import json
 import os
 import uuid
-from datetime import date, datetime, time, timedelta, timezone
-from typing import Optional
+from datetime import date, datetime, timezone
 
 import asyncpg
 import redis.asyncio as redis
 import structlog
-from agents.src.agents.calendar.models import ConflictResolution, ResolutionAction
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram import Update
 from telegram.ext import ContextTypes
 
 logger = structlog.get_logger(__name__)

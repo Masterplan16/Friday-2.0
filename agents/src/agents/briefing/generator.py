@@ -16,7 +16,7 @@ from typing import Optional
 import asyncpg
 import structlog
 from agents.src.agents.briefing.templates import format_briefing_message
-from agents.src.core.models import CASQUETTE_EMOJI_MAPPING, CASQUETTE_LABEL_MAPPING, Casquette
+from agents.src.core.models import Casquette
 
 logger = structlog.get_logger(__name__)
 

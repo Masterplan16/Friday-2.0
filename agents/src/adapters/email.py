@@ -18,8 +18,6 @@ Version: 1.0.0
 import email
 import os
 from abc import ABC, abstractmethod
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
 from typing import Any, Dict, List, Optional
 
 import structlog
@@ -76,13 +74,11 @@ class AccountHealth(BaseModel):
 class EmailAdapterError(Exception):
     """Erreur adaptateur email"""
 
-    pass
 
 
 class IMAPConnectionError(EmailAdapterError):
     """Erreur connexion IMAP"""
 
-    pass
 
 
 class IMAPUIDNotFoundError(EmailAdapterError):
@@ -93,13 +89,11 @@ class IMAPUIDNotFoundError(EmailAdapterError):
     Re-essayer ne changera rien.
     """
 
-    pass
 
 
 class SMTPSendError(EmailAdapterError):
     """Erreur envoi SMTP"""
 
-    pass
 
 
 # ============================================================================

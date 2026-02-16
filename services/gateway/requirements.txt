@@ -9,3 +9,7 @@ pydantic-settings>=2.7.0
 python-dotenv>=1.0.0
 aiobreaker>=1.2.0
 slowapi>=0.1.9
+
+# Dependencies for agents/src modules (heartbeat, trust layer)
+python-telegram-bot==21.0
+anthropic>=0.39.0

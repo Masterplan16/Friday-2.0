@@ -10,4 +10,4 @@ google-auth-httplib2==0.2.0
 google-auth==2.35.0
 
 # Additional dependencies
-requests==2.32.3
+requests==2.32.5

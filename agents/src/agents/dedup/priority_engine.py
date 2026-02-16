@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Optional
 
 import structlog
-from agents.src.agents.dedup.models import DedupAction, DedupGroup, FileEntry
+from agents.src.agents.dedup.models import DedupAction, DedupGroup
 
 logger = structlog.get_logger(__name__)
 

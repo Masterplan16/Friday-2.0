@@ -27,7 +27,7 @@ from agents.src.agents.calendar.message_prompts import (
     build_message_event_prompt,
     sanitize_message_text,
 )
-from agents.src.agents.calendar.models import Event, EventExtractionError, EventType
+from agents.src.agents.calendar.models import Event, EventExtractionError
 from agents.src.middleware.models import ActionResult
 from agents.src.middleware.trust import friday_action
 from agents.src.tools.anonymize import anonymize_text

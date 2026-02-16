@@ -12,11 +12,9 @@ Edge cases :
 """
 
 from datetime import datetime
-from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from agents.src.agents.archiviste.models import MetadataExtraction, RenameResult
+from agents.src.agents.archiviste.models import MetadataExtraction
 from agents.src.agents.archiviste.renamer import DocumentRenamer
 from agents.src.middleware.models import ActionResult
 
@@ -53,18 +51,19 @@ async def test_rename_document_facture_standard(renamer, sample_metadata_facture
 
     # Assert
     assert isinstance(result, ActionResult)
+    # Payload sérialise les Pydantic models en dict
     rename_result = result.payload["rename_result"]
-    assert isinstance(rename_result, RenameResult)
+    assert isinstance(rename_result, dict)
 
     # Format attendu : 2026-02-08_Facture_Laboratoire-Cerba_145EUR.pdf
-    assert rename_result.new_filename.startswith("2026-02-08_Facture_")
+    assert rename_result["new_filename"].startswith("2026-02-08_Facture_")
     assert (
-        "Laboratoire-Cerba" in rename_result.new_filename
-        or "Laboratoire" in rename_result.new_filename
+        "Laboratoire-Cerba" in rename_result["new_filename"]
+        or "Laboratoire" in rename_result["new_filename"]
     )
-    assert "145EUR" in rename_result.new_filename
-    assert rename_result.new_filename.endswith(".pdf")
-    assert rename_result.original_filename == original_filename
+    assert "145EUR" in rename_result["new_filename"]
+    assert rename_result["new_filename"].endswith(".pdf")
+    assert rename_result["original_filename"] == original_filename
 
 
 @pytest.mark.asyncio
@@ -91,9 +90,9 @@ async def test_rename_document_emitter_with_spaces(renamer):
     # Assert
     rename_result = result.payload["rename_result"]
     # Espaces remplacés par tirets
-    assert " " not in rename_result.new_filename.split(".")[0]  # Avant extension
-    assert "Agence" in rename_result.new_filename
-    assert "-" in rename_result.new_filename
+    assert " " not in rename_result["new_filename"].split(".")[0]  # Avant extension
+    assert "Agence" in rename_result["new_filename"]
+    assert "-" in rename_result["new_filename"]
 
 
 @pytest.mark.asyncio
@@ -123,7 +122,7 @@ async def test_rename_document_emitter_with_special_chars(renamer):
     # Caractères spéciaux supprimés
     forbidden_chars = ["\\", "/", ":", "*", "?", '"', "<", ">", "|"]
     for char in forbidden_chars:
-        assert char not in rename_result.new_filename
+        assert char not in rename_result["new_filename"]
 
 
 @pytest.mark.asyncio
@@ -149,7 +148,7 @@ async def test_rename_document_zero_amount(renamer):
 
     # Assert
     rename_result = result.payload["rename_result"]
-    assert "0EUR" in rename_result.new_filename
+    assert "0EUR" in rename_result["new_filename"]
 
 
 @pytest.mark.asyncio
@@ -176,8 +175,8 @@ async def test_rename_document_fallback_inconnu(renamer):
     # Assert
     rename_result = result.payload["rename_result"]
     # Fallback "Inconnu" utilisé
-    assert "Inconnu" in rename_result.new_filename
-    assert rename_result.new_filename.endswith(".jpg")
+    assert "Inconnu" in rename_result["new_filename"]
+    assert rename_result["new_filename"].endswith(".jpg")
 
 
 @pytest.mark.asyncio
@@ -201,7 +200,7 @@ async def test_rename_document_preserve_extension(renamer, sample_metadata_factu
 
         # Assert
         rename_result = result.payload["rename_result"]
-        assert rename_result.new_filename.lower().endswith(expected_ext)
+        assert rename_result["new_filename"].lower().endswith(expected_ext)
 
 
 @pytest.mark.asyncio
@@ -254,7 +253,7 @@ async def test_rename_document_emitter_too_long_truncated(renamer):
     # Assert
     rename_result = result.payload["rename_result"]
     # Émetteur tronqué à 50 caractères max
-    emitter_part = rename_result.new_filename.split("_")[2]  # 3ème partie = emitter
+    emitter_part = rename_result["new_filename"].split("_")[2]  # 3ème partie = emitter
     assert len(emitter_part) <= 50
 
 
@@ -292,8 +291,8 @@ async def test_rename_document_amount_decimal_formatted(renamer):
         rename_result = result.payload["rename_result"]
         # Montant formaté correctement
         assert (
-            expected in rename_result.new_filename
-            or f"{int(amount)}EUR" in rename_result.new_filename
+            expected in rename_result["new_filename"]
+            or f"{int(amount)}EUR" in rename_result["new_filename"]
         )
 
 
@@ -322,7 +321,8 @@ async def test_rename_document_action_result_structure(renamer, sample_metadata_
     assert 0.0 <= result.confidence <= 1.0
     assert result.reasoning  # Non vide
     assert "rename_result" in result.payload
-    assert isinstance(result.payload["rename_result"], RenameResult)
+    # Payload sérialise RenameResult en dict
+    assert isinstance(result.payload["rename_result"], dict)
 
 
 @pytest.mark.asyncio

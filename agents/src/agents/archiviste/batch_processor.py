@@ -16,7 +16,6 @@ AC6: Error handling & retry
 import asyncio
 import hashlib
 import json
-import os
 import time
 from collections import deque
 from dataclasses import dataclass

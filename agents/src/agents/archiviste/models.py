@@ -125,3 +125,92 @@ class RenameResult(BaseModel):
             raise ValueError("New filename must have an extension")
 
         return v
+
+
+class ClassificationResult(BaseModel):
+    """
+    Résultat de classification d'un document (Story 3.2 - Task 1.5).
+
+    Attributes:
+        category: Catégorie principale (pro, finance, universite, recherche, perso)
+        subcategory: Sous-catégorie (obligatoire pour finance)
+        path: Chemin relatif calculé dans l'arborescence
+        confidence: Score de confiance [0.0-1.0]
+        reasoning: Explication de la classification
+    """
+
+    category: str = Field(
+        ...,
+        description="Catégorie principale du document"
+    )
+    subcategory: Optional[str] = Field(
+        None,
+        description="Sous-catégorie (obligatoire si category=finance)"
+    )
+    path: str = Field(
+        ...,
+        description="Chemin relatif dans l'arborescence finale"
+    )
+    confidence: float = Field(
+        ...,
+        ge=0.0,
+        le=1.0,
+        description="Score de confiance de la classification"
+    )
+    reasoning: str = Field(
+        ...,
+        description="Explication textuelle de la décision"
+    )
+
+    @field_validator("category")
+    @classmethod
+    def validate_category(cls, v: str) -> str:
+        """Valide que la catégorie est dans la liste autorisée."""
+        valid_categories = {"pro", "finance", "universite", "recherche", "perso"}
+        if v not in valid_categories:
+            raise ValueError(
+                f"Invalid category '{v}'. Must be one of: {valid_categories}"
+            )
+        return v
+
+    @field_validator("subcategory")
+    @classmethod
+    def validate_finance_subcategory(cls, v: Optional[str], info) -> Optional[str]:
+        """Valide le périmètre financier si category=finance."""
+        # Accéder à category depuis les données du modèle
+        if "category" in info.data and info.data["category"] == "finance":
+            if v is None:
+                raise ValueError("Finance category requires subcategory")
+
+            valid_finance_perimeters = {
+                "selarl",
+                "scm",
+                "sci_ravas",
+                "sci_malbosc",
+                "personal"
+            }
+
+            if v not in valid_finance_perimeters:
+                raise ValueError(
+                    f"Invalid financial perimeter '{v}'. "
+                    f"Must be one of: {valid_finance_perimeters}"
+                )
+
+        return v
+
+
+class MovedFile(BaseModel):
+    """
+    Résultat du déplacement d'un fichier (Story 3.2 - Task 3).
+
+    Attributes:
+        source_path: Chemin source original
+        destination_path: Chemin destination final
+        success: Succès du déplacement
+        error: Message d'erreur si échec
+    """
+
+    source_path: str = Field(..., description="Chemin source du fichier")
+    destination_path: str = Field(..., description="Chemin destination final")
+    success: bool = Field(..., description="Succès de l'opération")
+    error: Optional[str] = Field(None, description="Message d'erreur si échec")

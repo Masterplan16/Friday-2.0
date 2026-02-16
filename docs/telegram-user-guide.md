@@ -1004,6 +1004,94 @@ ORDER BY created_at DESC LIMIT 20;
 
 ---
 
+## Archiviste - Classification & Arborescence (Story 3.2)
+
+### Commande `/arbo`
+
+Gestion de l'arborescence des documents Friday.
+
+**Commandes disponibles :**
+
+```
+/arbo                          Afficher l'arborescence (ASCII tree)
+/arbo stats                    Statistiques documents par categorie
+/arbo add <category> <path>    Ajouter dossier
+/arbo remove <path>            Supprimer dossier
+```
+
+**Exemple `/arbo` :**
+```
+Arborescence Friday
+C:/Users/lopez/BeeStation/Friday/Archives
+
+├── pro/ (Documents professionnels cabinet medical)
+│   ├── patients/ (Dossiers patients anonymises)
+│   └── administratif/ (Documents administratifs cabinet)
+├── finance/ (Documents financiers - 5 perimetres OFFICIELS)
+│   ├── selarl/ (Cabinet medical SELARL)
+│   ├── scm/ (SCM Societe Civile de Moyens)
+│   ├── sci_ravas/ (SCI Ravas)
+│   ├── sci_malbosc/ (SCI Malbosc)
+│   └── personal/ (Finances personnelles)
+├── universite/ (Documents universitaires enseignement)
+│   ├── theses/ (Encadrement theses doctorales)
+│   └── cours/ (Supports de cours)
+├── recherche/ (Documents recherche scientifique)
+│   ├── publications/ (Articles, communications scientifiques)
+│   └── projets/ (Dossiers projets de recherche)
+└── perso/ (Documents personnels)
+    ├── famille/ (Documents famille)
+    ├── voyages/ (Documents voyages)
+    └── divers/ (Documents personnels divers)
+```
+
+**Exemple `/arbo stats` :**
+```
+Statistiques classification
+
+Total documents : 156
+Classifies : 142
+Non classifies : 14
+
+  finance/selarl : 45
+  pro : 32
+  finance/scm : 18
+  universite : 15
+  recherche : 12
+  perso : 10
+  finance/personal : 6
+  finance/sci_ravas : 3
+  finance/sci_malbosc : 1
+```
+
+### Protections
+
+- **Owner-only** : Seul le Mainteneur peut executer `/arbo`
+- **Perimetres finance proteges** : Impossible de modifier ou supprimer les 5 perimetres racine (selarl, scm, sci_ravas, sci_malbosc, personal)
+- **Categories racine protegees** : Impossible de supprimer pro, finance, universite, recherche, perso
+
+### Notifications classification
+
+Quand un document est classe (trust=propose), notification dans **Topic Actions & Validations** :
+
+```
+Document classe (validation requise)
+
+Document : doc-123
+Categorie : Finance > SELARL
+Destination : finance/selarl
+Confiance : 94%
+
+[Approuver] [Corriger] [Rejeter]
+```
+
+**Boutons :**
+- **Approuver** : Classification acceptee, document deplace
+- **Corriger** : Affiche liste categories, si finance alors sous-menu perimetres
+- **Rejeter** : Classification rejetee, document reste en transit
+
+---
+
 ## ❓ Questions Fréquentes (FAQ)
 
 ### Je ne vois pas les topics sur mobile ?

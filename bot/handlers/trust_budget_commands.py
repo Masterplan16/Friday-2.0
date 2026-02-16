@@ -172,7 +172,6 @@ async def confiance_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         if not rows:
             await update.message.reply_text(
                 "Pas encore de donnees (nightly.py n'a pas encore execute)",
-                parse_mode="Markdown",
             )
             return
 
@@ -184,7 +183,7 @@ async def confiance_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
             key = f"{row['module']}.{row['action_type']}"
             grouped.setdefault(key, []).append(row)
 
-        lines = ["**Accuracy par module/action** (4 semaines)\n"]
+        lines = ["Accuracy par module/action (4 semaines)\n"]
 
         for key, weeks in grouped.items():
             module, action = key.split(".", 1)
@@ -207,7 +206,7 @@ async def confiance_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
                 retro_tag = " \u26a0\ufe0f RETRO"
 
             lines.append(
-                f"\u2022 `{key}` : {format_confidence(latest['accuracy'])}{trend} "
+                f"\u2022 {key} : {format_confidence(latest['accuracy'])}{trend} "
                 f"(n={latest['total_actions']}) [{trust_level}]{retro_tag}"
             )
 
@@ -221,13 +220,13 @@ async def confiance_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
                     )
 
         text = "\n".join(lines)
-        await send_message_with_split(update, text, parse_mode="Markdown")
+        await send_message_with_split(update, text)
 
     except ValueError as e:
-        await update.message.reply_text(f"Configuration erreur: {e}", parse_mode="Markdown")
+        await update.message.reply_text(f"Configuration erreur: {e}")
     except Exception as e:
         logger.error("/confiance command failed", error=str(e), exc_info=True)
-        await update.message.reply_text(_ERR_DB, parse_mode="Markdown")
+        await update.message.reply_text(_ERR_DB)
 
 
 # ────────────────────────────────────────────────────────────
@@ -252,8 +251,7 @@ async def receipt_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     args = [a for a in (context.args or []) if not a.startswith("-")]
     if not args:
         await update.message.reply_text(
-            "Usage: `/receipt <uuid>` (`-v` pour details)\n" "Exemple: `/receipt a1b2c3d4`",
-            parse_mode="Markdown",
+            "Usage: /receipt <uuid> (-v pour details)\nExemple: /receipt a1b2c3d4",
         )
         return
 
@@ -263,9 +261,8 @@ async def receipt_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     clean_id = receipt_id.replace("-", "")
     if len(clean_id) < 8 or not all(c in "0123456789abcdef" for c in clean_id.lower()):
         await update.message.reply_text(
-            f"UUID invalide: `{receipt_id}`\n"
+            f"UUID invalide: {receipt_id}\n"
             f"Format attendu: UUID complet ou prefix >= 8 caracteres hex",
-            parse_mode="Markdown",
         )
         return
 
@@ -304,22 +301,21 @@ async def receipt_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
                 if not rows:
                     await update.message.reply_text(
-                        f"Receipt introuvable pour `{receipt_id}`",
-                        parse_mode="Markdown",
+                        f"Receipt introuvable pour {receipt_id}",
                     )
                     return
 
                 if len(rows) > 1:
-                    lines = [f"Plusieurs receipts pour prefix `{receipt_id}`:\n"]
+                    lines = [f"Plusieurs receipts pour prefix {receipt_id}:\n"]
                     for r in rows:
                         rid = str(r["id"])[:8]
                         lines.append(
-                            f"\u2022 `{rid}...` {r['module']}.{r['action_type']} "
+                            f"\u2022 {rid}... {r['module']}.{r['action_type']} "
                             f"{format_status_emoji(r['status'])} "
                             f"{format_timestamp(r['created_at'])}"
                         )
-                    lines.append("\nPrecisez avec `/receipt <uuid_complet>`")
-                    await update.message.reply_text("\n".join(lines), parse_mode="Markdown")
+                    lines.append("\nPrecisez avec /receipt <uuid_complet>")
+                    await update.message.reply_text("\n".join(lines))
                     return
 
                 row = rows[0]
@@ -327,8 +323,8 @@ async def receipt_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         # Formater receipt
         rid = str(row["id"])
         lines = [
-            f"**Receipt** `{rid[:8]}...`\n",
-            f"Module: `{row['module']}.{row['action_type']}`",
+            f"Receipt {rid[:8]}...\n",
+            f"Module: {row['module']}.{row['action_type']}",
             f"Trust: {row['trust_level']}",
             f"Status: {format_status_emoji(row['status'])} {row['status']}",
             f"Confidence: {format_confidence(row['confidence'])}",
@@ -344,19 +340,19 @@ async def receipt_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         # Story 2.6 AC4: Section spéciale pour emails envoyés (lisibilité améliorée)
         if row["module"] == "email" and row["action_type"] == "draft_reply" and row.get("payload"):
             payload = row["payload"]
-            lines.append("\n**Email Details**")
+            lines.append("\nEmail Details")
             if payload.get("account_id"):
-                lines.append(f"Compte IMAP: `{payload['account_id']}`")
+                lines.append(f"Compte IMAP: {payload['account_id']}")
             if payload.get("email_type"):
                 lines.append(f"Type: {payload['email_type']}")
             if payload.get("message_id"):
-                lines.append(f"Message ID: `{payload['message_id'][:50]}...`")
+                lines.append(f"Message ID: {payload['message_id'][:50]}...")
             if payload.get("draft_body"):
                 draft_preview = truncate_text(payload["draft_body"], 300)
                 lines.append(f"\nBrouillon (extrait):\n---\n{draft_preview}\n---")
 
         if verbose:
-            lines.append("\n**Details** (`-v`)")
+            lines.append("\nDetails (-v)")
             if row.get("duration_ms"):
                 lines.append(f"Duration: {row['duration_ms']}ms")
             if row.get("validated_by"):
@@ -369,19 +365,19 @@ async def receipt_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
                 payload_str = json.dumps(row["payload"], indent=2, ensure_ascii=False)
                 if len(payload_str) > 1500:
                     payload_str = payload_str[:1500] + "\n..."
-                lines.append(f"Payload (JSON complet):\n```json\n{payload_str}\n```")
+                lines.append(f"Payload (JSON):\n{payload_str}")
             if row.get("feedback_comment"):
                 lines.append(f"Feedback: {row['feedback_comment']}")
             lines.append(f"Updated: {format_timestamp(row['updated_at'], verbose=True)}")
 
         text = "\n".join(lines)
-        await send_message_with_split(update, text, parse_mode="Markdown")
+        await send_message_with_split(update, text)
 
     except ValueError as e:
-        await update.message.reply_text(f"Configuration erreur: {e}", parse_mode="Markdown")
+        await update.message.reply_text(f"Configuration erreur: {e}")
     except Exception as e:
         logger.error("/receipt command failed", error=str(e), exc_info=True)
-        await update.message.reply_text(_ERR_DB, parse_mode="Markdown")
+        await update.message.reply_text(_ERR_DB)
 
 
 # ────────────────────────────────────────────────────────────

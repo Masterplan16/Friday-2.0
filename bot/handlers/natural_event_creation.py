@@ -12,9 +12,6 @@ from datetime import datetime, timezone
 from typing import Optional
 
 import structlog
-from telegram import Update
-from telegram.ext import ContextTypes
-
 from agents.src.agents.calendar.message_event_detector import (
     CONFIDENCE_THRESHOLD,
     detect_event_intention,
@@ -22,6 +19,8 @@ from agents.src.agents.calendar.message_event_detector import (
 )
 from agents.src.agents.calendar.models import EventExtractionError
 from bot.handlers.event_proposal_notifications import send_event_proposal_notification
+from telegram import Update
+from telegram.ext import ContextTypes
 
 logger = structlog.get_logger(__name__)
 

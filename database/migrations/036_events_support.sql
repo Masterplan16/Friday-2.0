@@ -45,7 +45,7 @@ COMMENT ON INDEX knowledge.idx_entities_event_date IS
 CREATE INDEX idx_entities_event_casquette_date
 ON knowledge.entities (
   (properties->>'casquette'),
-  (properties->>'start_datetime')::timestamptz
+  ((properties->>'start_datetime')::timestamptz)
 )
 WHERE entity_type = 'EVENT';
 

@@ -13,7 +13,7 @@ AC3: Progress tracking & notifications
 
 import time
 from pathlib import Path
-from typing import Optional, Dict
+from typing import Dict, Optional
 
 import structlog
 import telegram

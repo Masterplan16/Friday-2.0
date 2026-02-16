@@ -9,10 +9,9 @@ from datetime import datetime
 from typing import Optional
 
 import structlog
-from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup
-
 from agents.src.agents.calendar.models import Event
 from agents.src.core.models import CASQUETTE_EMOJI_MAPPING, CASQUETTE_LABEL_MAPPING, Casquette
+from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup
 
 logger = structlog.get_logger(__name__)
 

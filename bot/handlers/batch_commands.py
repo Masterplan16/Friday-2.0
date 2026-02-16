@@ -12,22 +12,21 @@ AC1: Intent detection & confirmation
 AC7: Security validation
 """
 
-import os
 import json
+import os
 import uuid
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
-from dataclasses import dataclass, field
 
 import structlog
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ContextTypes
-from anthropic import AsyncAnthropic
-
 from agents.src.agents.archiviste.batch_shared import (
     ALLOWED_ZONES,
     is_system_file,
 )
+from anthropic import AsyncAnthropic
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram.ext import ContextTypes
 
 logger = structlog.get_logger(__name__)
 
@@ -382,8 +381,8 @@ async def handle_batch_start_callback(update: Update, context: ContextTypes.DEFA
     batch_state.status = "running"
 
     # Import here to avoid circular imports
+    from agents.src.agents.archiviste.batch_processor import BatchFilters, BatchProcessor
     from agents.src.agents.archiviste.batch_progress import BatchProgressTracker
-    from agents.src.agents.archiviste.batch_processor import BatchProcessor, BatchFilters
 
     # Create progress tracker using the confirmation message
     # (AC3: edit this message for progress updates)

@@ -12,12 +12,11 @@ from typing import Optional
 
 import asyncpg
 import structlog
-from telegram import Update
-from telegram.ext import ContextTypes
-
 from agents.src.agents.calendar.models import CalendarEvent, EventStatus
 from agents.src.core.models import CASQUETTE_EMOJI_MAPPING, CASQUETTE_LABEL_MAPPING, Casquette
 from bot.handlers.event_proposal_notifications import format_date_fr
+from telegram import Update
+from telegram.ext import ContextTypes
 
 logger = structlog.get_logger(__name__)
 

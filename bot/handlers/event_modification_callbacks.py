@@ -12,11 +12,10 @@ from datetime import datetime, timezone
 from typing import Optional
 
 import structlog
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
-from telegram.ext import ContextTypes
-
 from bot.handlers.create_event_command import _validate_date, _validate_time
 from bot.handlers.event_proposal_notifications import format_date_fr
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram.ext import ContextTypes
 
 logger = structlog.get_logger(__name__)
 

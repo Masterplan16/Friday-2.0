@@ -13,7 +13,6 @@ from datetime import datetime, timezone
 from typing import Optional
 
 import structlog
-from agents.src.core.models import CASQUETTE_EMOJI_MAPPING, CASQUETTE_LABEL_MAPPING, Casquette
 from bot.handlers.event_proposal_notifications import format_date_fr
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes

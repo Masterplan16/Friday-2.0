@@ -12,7 +12,6 @@ from typing import Optional
 
 import asyncpg
 import structlog
-from agents.src.agents.calendar.models import CalendarEvent, EventStatus
 from agents.src.core.models import CASQUETTE_EMOJI_MAPPING, CASQUETTE_LABEL_MAPPING, Casquette
 from agents.src.middleware.models import ActionResult
 from bot.handlers.event_proposal_notifications import format_date_fr
@@ -280,8 +279,6 @@ async def _check_conflicts_immediate(db_pool: asyncpg.Pool, event_data: dict, bo
     Si conflits detectes -> notification Topic System.
     """
     try:
-        from datetime import date as date_type
-
         from agents.src.agents.calendar.conflict_detector import detect_calendar_conflicts
 
         properties = event_data.get("properties", {})

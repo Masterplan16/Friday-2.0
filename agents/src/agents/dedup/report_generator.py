@@ -13,12 +13,11 @@ from __future__ import annotations
 
 import csv
 import io
-from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
 import structlog
-from agents.src.agents.dedup.models import DedupGroup, ScanResult
+from agents.src.agents.dedup.models import ScanResult
 from agents.src.agents.dedup.priority_engine import PriorityEngine
 
 logger = structlog.get_logger(__name__)

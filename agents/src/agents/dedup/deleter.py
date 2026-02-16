@@ -14,12 +14,11 @@ AC7: Securite & rollback
 from __future__ import annotations
 
 import hashlib
-import time
 from pathlib import Path
 from typing import Callable, Optional
 
 import structlog
-from agents.src.agents.dedup.models import DedupAction, DedupGroup, FileEntry
+from agents.src.agents.dedup.models import DedupGroup, FileEntry
 
 logger = structlog.get_logger(__name__)
 

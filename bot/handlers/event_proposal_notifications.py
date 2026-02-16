@@ -10,7 +10,7 @@ from typing import Optional
 
 import structlog
 from agents.src.agents.calendar.models import Event
-from agents.src.core.models import CASQUETTE_EMOJI_MAPPING, CASQUETTE_LABEL_MAPPING, Casquette
+from agents.src.core.models import CASQUETTE_EMOJI_MAPPING, CASQUETTE_LABEL_MAPPING
 from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup
 
 logger = structlog.get_logger(__name__)

@@ -189,8 +189,8 @@ services:
   # ============================================
   gateway:
     build:
-      context: ./services/gateway
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: services/gateway/Dockerfile
     container_name: friday-gateway
     restart: unless-stopped
     environment:
@@ -200,10 +200,7 @@ services:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
       - ENVIRONMENT=${ENVIRONMENT:-production}
-      - PYTHONPATH=/agents/src
-    volumes:
-      - ./services/gateway:/app:ro
-      - ./agents/src:/agents:ro
+    # Note: gateway code + agents sont copiés dans l'image Docker (pas de volume mount)
     ports:
       - "127.0.0.1:8000:8000"
     networks:

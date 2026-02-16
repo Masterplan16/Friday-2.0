@@ -13,7 +13,7 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends wget && \
     rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt .
+COPY services/gateway/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # ============================================
@@ -27,7 +27,11 @@ ENV LOG_LEVEL=DEBUG
 # Install dev dependencies
 RUN pip install --no-cache-dir pytest pytest-asyncio pytest-cov httpx
 
-COPY . .
+# Copy gateway code and agents src
+COPY services/gateway /app/gateway
+COPY agents/src /app/agents/src
+
+WORKDIR /app/gateway
 
 CMD ["uvicorn", "run:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
 
@@ -38,8 +42,13 @@ FROM base AS production
 
 ENV ENVIRONMENT=production
 ENV LOG_LEVEL=INFO
+ENV PYTHONPATH=/app
 
-COPY . .
+# Copy gateway code and agents src
+COPY services/gateway /app/gateway
+COPY agents/src /app/agents/src
+
+WORKDIR /app/gateway
 
 # Non-root user for security
 RUN adduser --disabled-password --gecos "" appuser && \

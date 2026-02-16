@@ -14,7 +14,6 @@ from agents.src.agents.calendar.message_event_detector import MessageEventResult
 from agents.src.agents.calendar.models import Event, EventType
 from agents.src.core.models import Casquette
 
-
 # ============================================================================
 # FIXTURES
 # ============================================================================
@@ -203,9 +202,7 @@ class TestEventProposalNotification:
     @pytest.mark.asyncio
     async def test_notification_contains_title(self):
         """Notification contient le titre evenement."""
-        from bot.handlers.event_proposal_notifications import (
-            send_event_proposal_notification,
-        )
+        from bot.handlers.event_proposal_notifications import send_event_proposal_notification
 
         bot = AsyncMock()
         sent_msg = MagicMock()
@@ -230,9 +227,7 @@ class TestEventProposalNotification:
     @pytest.mark.asyncio
     async def test_notification_contains_confidence(self):
         """Notification contient la confidence."""
-        from bot.handlers.event_proposal_notifications import (
-            send_event_proposal_notification,
-        )
+        from bot.handlers.event_proposal_notifications import send_event_proposal_notification
 
         bot = AsyncMock()
         sent_msg = MagicMock()
@@ -256,9 +251,7 @@ class TestEventProposalNotification:
     @pytest.mark.asyncio
     async def test_notification_has_3_buttons(self):
         """Notification a 3 inline buttons."""
-        from bot.handlers.event_proposal_notifications import (
-            send_event_proposal_notification,
-        )
+        from bot.handlers.event_proposal_notifications import send_event_proposal_notification
 
         bot = AsyncMock()
         sent_msg = MagicMock()
@@ -287,9 +280,7 @@ class TestEventProposalNotification:
     @pytest.mark.asyncio
     async def test_callback_data_contains_event_id(self):
         """Callback data contient event_id."""
-        from bot.handlers.event_proposal_notifications import (
-            send_event_proposal_notification,
-        )
+        from bot.handlers.event_proposal_notifications import send_event_proposal_notification
 
         bot = AsyncMock()
         sent_msg = MagicMock()

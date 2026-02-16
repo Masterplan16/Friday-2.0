@@ -12,22 +12,22 @@ Tests :
 - Formatage message notification
 """
 
-import pytest
-from datetime import datetime, date, time, timedelta
+from datetime import date, datetime, time, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
+import pytest
 from agents.src.core.heartbeat_checks.calendar_conflicts import (
-    check_calendar_conflicts,
-    _should_skip_quiet_hours,
     _format_conflict_notification,
+    _should_skip_quiet_hours,
+    check_calendar_conflicts,
 )
-from agents.src.core.heartbeat_models import CheckResult, CheckPriority
-
+from agents.src.core.heartbeat_models import CheckPriority, CheckResult
 
 # ============================================================================
 # Fixtures
 # ============================================================================
+
 
 @pytest.fixture
 def mock_db_pool():
@@ -46,7 +46,7 @@ def context_daytime():
         "time": datetime(2026, 2, 17, 14, 30),
         "hour": 14,
         "is_weekend": False,
-        "quiet_hours": False
+        "quiet_hours": False,
     }
 
 
@@ -57,7 +57,7 @@ def context_quiet_hours():
         "time": datetime(2026, 2, 17, 23, 0),
         "hour": 23,
         "is_weekend": False,
-        "quiet_hours": True
+        "quiet_hours": True,
     }
 
 
@@ -76,7 +76,7 @@ def sample_conflicts():
             "event1_start_datetime": base_date,
             "event2_start_datetime": base_date.replace(hour=14, minute=0),
             "overlap_minutes": 30,
-            "resolved": False
+            "resolved": False,
         },
         {
             "id": str(uuid4()),
@@ -87,8 +87,8 @@ def sample_conflicts():
             "event1_start_datetime": base_date.replace(day=19, hour=16, minute=0),
             "event2_start_datetime": base_date.replace(day=19, hour=15, minute=30),
             "overlap_minutes": 30,
-            "resolved": False
-        }
+            "resolved": False,
+        },
     ]
 
 
@@ -96,11 +96,14 @@ def sample_conflicts():
 # Tests Check Conflits 7 Jours (AC5)
 # ============================================================================
 
+
 @pytest.mark.asyncio
 async def test_check_detects_conflicts_7_days(mock_db_pool, context_daytime):
     """Test AC5: Check détecte conflits sur 7 jours prochains."""
     # Mock get_conflicts_range
-    with patch("agents.src.core.heartbeat_checks.calendar_conflicts.get_conflicts_range") as mock_get:
+    with patch(
+        "agents.src.core.heartbeat_checks.calendar_conflicts.get_conflicts_range"
+    ) as mock_get:
         mock_get.return_value = [
             {
                 "id": str(uuid4()),
@@ -111,7 +114,7 @@ async def test_check_detects_conflicts_7_days(mock_db_pool, context_daytime):
                 "event1_start_datetime": datetime.now() + timedelta(days=2),
                 "event2_start_datetime": datetime.now() + timedelta(days=2),
                 "overlap_minutes": 60,
-                "resolved": False
+                "resolved": False,
             }
         ]
 
@@ -137,7 +140,9 @@ async def test_check_detects_conflicts_7_days(mock_db_pool, context_daytime):
 async def test_check_status_ok_if_no_conflicts(mock_db_pool, context_daytime):
     """Test AC5: CheckResult notify=False si aucun conflit."""
     # Mock get_conflicts_range (aucun conflit)
-    with patch("agents.src.core.heartbeat_checks.calendar_conflicts.get_conflicts_range") as mock_get:
+    with patch(
+        "agents.src.core.heartbeat_checks.calendar_conflicts.get_conflicts_range"
+    ) as mock_get:
         mock_get.return_value = []
 
         result = await check_calendar_conflicts(context_daytime, db_pool=mock_db_pool)
@@ -151,7 +156,9 @@ async def test_check_status_ok_if_no_conflicts(mock_db_pool, context_daytime):
 async def test_check_ignores_resolved_conflicts(mock_db_pool, context_daytime):
     """Test AC5: Check ignore conflits déjà résolus."""
     # Mock get_conflicts_range (1 résolu, 1 non résolu)
-    with patch("agents.src.core.heartbeat_checks.calendar_conflicts.get_conflicts_range") as mock_get:
+    with patch(
+        "agents.src.core.heartbeat_checks.calendar_conflicts.get_conflicts_range"
+    ) as mock_get:
         mock_get.return_value = [
             {
                 "id": str(uuid4()),
@@ -162,7 +169,7 @@ async def test_check_ignores_resolved_conflicts(mock_db_pool, context_daytime):
                 "event1_start_datetime": datetime.now() + timedelta(days=1),
                 "event2_start_datetime": datetime.now() + timedelta(days=1),
                 "overlap_minutes": 60,
-                "resolved": True  # Résolu
+                "resolved": True,  # Résolu
             },
             {
                 "id": str(uuid4()),
@@ -173,8 +180,8 @@ async def test_check_ignores_resolved_conflicts(mock_db_pool, context_daytime):
                 "event1_start_datetime": datetime.now() + timedelta(days=2),
                 "event2_start_datetime": datetime.now() + timedelta(days=2),
                 "overlap_minutes": 30,
-                "resolved": False  # Non résolu
-            }
+                "resolved": False,  # Non résolu
+            },
         ]
 
         result = await check_calendar_conflicts(context_daytime, db_pool=mock_db_pool)
@@ -188,6 +195,7 @@ async def test_check_ignores_resolved_conflicts(mock_db_pool, context_daytime):
 # ============================================================================
 # Tests Quiet Hours (AC5)
 # ============================================================================
+
 
 @pytest.mark.asyncio
 async def test_check_skips_quiet_hours(context_quiet_hours):
@@ -233,6 +241,7 @@ def test_should_skip_quiet_hours_22h():
 # Tests Formatage Message (AC5)
 # ============================================================================
 
+
 def test_format_conflict_notification_single_conflict(context_daytime):
     """Test AC5: Formatage message 1 conflit."""
     conflicts = [
@@ -241,7 +250,7 @@ def test_format_conflict_notification_single_conflict(context_daytime):
             "event1_title": "Consultation Dr Dupont",
             "event2_title": "Cours L2 Anatomie",
             "event1_start_datetime": datetime(2026, 2, 18, 14, 30),  # Demain
-            "overlap_minutes": 30
+            "overlap_minutes": 30,
         }
     ]
 
@@ -275,7 +284,7 @@ def test_format_conflict_notification_today(context_daytime):
             "event1_title": "Event1",
             "event2_title": "Event2",
             "event1_start_datetime": datetime.now().replace(hour=16, minute=0),  # Aujourd'hui
-            "overlap_minutes": 60
+            "overlap_minutes": 60,
         }
     ]
 
@@ -289,11 +298,14 @@ def test_format_conflict_notification_today(context_daytime):
 # Tests Error Handling
 # ============================================================================
 
+
 @pytest.mark.asyncio
 async def test_check_handles_db_error(context_daytime):
     """Test AC5: Check handle erreur DB gracefully."""
     # Mock get_conflicts_range qui raise Exception
-    with patch("agents.src.core.heartbeat_checks.calendar_conflicts.get_conflicts_range") as mock_get:
+    with patch(
+        "agents.src.core.heartbeat_checks.calendar_conflicts.get_conflicts_range"
+    ) as mock_get:
         mock_get.side_effect = Exception("DB connection failed")
 
         result = await check_calendar_conflicts(context_daytime, db_pool=None)

@@ -23,7 +23,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import UUID, uuid4
 
 import pytest
-
 from agents.src.agents.archiviste.embedding_generator import EmbeddingGenerator
 from agents.src.agents.archiviste.models import EmbeddingResult
 from agents.src.middleware.models import ActionResult
@@ -43,6 +42,7 @@ def mock_voyage_response():
     # Vecteur normalisé (L2 norm = 1) de 1024 dimensions
     # Créer vecteur avec norme L2 = 1
     import math
+
     value = 1.0 / math.sqrt(1024)  # sqrt(1024 * value^2) = 1
     embedding_vector = [value] * 1024
     return {
@@ -233,11 +233,13 @@ async def test_anonymization_before_api_call(
     mock_adapter.embed.assert_called_once()
     # call_args est un tuple (args, kwargs), on veut kwargs['texts']
     call_kwargs = mock_adapter.embed.call_args[1] if len(mock_adapter.embed.call_args) > 1 else {}
-    call_args_positional = mock_adapter.embed.call_args[0] if len(mock_adapter.embed.call_args) > 0 else ()
+    call_args_positional = (
+        mock_adapter.embed.call_args[0] if len(mock_adapter.embed.call_args) > 0 else ()
+    )
 
     # Vérifier textes passés (soit en positional soit en kwargs)
-    if 'texts' in call_kwargs:
-        texts_passed = call_kwargs['texts']
+    if "texts" in call_kwargs:
+        texts_passed = call_kwargs["texts"]
     elif len(call_args_positional) > 0:
         texts_passed = call_args_positional[0]
     else:
@@ -434,9 +436,7 @@ async def test_action_result_structure(
 
 
 @pytest.mark.asyncio
-async def test_fail_explicit_on_voyage_error(
-    embedding_generator, mock_anonymization_result
-):
+async def test_fail_explicit_on_voyage_error(embedding_generator, mock_anonymization_result):
     """
     Test fail-explicit si erreur Voyage AI après 3 retries (NFR7).
 

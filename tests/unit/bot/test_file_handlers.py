@@ -4,10 +4,13 @@ Tests unitaires pour bot/handlers/file_handlers.py
 Story 3.6 - Tests upload fichiers Telegram (AC#1, AC#4).
 """
 
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch, call
-from telegram import Update, Message, User, Chat, Document as TelegramDocument, PhotoSize
 from pathlib import Path
+from unittest.mock import AsyncMock, MagicMock, call, patch
+
+import pytest
+from telegram import Chat
+from telegram import Document as TelegramDocument
+from telegram import Message, PhotoSize, Update, User
 
 
 @pytest.fixture

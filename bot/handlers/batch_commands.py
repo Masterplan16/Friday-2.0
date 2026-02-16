@@ -20,10 +20,7 @@ from pathlib import Path
 from typing import Optional
 
 import structlog
-from agents.src.agents.archiviste.batch_shared import (
-    ALLOWED_ZONES,
-    is_system_file,
-)
+from agents.src.agents.archiviste.batch_shared import ALLOWED_ZONES, is_system_file
 from anthropic import AsyncAnthropic
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes

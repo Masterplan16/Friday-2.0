@@ -7,7 +7,6 @@ Teste l'expiration des validations en attente (timeout configurable).
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-
 from services.metrics.expire_validations import (
     expire_pending_validations,
     load_timeout_config,

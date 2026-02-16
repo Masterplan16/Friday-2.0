@@ -8,7 +8,6 @@ import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-
 from agents.src.agents.email.classifier import (
     EmailClassifierError,
     _call_claude_with_retry,
@@ -17,7 +16,6 @@ from agents.src.agents.email.classifier import (
     classify_email,
 )
 from agents.src.models.email_classification import EmailClassification
-
 
 # ==========================================
 # Tests classify_email (fonction principale)
@@ -146,13 +144,15 @@ async def test_call_claude_success_first_try(mock_get_adapter):
     # Mock LLM adapter (C1 fix: mock complete_with_anonymization)
     mock_adapter = AsyncMock()
     mock_response = AsyncMock()
-    mock_response.content = json.dumps({
-        "category": "finance",
-        "confidence": 0.88,
-        "reasoning": "Banking email with account details",
-        "keywords": ["bank", "account"],
-        "suggested_priority": "normal",
-    })
+    mock_response.content = json.dumps(
+        {
+            "category": "finance",
+            "confidence": 0.88,
+            "reasoning": "Banking email with account details",
+            "keywords": ["bank", "account"],
+            "suggested_priority": "normal",
+        }
+    )
     mock_adapter.complete_with_anonymization.return_value = mock_response
     mock_get_adapter.return_value = mock_adapter
 
@@ -181,12 +181,14 @@ async def test_call_claude_retry_on_json_error(mock_sleep, mock_get_adapter):
     mock_response_1 = AsyncMock()
     mock_response_1.content = "Invalid JSON response"
     mock_response_2 = AsyncMock()
-    mock_response_2.content = json.dumps({
-        "category": "pro",
-        "confidence": 0.90,
-        "reasoning": "Valid response on retry",
-        "keywords": ["test"],
-    })
+    mock_response_2.content = json.dumps(
+        {
+            "category": "pro",
+            "confidence": 0.90,
+            "reasoning": "Valid response on retry",
+            "keywords": ["test"],
+        }
+    )
     mock_adapter.complete_with_anonymization.side_effect = [mock_response_1, mock_response_2]
     mock_get_adapter.return_value = mock_adapter
     mock_sleep.return_value = None
@@ -226,7 +228,7 @@ async def test_call_claude_fail_after_max_retries(mock_sleep, mock_get_adapter):
 
     # Message peut être en français ou anglais
     error_msg = str(exc_info.value).lower()
-    assert ("3 tentatives" in error_msg or "max retries" in error_msg)
+    assert "3 tentatives" in error_msg or "max retries" in error_msg
     assert mock_adapter.complete_with_anonymization.call_count == 3  # C1 fix
 
 

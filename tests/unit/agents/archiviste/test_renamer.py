@@ -10,13 +10,14 @@ Edge cases :
 - Date invalide
 - Collisions de noms
 """
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+
 from datetime import datetime
 from pathlib import Path
+from unittest.mock import AsyncMock, MagicMock, patch
 
-from agents.src.agents.archiviste.renamer import DocumentRenamer
+import pytest
 from agents.src.agents.archiviste.models import MetadataExtraction, RenameResult
+from agents.src.agents.archiviste.renamer import DocumentRenamer
 from agents.src.middleware.models import ActionResult
 
 
@@ -35,7 +36,7 @@ def sample_metadata_facture():
         emitter="Laboratoire Cerba",
         amount=145.0,
         confidence=0.92,
-        reasoning="Facture médicale standard"
+        reasoning="Facture médicale standard",
     )
 
 
@@ -57,7 +58,10 @@ async def test_rename_document_facture_standard(renamer, sample_metadata_facture
 
     # Format attendu : 2026-02-08_Facture_Laboratoire-Cerba_145EUR.pdf
     assert rename_result.new_filename.startswith("2026-02-08_Facture_")
-    assert "Laboratoire-Cerba" in rename_result.new_filename or "Laboratoire" in rename_result.new_filename
+    assert (
+        "Laboratoire-Cerba" in rename_result.new_filename
+        or "Laboratoire" in rename_result.new_filename
+    )
     assert "145EUR" in rename_result.new_filename
     assert rename_result.new_filename.endswith(".pdf")
     assert rename_result.original_filename == original_filename
@@ -77,7 +81,7 @@ async def test_rename_document_emitter_with_spaces(renamer):
         emitter="Agence Régionale de Santé",
         amount=0.0,
         confidence=0.88,
-        reasoning="Courrier administratif"
+        reasoning="Courrier administratif",
     )
     original_filename = "courrier.pdf"
 
@@ -107,7 +111,7 @@ async def test_rename_document_emitter_with_special_chars(renamer):
         emitter="Labo / Tests*?",
         amount=50.0,
         confidence=0.85,
-        reasoning="Facture labo"
+        reasoning="Facture labo",
     )
     original_filename = "test.pdf"
 
@@ -117,7 +121,7 @@ async def test_rename_document_emitter_with_special_chars(renamer):
     # Assert
     rename_result = result.payload["rename_result"]
     # Caractères spéciaux supprimés
-    forbidden_chars = ['\\', '/', ':', '*', '?', '"', '<', '>', '|']
+    forbidden_chars = ["\\", "/", ":", "*", "?", '"', "<", ">", "|"]
     for char in forbidden_chars:
         assert char not in rename_result.new_filename
 
@@ -136,7 +140,7 @@ async def test_rename_document_zero_amount(renamer):
         emitter="ARS",
         amount=0.0,
         confidence=0.90,
-        reasoning="Courrier sans montant"
+        reasoning="Courrier sans montant",
     )
     original_filename = "courrier_ars.pdf"
 
@@ -162,7 +166,7 @@ async def test_rename_document_fallback_inconnu(renamer):
         emitter="",  # Émetteur vide
         amount=0.0,
         confidence=0.50,
-        reasoning="Métadonnées incertaines"
+        reasoning="Métadonnées incertaines",
     )
     original_filename = "document_illisible.jpg"
 
@@ -214,7 +218,7 @@ async def test_rename_document_confidence_min_preserved(renamer):
         emitter="Test",
         amount=100.0,
         confidence=0.75,
-        reasoning="Confiance moyenne"
+        reasoning="Confiance moyenne",
     )
     original_filename = "test.pdf"
 
@@ -240,7 +244,7 @@ async def test_rename_document_emitter_too_long_truncated(renamer):
         emitter=long_emitter,
         amount=100.0,
         confidence=0.90,
-        reasoning="Émetteur long"
+        reasoning="Émetteur long",
     )
     original_filename = "test.pdf"
 
@@ -278,7 +282,7 @@ async def test_rename_document_amount_decimal_formatted(renamer):
             emitter="Test",
             amount=amount,
             confidence=0.90,
-            reasoning="Test montant"
+            reasoning="Test montant",
         )
 
         # Act
@@ -287,7 +291,10 @@ async def test_rename_document_amount_decimal_formatted(renamer):
         # Assert
         rename_result = result.payload["rename_result"]
         # Montant formaté correctement
-        assert expected in rename_result.new_filename or f"{int(amount)}EUR" in rename_result.new_filename
+        assert (
+            expected in rename_result.new_filename
+            or f"{int(amount)}EUR" in rename_result.new_filename
+        )
 
 
 @pytest.mark.asyncio

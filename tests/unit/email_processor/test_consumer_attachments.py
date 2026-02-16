@@ -4,14 +4,14 @@ Tests unitaires pour intégration extraction PJ dans email consumer.
 Story 2.4 - Subtask 6.3
 """
 
+# Mock services.email_processor avant import
+import sys
 import uuid
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-# Mock services.email_processor avant import
-import sys
-sys.path.insert(0, 'c:\\Users\\lopez\\Desktop\\Friday 2.0')
+sys.path.insert(0, "c:\\Users\\lopez\\Desktop\\Friday 2.0")
 
 from agents.src.models.attachment import AttachmentExtractResult
 
@@ -28,12 +28,14 @@ async def test_email_with_attachments_extracts_and_notifies():
         extracted_count=2,
         failed_count=0,
         total_size_mb=0.25,
-        filepaths=["/var/friday/transit/file1.pdf", "/var/friday/transit/file2.jpg"]
+        filepaths=["/var/friday/transit/file1.pdf", "/var/friday/transit/file2.jpg"],
     )
     mock_result.generate_summaries(email_id=str(uuid.uuid4()), attachments_total=2)
 
     with patch("services.email_processor.consumer.extract_attachments", return_value=mock_result):
-        with patch("services.email_processor.consumer.EmailProcessorConsumer.send_telegram_notification_attachments") as mock_notify:
+        with patch(
+            "services.email_processor.consumer.EmailProcessorConsumer.send_telegram_notification_attachments"
+        ) as mock_notify:
             # TODO: Simuler process_email_event avec payload has_attachments=True
             # Vérifier extract_attachments appelé + notification envoyée
             pass
@@ -59,7 +61,10 @@ async def test_attachment_extraction_failure_continues_pipeline():
     WHEN process_email_event() est appelé
     THEN pipeline continue (email stocké, notification envoyée quand même)
     """
-    with patch("services.email_processor.consumer.extract_attachments", side_effect=Exception("Extraction failed")):
+    with patch(
+        "services.email_processor.consumer.extract_attachments",
+        side_effect=Exception("Extraction failed"),
+    ):
         # TODO: Simuler process_email_event
         # Vérifier email stocké quand même + log error
         pass
@@ -76,12 +81,15 @@ async def test_attachment_notification_failure_continues_pipeline():
         extracted_count=1,
         failed_count=0,
         total_size_mb=0.1,
-        filepaths=["/var/friday/transit/file1.pdf"]
+        filepaths=["/var/friday/transit/file1.pdf"],
     )
     mock_result.generate_summaries(email_id=str(uuid.uuid4()), attachments_total=1)
 
     with patch("services.email_processor.consumer.extract_attachments", return_value=mock_result):
-        with patch("services.email_processor.consumer.EmailProcessorConsumer.send_telegram_notification_attachments", side_effect=Exception("Telegram failed")):
+        with patch(
+            "services.email_processor.consumer.EmailProcessorConsumer.send_telegram_notification_attachments",
+            side_effect=Exception("Telegram failed"),
+        ):
             # TODO: Simuler process_email_event
             # Vérifier XACK quand même + log error
             pass
@@ -123,7 +131,7 @@ async def test_notification_max_5_filenames():
         extracted_count=8,
         failed_count=0,
         total_size_mb=1.5,
-        filepaths=[f"/var/friday/transit/file{i}.pdf" for i in range(8)]
+        filepaths=[f"/var/friday/transit/file{i}.pdf" for i in range(8)],
     )
     mock_result.generate_summaries(email_id=str(uuid.uuid4()), attachments_total=8)
 
@@ -141,7 +149,10 @@ async def test_extraction_uses_db_email_id():
     """
     email_uuid = uuid.uuid4()
 
-    with patch("services.email_processor.consumer.EmailProcessorConsumer.store_email_in_database", return_value=email_uuid):
+    with patch(
+        "services.email_processor.consumer.EmailProcessorConsumer.store_email_in_database",
+        return_value=email_uuid,
+    ):
         with patch("services.email_processor.consumer.extract_attachments") as mock_extract:
             # TODO: Simuler process_email_event
             # Vérifier mock_extract appelé avec email_id=str(email_uuid)
@@ -156,15 +167,14 @@ async def test_zero_extracted_skips_notification():
     THEN send_telegram_notification_attachments() PAS appelé
     """
     mock_result = AttachmentExtractResult(
-        extracted_count=0,
-        failed_count=2,
-        total_size_mb=0.0,
-        filepaths=[]
+        extracted_count=0, failed_count=2, total_size_mb=0.0, filepaths=[]
     )
     mock_result.generate_summaries(email_id=str(uuid.uuid4()), attachments_total=2)
 
     with patch("services.email_processor.consumer.extract_attachments", return_value=mock_result):
-        with patch("services.email_processor.consumer.EmailProcessorConsumer.send_telegram_notification_attachments") as mock_notify:
+        with patch(
+            "services.email_processor.consumer.EmailProcessorConsumer.send_telegram_notification_attachments"
+        ) as mock_notify:
             # TODO: Simuler process_email_event
             # Vérifier mock_notify PAS appelé
             mock_notify.assert_not_called()
@@ -186,9 +196,7 @@ async def test_emailengine_client_wrapper_get_message():
     http_client_mock.get = AsyncMock(return_value=response_mock)
 
     client = EmailEngineClient(
-        http_client=http_client_mock,
-        base_url="http://emailengine:3000",
-        secret="test_secret"
+        http_client=http_client_mock, base_url="http://emailengine:3000", secret="test_secret"
     )
 
     result = await client.get_message("main/message123")

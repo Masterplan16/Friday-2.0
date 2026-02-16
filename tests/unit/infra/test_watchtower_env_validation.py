@@ -3,9 +3,10 @@ Test validation des variables d'environnement Watchtower
 Story 1.14 - H2 (TOPIC_SYSTEM_ID validation) + M5 (smoke test CI)
 """
 
-import pytest
 import os
 from unittest.mock import patch
+
+import pytest
 
 
 def test_watchtower_requires_telegram_bot_token():
@@ -46,10 +47,7 @@ def test_watchtower_notification_url_format():
     test_token = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
     test_topic = "12345"
 
-    with patch.dict(os.environ, {
-        "TELEGRAM_BOT_TOKEN": test_token,
-        "TOPIC_SYSTEM_ID": test_topic
-    }):
+    with patch.dict(os.environ, {"TELEGRAM_BOT_TOKEN": test_token, "TOPIC_SYSTEM_ID": test_topic}):
         # Build expected URL (as Watchtower would)
         expected_url = f"telegram://{test_token}@telegram?channels={test_topic}"
 
@@ -76,7 +74,7 @@ def test_topic_system_id_is_numeric():
 
 @pytest.mark.skipif(
     not (os.getenv("TELEGRAM_BOT_TOKEN") and os.getenv("TOPIC_SYSTEM_ID")),
-    reason="Telegram env vars not set (OK in CI)"
+    reason="Telegram env vars not set (OK in CI)",
 )
 def test_watchtower_env_vars_actually_set():
     """

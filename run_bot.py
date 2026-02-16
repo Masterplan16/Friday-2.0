@@ -8,9 +8,10 @@ from dotenv import load_dotenv
 # Charger .env AVANT tout autre import
 load_dotenv()
 
+import asyncio
+
 # Maintenant importer et lancer le bot
 from bot.main import main
-import asyncio
 
 if __name__ == "__main__":
     asyncio.run(main())

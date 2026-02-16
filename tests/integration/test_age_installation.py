@@ -5,6 +5,7 @@ Story 1.12 - Task 1.1: Installer age CLI
 """
 
 import subprocess
+
 import pytest
 
 
@@ -16,9 +17,7 @@ def test_age_installed_in_n8n_container():
     AC1: L'exécution de `age --version` doit réussir
     """
     result = subprocess.run(
-        ["docker", "exec", "friday-n8n", "age", "--version"],
-        capture_output=True,
-        text=True
+        ["docker", "exec", "friday-n8n", "age", "--version"], capture_output=True, text=True
     )
 
     assert result.returncode == 0, f"age CLI not found: {result.stderr}"
@@ -33,9 +32,7 @@ def test_age_version_meets_requirements():
     AC1: Version age >= v1.3.0 selon Dev Notes
     """
     result = subprocess.run(
-        ["docker", "exec", "friday-n8n", "age", "--version"],
-        capture_output=True,
-        text=True
+        ["docker", "exec", "friday-n8n", "age", "--version"], capture_output=True, text=True
     )
 
     assert result.returncode == 0
@@ -45,7 +42,8 @@ def test_age_version_meets_requirements():
 
     # Extraire version (format: v1.3.0 ou 1.3.0)
     import re
-    match = re.search(r'v?(\d+)\.(\d+)\.(\d+)', version_line)
+
+    match = re.search(r"v?(\d+)\.(\d+)\.(\d+)", version_line)
     assert match, f"Cannot parse version from: {version_line}"
 
     major, minor, patch = map(int, match.groups())
@@ -64,9 +62,7 @@ def test_age_keygen_available():
     AC1: age-keygen doit être disponible pour générer les keypairs
     """
     result = subprocess.run(
-        ["docker", "exec", "friday-n8n", "age-keygen", "--help"],
-        capture_output=True,
-        text=True
+        ["docker", "exec", "friday-n8n", "age-keygen", "--help"], capture_output=True, text=True
     )
 
     assert result.returncode == 0, f"age-keygen not found: {result.stderr}"

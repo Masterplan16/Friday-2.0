@@ -21,16 +21,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-
 from agents.src.agents.archiviste.models import SearchResult
-from agents.src.agents.archiviste.semantic_search import (
-    EXCERPT_LENGTH,
-    TOP_K_MAX,
-    SemanticSearcher,
-)
+from agents.src.agents.archiviste.semantic_search import EXCERPT_LENGTH, TOP_K_MAX, SemanticSearcher
 from agents.src.middleware.models import ActionResult
 from agents.src.tools.anonymize import AnonymizationResult
-
 
 # ============================================================
 # Fixtures
@@ -219,9 +213,7 @@ async def test_anonymization_before_embedding(
 
 
 @pytest.mark.asyncio
-async def test_search_filter_category(
-    searcher, mock_anonymization_result, mock_embedding_response
-):
+async def test_search_filter_category(searcher, mock_anonymization_result, mock_embedding_response):
     """Test filtre category injecté dans WHERE clause."""
     searcher.db_pool.fetch.return_value = []
 
@@ -236,14 +228,10 @@ async def test_search_filter_category(
             "agents.src.agents.archiviste.semantic_search.get_embedding_adapter",
             return_value=mock_adapter,
         ):
-            await searcher.search(
-                query="facture", filters={"category": "finance"}
-            )
+            await searcher.search(query="facture", filters={"category": "finance"})
 
     # Vérifier SET LOCAL hnsw.iterative_scan activé
-    searcher.db_pool.execute.assert_called_once_with(
-        "SET LOCAL hnsw.iterative_scan = on"
-    )
+    searcher.db_pool.execute.assert_called_once_with("SET LOCAL hnsw.iterative_scan = on")
 
     # Vérifier query SQL contient filtre category
     fetch_call = searcher.db_pool.fetch.call_args
@@ -381,9 +369,7 @@ async def test_search_action_failure(searcher):
 
 
 @pytest.mark.asyncio
-async def test_search_no_results(
-    searcher, mock_anonymization_result, mock_embedding_response
-):
+async def test_search_no_results(searcher, mock_anonymization_result, mock_embedding_response):
     """Test recherche sans résultats retourne liste vide."""
     searcher.db_pool.fetch.return_value = []
 

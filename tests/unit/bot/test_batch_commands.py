@@ -10,10 +10,11 @@ Coverage:
 - Filters options
 """
 
-import pytest
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
-from telegram import Update, Message, User, Chat, InlineKeyboardMarkup
+
+import pytest
+from telegram import Chat, InlineKeyboardMarkup, Message, Update, User
 from telegram.ext import ContextTypes
 
 # Import will fail initially (RED phase)
@@ -79,7 +80,9 @@ async def test_detect_batch_intent_specific_path(mock_anthropic):
 
     from bot.handlers.batch_commands import detect_batch_intent
 
-    result = await detect_batch_intent("Traite tous les fichiers dans C:\\Users\\lopez\\Desktop\\Scans")
+    result = await detect_batch_intent(
+        "Traite tous les fichiers dans C:\\Users\\lopez\\Desktop\\Scans"
+    )
 
     assert result is not None
     assert result.folder_path == "C:\\Users\\lopez\\Desktop\\Scans"
@@ -95,9 +98,7 @@ async def test_detect_batch_intent_no_match(mock_anthropic):
     AC1: retourne None si intention non détectée
     """
     mock_response = MagicMock()
-    mock_response.content = [
-        MagicMock(text='{"intent": "other", "confidence": 0.12}')
-    ]
+    mock_response.content = [MagicMock(text='{"intent": "other", "confidence": 0.12}')]
     mock_anthropic.messages.create = AsyncMock(return_value=mock_response)
 
     from bot.handlers.batch_commands import detect_batch_intent

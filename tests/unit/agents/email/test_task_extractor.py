@@ -11,9 +11,7 @@ from datetime import datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-
 from agents.src.agents.email.models import TaskDetected, TaskExtractionResult
-
 
 # =============================================================================
 # FIXTURES
@@ -34,9 +32,11 @@ def mock_presidio():
         # Par défaut, retourne un AnonymizationResult mock avec texte non anonymisé
         async def mock_anonymize(text, **kwargs):
             from unittest.mock import MagicMock
+
             result = MagicMock()
             result.anonymized_text = text  # Retourner texte tel quel en tests
             return result
+
         mock.side_effect = mock_anonymize
         yield mock
 
@@ -144,7 +144,11 @@ async def test_extract_explicit_task_confirm_action(
     # Test
     result = await extract_tasks_from_email(
         email_text="Merci de me confirmer ta participation au séminaire du 15 février",
-        email_metadata={"email_id": "test-789", "sender": "test@example.com", "subject": "Séminaire"},
+        email_metadata={
+            "email_id": "test-789",
+            "sender": "test@example.com",
+            "subject": "Séminaire",
+        },
         current_date=current_date_str,
     )
 
@@ -184,9 +188,7 @@ async def test_extract_implicit_task_self_commitment(
 
 
 @pytest.mark.asyncio
-async def test_extract_reminder_task(
-    mock_anthropic_client, mock_presidio, current_date_str
-):
+async def test_extract_reminder_task(mock_anthropic_client, mock_presidio, current_date_str):
     """
     AC1 : Rappel explicite → 1 tâche détectée
     """
@@ -219,9 +221,7 @@ async def test_extract_reminder_task(
 
 
 @pytest.mark.asyncio
-async def test_extract_task_date_tomorrow(
-    mock_anthropic_client, mock_presidio, current_date_str
-):
+async def test_extract_task_date_tomorrow(mock_anthropic_client, mock_presidio, current_date_str):
     """
     AC6 : Date relative 'demain' → Convertie en date absolue
     """
@@ -239,7 +239,11 @@ async def test_extract_task_date_tomorrow(
     # Test
     result = await extract_tasks_from_email(
         email_text="Envoie-moi ça demain",
-        email_metadata={"email_id": "test-date-1", "sender": "test@example.com", "subject": "Document"},
+        email_metadata={
+            "email_id": "test-date-1",
+            "sender": "test@example.com",
+            "subject": "Document",
+        },
         current_date=current_date_str,
     )
 
@@ -281,9 +285,7 @@ async def test_extract_task_date_next_thursday(
 
 
 @pytest.mark.asyncio
-async def test_extract_task_date_in_3_days(
-    mock_anthropic_client, mock_presidio, current_date_str
-):
+async def test_extract_task_date_in_3_days(mock_anthropic_client, mock_presidio, current_date_str):
     """
     AC6 : Date relative 'dans 3 jours' → Convertie en date absolue
     """
@@ -301,7 +303,11 @@ async def test_extract_task_date_in_3_days(
     # Test
     result = await extract_tasks_from_email(
         email_text="Finaliser le dossier dans 3 jours",
-        email_metadata={"email_id": "test-date-3", "sender": "test@example.com", "subject": "Dossier"},
+        email_metadata={
+            "email_id": "test-date-3",
+            "sender": "test@example.com",
+            "subject": "Dossier",
+        },
         current_date=current_date_str,
     )
 
@@ -331,7 +337,11 @@ async def test_extract_task_date_before_friday(
     # Test
     result = await extract_tasks_from_email(
         email_text="Valider la facture avant vendredi",
-        email_metadata={"email_id": "test-date-4", "sender": "test@example.com", "subject": "Facture"},
+        email_metadata={
+            "email_id": "test-date-4",
+            "sender": "test@example.com",
+            "subject": "Facture",
+        },
         current_date=current_date_str,
     )
 
@@ -341,9 +351,7 @@ async def test_extract_task_date_before_friday(
 
 
 @pytest.mark.asyncio
-async def test_extract_task_date_next_week(
-    mock_anthropic_client, mock_presidio, current_date_str
-):
+async def test_extract_task_date_next_week(mock_anthropic_client, mock_presidio, current_date_str):
     """
     AC6 : Date relative 'la semaine prochaine' → Convertie en lundi suivant
     """
@@ -361,7 +369,11 @@ async def test_extract_task_date_next_week(
     # Test
     result = await extract_tasks_from_email(
         email_text="Préparer la présentation pour la semaine prochaine",
-        email_metadata={"email_id": "test-date-5", "sender": "test@example.com", "subject": "Présentation"},
+        email_metadata={
+            "email_id": "test-date-5",
+            "sender": "test@example.com",
+            "subject": "Présentation",
+        },
         current_date=current_date_str,
     )
 
@@ -397,7 +409,11 @@ async def test_extract_task_priority_high_urgent(
     # Test
     result = await extract_tasks_from_email(
         email_text="URGENT : Envoie le dossier ASAP",
-        email_metadata={"email_id": "test-priority-1", "sender": "test@example.com", "subject": "Urgent"},
+        email_metadata={
+            "email_id": "test-priority-1",
+            "sender": "test@example.com",
+            "subject": "Urgent",
+        },
         current_date=current_date_str,
     )
 
@@ -430,7 +446,11 @@ async def test_extract_task_priority_normal_default(
     # Test
     result = await extract_tasks_from_email(
         email_text="Peux-tu m'envoyer le rapport ?",
-        email_metadata={"email_id": "test-priority-2", "sender": "test@example.com", "subject": "Rapport"},
+        email_metadata={
+            "email_id": "test-priority-2",
+            "sender": "test@example.com",
+            "subject": "Rapport",
+        },
         current_date=current_date_str,
     )
 
@@ -460,7 +480,11 @@ async def test_extract_task_priority_low_when_convenient(
     # Test
     result = await extract_tasks_from_email(
         email_text="Quand tu peux, regarde ce document",
-        email_metadata={"email_id": "test-priority-3", "sender": "test@example.com", "subject": "Document"},
+        email_metadata={
+            "email_id": "test-priority-3",
+            "sender": "test@example.com",
+            "subject": "Document",
+        },
         current_date=current_date_str,
     )
 
@@ -475,9 +499,7 @@ async def test_extract_task_priority_low_when_convenient(
 
 
 @pytest.mark.asyncio
-async def test_extract_no_task_newsletter(
-    mock_anthropic_client, mock_presidio, current_date_str
-):
+async def test_extract_no_task_newsletter(mock_anthropic_client, mock_presidio, current_date_str):
     """
     AC5 : Newsletter → Aucune tâche détectée
     """
@@ -485,17 +507,17 @@ async def test_extract_no_task_newsletter(
 
     # Mock réponse Claude
     mock_response = MagicMock()
-    mock_response.content = [
-        MagicMock(
-            text='{"tasks_detected": [], "confidence_overall": 0.12}'
-        )
-    ]
+    mock_response.content = [MagicMock(text='{"tasks_detected": [], "confidence_overall": 0.12}')]
     mock_anthropic_client.messages.create = AsyncMock(return_value=mock_response)
 
     # Test
     result = await extract_tasks_from_email(
         email_text="Newsletter hebdomadaire : Actualités médicales...",
-        email_metadata={"email_id": "test-notask-1", "sender": "newsletter@example.com", "subject": "Newsletter"},
+        email_metadata={
+            "email_id": "test-notask-1",
+            "sender": "newsletter@example.com",
+            "subject": "Newsletter",
+        },
         current_date=current_date_str,
     )
 
@@ -515,17 +537,17 @@ async def test_extract_no_task_simple_thank_you(
 
     # Mock réponse Claude
     mock_response = MagicMock()
-    mock_response.content = [
-        MagicMock(
-            text='{"tasks_detected": [], "confidence_overall": 0.08}'
-        )
-    ]
+    mock_response.content = [MagicMock(text='{"tasks_detected": [], "confidence_overall": 0.08}')]
     mock_anthropic_client.messages.create = AsyncMock(return_value=mock_response)
 
     # Test
     result = await extract_tasks_from_email(
         email_text="Merci pour ton message, j'ai bien reçu le document. Bonne journée !",
-        email_metadata={"email_id": "test-notask-2", "sender": "test@example.com", "subject": "Merci"},
+        email_metadata={
+            "email_id": "test-notask-2",
+            "sender": "test@example.com",
+            "subject": "Merci",
+        },
         current_date=current_date_str,
     )
 
@@ -560,7 +582,11 @@ async def test_extract_multiple_tasks_single_email(
     # Test
     result = await extract_tasks_from_email(
         email_text="Urgent : peux-tu m'envoyer le planning ASAP et rappeler le patient ?",
-        email_metadata={"email_id": "test-multi-1", "sender": "test@example.com", "subject": "Urgent"},
+        email_metadata={
+            "email_id": "test-multi-1",
+            "sender": "test@example.com",
+            "subject": "Urgent",
+        },
         current_date=current_date_str,
     )
 
@@ -581,18 +607,18 @@ async def test_presidio_anonymization_called(
 
     # Mock réponse Claude
     mock_response = MagicMock()
-    mock_response.content = [
-        MagicMock(
-            text='{"tasks_detected": [], "confidence_overall": 0.5}'
-        )
-    ]
+    mock_response.content = [MagicMock(text='{"tasks_detected": [], "confidence_overall": 0.5}')]
     mock_anthropic_client.messages.create = AsyncMock(return_value=mock_response)
 
     # Test
     email_text = "Rappelle Jean Dupont au 06.12.34.56.78"
     await extract_tasks_from_email(
         email_text=email_text,
-        email_metadata={"email_id": "test-rgpd-1", "sender": "test@example.com", "subject": "Rappel"},
+        email_metadata={
+            "email_id": "test-rgpd-1",
+            "sender": "test@example.com",
+            "subject": "Rappel",
+        },
         current_date=current_date_str,
     )
 

@@ -4,11 +4,12 @@ Tests d'intégration pour bot Telegram Friday 2.0
 Story 1.9 - Tests flux message complet (réception → traitement → envoi).
 """
 
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
 from datetime import datetime
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 from bot.handlers.messages import handle_text_message, send_message_with_split
-from telegram import Update, Message, User, Chat
+from telegram import Chat, Message, Update, User
 from telegram.constants import MessageLimit
 
 
@@ -111,7 +112,9 @@ async def test_message_with_newlines_split_cleanly(mock_update, mock_context):
         # par un newline (découpe propre)
         if len(chunk_text) < len(long_text):
             # Enlever le préfixe [1/2] si présent
-            clean_chunk = chunk_text.split("\n", 1)[-1] if "[" in chunk_text.split("\n")[0] else chunk_text
+            clean_chunk = (
+                chunk_text.split("\n", 1)[-1] if "[" in chunk_text.split("\n")[0] else chunk_text
+            )
             # Le dernier char devrait être un newline (ou espace)
             # Note: lstrip dans send_message_with_split enlève les espaces leading
 

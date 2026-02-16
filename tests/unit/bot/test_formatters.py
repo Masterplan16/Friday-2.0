@@ -7,7 +7,6 @@ Story 1.11 - Task 5.2 : Tests helpers formatage.
 from datetime import datetime, timedelta, timezone
 
 import pytest
-
 from bot.handlers.formatters import (
     format_confidence,
     format_eur,
@@ -52,7 +51,16 @@ class TestFormatStatusEmoji:
 
     def test_all_known_statuses(self):
         """Verifie que tous les statuses connus ont un emoji."""
-        known = ["auto", "pending", "approved", "rejected", "corrected", "expired", "error", "executed"]
+        known = [
+            "auto",
+            "pending",
+            "approved",
+            "rejected",
+            "corrected",
+            "expired",
+            "error",
+            "executed",
+        ]
         for status in known:
             result = format_status_emoji(status)
             assert result != "?", f"Status '{status}' devrait avoir un emoji"

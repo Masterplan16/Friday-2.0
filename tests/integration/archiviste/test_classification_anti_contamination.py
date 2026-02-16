@@ -9,12 +9,13 @@ Les tests d'intégration pipeline complets (Redis → Classify → Move → PG)
 seront dans test_classification_pipeline_integration.py avec mocks/fixtures
 appropriés.
 """
-import pytest
-from pydantic import ValidationError
-from agents.src.agents.archiviste.models import ClassificationResult
 
+import pytest
+from agents.src.agents.archiviste.models import ClassificationResult
+from pydantic import ValidationError
 
 # ==================== Anti-contamination Pydantic (AC6) ====================
+
 
 class TestFinanceAntiContamination:
     """Tests AC6 : Validation stricte périmètres finance."""
@@ -27,7 +28,7 @@ class TestFinanceAntiContamination:
                 subcategory="invalid_perimeter",
                 path="finance/invalid_perimeter",
                 confidence=0.90,
-                reasoning="Test anti-contamination"
+                reasoning="Test anti-contamination",
             )
 
     def test_finance_must_have_subcategory(self):
@@ -38,7 +39,7 @@ class TestFinanceAntiContamination:
                 subcategory=None,
                 path="finance",
                 confidence=0.90,
-                reasoning="Test validation finance"
+                reasoning="Test validation finance",
             )
 
     def test_finance_valid_perimeters_accepted(self):
@@ -51,7 +52,7 @@ class TestFinanceAntiContamination:
                 subcategory=perimeter,
                 path=f"finance/{perimeter}",
                 confidence=0.92,
-                reasoning=f"Test {perimeter} valide"
+                reasoning=f"Test {perimeter} valide",
             )
             assert result.subcategory == perimeter
 
@@ -65,7 +66,7 @@ class TestFinanceAntiContamination:
                 subcategory=None,
                 path=category,
                 confidence=0.88,
-                reasoning=f"Test {category}"
+                reasoning=f"Test {category}",
             )
             assert result.category == category
 
@@ -78,7 +79,7 @@ class TestFinanceAntiContamination:
                 subcategory="selarl_scm_mixed",
                 path="finance/selarl_scm_mixed",
                 confidence=0.90,
-                reasoning="Tentative contamination"
+                reasoning="Tentative contamination",
             )
 
     def test_invalid_category_rejected(self):
@@ -89,7 +90,7 @@ class TestFinanceAntiContamination:
                 subcategory=None,
                 path="medical",
                 confidence=0.90,
-                reasoning="Catégorie inexistante"
+                reasoning="Catégorie inexistante",
             )
 
     def test_confidence_bounds(self):
@@ -100,7 +101,7 @@ class TestFinanceAntiContamination:
                 subcategory=None,
                 path="pro",
                 confidence=1.5,
-                reasoning="Confidence hors limites"
+                reasoning="Confidence hors limites",
             )
 
         with pytest.raises(ValidationError):
@@ -109,5 +110,5 @@ class TestFinanceAntiContamination:
                 subcategory=None,
                 path="pro",
                 confidence=-0.1,
-                reasoning="Confidence négative"
+                reasoning="Confidence négative",
             )

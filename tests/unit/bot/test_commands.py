@@ -5,10 +5,11 @@ Story 1.9 - Tests handlers commandes Telegram (/help, /start).
 Story 1.11 - Stubs supprimes, commandes reelles dans trust_budget_commands.py.
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from telegram import Update, Message, User, Chat
+
+import pytest
 from bot.handlers import commands
+from telegram import Chat, Message, Update, User
 
 
 @pytest.fixture

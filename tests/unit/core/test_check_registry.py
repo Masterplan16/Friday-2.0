@@ -4,16 +4,16 @@ Tests unitaires pour CheckRegistry (Story 4.1 Task 2)
 RED PHASE : Tests écrits AVANT l'implémentation (TDD)
 """
 
-import pytest
 from unittest.mock import AsyncMock
 
+import pytest
 from agents.src.core.check_registry import CheckRegistry
-from agents.src.core.heartbeat_models import Check, CheckResult, CheckPriority
-
+from agents.src.core.heartbeat_models import Check, CheckPriority, CheckResult
 
 # ============================================================================
 # Fixtures
 # ============================================================================
+
 
 @pytest.fixture
 def check_registry():
@@ -26,14 +26,17 @@ def check_registry():
 @pytest.fixture
 async def mock_check_fn():
     """Mock check function."""
+
     async def _mock_check(*args, **kwargs) -> CheckResult:
         return CheckResult(notify=False, message="Mock check executed")
+
     return _mock_check
 
 
 # ============================================================================
 # Tests Task 2.1-2.2: Register Checks
 # ============================================================================
+
 
 def test_check_registry_singleton(check_registry):
     """Test 1: CheckRegistry est singleton."""
@@ -50,7 +53,7 @@ async def test_register_check(check_registry, mock_check_fn):
         check_id="check_urgent_emails",
         priority=CheckPriority.HIGH,
         description="Emails urgents non lus",
-        execute_fn=mock_check_fn
+        execute_fn=mock_check_fn,
     )
 
     # Vérifier check enregistré
@@ -67,7 +70,7 @@ def test_register_duplicate_check_id_raises_error(check_registry, mock_check_fn)
         check_id="check_duplicate",
         priority=CheckPriority.HIGH,
         description="Check 1",
-        execute_fn=mock_check_fn
+        execute_fn=mock_check_fn,
     )
 
     with pytest.raises(ValueError, match="already registered"):
@@ -75,13 +78,14 @@ def test_register_duplicate_check_id_raises_error(check_registry, mock_check_fn)
             check_id="check_duplicate",
             priority=CheckPriority.MEDIUM,
             description="Check 2",
-            execute_fn=mock_check_fn
+            execute_fn=mock_check_fn,
         )
 
 
 # ============================================================================
 # Tests Task 2.3: Get Checks by Priority
 # ============================================================================
+
 
 @pytest.mark.asyncio
 async def test_get_checks_by_priority(check_registry, mock_check_fn):
@@ -91,21 +95,21 @@ async def test_get_checks_by_priority(check_registry, mock_check_fn):
         check_id="check_critical",
         priority=CheckPriority.CRITICAL,
         description="Check critique",
-        execute_fn=mock_check_fn
+        execute_fn=mock_check_fn,
     )
 
     check_registry.register_check(
         check_id="check_high",
         priority=CheckPriority.HIGH,
         description="Check high",
-        execute_fn=mock_check_fn
+        execute_fn=mock_check_fn,
     )
 
     check_registry.register_check(
         check_id="check_medium",
         priority=CheckPriority.MEDIUM,
         description="Check medium",
-        execute_fn=mock_check_fn
+        execute_fn=mock_check_fn,
     )
 
     # Récupérer checks CRITICAL
@@ -123,6 +127,7 @@ async def test_get_checks_by_priority(check_registry, mock_check_fn):
 # Tests Task 2.4: Get All Checks
 # ============================================================================
 
+
 @pytest.mark.asyncio
 async def test_get_all_checks(check_registry, mock_check_fn):
     """Test 5: get_all_checks() retourne tous les checks."""
@@ -130,14 +135,14 @@ async def test_get_all_checks(check_registry, mock_check_fn):
         check_id="check_1",
         priority=CheckPriority.HIGH,
         description="Check 1",
-        execute_fn=mock_check_fn
+        execute_fn=mock_check_fn,
     )
 
     check_registry.register_check(
         check_id="check_2",
         priority=CheckPriority.MEDIUM,
         description="Check 2",
-        execute_fn=mock_check_fn
+        execute_fn=mock_check_fn,
     )
 
     all_checks = check_registry.get_all_checks()
@@ -154,7 +159,7 @@ def test_get_check_by_id_exists(check_registry, mock_check_fn):
         check_id="check_exists",
         priority=CheckPriority.MEDIUM,
         description="Check exists",
-        execute_fn=mock_check_fn
+        execute_fn=mock_check_fn,
     )
 
     check = check_registry.get_check("check_exists")
@@ -172,6 +177,7 @@ def test_get_check_by_id_not_exists(check_registry):
 # Tests Task 2.5: Singleton Pattern Validation
 # ============================================================================
 
+
 def test_check_registry_persists_across_instances(mock_check_fn):
     """Test 8: Checks persistent entre instances singleton."""
     registry1 = CheckRegistry()
@@ -179,7 +185,7 @@ def test_check_registry_persists_across_instances(mock_check_fn):
         check_id="check_persistent",
         priority=CheckPriority.HIGH,
         description="Check persistent",
-        execute_fn=mock_check_fn
+        execute_fn=mock_check_fn,
     )
 
     # Nouvelle instance (même singleton)

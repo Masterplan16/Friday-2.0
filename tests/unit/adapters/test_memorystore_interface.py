@@ -9,8 +9,9 @@ Tests:
 - Factory retourne interface MemoryStore (pas implémentation)
 """
 
-import pytest
 from abc import ABC
+
+import pytest
 from agents.src.adapters.memorystore_interface import MemoryStore, NodeType, RelationType
 
 
@@ -41,9 +42,9 @@ class TestMemoryStoreInterface:
         ]
 
         for method_name in required_methods:
-            assert hasattr(MemoryStore, method_name), (
-                f"MemoryStore doit avoir la méthode abstraite {method_name}"
-            )
+            assert hasattr(
+                MemoryStore, method_name
+            ), f"MemoryStore doit avoir la méthode abstraite {method_name}"
 
     def test_nodetype_enum_has_10_types(self):
         """NodeType doit avoir exactement 10 types."""
@@ -61,9 +62,7 @@ class TestMemoryStoreInterface:
         }
 
         actual_types = {t.value for t in NodeType}
-        assert actual_types == expected_types, (
-            f"NodeType doit avoir ces 10 types: {expected_types}"
-        )
+        assert actual_types == expected_types, f"NodeType doit avoir ces 10 types: {expected_types}"
 
     def test_relationtype_enum_has_14_types(self):
         """RelationType doit avoir exactement 14 types."""
@@ -85,9 +84,9 @@ class TestMemoryStoreInterface:
         }
 
         actual_types = {r.value for r in RelationType}
-        assert actual_types == expected_types, (
-            f"RelationType doit avoir ces 14 types: {expected_types}"
-        )
+        assert (
+            actual_types == expected_types
+        ), f"RelationType doit avoir ces 14 types: {expected_types}"
 
 
 class TestPostgreSQLMemorystoreImplementation:
@@ -115,9 +114,9 @@ class TestPostgreSQLMemorystoreImplementation:
         ]
 
         for method_name in required_methods:
-            assert hasattr(PostgreSQLMemorystore, method_name), (
-                f"PostgreSQLMemorystore doit implémenter {method_name}"
-            )
+            assert hasattr(
+                PostgreSQLMemorystore, method_name
+            ), f"PostgreSQLMemorystore doit implémenter {method_name}"
             # Vérifier que c'est bien une méthode callable
             method = getattr(PostgreSQLMemorystore, method_name)
             assert callable(method)
@@ -130,6 +129,7 @@ class TestMemorystoreFactory:
     async def test_factory_returns_interface(self):
         """Factory doit retourner interface MemoryStore (pas implémentation)."""
         from unittest.mock import AsyncMock, MagicMock
+
         from agents.src.adapters.memorystore import get_memorystore_adapter
 
         # Mock asyncpg.Pool avec acquire() comme context manager
@@ -153,6 +153,7 @@ class TestMemorystoreFactory:
     async def test_factory_default_provider_is_postgresql(self):
         """Factory avec provider=None doit utiliser postgresql par défaut."""
         from unittest.mock import AsyncMock, MagicMock, patch
+
         from agents.src.adapters.memorystore import get_memorystore_adapter
 
         # Mock asyncpg.Pool avec acquire() comme context manager
@@ -175,6 +176,7 @@ class TestMemorystoreFactory:
     async def test_factory_graphiti_raises_notimplementederror(self):
         """Factory avec provider=graphiti doit raise NotImplementedError."""
         from unittest.mock import MagicMock
+
         from agents.src.adapters.memorystore import get_memorystore_adapter
 
         mock_pool = MagicMock()
@@ -186,6 +188,7 @@ class TestMemorystoreFactory:
     async def test_factory_neo4j_raises_notimplementederror(self):
         """Factory avec provider=neo4j doit raise NotImplementedError."""
         from unittest.mock import MagicMock
+
         from agents.src.adapters.memorystore import get_memorystore_adapter
 
         mock_pool = MagicMock()
@@ -197,6 +200,7 @@ class TestMemorystoreFactory:
     async def test_factory_qdrant_raises_notimplementederror(self):
         """Factory avec provider=qdrant doit raise NotImplementedError."""
         from unittest.mock import MagicMock
+
         from agents.src.adapters.memorystore import get_memorystore_adapter
 
         mock_pool = MagicMock()
@@ -208,6 +212,7 @@ class TestMemorystoreFactory:
     async def test_factory_unknown_provider_raises_valueerror(self):
         """Factory avec provider inconnu doit raise ValueError."""
         from unittest.mock import MagicMock
+
         from agents.src.adapters.memorystore import get_memorystore_adapter
 
         mock_pool = MagicMock()

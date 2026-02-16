@@ -10,14 +10,13 @@ from datetime import datetime, timezone
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
-
 from agents.src.core.heartbeat_engine import HeartbeatEngine
-from agents.src.core.heartbeat_models import CheckResult, CheckPriority
-
+from agents.src.core.heartbeat_models import CheckPriority, CheckResult
 
 # ============================================================================
 # Fixtures
 # ============================================================================
+
 
 @pytest.fixture
 def mock_db_pool():
@@ -48,7 +47,7 @@ def mock_context_provider():
         is_quiet_hours=False,
         current_casquette="medecin",
         next_calendar_event=None,
-        last_activity_mainteneur=None
+        last_activity_mainteneur=None,
     )
     return provider
 
@@ -65,7 +64,7 @@ def mock_llm_decider():
     decider = AsyncMock()
     decider.decide_checks.return_value = {
         "checks_to_run": [],
-        "reasoning": "Silence = bon comportement"
+        "reasoning": "Silence = bon comportement",
     }
     return decider
 
@@ -83,7 +82,7 @@ def heartbeat_engine(
     mock_context_provider,
     mock_check_registry,
     mock_llm_decider,
-    mock_check_executor
+    mock_check_executor,
 ):
     """Fixture HeartbeatEngine avec tous mocks."""
     return HeartbeatEngine(
@@ -92,13 +91,14 @@ def heartbeat_engine(
         context_provider=mock_context_provider,
         check_registry=mock_check_registry,
         llm_decider=mock_llm_decider,
-        check_executor=mock_check_executor
+        check_executor=mock_check_executor,
     )
 
 
 # ============================================================================
 # Tests Task 1.1-1.2: HeartbeatEngine Core
 # ============================================================================
+
 
 @pytest.mark.asyncio
 async def test_heartbeat_engine_init(heartbeat_engine):
@@ -141,8 +141,11 @@ async def test_run_heartbeat_cycle_daemon_mode(heartbeat_engine, mock_context_pr
 # Tests Task 1.3: Quiet Hours Check
 # ============================================================================
 
+
 @pytest.mark.asyncio
-async def test_quiet_hours_skip_non_critical(heartbeat_engine, mock_context_provider, mock_llm_decider, mock_check_registry):
+async def test_quiet_hours_skip_non_critical(
+    heartbeat_engine, mock_context_provider, mock_llm_decider, mock_check_registry
+):
     """Test 4: Quiet hours (22h-8h) → skip checks non-CRITICAL."""
     from agents.src.core.heartbeat_models import HeartbeatContext
 
@@ -154,13 +157,11 @@ async def test_quiet_hours_skip_non_critical(heartbeat_engine, mock_context_prov
         is_quiet_hours=True,  # 03:00 = quiet hours
         current_casquette=None,
         next_calendar_event=None,
-        last_activity_mainteneur=None
+        last_activity_mainteneur=None,
     )
 
     # Mock CRITICAL checks
-    critical_checks = [
-        Mock(check_id="check_warranty_expiry", priority=CheckPriority.CRITICAL)
-    ]
+    critical_checks = [Mock(check_id="check_warranty_expiry", priority=CheckPriority.CRITICAL)]
     mock_check_registry.get_checks_by_priority.return_value = critical_checks
 
     result = await heartbeat_engine.run_heartbeat_cycle(mode="one-shot")
@@ -173,7 +174,9 @@ async def test_quiet_hours_skip_non_critical(heartbeat_engine, mock_context_prov
 
 
 @pytest.mark.asyncio
-async def test_non_quiet_hours_use_llm_decider(heartbeat_engine, mock_context_provider, mock_llm_decider):
+async def test_non_quiet_hours_use_llm_decider(
+    heartbeat_engine, mock_context_provider, mock_llm_decider
+):
     """Test 5: Hors quiet hours → LLM décideur utilisé."""
     result = await heartbeat_engine.run_heartbeat_cycle(mode="one-shot")
 
@@ -184,6 +187,7 @@ async def test_non_quiet_hours_use_llm_decider(heartbeat_engine, mock_context_pr
 # ============================================================================
 # Tests Task 1.4: Configuration
 # ============================================================================
+
 
 def test_heartbeat_interval_configuration_default():
     """Test 6: Interval par défaut = 30 minutes."""
@@ -201,12 +205,10 @@ def test_heartbeat_mode_configuration():
 # Tests Task 1.5: Error Handling
 # ============================================================================
 
+
 @pytest.mark.asyncio
 async def test_cycle_error_handling_logs_and_continues(
-    heartbeat_engine,
-    mock_check_executor,
-    mock_llm_decider,
-    mock_check_registry
+    heartbeat_engine, mock_check_executor, mock_llm_decider, mock_check_registry
 ):
     """Test 8: Erreur dans cycle → log + alerte System + continue."""
     from agents.src.core.heartbeat_models import Check, CheckPriority
@@ -214,7 +216,7 @@ async def test_cycle_error_handling_logs_and_continues(
     # Configurer LLM pour retourner 2 checks
     mock_llm_decider.decide_checks.return_value = {
         "checks_to_run": ["check_1", "check_2"],
-        "reasoning": "Test error handling"
+        "reasoning": "Test error handling",
     }
 
     # Configurer registry pour retourner les checks
@@ -222,13 +224,13 @@ async def test_cycle_error_handling_logs_and_continues(
         check_id="check_1",
         priority=CheckPriority.HIGH,
         description="Test check 1",
-        execute_fn=AsyncMock()
+        execute_fn=AsyncMock(),
     )
     mock_check_2 = Check(
         check_id="check_2",
         priority=CheckPriority.HIGH,
         description="Test check 2",
-        execute_fn=AsyncMock()
+        execute_fn=AsyncMock(),
     )
 
     def get_check_side_effect(check_id):
@@ -243,7 +245,7 @@ async def test_cycle_error_handling_logs_and_continues(
     # Simuler erreur check executor (1er check crash, 2ème OK)
     mock_check_executor.execute_check.side_effect = [
         Exception("Check crash"),  # check_1 crash
-        CheckResult(notify=False)  # check_2 OK
+        CheckResult(notify=False),  # check_2 OK
     ]
 
     # Cycle ne doit PAS crash (try/except global)
@@ -274,6 +276,7 @@ async def test_cycle_critical_error_sends_alert(heartbeat_engine, mock_db_pool):
 # Tests Task 1.5: Metrics Logging
 # ============================================================================
 
+
 @pytest.mark.asyncio
 async def test_heartbeat_logs_structured_metrics(heartbeat_engine, mock_db_pool):
     """Test 10: Cycle log metrics structurés (JSON)."""
@@ -300,6 +303,7 @@ async def test_heartbeat_saves_metrics_to_db(heartbeat_engine, mock_db_pool):
 # Tests Task 1.3: Quiet Hours Edge Cases
 # ============================================================================
 
+
 @pytest.mark.asyncio
 async def test_quiet_hours_boundaries():
     """Test 12: Quiet hours boundaries (22h00 et 08h00 précis)."""
@@ -313,7 +317,7 @@ async def test_quiet_hours_boundaries():
         is_quiet_hours=True,
         current_casquette=None,
         next_calendar_event=None,
-        last_activity_mainteneur=None
+        last_activity_mainteneur=None,
     )
     assert context_22h.is_quiet_hours is True
 
@@ -325,6 +329,6 @@ async def test_quiet_hours_boundaries():
         is_quiet_hours=False,
         current_casquette=None,
         next_calendar_event=None,
-        last_activity_mainteneur=None
+        last_activity_mainteneur=None,
     )
     assert context_8h.is_quiet_hours is False

@@ -36,13 +36,7 @@ from bot.handlers import (
     vip_commands,
     warranty_commands,
 )
-from telegram.ext import (
-    Application,
-    ApplicationBuilder,
-    CommandHandler,
-    MessageHandler,
-    filters,
-)
+from telegram.ext import Application, ApplicationBuilder, CommandHandler, MessageHandler, filters
 
 logger = structlog.get_logger(__name__)
 

@@ -188,7 +188,9 @@ def _validate_step_input(field: str, value: str) -> Optional[str]:
 
 def _validate_date(date_str: str) -> Optional[str]:
     """
-    Valide format date JJ/MM/AAAA ou JJ/MM (annee courante).
+    Valide format date JJ/MM/AAAA, JJ/MM (annee courante), ou date relative.
+
+    Dates relatives supportees: demain, apres-demain, lundi-dimanche (prochain).
 
     Returns:
         Message d'erreur si invalide, None si OK
@@ -210,7 +212,30 @@ def _validate_date(date_str: str) -> Optional[str]:
         except ValueError:
             return "Date invalide. Utilisez le format JJ/MM (ex: 17/02)."
 
-    return "Format de date non reconnu. Utilisez JJ/MM/AAAA ou JJ/MM."
+    # Dates relatives
+    normalized = date_str.strip().lower()
+    if normalized in ("demain", "après-demain", "apres-demain", "aujourd'hui", "aujourdhui"):
+        return None
+
+    # Jours de la semaine
+    jours_semaine = (
+        "lundi",
+        "mardi",
+        "mercredi",
+        "jeudi",
+        "vendredi",
+        "samedi",
+        "dimanche",
+    )
+    # "lundi", "lundi prochain", etc.
+    for jour in jours_semaine:
+        if normalized == jour or normalized == f"{jour} prochain":
+            return None
+
+    return (
+        "Format de date non reconnu. Utilisez JJ/MM/AAAA, JJ/MM, "
+        "ou une date relative (demain, lundi, mardi prochain, etc.)."
+    )
 
 
 def _validate_time(time_str: str) -> Optional[str]:
@@ -287,10 +312,17 @@ async def _send_event_summary(
 
     # Creer entite EVENT proposed dans PostgreSQL
     db_pool = context.bot_data.get("db_pool")
+    context_manager = context.bot_data.get("context_manager")
     event_id = None
     if db_pool:
         event_id = await _create_guided_event_entity(
-            db_pool, title, start_dt, end_dt, location, participants_str
+            db_pool,
+            title,
+            start_dt,
+            end_dt,
+            location,
+            participants_str,
+            context_manager=context_manager,
         )
 
     # Inline buttons
@@ -316,35 +348,88 @@ async def _send_event_summary(
 
 def _build_datetime(date_str: str, time_str: Optional[str]) -> Optional[datetime]:
     """
-    Construit datetime depuis date_str (JJ/MM ou JJ/MM/AAAA) + time_str (HH:MM ou HHhMM).
+    Construit datetime depuis date_str + time_str.
+
+    Supports:
+    - JJ/MM/AAAA, JJ/MM
+    - Dates relatives: demain, apres-demain, lundi-dimanche
+    - Time: HH:MM, HHhMM
 
     Returns:
-        datetime ou None si parsing echoue
+        timezone-aware datetime (Europe/Paris) ou None si parsing echoue
     """
     if not date_str or not time_str:
         return None
 
     try:
+        from zoneinfo import ZoneInfo
+
+        tz_paris = ZoneInfo("Europe/Paris")
+
         # Normaliser time
         normalized_time = time_str.replace("h", ":")
         if normalized_time.endswith(":"):
             normalized_time += "00"
 
         # Parse date
-        if len(date_str.split("/")) == 3:
-            date_part = datetime.strptime(date_str, "%d/%m/%Y").date()
-        else:
-            current_year = datetime.now().year
-            date_part = datetime.strptime(f"{date_str}/{current_year}", "%d/%m/%Y").date()
+        date_part = _parse_date_str(date_str)
+        if date_part is None:
+            return None
 
         # Parse time
         parts = normalized_time.split(":")
         hour = int(parts[0])
         minute = int(parts[1]) if len(parts) > 1 else 0
 
-        return datetime(date_part.year, date_part.month, date_part.day, hour, minute)
+        return datetime(
+            date_part.year, date_part.month, date_part.day, hour, minute, tzinfo=tz_paris
+        )
     except (ValueError, IndexError):
         return None
+
+
+def _parse_date_str(date_str: str):
+    """Parse date string (JJ/MM, JJ/MM/AAAA, or relative) to date object."""
+    from datetime import timedelta
+
+    # Format JJ/MM/AAAA
+    if re.match(r"^\d{1,2}/\d{1,2}/\d{4}$", date_str):
+        return datetime.strptime(date_str, "%d/%m/%Y").date()
+
+    # Format JJ/MM
+    if re.match(r"^\d{1,2}/\d{1,2}$", date_str):
+        current_year = datetime.now().year
+        return datetime.strptime(f"{date_str}/{current_year}", "%d/%m/%Y").date()
+
+    # Relative dates
+    normalized = date_str.strip().lower()
+    today = datetime.now().date()
+
+    if normalized in ("aujourd'hui", "aujourdhui"):
+        return today
+    if normalized == "demain":
+        return today + timedelta(days=1)
+    if normalized in ("après-demain", "apres-demain"):
+        return today + timedelta(days=2)
+
+    # Jours de la semaine (prochain)
+    jours_map = {
+        "lundi": 0,
+        "mardi": 1,
+        "mercredi": 2,
+        "jeudi": 3,
+        "vendredi": 4,
+        "samedi": 5,
+        "dimanche": 6,
+    }
+    for jour, weekday in jours_map.items():
+        if normalized == jour or normalized == f"{jour} prochain":
+            days_ahead = weekday - today.weekday()
+            if days_ahead <= 0:
+                days_ahead += 7
+            return today + timedelta(days=days_ahead)
+
+    return None
 
 
 async def _create_guided_event_entity(
@@ -354,19 +439,39 @@ async def _create_guided_event_entity(
     end_dt: Optional[datetime],
     location: Optional[str],
     participants_str: Optional[str],
+    context_manager=None,
 ) -> Optional[str]:
     """
     Cree entite EVENT proposed dans knowledge.entities.
+
+    Auto-detect casquette via ContextManager (Story 7.3) si disponible.
 
     Returns:
         UUID string de l'entite creee ou None si erreur
     """
     event_id = str(uuid.uuid4())
 
+    # Auto-detect casquette via ContextManager (Story 7.3)
+    casquette_value = "personnel"
+    if context_manager is not None:
+        try:
+            user_context = await context_manager.get_current_context()
+            if user_context and user_context.casquette:
+                casquette_value = user_context.casquette.value
+                logger.debug(
+                    "Guided event casquette from ContextManager",
+                    extra={"casquette": casquette_value},
+                )
+        except Exception as e:
+            logger.warning(
+                "ContextManager failed for guided event, defaulting to personnel",
+                extra={"error": str(e)},
+            )
+
     properties = {
         "status": "proposed",
         "source": "guided_command",
-        "casquette": "personnel",  # Default, modifiable avant creation
+        "casquette": casquette_value,
     }
     if start_dt:
         properties["start_datetime"] = start_dt.isoformat()

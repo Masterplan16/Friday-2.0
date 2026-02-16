@@ -20,13 +20,11 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-
 from bot.handlers.search_commands import (
     _parse_query_and_filters,
     search_command,
     search_details_callback,
 )
-
 
 # ============================================================
 # Fixtures
@@ -110,9 +108,7 @@ async def test_search_with_results(mock_update, mock_context, mock_search_result
     status_msg = AsyncMock()
     mock_update.message.reply_text.side_effect = [status_msg, None]
 
-    with patch(
-        "bot.handlers.search_commands.SemanticSearcher"
-    ) as MockSearcher:
+    with patch("bot.handlers.search_commands.SemanticSearcher") as MockSearcher:
         mock_searcher = AsyncMock()
         mock_searcher.search.return_value = mock_search_results
         MockSearcher.return_value = mock_searcher
@@ -148,9 +144,7 @@ async def test_search_no_results(mock_update, mock_context):
     status_msg = AsyncMock()
     mock_update.message.reply_text.side_effect = [status_msg, None]
 
-    with patch(
-        "bot.handlers.search_commands.SemanticSearcher"
-    ) as MockSearcher:
+    with patch("bot.handlers.search_commands.SemanticSearcher") as MockSearcher:
         mock_searcher = AsyncMock()
         mock_searcher.search.return_value = []
         MockSearcher.return_value = mock_searcher
@@ -195,9 +189,7 @@ def test_parse_query_simple():
 
 def test_parse_query_with_category_filter():
     """Test parse query avec filtre --category."""
-    query, filters = _parse_query_and_filters(
-        "facture plombier --category=finance"
-    )
+    query, filters = _parse_query_and_filters("facture plombier --category=finance")
     assert query == "facture plombier"
     assert filters == {"category": "finance"}
 
@@ -234,9 +226,7 @@ async def test_search_exception_shows_error(mock_update, mock_context):
     status_msg = AsyncMock()
     mock_update.message.reply_text.side_effect = [status_msg, None]
 
-    with patch(
-        "bot.handlers.search_commands.SemanticSearcher"
-    ) as MockSearcher:
+    with patch("bot.handlers.search_commands.SemanticSearcher") as MockSearcher:
         mock_searcher = AsyncMock()
         mock_searcher.search.side_effect = Exception("DB connection lost")
         MockSearcher.return_value = mock_searcher
@@ -351,9 +341,7 @@ async def test_search_validation_error(mock_update, mock_context):
     status_msg = AsyncMock()
     mock_update.message.reply_text.side_effect = [status_msg, None]
 
-    with patch(
-        "bot.handlers.search_commands.SemanticSearcher"
-    ) as MockSearcher:
+    with patch("bot.handlers.search_commands.SemanticSearcher") as MockSearcher:
         mock_searcher = AsyncMock()
         mock_searcher.search.side_effect = ValueError("top_k must be between 1 and 100")
         MockSearcher.return_value = mock_searcher

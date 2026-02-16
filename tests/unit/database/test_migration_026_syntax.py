@@ -10,16 +10,12 @@ from pathlib import Path
 import pytest
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
-MIGRATION_FILE = (
-    PROJECT_ROOT / "database" / "migrations" / "026_cold_start_tracking.sql"
-)
+MIGRATION_FILE = PROJECT_ROOT / "database" / "migrations" / "026_cold_start_tracking.sql"
 
 
 def test_migration_026_file_exists():
     """Vérifie que le fichier migration 026 existe."""
-    assert MIGRATION_FILE.exists(), (
-        f"Migration 026 non trouvée: {MIGRATION_FILE}"
-    )
+    assert MIGRATION_FILE.exists(), f"Migration 026 non trouvée: {MIGRATION_FILE}"
 
 
 def test_migration_026_has_begin_commit():
@@ -32,9 +28,7 @@ def test_migration_026_has_begin_commit():
     # Vérifier que BEGIN apparaît avant COMMIT
     begin_pos = content.find("BEGIN;")
     commit_pos = content.find("COMMIT;")
-    assert (
-        begin_pos < commit_pos
-    ), "BEGIN doit apparaître avant COMMIT"
+    assert begin_pos < commit_pos, "BEGIN doit apparaître avant COMMIT"
 
 
 def test_migration_026_creates_table():
@@ -43,9 +37,9 @@ def test_migration_026_creates_table():
 
     # Rechercher CREATE TABLE core.cold_start_tracking
     pattern = r"CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?core\.cold_start_tracking"
-    assert re.search(pattern, content, re.IGNORECASE), (
-        "Migration doit créer table core.cold_start_tracking"
-    )
+    assert re.search(
+        pattern, content, re.IGNORECASE
+    ), "Migration doit créer table core.cold_start_tracking"
 
 
 def test_migration_026_has_required_columns():
@@ -65,9 +59,9 @@ def test_migration_026_has_required_columns():
     for col in required_columns:
         # Chercher déclaration colonne (flexible sur espaces)
         pattern = rf"\b{col}\s+\w+"
-        assert re.search(pattern, content, re.IGNORECASE), (
-            f"Colonne '{col}' manquante dans migration 026"
-        )
+        assert re.search(
+            pattern, content, re.IGNORECASE
+        ), f"Colonne '{col}' manquante dans migration 026"
 
 
 def test_migration_026_has_primary_key():
@@ -93,9 +87,9 @@ def test_migration_026_has_phase_check_constraint():
     # Chercher CHECK constraint sur phase
     # phase IN ('cold_start', 'calibrated', 'production')
     pattern = r"phase\s+.*CHECK.*cold_start.*calibrated.*production"
-    assert re.search(pattern, content, re.IGNORECASE | re.DOTALL), (
-        "CHECK constraint sur phase manquante (doit inclure: cold_start, calibrated, production)"
-    )
+    assert re.search(
+        pattern, content, re.IGNORECASE | re.DOTALL
+    ), "CHECK constraint sur phase manquante (doit inclure: cold_start, calibrated, production)"
 
 
 def test_migration_026_has_indexes():
@@ -104,9 +98,9 @@ def test_migration_026_has_indexes():
 
     # Index principal sur (module, action_type)
     pattern_main = r"CREATE\s+INDEX\s+.*idx_cold_start_module_action.*\(module\s*,\s*action_type\)"
-    assert re.search(pattern_main, content, re.IGNORECASE | re.DOTALL), (
-        "Index idx_cold_start_module_action manquant"
-    )
+    assert re.search(
+        pattern_main, content, re.IGNORECASE | re.DOTALL
+    ), "Index idx_cold_start_module_action manquant"
 
 
 def test_migration_026_seeds_email_classify():
@@ -115,8 +109,7 @@ def test_migration_026_seeds_email_classify():
 
     # Chercher INSERT pour email + classify
     has_seed = (
-        re.search(r"INSERT\s+INTO\s+core\.cold_start_tracking", content, re.IGNORECASE)
-        is not None
+        re.search(r"INSERT\s+INTO\s+core\.cold_start_tracking", content, re.IGNORECASE) is not None
     )
     has_email = "'email'" in content or '"email"' in content
     has_classify = "'classify'" in content or '"classify"' in content
@@ -132,9 +125,7 @@ def test_migration_026_has_comments():
 
     # Au moins un COMMENT ON TABLE ou COMMENT ON COLUMN
     has_comment = re.search(r"COMMENT\s+ON\s+(TABLE|COLUMN)", content, re.IGNORECASE)
-    assert has_comment, (
-        "Migration devrait contenir des COMMENT ON pour documentation"
-    )
+    assert has_comment, "Migration devrait contenir des COMMENT ON pour documentation"
 
 
 def test_migration_026_has_trigger_updated_at():
@@ -142,16 +133,18 @@ def test_migration_026_has_trigger_updated_at():
     content = MIGRATION_FILE.read_text(encoding="utf-8")
 
     # Fonction trigger
-    pattern_func = r"CREATE\s+(?:OR\s+REPLACE\s+)?FUNCTION\s+.*update_cold_start_tracking_updated_at"
-    assert re.search(pattern_func, content, re.IGNORECASE | re.DOTALL), (
-        "Fonction trigger update_cold_start_tracking_updated_at manquante"
+    pattern_func = (
+        r"CREATE\s+(?:OR\s+REPLACE\s+)?FUNCTION\s+.*update_cold_start_tracking_updated_at"
     )
+    assert re.search(
+        pattern_func, content, re.IGNORECASE | re.DOTALL
+    ), "Fonction trigger update_cold_start_tracking_updated_at manquante"
 
     # Trigger
     pattern_trigger = r"CREATE\s+TRIGGER\s+.*trigger_cold_start_tracking_updated_at"
-    assert re.search(pattern_trigger, content, re.IGNORECASE | re.DOTALL), (
-        "Trigger trigger_cold_start_tracking_updated_at manquant"
-    )
+    assert re.search(
+        pattern_trigger, content, re.IGNORECASE | re.DOTALL
+    ), "Trigger trigger_cold_start_tracking_updated_at manquant"
 
 
 def test_migration_026_sql_syntax_valid():
@@ -168,14 +161,14 @@ def test_migration_026_sql_syntax_valid():
     # Cela exclut les BEGIN dans les fonctions PL/pgSQL
     begin_count = len(re.findall(r"\bBEGIN\s*;", content, re.IGNORECASE))
     commit_count = len(re.findall(r"\bCOMMIT\s*;", content, re.IGNORECASE))
-    assert begin_count == commit_count, (
-        f"Mismatch BEGIN;/COMMIT;: {begin_count} BEGIN;, {commit_count} COMMIT;"
-    )
+    assert (
+        begin_count == commit_count
+    ), f"Mismatch BEGIN;/COMMIT;: {begin_count} BEGIN;, {commit_count} COMMIT;"
     assert begin_count >= 1, "Au moins un BEGIN; transactionnel requis"
 
     # Compter parenthèses ouvrantes vs fermantes
     open_parens = content.count("(")
     close_parens = content.count(")")
-    assert open_parens == close_parens, (
-        f"Parenthèses non balancées: {open_parens} '(' vs {close_parens} ')'"
-    )
+    assert (
+        open_parens == close_parens
+    ), f"Parenthèses non balancées: {open_parens} '(' vs {close_parens} ')'"

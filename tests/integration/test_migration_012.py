@@ -5,12 +5,13 @@ Vérifie que la table est créée correctement avec toutes les contraintes.
 """
 
 import asyncio
-from datetime import datetime, timezone
 import json
 import os
-import pytest
-import asyncpg
+from datetime import datetime, timezone
 from uuid import uuid4
+
+import asyncpg
+import pytest
 
 
 @pytest.fixture
@@ -19,8 +20,7 @@ async def db_connection():
     # Connection string depuis env ou défaut test
     # Port 5433 car 5432 déjà utilisé (docker-compose.yml ligne 37)
     db_url = os.getenv(
-        "DATABASE_URL",
-        "postgresql://friday:REDACTED_TEST_PASSWORD@localhost:5433/friday"
+        "DATABASE_URL", "postgresql://friday:REDACTED_TEST_PASSWORD@localhost:5433/friday"
     )
 
     conn = await asyncpg.connect(db_url)
@@ -51,10 +51,19 @@ async def test_migration_012_table_exists(db_connection):
 async def test_migration_012_columns_exist(db_connection):
     """Vérifie que toutes les colonnes requises existent"""
     required_columns = {
-        'message_id', 'account', 'sender', 'recipients',
-        'subject', 'body_text', 'body_html', 'received_at',
-        'has_attachments', 'attachment_count', 'imported_at',
-        'import_batch_id', 'import_source'
+        "message_id",
+        "account",
+        "sender",
+        "recipients",
+        "subject",
+        "body_text",
+        "body_html",
+        "received_at",
+        "has_attachments",
+        "attachment_count",
+        "imported_at",
+        "import_batch_id",
+        "import_source",
     }
 
     result = await db_connection.fetch(
@@ -66,7 +75,7 @@ async def test_migration_012_columns_exist(db_connection):
         """
     )
 
-    existing_columns = {row['column_name'] for row in result}
+    existing_columns = {row["column_name"] for row in result}
 
     missing = required_columns - existing_columns
     assert not missing, f"Colonnes manquantes: {missing}"
@@ -97,10 +106,10 @@ async def test_migration_012_primary_key(db_connection):
 async def test_migration_012_indexes_exist(db_connection):
     """Vérifie que les indexes sont créés"""
     expected_indexes = {
-        'idx_emails_legacy_received',
-        'idx_emails_legacy_account',
-        'idx_emails_legacy_import_batch',
-        'idx_emails_legacy_has_attachments'
+        "idx_emails_legacy_received",
+        "idx_emails_legacy_account",
+        "idx_emails_legacy_import_batch",
+        "idx_emails_legacy_has_attachments",
     }
 
     result = await db_connection.fetch(
@@ -112,10 +121,10 @@ async def test_migration_012_indexes_exist(db_connection):
         """
     )
 
-    existing_indexes = {row['indexname'] for row in result}
+    existing_indexes = {row["indexname"] for row in result}
 
     # Exclude automatic PK index
-    existing_indexes = {idx for idx in existing_indexes if not idx.endswith('_pkey')}
+    existing_indexes = {idx for idx in existing_indexes if not idx.endswith("_pkey")}
 
     missing = expected_indexes - existing_indexes
     assert not missing, f"Indexes manquants: {missing}"
@@ -136,20 +145,22 @@ async def test_migration_012_insert_10_test_emails(db_connection):
     batch_id = uuid4()
 
     for i in range(10):
-        test_emails.append((
-            f"<test-{i}-{uuid4()}@example.com>",  # message_id unique
-            f"test{i}@cabinet.fr",  # account
-            f"sender{i}@example.com",  # sender
-            [f"recipient{i}@example.com", f"cc{i}@example.com"],  # recipients
-            f"Test Email #{i}",  # subject
-            f"Ceci est le contenu texte de l'email test #{i}",  # body_text
-            f"<p>Ceci est le contenu HTML de l'email test #{i}</p>",  # body_html
-            datetime(2024, 1, i+1, 10, 30, tzinfo=timezone.utc),  # received_at
-            i % 2 == 0,  # has_attachments (alternance)
-            i % 3,  # attachment_count
-            batch_id,  # import_batch_id
-            'pytest'  # import_source
-        ))
+        test_emails.append(
+            (
+                f"<test-{i}-{uuid4()}@example.com>",  # message_id unique
+                f"test{i}@cabinet.fr",  # account
+                f"sender{i}@example.com",  # sender
+                [f"recipient{i}@example.com", f"cc{i}@example.com"],  # recipients
+                f"Test Email #{i}",  # subject
+                f"Ceci est le contenu texte de l'email test #{i}",  # body_text
+                f"<p>Ceci est le contenu HTML de l'email test #{i}</p>",  # body_html
+                datetime(2024, 1, i + 1, 10, 30, tzinfo=timezone.utc),  # received_at
+                i % 2 == 0,  # has_attachments (alternance)
+                i % 3,  # attachment_count
+                batch_id,  # import_batch_id
+                "pytest",  # import_source
+            )
+        )
 
     # INSERT batch
     inserted = await db_connection.executemany(
@@ -161,7 +172,7 @@ async def test_migration_012_insert_10_test_emails(db_connection):
             import_batch_id, import_source
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
         """,
-        test_emails
+        test_emails,
     )
 
     # Vérifier 10 rows insérées
@@ -179,7 +190,7 @@ async def test_migration_012_insert_10_test_emails(db_connection):
         LIMIT 1
         """
     )
-    assert result['imported_at'] is not None, "imported_at devrait être auto-rempli"
+    assert result["imported_at"] is not None, "imported_at devrait être auto-rempli"
 
     # Vérifier recipients array fonctionne
     result = await db_connection.fetchrow(
@@ -191,8 +202,8 @@ async def test_migration_012_insert_10_test_emails(db_connection):
         LIMIT 1
         """
     )
-    assert isinstance(result['recipients'], list), "recipients devrait être un array"
-    assert len(result['recipients']) == 2, "recipients devrait contenir 2 éléments"
+    assert isinstance(result["recipients"], list), "recipients devrait être un array"
+    assert len(result["recipients"]) == 2, "recipients devrait contenir 2 éléments"
 
     # Cleanup
     await db_connection.execute(
@@ -218,7 +229,7 @@ async def test_migration_012_pk_constraint_uniqueness(db_connection):
             message_id, account, received_at, import_source
         ) VALUES ($1, 'test@example.com', NOW(), 'pytest_pk')
         """,
-        message_id
+        message_id,
     )
 
     # Tenter d'insérer le même message_id → devrait échouer
@@ -229,7 +240,7 @@ async def test_migration_012_pk_constraint_uniqueness(db_connection):
                 message_id, account, received_at, import_source
             ) VALUES ($1, 'test2@example.com', NOW(), 'pytest_pk')
             """,
-            message_id
+            message_id,
         )
 
     # Cleanup
@@ -255,11 +266,11 @@ async def test_migration_012_index_performance(db_connection):
 
     # Parser le JSON retourné par PostgreSQL
     plan_json = json.loads(result) if isinstance(result, str) else result
-    plan = plan_json[0]['Plan']
+    plan = plan_json[0]["Plan"]
     # Vérifier qu'un scan est utilisé quelque part dans le plan
     # (peut être dans Node Type racine ou dans Plans enfants)
     plan_str = str(plan)
-    assert 'Scan' in plan_str, "Query plan devrait inclure un scan (Seq Scan, Index Scan, etc.)"
+    assert "Scan" in plan_str, "Query plan devrait inclure un scan (Seq Scan, Index Scan, etc.)"
 
     # Query qui devrait utiliser idx_emails_legacy_account
     result = await db_connection.fetchval(
@@ -272,9 +283,9 @@ async def test_migration_012_index_performance(db_connection):
 
     # Parser le JSON retourné par PostgreSQL
     plan_json = json.loads(result) if isinstance(result, str) else result
-    plan = plan_json[0]['Plan']
+    plan = plan_json[0]["Plan"]
     plan_str = str(plan)
-    assert 'Scan' in plan_str, "Query plan devrait inclure un scan (Seq Scan, Index Scan, etc.)"
+    assert "Scan" in plan_str, "Query plan devrait inclure un scan (Seq Scan, Index Scan, etc.)"
 
 
 if __name__ == "__main__":

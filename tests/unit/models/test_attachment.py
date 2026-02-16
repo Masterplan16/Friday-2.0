@@ -8,17 +8,17 @@ Valide :
 - ActionResult compatibility
 """
 
-import pytest
 from datetime import datetime, timezone
 from uuid import uuid4
-from pydantic import ValidationError
 
+import pytest
 from agents.src.models.attachment import (
+    MAX_ATTACHMENT_SIZE_BYTES,
+    MAX_FILENAME_LENGTH,
     Attachment,
     AttachmentExtractResult,
-    MAX_ATTACHMENT_SIZE_BYTES,
-    MAX_FILENAME_LENGTH
 )
+from pydantic import ValidationError
 
 
 class TestAttachmentSchema:
@@ -36,7 +36,7 @@ class TestAttachmentSchema:
             status="pending",
             extracted_at=datetime.now(timezone.utc),
             created_at=datetime.now(timezone.utc),
-            updated_at=datetime.now(timezone.utc)
+            updated_at=datetime.now(timezone.utc),
         )
 
         assert attachment.filename == "facture_2026.pdf"
@@ -57,7 +57,7 @@ class TestAttachmentSchema:
                 status="pending",
                 extracted_at=datetime.now(timezone.utc),
                 created_at=datetime.now(timezone.utc),
-                updated_at=datetime.now(timezone.utc)
+                updated_at=datetime.now(timezone.utc),
             )
 
         assert "Filename cannot be empty" in str(exc_info.value)
@@ -77,7 +77,7 @@ class TestAttachmentSchema:
                 status="pending",
                 extracted_at=datetime.now(timezone.utc),
                 created_at=datetime.now(timezone.utc),
-                updated_at=datetime.now(timezone.utc)
+                updated_at=datetime.now(timezone.utc),
             )
 
         # Pydantic v2 message: "String should have at most 200 characters"
@@ -95,7 +95,7 @@ class TestAttachmentSchema:
             status="pending",
             extracted_at=datetime.now(timezone.utc),
             created_at=datetime.now(timezone.utc),
-            updated_at=datetime.now(timezone.utc)
+            updated_at=datetime.now(timezone.utc),
         )
 
         assert attachment.filename == "facture.pdf"  # Trimmed
@@ -113,7 +113,7 @@ class TestAttachmentSchema:
                 status="pending",
                 extracted_at=datetime.now(timezone.utc),
                 created_at=datetime.now(timezone.utc),
-                updated_at=datetime.now(timezone.utc)
+                updated_at=datetime.now(timezone.utc),
             )
 
         assert "greater than 0" in str(exc_info.value)
@@ -131,7 +131,7 @@ class TestAttachmentSchema:
                 status="pending",
                 extracted_at=datetime.now(timezone.utc),
                 created_at=datetime.now(timezone.utc),
-                updated_at=datetime.now(timezone.utc)
+                updated_at=datetime.now(timezone.utc),
             )
 
         assert "less than or equal to" in str(exc_info.value)
@@ -149,7 +149,7 @@ class TestAttachmentSchema:
                 status="pending",
                 extracted_at=datetime.now(timezone.utc),
                 created_at=datetime.now(timezone.utc),
-                updated_at=datetime.now(timezone.utc)
+                updated_at=datetime.now(timezone.utc),
             )
 
         assert "Invalid MIME type format" in str(exc_info.value)
@@ -166,7 +166,7 @@ class TestAttachmentSchema:
             status="pending",
             extracted_at=datetime.now(timezone.utc),
             created_at=datetime.now(timezone.utc),
-            updated_at=datetime.now(timezone.utc)
+            updated_at=datetime.now(timezone.utc),
         )
 
         assert attachment.mime_type == "application/pdf"  # Lowercase
@@ -184,7 +184,7 @@ class TestAttachmentSchema:
                 status="pending",
                 extracted_at=datetime.now(timezone.utc),
                 created_at=datetime.now(timezone.utc),
-                updated_at=datetime.now(timezone.utc)
+                updated_at=datetime.now(timezone.utc),
             )
 
         assert "Filepath cannot be empty" in str(exc_info.value)
@@ -202,14 +202,14 @@ class TestAttachmentSchema:
                 status="pending",
                 extracted_at=datetime.now(timezone.utc),
                 created_at=datetime.now(timezone.utc),
-                updated_at=datetime.now(timezone.utc)
+                updated_at=datetime.now(timezone.utc),
             )
 
         assert "must be absolute Unix path" in str(exc_info.value)
 
     def test_attachment_status_valid_values(self):
         """Status accepte pending/processed/archived/error uniquement."""
-        valid_statuses = ['pending', 'processed', 'archived', 'error']
+        valid_statuses = ["pending", "processed", "archived", "error"]
 
         for status in valid_statuses:
             attachment = Attachment(
@@ -222,7 +222,7 @@ class TestAttachmentSchema:
                 status=status,
                 extracted_at=datetime.now(timezone.utc),
                 created_at=datetime.now(timezone.utc),
-                updated_at=datetime.now(timezone.utc)
+                updated_at=datetime.now(timezone.utc),
             )
 
             assert attachment.status == status
@@ -240,7 +240,7 @@ class TestAttachmentSchema:
                 status="invalid_status",  # Invalid
                 extracted_at=datetime.now(timezone.utc),
                 created_at=datetime.now(timezone.utc),
-                updated_at=datetime.now(timezone.utc)
+                updated_at=datetime.now(timezone.utc),
             )
 
 
@@ -255,8 +255,8 @@ class TestAttachmentExtractResult:
             total_size_mb=0.38,
             filepaths=[
                 "/var/friday/transit/attachments/2026-02-11/test1.pdf",
-                "/var/friday/transit/attachments/2026-02-11/test2.jpg"
-            ]
+                "/var/friday/transit/attachments/2026-02-11/test2.jpg",
+            ],
         )
 
         assert result.extracted_count == 2
@@ -268,18 +268,12 @@ class TestAttachmentExtractResult:
         """extracted_count/failed_count négatifs rejetés."""
         with pytest.raises(ValidationError):
             AttachmentExtractResult(
-                extracted_count=-1,  # Négatif
-                failed_count=0,
-                total_size_mb=0.0,
-                filepaths=[]
+                extracted_count=-1, failed_count=0, total_size_mb=0.0, filepaths=[]  # Négatif
             )
 
         with pytest.raises(ValidationError):
             AttachmentExtractResult(
-                extracted_count=0,
-                failed_count=-5,  # Négatif
-                total_size_mb=0.0,
-                filepaths=[]
+                extracted_count=0, failed_count=-5, total_size_mb=0.0, filepaths=[]  # Négatif
             )
 
     def test_extract_result_filepaths_must_be_absolute(self):
@@ -289,7 +283,7 @@ class TestAttachmentExtractResult:
                 extracted_count=1,
                 failed_count=0,
                 total_size_mb=0.15,
-                filepaths=["relative/path/file.pdf"]  # Relatif
+                filepaths=["relative/path/file.pdf"],  # Relatif
             )
 
         assert "must be absolute Unix path" in str(exc_info.value)
@@ -302,15 +296,15 @@ class TestAttachmentExtractResult:
             total_size_mb=0.38,
             filepaths=[
                 "/var/friday/transit/attachments/2026-02-11/test1.pdf",
-                "/var/friday/transit/attachments/2026-02-11/test2.jpg"
-            ]
+                "/var/friday/transit/attachments/2026-02-11/test2.jpg",
+            ],
         )
 
         # ActionResult fields présents
-        assert hasattr(result, 'input_summary')
-        assert hasattr(result, 'output_summary')
-        assert hasattr(result, 'confidence')
-        assert hasattr(result, 'reasoning')
+        assert hasattr(result, "input_summary")
+        assert hasattr(result, "output_summary")
+        assert hasattr(result, "confidence")
+        assert hasattr(result, "reasoning")
 
         # Confidence = 1.0 (extraction déterministe)
         assert result.confidence == 1.0
@@ -323,8 +317,8 @@ class TestAttachmentExtractResult:
             total_size_mb=0.38,
             filepaths=[
                 "/var/friday/transit/attachments/2026-02-11/test1.pdf",
-                "/var/friday/transit/attachments/2026-02-11/test2.jpg"
-            ]
+                "/var/friday/transit/attachments/2026-02-11/test2.jpg",
+            ],
         )
 
         result.generate_summaries(email_id="abc123", attachments_total=3)
@@ -343,7 +337,11 @@ class TestAttachmentExtractResult:
             extracted_count=3,
             failed_count=0,
             total_size_mb=1.2,
-            filepaths=["/var/friday/transit/test1.pdf", "/var/friday/transit/test2.pdf", "/var/friday/transit/test3.pdf"]
+            filepaths=[
+                "/var/friday/transit/test1.pdf",
+                "/var/friday/transit/test2.pdf",
+                "/var/friday/transit/test3.pdf",
+            ],
         )
 
         result.generate_summaries(email_id="xyz789", attachments_total=3)
@@ -357,10 +355,7 @@ class TestAttachmentExtractResult:
     def test_extract_result_generate_summaries_all_failed(self):
         """generate_summaries() avec extracted_count=0 (toutes failed)."""
         result = AttachmentExtractResult(
-            extracted_count=0,
-            failed_count=2,
-            total_size_mb=0.0,
-            filepaths=[]
+            extracted_count=0, failed_count=2, total_size_mb=0.0, filepaths=[]
         )
 
         result.generate_summaries(email_id="def456", attachments_total=2)

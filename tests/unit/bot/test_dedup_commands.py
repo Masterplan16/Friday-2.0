@@ -15,7 +15,6 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-
 from bot.handlers.dedup_commands import (
     _format_duration,
     _format_size,

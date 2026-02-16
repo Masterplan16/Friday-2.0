@@ -13,18 +13,20 @@ Tests couvrant :
 - Edge cases (texte vide, pas de PII)
 """
 
-import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import httpx
+import pytest
 
 # Import après définition des mocks pour éviter les imports réels
 from agents.src.tools.anonymize import (
+    FRENCH_ENTITIES,
+    AnonymizationError,
+    AnonymizationResult,
     anonymize_text,
     deanonymize_text,
-    AnonymizationResult,
-    AnonymizationError,
-    FRENCH_ENTITIES,
 )
+
 from config.exceptions import PipelineError
 
 
@@ -33,9 +35,9 @@ class TestFrenchEntitiesConfiguration:
 
     def test_credit_card_in_french_entities(self):
         """B1: CREDIT_CARD doit être dans FRENCH_ENTITIES"""
-        assert "CREDIT_CARD" in FRENCH_ENTITIES, (
-            "CREDIT_CARD manquant dans FRENCH_ENTITIES (requis par pii_samples.json sample 004)"
-        )
+        assert (
+            "CREDIT_CARD" in FRENCH_ENTITIES
+        ), "CREDIT_CARD manquant dans FRENCH_ENTITIES (requis par pii_samples.json sample 004)"
 
     def test_all_required_entities_present(self):
         """Vérifier que toutes les entités requises sont présentes"""
@@ -60,9 +62,9 @@ class TestAnonymizationErrorHierarchy:
 
     def test_anonymization_error_inherits_pipeline_error(self):
         """B4: AnonymizationError doit hériter de PipelineError"""
-        assert issubclass(AnonymizationError, PipelineError), (
-            "AnonymizationError doit hériter de PipelineError (pas Exception bare)"
-        )
+        assert issubclass(
+            AnonymizationError, PipelineError
+        ), "AnonymizationError doit hériter de PipelineError (pas Exception bare)"
 
     def test_anonymization_error_is_exception(self):
         """AnonymizationError doit être une Exception"""
@@ -77,9 +79,9 @@ class TestAnonymizationResultModel:
         from pydantic import BaseModel
 
         # Migration dataclass → Pydantic complétée (Task 1.7)
-        assert issubclass(AnonymizationResult, BaseModel), (
-            "AnonymizationResult devrait être Pydantic BaseModel (alignement pattern projet)"
-        )
+        assert issubclass(
+            AnonymizationResult, BaseModel
+        ), "AnonymizationResult devrait être Pydantic BaseModel (alignement pattern projet)"
 
 
 @pytest.mark.asyncio
@@ -131,21 +133,25 @@ class TestAnonymizeTextBasicFunctionality:
         # Mock analyzer response
         mock_analyze_response = MagicMock()
         mock_analyze_response.raise_for_status = MagicMock()
-        mock_analyze_response.json = MagicMock(return_value=[
-            {
-                "entity_type": "PERSON",
-                "start": 0,
-                "end": 11,
-                "score": 0.95,
-            }
-        ])
+        mock_analyze_response.json = MagicMock(
+            return_value=[
+                {
+                    "entity_type": "PERSON",
+                    "start": 0,
+                    "end": 11,
+                    "score": 0.95,
+                }
+            ]
+        )
 
         # Mock anonymizer response
         mock_anonymize_response = MagicMock()
         mock_anonymize_response.raise_for_status = MagicMock()
-        mock_anonymize_response.json = MagicMock(return_value={
-            "text": "[PERSON_1] habite à Paris.",
-        })
+        mock_anonymize_response.json = MagicMock(
+            return_value={
+                "text": "[PERSON_1] habite à Paris.",
+            }
+        )
 
         mock_client.post = AsyncMock(side_effect=[mock_analyze_response, mock_anonymize_response])
 
@@ -195,16 +201,16 @@ class TestAnonymizeTextFailExplicit:
         # Mock analyzer response
         mock_analyze_response = MagicMock()
         mock_analyze_response.raise_for_status = MagicMock()
-        mock_analyze_response.json = MagicMock(return_value=[
-            {"entity_type": "PERSON", "start": 0, "end": 4, "score": 0.9}
-        ])
+        mock_analyze_response.json = MagicMock(
+            return_value=[{"entity_type": "PERSON", "start": 0, "end": 4, "score": 0.9}]
+        )
 
         # Mock anonymizer response SANS clé "text" (bug)
         mock_anonymize_response = MagicMock()
         mock_anonymize_response.raise_for_status = MagicMock()
-        mock_anonymize_response.json = MagicMock(return_value={
-            "error": "anonymization failed"
-        })  # Pas de clé "text"
+        mock_anonymize_response.json = MagicMock(
+            return_value={"error": "anonymization failed"}
+        )  # Pas de clé "text"
 
         mock_client.post.side_effect = [mock_analyze_response, mock_anonymize_response]
 
@@ -213,9 +219,9 @@ class TestAnonymizeTextFailExplicit:
 
         # Vérifier que l'erreur mentionne explicitement le problème (L3 fix)
         error_msg = str(exc_info.value)
-        assert "Anonymization failed" in error_msg or "missing 'text' key" in error_msg, (
-            f"Expected specific error message, got: {error_msg}"
-        )
+        assert (
+            "Anonymization failed" in error_msg or "missing 'text' key" in error_msg
+        ), f"Expected specific error message, got: {error_msg}"
 
 
 @pytest.mark.asyncio
@@ -284,15 +290,13 @@ class TestMappingLifecycle:
         # Mock responses
         mock_analyze_response = MagicMock()
         mock_analyze_response.raise_for_status = MagicMock()
-        mock_analyze_response.json = MagicMock(return_value=[
-            {"entity_type": "PERSON", "start": 0, "end": 4, "score": 0.9}
-        ])
+        mock_analyze_response.json = MagicMock(
+            return_value=[{"entity_type": "PERSON", "start": 0, "end": 4, "score": 0.9}]
+        )
 
         mock_anonymize_response = MagicMock()
         mock_anonymize_response.raise_for_status = MagicMock()
-        mock_anonymize_response.json = MagicMock(return_value={
-            "text": "[PERSON_1] habite Paris."
-        })
+        mock_anonymize_response.json = MagicMock(return_value={"text": "[PERSON_1] habite Paris."})
 
         mock_client.post = AsyncMock(side_effect=[mock_analyze_response, mock_anonymize_response])
 

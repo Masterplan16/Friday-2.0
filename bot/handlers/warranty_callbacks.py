@@ -15,11 +15,7 @@ import asyncpg
 import structlog
 from agents.src.agents.archiviste.warranty_db import delete_warranty
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
-from telegram.ext import (
-    Application,
-    CallbackQueryHandler,
-    ContextTypes,
-)
+from telegram.ext import Application, CallbackQueryHandler, ContextTypes
 
 logger = structlog.get_logger(__name__)
 

@@ -9,15 +9,14 @@ Test Strategy:
 - Base de données test réelle (PostgreSQL + pgvector)
 """
 
-import pytest
-import asyncpg
-from pathlib import Path
-from datetime import datetime
 import os
+from datetime import datetime
+from pathlib import Path
 
+import asyncpg
+import pytest
 from agents.src.adapters.memorystore import PostgreSQLMemorystore
 from agents.src.agents.email.graph_populator import populate_email_graph
-
 
 # Configuration BDD test (override avec env vars)
 TEST_DB_CONFIG = {
@@ -43,12 +42,13 @@ async def e2e_db_pool():
 
     # Setup schemas + migrations
     async with pool.acquire() as conn:
-        await conn.execute("CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\"")
+        await conn.execute('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"')
         await conn.execute("CREATE EXTENSION IF NOT EXISTS vector")
         await conn.execute("CREATE SCHEMA IF NOT EXISTS knowledge")
         await conn.execute("CREATE SCHEMA IF NOT EXISTS core")
 
-        await conn.execute("""
+        await conn.execute(
+            """
             CREATE OR REPLACE FUNCTION core.update_updated_at()
             RETURNS TRIGGER AS $$
             BEGIN
@@ -56,7 +56,8 @@ async def e2e_db_pool():
                 RETURN NEW;
             END;
             $$ LANGUAGE plpgsql;
-        """)
+        """
+        )
 
     migrations_dir = Path(__file__).parent.parent.parent / "database" / "migrations"
 
@@ -119,7 +120,7 @@ class TestEmailToGraphPipeline:
             "body": "Bonjour Antonio, voici les documents...",
             "date": "2026-02-11T14:30:00Z",
             "category": "admin",
-            "priority": "normal"
+            "priority": "normal",
         }
 
         # Appeler graph_populator
@@ -143,12 +144,16 @@ class TestEmailToGraphPipeline:
         assert person_emails == {"john@example.com", "antonio@example.com", "alice@example.com"}
 
         # Vérifier relation SENT_BY (Email → John)
-        related_sender = await memorystore_e2e.get_related_nodes(email_node_id, relation_type="sent_by", direction="out")
+        related_sender = await memorystore_e2e.get_related_nodes(
+            email_node_id, relation_type="sent_by", direction="out"
+        )
         assert len(related_sender) == 1
         assert related_sender[0]["metadata"]["email"] == "john@example.com"
 
         # Vérifier relations RECEIVED_BY (Email → Antonio, Alice)
-        related_recipients = await memorystore_e2e.get_related_nodes(email_node_id, relation_type="received_by", direction="out")
+        related_recipients = await memorystore_e2e.get_related_nodes(
+            email_node_id, relation_type="received_by", direction="out"
+        )
         assert len(related_recipients) == 2
 
         recipient_emails = {r["metadata"]["email"] for r in related_recipients}
@@ -201,11 +206,8 @@ class TestEmailToGraphPipeline:
         doc_id = await memorystore_e2e.create_node(
             node_type="document",
             name="Facture_250EUR.pdf",
-            metadata={
-                "source_id": "/docs/facture_250.pdf",
-                "mime_type": "application/pdf"
-            },
-            source="archiviste"
+            metadata={"source_id": "/docs/facture_250.pdf", "mime_type": "application/pdf"},
+            source="archiviste",
         )
 
         # Email avec PJ
@@ -218,17 +220,17 @@ class TestEmailToGraphPipeline:
         }
 
         attachments = [
-            {
-                "doc_id": doc_id,
-                "filename": "Facture_250EUR.pdf",
-                "mime_type": "application/pdf"
-            }
+            {"doc_id": doc_id, "filename": "Facture_250EUR.pdf", "mime_type": "application/pdf"}
         ]
 
-        email_node_id = await populate_email_graph(email_data, memorystore_e2e, attachments=attachments)
+        email_node_id = await populate_email_graph(
+            email_data, memorystore_e2e, attachments=attachments
+        )
 
         # Vérifier relation ATTACHED_TO (Document → Email)
-        related_docs = await memorystore_e2e.get_related_nodes(email_node_id, relation_type="attached_to", direction="in")
+        related_docs = await memorystore_e2e.get_related_nodes(
+            email_node_id, relation_type="attached_to", direction="in"
+        )
         assert len(related_docs) == 1
         assert related_docs[0]["id"] == doc_id
 
@@ -241,7 +243,7 @@ class TestEmailToGraphPipeline:
         invalid_email = {
             "subject": "Test",
             "sender": "test@example.com",
-            "date": "2026-02-11T14:00:00Z"
+            "date": "2026-02-11T14:00:00Z",
         }
 
         with pytest.raises(ValueError, match="Missing required field"):

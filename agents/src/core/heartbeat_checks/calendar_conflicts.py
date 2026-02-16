@@ -13,9 +13,7 @@ from typing import Any, Dict, Optional
 
 import asyncpg
 import structlog
-from agents.src.agents.calendar.conflict_detector import (
-    get_conflicts_range,
-)
+from agents.src.agents.calendar.conflict_detector import get_conflicts_range
 from agents.src.core.heartbeat_models import CheckPriority, CheckResult
 
 logger = structlog.get_logger(__name__)

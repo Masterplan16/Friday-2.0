@@ -15,9 +15,7 @@ import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from agents.src.agents.calendar.message_event_detector import (
-    extract_event_from_message,
-)
+from agents.src.agents.calendar.message_event_detector import extract_event_from_message
 from agents.src.core.models import Casquette
 
 

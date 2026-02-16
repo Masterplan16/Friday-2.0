@@ -44,8 +44,7 @@ class TestDockerComposePortsSecurity:
                 port_str = str(port_entry).strip('"')
                 if ":" in port_str:
                     assert port_str.startswith("127.0.0.1:"), (
-                        f"Service {svc_name}: port {port_str} must be "
-                        f"bound to 127.0.0.1"
+                        f"Service {svc_name}: port {port_str} must be " f"bound to 127.0.0.1"
                     )
 
 
@@ -85,16 +84,16 @@ class TestRedisACLPermissions:
             "friday_n8n",
             "friday_emailengine",
         }
-        assert set(acl_users.keys()) == expected_users, (
-            f"Expected users {expected_users}, got {set(acl_users.keys())}"
-        )
+        assert (
+            set(acl_users.keys()) == expected_users
+        ), f"Expected users {expected_users}, got {set(acl_users.keys())}"
 
     def test_default_user_is_off(self, acl_users):
         """user default doit etre OFF (aucune connexion anonyme)."""
         default_line = acl_users["default"]
-        assert " off " in default_line or default_line.endswith(" off"), (
-            "Default user must be disabled (off)"
-        )
+        assert " off " in default_line or default_line.endswith(
+            " off"
+        ), "Default user must be disabled (off)"
 
     def test_no_service_user_has_all_commands(self, acl_users):
         """Aucun user de service ne doit avoir +@all (sauf admin)."""
@@ -124,9 +123,7 @@ class TestRedisACLPermissions:
         assert "~presidio:mapping:*" in line, "Agents must have access to presidio:mapping:* keys"
         # Should NOT have bare ~* (all keys) - only prefixed key patterns allowed
         bare_wildcard = re.search(r"(?<!\S)~\*(?!\S)", line)
-        assert bare_wildcard is None, (
-            "Agents should not have unrestricted key access (~*)"
-        )
+        assert bare_wildcard is None, "Agents should not have unrestricted key access (~*)"
 
     def test_alerting_restricted_to_streams(self, acl_users):
         """Alerting: streams only, pas de cache ni presidio."""
@@ -165,12 +162,12 @@ class TestRedisACLPermissions:
                 )
             # If +@write is used, ensure destructive cmds are negated
             if "+@write" in line_lower:
-                assert "-flushall" in line_lower, (
-                    f"User {username} has +@write without -flushall negation"
-                )
-                assert "-flushdb" in line_lower, (
-                    f"User {username} has +@write without -flushdb negation"
-                )
+                assert (
+                    "-flushall" in line_lower
+                ), f"User {username} has +@write without -flushall negation"
+                assert (
+                    "-flushdb" in line_lower
+                ), f"User {username} has +@write without -flushdb negation"
 
     def test_all_service_users_have_passwords(self, acl_users):
         """Tous les users de service doivent avoir un password (>)."""
@@ -198,9 +195,9 @@ class TestEnvExampleSecurity:
         assert "sk-ant-" not in env_content, ".env.example contains real Anthropic key"
         # Telegram bot token pattern: digits:alphanumeric
         telegram_token_pattern = re.compile(r"\d{10}:[A-Za-z0-9_-]{35}")
-        assert not telegram_token_pattern.search(env_content), (
-            ".env.example contains real Telegram token"
-        )
+        assert not telegram_token_pattern.search(
+            env_content
+        ), ".env.example contains real Telegram token"
 
     def test_passwords_are_placeholders(self, env_content):
         """Les passwords doivent etre des placeholders (changeme/your_*_here)."""
@@ -219,9 +216,9 @@ class TestEnvExampleSecurity:
                 "REDIS_N8N_PASSWORD",
                 "REDIS_EMAILENGINE_PASSWORD",
             ):
-                assert "changeme" in value.lower() or "your_" in value.lower(), (
-                    f"{key} must be a placeholder (changeme/your_*_here), got: {value}"
-                )
+                assert (
+                    "changeme" in value.lower() or "your_" in value.lower()
+                ), f"{key} must be a placeholder (changeme/your_*_here), got: {value}"
 
     def test_no_real_tokens(self, env_content):
         """Pas de vrais tokens."""
@@ -258,9 +255,9 @@ class TestSopsConfig:
     def test_sops_has_env_enc_rule(self):
         sops_file = PROJECT_ROOT / ".sops.yaml"
         content = sops_file.read_text()
-        assert ".env.enc" in content or r"\.env\.enc" in content, (
-            ".sops.yaml must have a rule for .env.enc files"
-        )
+        assert (
+            ".env.enc" in content or r"\.env\.enc" in content
+        ), ".sops.yaml must have a rule for .env.enc files"
 
     def test_sops_uses_age(self):
         sops_file = PROJECT_ROOT / ".sops.yaml"
@@ -290,15 +287,13 @@ class TestGitignoreSecurity:
 
     def test_credentials_excluded(self, gitignore_content):
         """credentials.json doit etre exclu."""
-        assert "credentials.json" in gitignore_content, (
-            ".gitignore must exclude credentials.json"
-        )
+        assert "credentials.json" in gitignore_content, ".gitignore must exclude credentials.json"
 
     def test_service_account_excluded(self, gitignore_content):
         """service-account.json doit etre exclu."""
-        assert "service-account.json" in gitignore_content, (
-            ".gitignore must exclude service-account.json"
-        )
+        assert (
+            "service-account.json" in gitignore_content
+        ), ".gitignore must exclude service-account.json"
 
 
 # ============================================
@@ -322,21 +317,18 @@ class TestCaddyfileSecurity:
             if domain.startswith(":"):
                 continue  # Port-only block (e.g., ":80 {")
             assert domain.endswith(".local") or domain.endswith(".internal"), (
-                f"Caddyfile domain {domain} must be .local or .internal, "
-                f"not a public domain"
+                f"Caddyfile domain {domain} must be .local or .internal, " f"not a public domain"
             )
 
     def test_has_friday_local_domains(self, caddyfile_content):
         """Au moins un domaine .friday.local doit etre configure."""
-        assert ".friday.local" in caddyfile_content, (
-            "Caddyfile must contain .friday.local domains"
-        )
+        assert ".friday.local" in caddyfile_content, "Caddyfile must contain .friday.local domains"
 
     def test_no_tls_auto(self, caddyfile_content):
         """Pas de TLS automatique (pas de certificats publics pour domaines locaux)."""
-        assert "tls {" not in caddyfile_content, (
-            "Caddyfile should not have explicit TLS config for local domains"
-        )
+        assert (
+            "tls {" not in caddyfile_content
+        ), "Caddyfile should not have explicit TLS config for local domains"
 
 
 # ============================================
@@ -352,33 +344,29 @@ class TestTailscaleScripts:
     def test_setup_tailscale_has_shebang(self):
         script = PROJECT_ROOT / "scripts" / "setup-tailscale.sh"
         content = script.read_text()
-        assert content.startswith("#!/usr/bin/env bash"), (
-            "setup-tailscale.sh must have #!/usr/bin/env bash shebang"
-        )
+        assert content.startswith(
+            "#!/usr/bin/env bash"
+        ), "setup-tailscale.sh must have #!/usr/bin/env bash shebang"
 
     def test_setup_tailscale_has_hostname(self):
         """Script doit configurer hostname friday-vps."""
         script = PROJECT_ROOT / "scripts" / "setup-tailscale.sh"
         content = script.read_text()
-        assert "friday-vps" in content, (
-            "setup-tailscale.sh must configure hostname friday-vps"
-        )
+        assert "friday-vps" in content, "setup-tailscale.sh must configure hostname friday-vps"
 
     def test_setup_tailscale_enables_service(self):
         """Script doit activer tailscaled au demarrage."""
         script = PROJECT_ROOT / "scripts" / "setup-tailscale.sh"
         content = script.read_text()
-        assert "systemctl enable tailscaled" in content, (
-            "setup-tailscale.sh must enable tailscaled at boot"
-        )
+        assert (
+            "systemctl enable tailscaled" in content
+        ), "setup-tailscale.sh must enable tailscaled at boot"
 
     def test_setup_tailscale_verifies_status(self):
         """Script doit verifier tailscale status apres install."""
         script = PROJECT_ROOT / "scripts" / "setup-tailscale.sh"
         content = script.read_text()
-        assert "tailscale status" in content, (
-            "setup-tailscale.sh must verify tailscale status"
-        )
+        assert "tailscale status" in content, "setup-tailscale.sh must verify tailscale status"
 
     def test_harden_ssh_exists(self):
         script = PROJECT_ROOT / "scripts" / "harden-ssh.sh"
@@ -387,33 +375,27 @@ class TestTailscaleScripts:
     def test_harden_ssh_has_shebang(self):
         script = PROJECT_ROOT / "scripts" / "harden-ssh.sh"
         content = script.read_text()
-        assert content.startswith("#!/usr/bin/env bash"), (
-            "harden-ssh.sh must have #!/usr/bin/env bash shebang"
-        )
+        assert content.startswith(
+            "#!/usr/bin/env bash"
+        ), "harden-ssh.sh must have #!/usr/bin/env bash shebang"
 
     def test_harden_ssh_configures_ufw(self):
         """Script doit configurer UFW pour bloquer SSH public."""
         script = PROJECT_ROOT / "scripts" / "harden-ssh.sh"
         content = script.read_text()
-        assert "ufw deny 22/tcp" in content, (
-            "harden-ssh.sh must deny public SSH via UFW"
-        )
+        assert "ufw deny 22/tcp" in content, "harden-ssh.sh must deny public SSH via UFW"
 
     def test_harden_ssh_configures_listenaddress(self):
         """Script doit configurer ListenAddress pour Tailscale."""
         script = PROJECT_ROOT / "scripts" / "harden-ssh.sh"
         content = script.read_text()
-        assert "ListenAddress" in content, (
-            "harden-ssh.sh must configure SSH ListenAddress"
-        )
+        assert "ListenAddress" in content, "harden-ssh.sh must configure SSH ListenAddress"
 
     def test_harden_ssh_allows_tailscale_interface(self):
         """Script doit autoriser interface tailscale0 dans UFW."""
         script = PROJECT_ROOT / "scripts" / "harden-ssh.sh"
         content = script.read_text()
-        assert "tailscale0" in content, (
-            "harden-ssh.sh must allow tailscale0 interface in UFW"
-        )
+        assert "tailscale0" in content, "harden-ssh.sh must allow tailscale0 interface in UFW"
 
     def test_sops_test_script_exists(self):
         script = PROJECT_ROOT / "scripts" / "test-sops-workflow.sh"
@@ -422,6 +404,6 @@ class TestTailscaleScripts:
     def test_sops_test_script_has_shebang(self):
         script = PROJECT_ROOT / "scripts" / "test-sops-workflow.sh"
         content = script.read_text()
-        assert content.startswith("#!/usr/bin/env bash"), (
-            "test-sops-workflow.sh must have #!/usr/bin/env bash shebang"
-        )
+        assert content.startswith(
+            "#!/usr/bin/env bash"
+        ), "test-sops-workflow.sh must have #!/usr/bin/env bash shebang"

@@ -192,11 +192,13 @@ async def filters_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     try:
         async with db_pool.acquire() as db:
             if subcommand == "list":
-                filters = await db.fetch("""
+                filters = await db.fetch(
+                    """
                     SELECT sender_email, sender_domain, filter_type, category, created_at
                     FROM core.sender_filters
                     ORDER BY filter_type, created_at DESC
-                    """)
+                    """
+                )
 
                 if not filters:
                     await update.message.reply_text(
@@ -245,21 +247,25 @@ async def filters_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
                 await update.message.reply_text(msg, parse_mode="Markdown")
 
             elif subcommand == "stats":
-                stats = await db.fetchrow("""
+                stats = await db.fetchrow(
+                    """
                     SELECT
                         COUNT(*) as total_filters,
                         COUNT(*) FILTER (WHERE filter_type = 'vip') as vip_count,
                         COUNT(*) FILTER (WHERE filter_type = 'blacklist') as blacklist_count,
                         COUNT(*) FILTER (WHERE filter_type = 'whitelist') as whitelist_count
                     FROM core.sender_filters
-                    """)
+                    """
+                )
 
                 # Economie tokens reelle depuis core.llm_usage
-                savings = await db.fetchrow("""
+                savings = await db.fetchrow(
+                    """
                     SELECT COALESCE(SUM(tokens_saved_by_filters), 0) as tokens_saved
                     FROM core.llm_usage
                     WHERE date_trunc('month', timestamp) = date_trunc('month', CURRENT_DATE)
-                    """)
+                    """
+                )
 
                 msg = (
                     f"**Statistiques filtrage**\n\n"

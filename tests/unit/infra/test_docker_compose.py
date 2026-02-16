@@ -61,7 +61,9 @@ class TestDockerImageVersions:
     def test_qdrant_not_active(self, main_config):
         """Qdrant doit etre retire (Decision D19 - pgvector Day 1)."""
         services = main_config.get("services", {})
-        assert "qdrant" not in services, "Qdrant should be removed (Decision D19 - pgvector in PostgreSQL)"
+        assert (
+            "qdrant" not in services
+        ), "Qdrant should be removed (Decision D19 - pgvector in PostgreSQL)"
 
     def test_n8n_uses_custom_build(self, main_config):
         """n8n utilise un build custom (Dockerfile.n8n) au lieu d'une image publique."""
@@ -127,13 +129,17 @@ class TestPostgresConfig:
 class TestRedisACL:
     """Verifie la configuration Redis ACL."""
 
-    @pytest.mark.skip(reason="Redis ACL disabled in docker-compose.yml (CRLF issue) - TODO Story 1.17")
+    @pytest.mark.skip(
+        reason="Redis ACL disabled in docker-compose.yml (CRLF issue) - TODO Story 1.17"
+    )
     def test_redis_acl_file_mounted(self, main_config):
         volumes = main_config["services"]["redis"]["volumes"]
         acl_volumes = [v for v in volumes if "redis.acl" in v or "users.acl" in v]
         assert len(acl_volumes) > 0, "Redis ACL file must be mounted"
 
-    @pytest.mark.skip(reason="Redis ACL disabled in docker-compose.yml (CRLF issue) - TODO Story 1.17")
+    @pytest.mark.skip(
+        reason="Redis ACL disabled in docker-compose.yml (CRLF issue) - TODO Story 1.17"
+    )
     def test_redis_command_loads_acl(self, main_config):
         command = main_config["services"]["redis"]["command"]
         assert "--aclfile" in command, "Redis must load ACL file"
@@ -288,9 +294,9 @@ class TestNetworkSecurity:
         for svc_name, svc in all_services.items():
             ports = svc.get("ports", [])
             for port in ports:
-                assert str(port).startswith("127.0.0.1:"), (
-                    f"Service {svc_name} port {port} must be localhost only (127.0.0.1)"
-                )
+                assert str(port).startswith(
+                    "127.0.0.1:"
+                ), f"Service {svc_name} port {port} must be localhost only (127.0.0.1)"
 
     def test_friday_network_exists(self, main_config):
         networks = main_config.get("networks", {})

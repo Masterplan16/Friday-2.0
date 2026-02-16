@@ -4,11 +4,11 @@ Tests unitaires pour les rétrogradations automatiques trust levels.
 Story 1.8 - AC2, AC3 : Rétrogradation automatique auto→propose et propose→blocked
 """
 
-import pytest
-from unittest.mock import AsyncMock, MagicMock, mock_open, patch
 from datetime import datetime, timedelta
-import yaml
+from unittest.mock import AsyncMock, MagicMock, mock_open, patch
 
+import pytest
+import yaml
 from services.metrics.nightly import MetricsAggregator
 
 
@@ -87,7 +87,9 @@ class TestApplyRetrogradations:
             with patch("yaml.safe_load", return_value=mock_trust_config):
                 with patch("yaml.dump") as mock_yaml_dump:
                     with patch.object(
-                        metrics_aggregator, "load_current_trust_levels", return_value=mock_trust_config
+                        metrics_aggregator,
+                        "load_current_trust_levels",
+                        return_value=mock_trust_config,
                     ):
                         # Action : Appliquer rétrogradations
                         await metrics_aggregator.apply_retrogradations(retrogradations)
@@ -126,7 +128,10 @@ class TestApplyRetrogradations:
 
                     # Vérification : capture stdout pour voir les logs structlog
                     captured = capsys.readouterr()
-                    assert "Trust level retrogradé" in captured.out or "Trust level retrograd" in captured.out
+                    assert (
+                        "Trust level retrogradé" in captured.out
+                        or "Trust level retrograd" in captured.out
+                    )
 
     @pytest.mark.asyncio
     async def test_apply_retrogradations_multiple(self, metrics_aggregator, mock_trust_config):

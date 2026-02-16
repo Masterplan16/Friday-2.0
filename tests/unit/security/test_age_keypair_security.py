@@ -6,8 +6,9 @@ Story 1.12 - Task 1.2: Vérifier que la clé privée age n'est JAMAIS commitée.
 
 import os
 import subprocess
-import pytest
 from pathlib import Path
+
+import pytest
 
 
 @pytest.mark.unit
@@ -28,14 +29,19 @@ def test_age_private_key_not_in_repo():
     for pattern in private_key_patterns:
         # Rechercher dans fichiers trackés (exclure docs, tests, .gitignore où c'est légitime)
         result = subprocess.run(
-            ["git", "grep", "-i", pattern,
-             ":(exclude).gitignore",
-             ":(exclude)docs/",
-             ":(exclude)tests/",
-             ":(exclude)_bmad-output/"],
+            [
+                "git",
+                "grep",
+                "-i",
+                pattern,
+                ":(exclude).gitignore",
+                ":(exclude)docs/",
+                ":(exclude)tests/",
+                ":(exclude)_bmad-output/",
+            ],
             cwd=repo_root,
             capture_output=True,
-            text=True
+            text=True,
         )
 
         # La commande doit échouer (exit code 1 = aucun match trouvé)
@@ -63,7 +69,7 @@ def test_age_private_key_not_in_env_files():
 
     for env_file in env_files:
         # Ignorer fichiers binaires ou chiffrés SOPS
-        if env_file.suffix in ['.enc', '.age']:
+        if env_file.suffix in [".enc", ".age"]:
             # Fichier chiffré, on ne peut pas le lire directement
             # Vérifier via git grep sur le fichier avant chiffrement
             continue
@@ -101,14 +107,12 @@ def test_age_public_key_format_valid():
 
             # Vérifier format
             assert public_key.startswith("age1"), (
-                f"Invalid AGE_PUBLIC_KEY format: {public_key}\n"
-                f"Expected: age1<base64>"
+                f"Invalid AGE_PUBLIC_KEY format: {public_key}\n" f"Expected: age1<base64>"
             )
 
             # Longueur attendue : age1 (4 chars) + 58-62 chars base64
             assert 60 <= len(public_key) <= 70, (
-                f"Invalid AGE_PUBLIC_KEY length: {len(public_key)}\n"
-                f"Expected: 60-70 characters"
+                f"Invalid AGE_PUBLIC_KEY length: {len(public_key)}\n" f"Expected: 60-70 characters"
             )
 
             break

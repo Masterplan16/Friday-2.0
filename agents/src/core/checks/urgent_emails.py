@@ -30,22 +30,26 @@ async def check_urgent_emails(db_pool: asyncpg.Pool) -> CheckResult:
     try:
         async with db_pool.acquire() as conn:
             # Query emails urgents non lus
-            urgent_count = await conn.fetchval("""
+            urgent_count = await conn.fetchval(
+                """
                 SELECT COUNT(*)
                 FROM ingestion.emails
                 WHERE priority = 'urgent'
                   AND read = false
-                """)
+                """
+            )
 
             # Query détails pour message
-            urgent_emails = await conn.fetch("""
+            urgent_emails = await conn.fetch(
+                """
                 SELECT sender, subject
                 FROM ingestion.emails
                 WHERE priority = 'urgent'
                   AND read = false
                 ORDER BY received_at DESC
                 LIMIT 3
-                """)
+                """
+            )
 
         if urgent_count == 0:
             # Silence = bon comportement (AC4)

@@ -4,16 +4,17 @@ Tests unitaires pour notifications email draft reply
 Story 2.6 - Task 1.3 : Tests notifications confirmation/échec envoi email
 """
 
-import pytest
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
-from telegram import Bot
+
+import pytest
 
 # Import des fonctions à tester (PYTHONPATH setup in conftest.py)
 from bot.handlers.draft_reply_notifications import (
     send_email_confirmation_notification,
-    send_email_failure_notification
+    send_email_failure_notification,
 )
+from telegram import Bot
 
 
 @pytest.fixture
@@ -36,6 +37,7 @@ def env_vars(monkeypatch):
 # TEST 1 : Notification confirmation envoyée dans topic Email
 # =============================================================================
 
+
 @pytest.mark.asyncio
 async def test_confirmation_notification_sent_to_email_topic(mock_bot, env_vars):
     """
@@ -57,7 +59,7 @@ async def test_confirmation_notification_sent_to_email_topic(mock_bot, env_vars)
         recipient_anon=recipient_anon,
         subject_anon=subject_anon,
         account_name=account_name,
-        sent_at=sent_at
+        sent_at=sent_at,
     )
 
     # Assert
@@ -82,6 +84,7 @@ async def test_confirmation_notification_sent_to_email_topic(mock_bot, env_vars)
 # TEST 2 : Anonymisation recipient + subject dans notification
 # =============================================================================
 
+
 @pytest.mark.asyncio
 async def test_confirmation_notification_contains_anonymized_data(mock_bot, env_vars):
     """
@@ -100,7 +103,7 @@ async def test_confirmation_notification_contains_anonymized_data(mock_bot, env_
         recipient_anon=recipient_anon,
         subject_anon=subject_anon,
         account_name="medical",
-        sent_at=datetime.now()
+        sent_at=datetime.now(),
     )
 
     # Assert
@@ -120,6 +123,7 @@ async def test_confirmation_notification_contains_anonymized_data(mock_bot, env_
 # TEST 3 : Inline button callback correct
 # =============================================================================
 
+
 @pytest.mark.asyncio
 async def test_confirmation_notification_has_journal_button(mock_bot, env_vars):
     """
@@ -137,7 +141,7 @@ async def test_confirmation_notification_has_journal_button(mock_bot, env_vars):
         recipient_anon="[NAME_1]@[DOMAIN_1]",
         subject_anon="Test",
         account_name="personal",
-        sent_at=datetime.now()
+        sent_at=datetime.now(),
     )
 
     # Assert
@@ -157,6 +161,7 @@ async def test_confirmation_notification_has_journal_button(mock_bot, env_vars):
 # TEST 4 : Échec notification ne bloque pas workflow
 # =============================================================================
 
+
 @pytest.mark.asyncio
 async def test_confirmation_notification_failure_does_not_raise(mock_bot, env_vars, caplog):
     """
@@ -175,7 +180,7 @@ async def test_confirmation_notification_failure_does_not_raise(mock_bot, env_va
             recipient_anon="[NAME_1]@[DOMAIN_1]",
             subject_anon="Test",
             account_name="professional",
-            sent_at=datetime.now()
+            sent_at=datetime.now(),
         )
         # Si on arrive ici, c'est bon (pas de raise)
         success = True
@@ -192,6 +197,7 @@ async def test_confirmation_notification_failure_does_not_raise(mock_bot, env_va
 # =============================================================================
 # TEST 5 : Notification échec EmailEngine dans topic System
 # =============================================================================
+
 
 @pytest.mark.asyncio
 async def test_failure_notification_sent_to_system_topic(mock_bot, env_vars):
@@ -210,7 +216,7 @@ async def test_failure_notification_sent_to_system_topic(mock_bot, env_vars):
         bot=mock_bot,
         receipt_id=receipt_id,
         error_message=error_message,
-        recipient_anon=recipient_anon
+        recipient_anon=recipient_anon,
     )
 
     # Assert
@@ -233,6 +239,7 @@ async def test_failure_notification_sent_to_system_topic(mock_bot, env_vars):
 # TEST BONUS : Format message complet AC3
 # =============================================================================
 
+
 @pytest.mark.asyncio
 async def test_confirmation_notification_format_matches_ac3(mock_bot, env_vars):
     """
@@ -250,7 +257,7 @@ async def test_confirmation_notification_format_matches_ac3(mock_bot, env_vars):
         recipient_anon="[NAME_99]@[DOMAIN_55]",
         subject_anon="Re: [SUBJECT_88]",
         account_name="academic",
-        sent_at=sent_at
+        sent_at=sent_at,
     )
 
     # Assert

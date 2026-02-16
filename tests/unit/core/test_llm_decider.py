@@ -4,21 +4,17 @@ Tests unitaires pour LLM Décideur (Story 4.1 Task 4)
 RED PHASE : Tests écrits AVANT l'implémentation (TDD)
 """
 
-import pytest
 from datetime import datetime, timezone
-from unittest.mock import AsyncMock, patch, Mock
+from unittest.mock import AsyncMock, Mock, patch
 
+import pytest
+from agents.src.core.heartbeat_models import Check, CheckPriority, HeartbeatContext
 from agents.src.core.llm_decider import LLMDecider, LLMDecisionResult
-from agents.src.core.heartbeat_models import (
-    HeartbeatContext,
-    Check,
-    CheckPriority
-)
-
 
 # ============================================================================
 # Fixtures
 # ============================================================================
+
 
 @pytest.fixture
 def llm_client_mock():
@@ -48,10 +44,7 @@ def redis_client_mock():
 @pytest.fixture
 def llm_decider(llm_client_mock, redis_client_mock):
     """Fixture LLMDecider avec mocks."""
-    return LLMDecider(
-        llm_client=llm_client_mock,
-        redis_client=redis_client_mock
-    )
+    return LLMDecider(llm_client=llm_client_mock, redis_client=redis_client_mock)
 
 
 @pytest.fixture
@@ -66,9 +59,9 @@ def sample_context():
         next_calendar_event={
             "title": "Consultation",
             "start_time": "2026-02-17T15:00:00Z",
-            "casquette": "medecin"
+            "casquette": "medecin",
         },
-        last_activity_mainteneur=datetime(2026, 2, 17, 14, 0, tzinfo=timezone.utc)
+        last_activity_mainteneur=datetime(2026, 2, 17, 14, 0, tzinfo=timezone.utc),
     )
 
 
@@ -80,32 +73,33 @@ def sample_checks():
             check_id="check_urgent_emails",
             priority=CheckPriority.HIGH,
             description="Emails urgents non lus",
-            execute_fn=AsyncMock()
+            execute_fn=AsyncMock(),
         ),
         Check(
             check_id="check_financial_alerts",
             priority=CheckPriority.MEDIUM,
             description="Échéances cotisations <7j",
-            execute_fn=AsyncMock()
+            execute_fn=AsyncMock(),
         ),
         Check(
             check_id="check_thesis_reminders",
             priority=CheckPriority.LOW,
             description="Relances thésards",
-            execute_fn=AsyncMock()
+            execute_fn=AsyncMock(),
         ),
         Check(
             check_id="check_warranty_expiry",
             priority=CheckPriority.CRITICAL,
             description="Garanties expirant <7j",
-            execute_fn=AsyncMock()
-        )
+            execute_fn=AsyncMock(),
+        ),
     ]
 
 
 # ============================================================================
 # Tests Task 4.1-4.2: Prompt LLM Décideur
 # ============================================================================
+
 
 @pytest.mark.asyncio
 async def test_llm_decider_init(llm_decider):
@@ -129,10 +123,7 @@ async def test_decide_checks_returns_valid_structure(llm_decider, sample_context
 
 @pytest.mark.asyncio
 async def test_decide_checks_calls_llm_with_correct_prompt(
-    llm_decider,
-    llm_client_mock,
-    sample_context,
-    sample_checks
+    llm_decider, llm_client_mock, sample_context, sample_checks
 ):
     """Test 3: LLM appelé avec prompt correct."""
     await llm_decider.decide_checks(sample_context, sample_checks)
@@ -166,16 +157,15 @@ async def test_decide_checks_silence_by_default(llm_decider, sample_context, sam
 
 @pytest.mark.asyncio
 async def test_decide_checks_selects_checks_when_pertinent(
-    llm_decider,
-    llm_client_mock,
-    sample_context,
-    sample_checks
+    llm_decider, llm_client_mock, sample_context, sample_checks
 ):
     """Test 5: LLM sélectionne checks pertinents selon contexte."""
     # Simuler réponse LLM avec 2 checks sélectionnés
     response_mock = Mock()
     response_mock.content = [
-        Mock(text='{"checks_to_run": ["check_urgent_emails", "check_financial_alerts"], "reasoning": "Casquette médecin + événement proche"}')
+        Mock(
+            text='{"checks_to_run": ["check_urgent_emails", "check_financial_alerts"], "reasoning": "Casquette médecin + événement proche"}'
+        )
     ]
     llm_client_mock.messages.create = AsyncMock(return_value=response_mock)
 
@@ -188,10 +178,7 @@ async def test_decide_checks_selects_checks_when_pertinent(
 
 @pytest.mark.asyncio
 async def test_decide_checks_includes_context_details_in_prompt(
-    llm_decider,
-    llm_client_mock,
-    sample_context,
-    sample_checks
+    llm_decider, llm_client_mock, sample_context, sample_checks
 ):
     """Test 6: Prompt inclut détails contexte (heure, casquette, événement)."""
     await llm_decider.decide_checks(sample_context, sample_checks)
@@ -210,12 +197,10 @@ async def test_decide_checks_includes_context_details_in_prompt(
 # Tests Task 4.3: Fallback si LLM crash
 # ============================================================================
 
+
 @pytest.mark.asyncio
 async def test_fallback_on_llm_error_returns_high_checks(
-    llm_decider,
-    llm_client_mock,
-    sample_context,
-    sample_checks
+    llm_decider, llm_client_mock, sample_context, sample_checks
 ):
     """Test 7: Si LLM crash → fallback HIGH checks."""
     # Simuler erreur LLM
@@ -230,15 +215,12 @@ async def test_fallback_on_llm_error_returns_high_checks(
 
 @pytest.mark.asyncio
 async def test_fallback_on_invalid_json_response(
-    llm_decider,
-    llm_client_mock,
-    sample_context,
-    sample_checks
+    llm_decider, llm_client_mock, sample_context, sample_checks
 ):
     """Test 8: Si LLM retourne JSON invalide → fallback HIGH checks."""
     # Simuler réponse JSON invalide
     response_mock = Mock()
-    response_mock.content = [Mock(text='INVALID JSON {{{')]
+    response_mock.content = [Mock(text="INVALID JSON {{{")]
     llm_client_mock.messages.create = AsyncMock(return_value=response_mock)
 
     result = await llm_decider.decide_checks(sample_context, sample_checks)
@@ -250,10 +232,7 @@ async def test_fallback_on_invalid_json_response(
 
 @pytest.mark.asyncio
 async def test_fallback_includes_critical_checks(
-    llm_decider,
-    llm_client_mock,
-    sample_context,
-    sample_checks
+    llm_decider, llm_client_mock, sample_context, sample_checks
 ):
     """Test 9: Fallback inclut aussi CRITICAL checks."""
     llm_client_mock.messages.create.side_effect = Exception("LLM error")
@@ -269,13 +248,10 @@ async def test_fallback_includes_critical_checks(
 # Tests Task 4.4: Circuit Breaker
 # ============================================================================
 
+
 @pytest.mark.asyncio
 async def test_circuit_breaker_after_3_failures(
-    llm_decider,
-    llm_client_mock,
-    redis_client_mock,
-    sample_context,
-    sample_checks
+    llm_decider, llm_client_mock, redis_client_mock, sample_context, sample_checks
 ):
     """Test 10: 3 échecs consécutifs → circuit breaker 1h."""
     # Simuler 3 échecs LLM
@@ -291,10 +267,7 @@ async def test_circuit_breaker_after_3_failures(
 
 @pytest.mark.asyncio
 async def test_circuit_breaker_open_uses_fallback(
-    llm_decider,
-    redis_client_mock,
-    sample_context,
-    sample_checks
+    llm_decider, redis_client_mock, sample_context, sample_checks
 ):
     """Test 11: Circuit breaker ouvert → fallback sans appeler LLM."""
     # Simuler circuit breaker ouvert (3 échecs)
@@ -304,23 +277,22 @@ async def test_circuit_breaker_open_uses_fallback(
 
     # Vérifier fallback utilisé (HIGH checks)
     assert "check_urgent_emails" in result["checks_to_run"]
-    assert "circuit breaker" in result["reasoning"].lower() or "fallback" in result["reasoning"].lower()
+    assert (
+        "circuit breaker" in result["reasoning"].lower()
+        or "fallback" in result["reasoning"].lower()
+    )
 
 
 @pytest.mark.asyncio
 async def test_circuit_breaker_resets_after_success(
-    llm_decider,
-    llm_client_mock,
-    redis_client_mock,
-    sample_context,
-    sample_checks
+    llm_decider, llm_client_mock, redis_client_mock, sample_context, sample_checks
 ):
     """Test 12: Succès LLM → reset compteur failures."""
     # Simuler 2 échecs puis 1 succès
     llm_client_mock.messages.create.side_effect = [
         Exception("Error 1"),
         Exception("Error 2"),
-        Mock(content=[Mock(text='{"checks_to_run": [], "reasoning": "Success"}')])
+        Mock(content=[Mock(text='{"checks_to_run": [], "reasoning": "Success"}')]),
     ]
 
     # 2 échecs
@@ -338,6 +310,7 @@ async def test_circuit_breaker_resets_after_success(
 # Tests Edge Cases
 # ============================================================================
 
+
 @pytest.mark.asyncio
 async def test_decide_checks_empty_checks_list(llm_decider, sample_context):
     """Test 13: Liste checks vide → retourne []."""
@@ -348,16 +321,15 @@ async def test_decide_checks_empty_checks_list(llm_decider, sample_context):
 
 @pytest.mark.asyncio
 async def test_decide_checks_validates_check_ids(
-    llm_decider,
-    llm_client_mock,
-    sample_context,
-    sample_checks
+    llm_decider, llm_client_mock, sample_context, sample_checks
 ):
     """Test 14: IDs checks invalides filtrés."""
     # Simuler LLM retourne check ID inexistant
     response_mock = Mock()
     response_mock.content = [
-        Mock(text='{"checks_to_run": ["check_invalid", "check_urgent_emails"], "reasoning": "Test"}')
+        Mock(
+            text='{"checks_to_run": ["check_invalid", "check_urgent_emails"], "reasoning": "Test"}'
+        )
     ]
     llm_client_mock.messages.create = AsyncMock(return_value=response_mock)
 
@@ -372,10 +344,7 @@ async def test_decide_checks_validates_check_ids(
 
 @pytest.mark.asyncio
 async def test_decide_checks_timeout_handling(
-    llm_decider,
-    llm_client_mock,
-    sample_context,
-    sample_checks
+    llm_decider, llm_client_mock, sample_context, sample_checks
 ):
     """Test 15: Timeout LLM → fallback."""
     import asyncio

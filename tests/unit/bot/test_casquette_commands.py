@@ -12,19 +12,19 @@ Tests:
 - Unicode emojis rendering
 """
 
-import pytest
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
-from telegram import Update, Message, User, Chat, InlineKeyboardMarkup
 
-from bot.handlers.casquette_commands import handle_casquette_command
+import pytest
+from agents.src.core.models import Casquette, ContextSource, UserContext
 from bot.handlers.casquette_callbacks import handle_casquette_button
-from agents.src.core.models import UserContext, ContextSource, Casquette
-
+from bot.handlers.casquette_commands import handle_casquette_command
+from telegram import Chat, InlineKeyboardMarkup, Message, Update, User
 
 # ============================================================================
 # Fixtures
 # ============================================================================
+
 
 @pytest.fixture
 def mock_update():
@@ -54,16 +54,14 @@ def mock_context():
     """Mock Telegram Context avec db_pool et redis_client."""
     context = MagicMock()
     context.args = []
-    context.bot_data = {
-        "db_pool": AsyncMock(),
-        "redis_client": AsyncMock()
-    }
+    context.bot_data = {"db_pool": AsyncMock(), "redis_client": AsyncMock()}
     return context
 
 
 # ============================================================================
 # Tests Commande /casquette
 # ============================================================================
+
 
 @pytest.mark.asyncio
 async def test_casquette_command_display(mock_update, mock_context):
@@ -73,21 +71,25 @@ async def test_casquette_command_display(mock_update, mock_context):
         mock_cm = MockContextManager.return_value
 
         # Mock get_current_context → médecin (source=event)
-        mock_cm.get_current_context = AsyncMock(return_value=UserContext(
-            casquette=Casquette.MEDECIN,
-            source=ContextSource.EVENT,
-            updated_at=datetime.now(),
-            updated_by="system"
-        ))
+        mock_cm.get_current_context = AsyncMock(
+            return_value=UserContext(
+                casquette=Casquette.MEDECIN,
+                source=ContextSource.EVENT,
+                updated_at=datetime.now(),
+                updated_by="system",
+            )
+        )
 
         # Mock get_upcoming_events → 1 événement
         with patch("bot.handlers.casquette_commands._get_upcoming_events") as mock_events:
-            mock_events.return_value = [{
-                "casquette": Casquette.ENSEIGNANT,
-                "title": "Cours L2 Anatomie",
-                "start_time": "14h00",
-                "end_time": "16h00"
-            }]
+            mock_events.return_value = [
+                {
+                    "casquette": Casquette.ENSEIGNANT,
+                    "title": "Cours L2 Anatomie",
+                    "start_time": "14h00",
+                    "end_time": "16h00",
+                }
+            ]
 
             # Appeler handler
             await handle_casquette_command(mock_update, mock_context)
@@ -120,12 +122,14 @@ async def test_casquette_command_set_medecin(mock_update, mock_context):
         mock_cm = MockContextManager.return_value
 
         # Mock set_context
-        mock_cm.set_context = AsyncMock(return_value=UserContext(
-            casquette=Casquette.MEDECIN,
-            source=ContextSource.MANUAL,
-            updated_at=datetime.now(),
-            updated_by="manual"
-        ))
+        mock_cm.set_context = AsyncMock(
+            return_value=UserContext(
+                casquette=Casquette.MEDECIN,
+                source=ContextSource.MANUAL,
+                updated_at=datetime.now(),
+                updated_by="manual",
+            )
+        )
 
         # Appeler handler
         await handle_casquette_command(mock_update, mock_context)
@@ -151,12 +155,14 @@ async def test_casquette_command_set_auto(mock_update, mock_context):
         mock_cm = MockContextManager.return_value
 
         # Mock set_context (casquette=None)
-        mock_cm.set_context = AsyncMock(return_value=UserContext(
-            casquette=None,
-            source=ContextSource.DEFAULT,
-            updated_at=datetime.now(),
-            updated_by="system"
-        ))
+        mock_cm.set_context = AsyncMock(
+            return_value=UserContext(
+                casquette=None,
+                source=ContextSource.DEFAULT,
+                updated_at=datetime.now(),
+                updated_by="system",
+            )
+        )
 
         # Appeler handler
         await handle_casquette_command(mock_update, mock_context)
@@ -200,6 +206,7 @@ async def test_casquette_command_invalid_argument(mock_update, mock_context):
 # Tests Callbacks Inline Buttons
 # ============================================================================
 
+
 @pytest.mark.asyncio
 async def test_casquette_button_click_enseignant(mock_callback_query, mock_context):
     """Test AC2: Clic inline button [Enseignant]."""
@@ -211,12 +218,14 @@ async def test_casquette_button_click_enseignant(mock_callback_query, mock_conte
         mock_cm = MockContextManager.return_value
 
         # Mock set_context
-        mock_cm.set_context = AsyncMock(return_value=UserContext(
-            casquette=Casquette.ENSEIGNANT,
-            source=ContextSource.MANUAL,
-            updated_at=datetime.now(),
-            updated_by="manual"
-        ))
+        mock_cm.set_context = AsyncMock(
+            return_value=UserContext(
+                casquette=Casquette.ENSEIGNANT,
+                source=ContextSource.MANUAL,
+                updated_at=datetime.now(),
+                updated_by="manual",
+            )
+        )
 
         # Appeler callback handler
         await handle_casquette_button(mock_callback_query, mock_context)
@@ -260,6 +269,7 @@ async def test_casquette_button_click_auto(mock_callback_query, mock_context):
 # Tests Unicode Emojis
 # ============================================================================
 
+
 @pytest.mark.asyncio
 async def test_casquette_emojis_rendering(mock_update, mock_context):
     """Test AC2: Unicode emojis rendering correct."""
@@ -270,12 +280,14 @@ async def test_casquette_emojis_rendering(mock_update, mock_context):
         mock_cm = MockContextManager.return_value
 
         # Mock get_current_context
-        mock_cm.get_current_context = AsyncMock(return_value=UserContext(
-            casquette=Casquette.CHERCHEUR,
-            source=ContextSource.MANUAL,
-            updated_at=datetime.now(),
-            updated_by="manual"
-        ))
+        mock_cm.get_current_context = AsyncMock(
+            return_value=UserContext(
+                casquette=Casquette.CHERCHEUR,
+                source=ContextSource.MANUAL,
+                updated_at=datetime.now(),
+                updated_by="manual",
+            )
+        )
 
         # Mock get_upcoming_events
         with patch("bot.handlers.casquette_commands._get_upcoming_events") as mock_events:
@@ -291,11 +303,7 @@ async def test_casquette_emojis_rendering(mock_update, mock_context):
 
     # Vérifier inline buttons ont emojis
     reply_markup = mock_update.message.reply_text.call_args[1]["reply_markup"]
-    button_texts = [
-        button.text
-        for row in reply_markup.inline_keyboard
-        for button in row
-    ]
+    button_texts = [button.text for row in reply_markup.inline_keyboard for button in row]
     assert any("🩺" in text for text in button_texts)  # Médecin
     assert any("🎓" in text for text in button_texts)  # Enseignant
     assert any("🔬" in text for text in button_texts)  # Chercheur
@@ -305,6 +313,7 @@ async def test_casquette_emojis_rendering(mock_update, mock_context):
 # ============================================================================
 # Tests Edge Cases
 # ============================================================================
+
 
 @pytest.mark.asyncio
 async def test_casquette_command_no_upcoming_events(mock_update, mock_context):
@@ -316,12 +325,14 @@ async def test_casquette_command_no_upcoming_events(mock_update, mock_context):
         mock_cm = MockContextManager.return_value
 
         # Mock get_current_context
-        mock_cm.get_current_context = AsyncMock(return_value=UserContext(
-            casquette=None,
-            source=ContextSource.DEFAULT,
-            updated_at=datetime.now(),
-            updated_by="system"
-        ))
+        mock_cm.get_current_context = AsyncMock(
+            return_value=UserContext(
+                casquette=None,
+                source=ContextSource.DEFAULT,
+                updated_at=datetime.now(),
+                updated_by="system",
+            )
+        )
 
         # Mock get_upcoming_events → []
         with patch("bot.handlers.casquette_commands._get_upcoming_events") as mock_events:

@@ -12,17 +12,17 @@ Tests unitaires pour watchdog_handler.py (Story 3.5 - Task 6.2).
 - Stabilisation (stable + deleted)
 - Move to error dir (AC5) + pipeline error publish
 """
+
 import asyncio
 from datetime import datetime, timezone
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch, PropertyMock
+from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
 
 import pytest
-
 from agents.src.agents.archiviste.watchdog_handler import (
     DOCUMENT_RECEIVED_STREAM,
-    FridayWatchdogHandler,
     MAX_RETRIES,
+    FridayWatchdogHandler,
 )
 
 
@@ -180,7 +180,9 @@ class TestFridayWatchdogHandler:
         )
 
         # Patcher asyncio.sleep pour accelerer le test
-        with patch("agents.src.agents.archiviste.watchdog_handler.asyncio.sleep", new_callable=AsyncMock):
+        with patch(
+            "agents.src.agents.archiviste.watchdog_handler.asyncio.sleep", new_callable=AsyncMock
+        ):
             await handler._publish_with_retry(test_file)
 
         assert mock_redis.xadd.call_count == 3
@@ -189,9 +191,7 @@ class TestFridayWatchdogHandler:
     async def test_handler_retry_exhausted_raises(self, tmp_path):
         """Toutes tentatives echouees leve exception."""
         mock_redis = AsyncMock()
-        mock_redis.xadd = AsyncMock(
-            side_effect=ConnectionError("Redis permanently down")
-        )
+        mock_redis.xadd = AsyncMock(side_effect=ConnectionError("Redis permanently down"))
 
         test_file = tmp_path / "doc.pdf"
         test_file.write_bytes(b"content")
@@ -206,7 +206,9 @@ class TestFridayWatchdogHandler:
             stabilization_delay=0,
         )
 
-        with patch("agents.src.agents.archiviste.watchdog_handler.asyncio.sleep", new_callable=AsyncMock):
+        with patch(
+            "agents.src.agents.archiviste.watchdog_handler.asyncio.sleep", new_callable=AsyncMock
+        ):
             with pytest.raises(ConnectionError, match="permanently down"):
                 await handler._publish_with_retry(test_file)
 
@@ -374,6 +376,7 @@ class TestFridayWatchdogHandler:
         assert not test_file.exists()
         # Fichier dans error_dir/{date}/
         from datetime import date
+
         today = date.today().isoformat()
         moved = error_dir / today / "failed.pdf"
         assert moved.exists()

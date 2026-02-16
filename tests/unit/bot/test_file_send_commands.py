@@ -17,8 +17,7 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from telegram import Update, Message, User, Chat
-
+from telegram import Chat, Message, Update, User
 
 # ============================================================================
 # Fixtures
@@ -69,13 +68,15 @@ async def test_detect_intent_envoie_moi():
 
     # Mock Claude response (JSON avec intention détectée)
     mock_llm_response = MagicMock()
-    mock_llm_response.content = json.dumps({
-        "has_intent": True,
-        "query": "facture plombier",
-        "doc_type": "facture",
-        "keywords": ["facture", "plombier"],
-        "confidence": 0.95,
-    })
+    mock_llm_response.content = json.dumps(
+        {
+            "has_intent": True,
+            "query": "facture plombier",
+            "doc_type": "facture",
+            "keywords": ["facture", "plombier"],
+            "confidence": 0.95,
+        }
+    )
 
     with patch("bot.handlers.file_send_commands.ClaudeAdapter") as MockClaude:
         mock_claude = MockClaude.return_value
@@ -109,13 +110,15 @@ async def test_detect_intent_je_veux():
     from bot.handlers.file_send_commands import detect_file_request_intent
 
     mock_llm_response = MagicMock()
-    mock_llm_response.content = json.dumps({
-        "has_intent": True,
-        "query": "contrat SELARL",
-        "doc_type": "contrat",
-        "keywords": ["contrat", "SELARL"],
-        "confidence": 0.92,
-    })
+    mock_llm_response.content = json.dumps(
+        {
+            "has_intent": True,
+            "query": "contrat SELARL",
+            "doc_type": "contrat",
+            "keywords": ["contrat", "SELARL"],
+            "confidence": 0.92,
+        }
+    )
 
     with patch("bot.handlers.file_send_commands.ClaudeAdapter") as MockClaude:
         mock_claude = MockClaude.return_value
@@ -144,10 +147,12 @@ async def test_detect_intent_no_match():
     from bot.handlers.file_send_commands import detect_file_request_intent
 
     mock_llm_response = MagicMock()
-    mock_llm_response.content = json.dumps({
-        "has_intent": False,
-        "confidence": 0.1,
-    })
+    mock_llm_response.content = json.dumps(
+        {
+            "has_intent": False,
+            "confidence": 0.1,
+        }
+    )
 
     with patch("bot.handlers.file_send_commands.ClaudeAdapter") as MockClaude:
         mock_claude = MockClaude.return_value
@@ -172,7 +177,7 @@ async def test_search_file_found_high_similarity():
     - JOIN avec document_metadata
     - Résultat retourné avec metadata complète
     """
-    from bot.handlers.file_send_commands import search_documents_semantic, DocumentSearchResult
+    from bot.handlers.file_send_commands import DocumentSearchResult, search_documents_semantic
 
     # Mock DATABASE_URL environment variable
     with patch("os.getenv") as mock_getenv:
@@ -184,7 +189,9 @@ async def test_search_file_found_high_similarity():
             mock_voyage.embed_query = AsyncMock(return_value=[0.1] * 1024)  # Mock embedding
 
             # Mock vectorstore search
-            with patch("bot.handlers.file_send_commands.get_vectorstore_adapter") as MockVectorstore:
+            with patch(
+                "bot.handlers.file_send_commands.get_vectorstore_adapter"
+            ) as MockVectorstore:
                 mock_vectorstore = AsyncMock()
                 MockVectorstore.return_value = mock_vectorstore
 
@@ -249,7 +256,9 @@ async def test_search_file_not_found():
             mock_voyage = MockVoyage.return_value
             mock_voyage.embed_query = AsyncMock(return_value=[0.1] * 1024)
 
-            with patch("bot.handlers.file_send_commands.get_vectorstore_adapter") as MockVectorstore:
+            with patch(
+                "bot.handlers.file_send_commands.get_vectorstore_adapter"
+            ) as MockVectorstore:
                 mock_vectorstore = AsyncMock()
                 MockVectorstore.return_value = mock_vectorstore
 
@@ -409,7 +418,9 @@ async def test_send_file_not_on_vps(mock_update, mock_context):
         with patch("bot.handlers.file_send_commands.search_documents_semantic") as MockSearch:
             mock_result = MagicMock()
             mock_result.filename = "Contrat_SELARL.pdf"
-            mock_result.file_path = r"C:\Users\lopez\BeeStation\Friday\Archives\pro\Contrat_SELARL.pdf"
+            mock_result.file_path = (
+                r"C:\Users\lopez\BeeStation\Friday\Archives\pro\Contrat_SELARL.pdf"
+            )
             mock_result.similarity = 0.90
             mock_result.doc_type = "contrat"
             mock_result.emitter = "SELARL Cabinet"

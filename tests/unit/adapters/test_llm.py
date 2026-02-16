@@ -11,18 +11,12 @@ RÈGLES:
 Date: 2026-02-10
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from anthropic.types import Message, Usage, TextBlock, ContentBlock
 
-from agents.src.adapters.llm import (
-    ClaudeAdapter,
-    get_llm_adapter,
-    LLMResponse,
-    LLMError,
-)
+import pytest
+from agents.src.adapters.llm import ClaudeAdapter, LLMError, LLMResponse, get_llm_adapter
 from agents.src.tools.anonymize import AnonymizationError, AnonymizationResult
-
+from anthropic.types import ContentBlock, Message, TextBlock, Usage
 
 # ============================================================================
 # FIXTURES
@@ -132,9 +126,7 @@ async def test_complete_with_anonymization_success(
             assert response.usage["output_tokens"] == 50
 
             # Vérifier que l'anonymisation a été appelée
-            mock_anon.assert_called_once_with(
-                "Email de Dr Dupont à Clinique Saint-Jean"
-            )
+            mock_anon.assert_called_once_with("Email de Dr Dupont à Clinique Saint-Jean")
 
             # Vérifier que Claude a reçu le texte anonymisé
             call_args = mock_anthropic_client.messages.create.call_args
@@ -177,9 +169,7 @@ async def test_complete_with_anonymization_presidio_down(mock_anthropic_client):
 
         # Doit lever une erreur, pas de fallback silencieux
         with pytest.raises(AnonymizationError, match="Presidio service unavailable"):
-            await adapter.complete_with_anonymization(
-                prompt="Analyse", context="Email avec PII"
-            )
+            await adapter.complete_with_anonymization(prompt="Analyse", context="Email avec PII")
 
         # Claude ne doit PAS avoir été appelé
         mock_anthropic_client.messages.create.assert_not_called()

@@ -14,7 +14,6 @@ from unittest.mock import AsyncMock, MagicMock, Mock, patch
 from uuid import uuid4
 
 import pytest
-
 from agents.src.middleware.models import ActionResult, CorrectionRule
 from agents.src.middleware.trust import (
     TrustManager,
@@ -23,7 +22,6 @@ from agents.src.middleware.trust import (
     init_trust_manager,
 )
 from tests.conftest import create_mock_pool_with_conn
-
 
 # ==========================================
 # Fixtures

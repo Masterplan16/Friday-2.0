@@ -24,9 +24,7 @@ import structlog
 from structlog.types import EventDict, WrappedLogger
 
 
-def add_app_context(
-    logger: WrappedLogger, method_name: str, event_dict: EventDict
-) -> EventDict:
+def add_app_context(logger: WrappedLogger, method_name: str, event_dict: EventDict) -> EventDict:
     """
     Ajoute contexte applicatif à chaque log.
 

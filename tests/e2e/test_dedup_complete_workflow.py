@@ -10,7 +10,6 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-
 from agents.src.agents.dedup.deleter import SafeDeleter
 from agents.src.agents.dedup.models import ScanConfig
 from agents.src.agents.dedup.priority_engine import PriorityEngine
@@ -144,9 +143,9 @@ async def test_complete_dedup_workflow(tmp_path):
 
     # BeeStation file should NOT be in deleted list
     for deleted_path in deleted_files:
-        assert "BeeStation" not in deleted_path, (
-            f"BeeStation keeper incorrectly deleted: {deleted_path}"
-        )
+        assert (
+            "BeeStation" not in deleted_path
+        ), f"BeeStation keeper incorrectly deleted: {deleted_path}"
 
     # Verify keeper files would still exist (send2trash was mocked)
     bee_photo = tmp_path / "BeeStation" / "Friday" / "Archives" / "Photos" / "vacation_paris.jpg"

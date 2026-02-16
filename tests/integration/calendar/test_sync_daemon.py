@@ -7,7 +7,6 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 import redis.asyncio as aioredis
-
 from services.calendar_sync.worker import CalendarSyncWorker
 
 
@@ -46,9 +45,7 @@ def mock_config():
         "google_calendar": {
             "enabled": True,
             "sync_interval_minutes": 30,
-            "calendars": [
-                {"id": "primary", "name": "Test Calendar", "casquette": "medecin"}
-            ],
+            "calendars": [{"id": "primary", "name": "Test Calendar", "casquette": "medecin"}],
         }
     }
 
@@ -92,9 +89,7 @@ class TestCalendarSyncWorker:
         assert expected_interval == 1800
 
     @pytest.mark.asyncio
-    async def test_healthcheck_redis_key_updated(
-        self, mock_redis, mock_sync_manager, mock_config
-    ):
+    async def test_healthcheck_redis_key_updated(self, mock_redis, mock_sync_manager, mock_config):
         """Test healthcheck : Redis key calendar:last_sync (TTL 1h)."""
         # Arrange
         worker = CalendarSyncWorker(
@@ -128,9 +123,7 @@ class TestCalendarSyncWorker:
         """Test alerte System si sync échoue 3x consécutives."""
         # Arrange
         # Make sync_bidirectional fail
-        mock_sync_manager.sync_bidirectional.side_effect = Exception(
-            "Google Calendar API error"
-        )
+        mock_sync_manager.sync_bidirectional.side_effect = Exception("Google Calendar API error")
 
         # Configure Redis incr to return 1, 2, 3 (incremental counter)
         mock_redis.incr.side_effect = [1, 2, 3]
@@ -158,9 +151,7 @@ class TestCalendarSyncWorker:
 
             # Vérifie que le compteur Redis a été incrémenté 3 fois
             assert mock_redis.incr.call_count == 3
-            assert (
-                mock_redis.incr.call_args[0][0] == "calendar:sync_failures"
-            )  # Last call
+            assert mock_redis.incr.call_args[0][0] == "calendar:sync_failures"  # Last call
 
     @pytest.mark.asyncio
     async def test_sync_success_resets_failure_counter(
@@ -178,9 +169,7 @@ class TestCalendarSyncWorker:
         mock_sync_manager.sync_bidirectional.side_effect = [
             Exception("Error 1"),
             Exception("Error 2"),
-            Mock(
-                events_created=1, events_updated=0, errors=[]
-            ),  # Success on 3rd attempt
+            Mock(events_created=1, events_updated=0, errors=[]),  # Success on 3rd attempt
         ]
 
         with patch("services.calendar_sync.worker.send_telegram_alert"):
@@ -192,9 +181,7 @@ class TestCalendarSyncWorker:
         mock_redis.delete.assert_called_with("calendar:sync_failures")
 
     @pytest.mark.asyncio
-    async def test_graceful_shutdown_on_sigterm(
-        self, mock_redis, mock_sync_manager, mock_config
-    ):
+    async def test_graceful_shutdown_on_sigterm(self, mock_redis, mock_sync_manager, mock_config):
         """Test arrêt gracieux (SIGTERM)."""
         # Arrange
         worker = CalendarSyncWorker(

@@ -4,7 +4,6 @@ import tempfile
 from pathlib import Path
 
 import pytest
-
 from agents.src.integrations.google_calendar.config import (
     CalendarConfig,
     CalendarSettings,
@@ -101,7 +100,7 @@ class TestCalendarConfig:
         """Test loading valid calendar configuration from YAML."""
         # Arrange
         config_file = tmp_path / "calendar_config.yaml"
-        config_file.write_text(valid_calendar_yaml, encoding='utf-8')
+        config_file.write_text(valid_calendar_yaml, encoding="utf-8")
 
         # Act
         config = CalendarConfig.from_yaml(str(config_file))
@@ -121,7 +120,7 @@ class TestCalendarConfig:
         """Test validation of 3 calendars configuration."""
         # Arrange
         config_file = tmp_path / "calendar_config.yaml"
-        config_file.write_text(valid_calendar_yaml, encoding='utf-8')
+        config_file.write_text(valid_calendar_yaml, encoding="utf-8")
 
         # Act
         config = CalendarConfig.from_yaml(str(config_file))
@@ -154,7 +153,7 @@ class TestCalendarConfig:
         """Test fail-fast when no calendars configured."""
         # Arrange
         config_file = tmp_path / "calendar_config.yaml"
-        config_file.write_text(no_calendars_yaml, encoding='utf-8')
+        config_file.write_text(no_calendars_yaml, encoding="utf-8")
 
         # Act & Assert
         with pytest.raises(ValueError) as exc_info:
@@ -168,7 +167,7 @@ class TestCalendarConfig:
         """Test that invalid casquette is rejected."""
         # Arrange
         config_file = tmp_path / "calendar_config.yaml"
-        config_file.write_text(invalid_casquette_yaml, encoding='utf-8')
+        config_file.write_text(invalid_casquette_yaml, encoding="utf-8")
 
         # Act & Assert
         with pytest.raises(ValueError) as exc_info:
@@ -198,7 +197,7 @@ google_calendar:
       color: "red"  # Invalid - should be #RRGGBB
 """
         config_file = tmp_path / "calendar_config.yaml"
-        config_file.write_text(invalid_color_yaml, encoding='utf-8')
+        config_file.write_text(invalid_color_yaml, encoding="utf-8")
 
         # Act & Assert
         with pytest.raises(ValueError) as exc_info:
@@ -224,7 +223,7 @@ google_calendar:
     future_days: 90
 """
         config_file = tmp_path / "calendar_config.yaml"
-        config_file.write_text(invalid_sync_yaml, encoding='utf-8')
+        config_file.write_text(invalid_sync_yaml, encoding="utf-8")
 
         # Act & Assert
         with pytest.raises(ValueError) as exc_info:
@@ -249,7 +248,7 @@ google_calendar:
       minutes: 30
 """
         config_file = tmp_path / "calendar_config.yaml"
-        config_file.write_text(invalid_reminder_yaml, encoding='utf-8')
+        config_file.write_text(invalid_reminder_yaml, encoding="utf-8")
 
         # Act & Assert
         with pytest.raises(ValueError) as exc_info:
@@ -265,7 +264,7 @@ google_calendar:
         """
         # Arrange
         config_file = tmp_path / "calendar_config.yaml"
-        config_file.write_text(unlimited_history_yaml, encoding='utf-8')
+        config_file.write_text(unlimited_history_yaml, encoding="utf-8")
 
         # Act
         config = CalendarConfig.from_yaml(str(config_file))

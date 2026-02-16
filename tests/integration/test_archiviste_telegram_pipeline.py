@@ -28,7 +28,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import asyncpg
 import pytest
 from redis.asyncio import Redis
-
 from services.archiviste_consumer.consumer import (
     CONSUMER_GROUP,
     STREAM_NAME,

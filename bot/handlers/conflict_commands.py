@@ -16,11 +16,7 @@ from typing import Any, Dict
 
 import asyncpg
 import structlog
-from agents.src.core.models import (
-    CASQUETTE_EMOJI_MAPPING,
-    CASQUETTE_LABEL_MAPPING,
-    Casquette,
-)
+from agents.src.core.models import CASQUETTE_EMOJI_MAPPING, CASQUETTE_LABEL_MAPPING, Casquette
 from telegram import Update
 from telegram.ext import ContextTypes
 
@@ -105,7 +101,8 @@ async def _get_unresolved_conflicts(db_pool: asyncpg.Pool) -> list:
         Liste conflits avec détails événements
     """
     async with db_pool.acquire() as conn:
-        rows = await conn.fetch("""
+        rows = await conn.fetch(
+            """
             SELECT
                 c.id,
                 c.event1_id,
@@ -126,7 +123,8 @@ async def _get_unresolved_conflicts(db_pool: asyncpg.Pool) -> list:
             WHERE c.resolved = false
             ORDER BY e1.properties->>'start_datetime' ASC
             LIMIT 20
-            """)
+            """
+        )
 
     return [dict(row) for row in rows]
 

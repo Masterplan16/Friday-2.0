@@ -24,7 +24,6 @@ from agents.src.adapters.memorystore import PostgreSQLMemorystore
 from agents.src.adapters.vectorstore import get_vectorstore_adapter
 from agents.src.agents.email.graph_populator import populate_email_graph
 
-
 # ============================================================
 # Fixtures
 # ============================================================
@@ -111,7 +110,9 @@ async def test_email_to_search_e2e_pipeline(db_pool: asyncpg.Pool, clean_test_da
     mock_memorystore.create_edge = AsyncMock()
 
     # Mock Voyage AI + Presidio
-    with patch("agents.src.agents.email.graph_populator.get_vectorstore_adapter") as mock_vectorstore_factory:
+    with patch(
+        "agents.src.agents.email.graph_populator.get_vectorstore_adapter"
+    ) as mock_vectorstore_factory:
         with patch("agents.src.agents.email.graph_populator.anonymize_text") as mock_anon:
 
             # Mock vectorstore - VA VRAIMENT stocker dans PostgreSQL
@@ -249,7 +250,9 @@ async def test_multi_email_semantic_search_e2e(db_pool: asyncpg.Pool, clean_test
     mock_memorystore.create_edge = AsyncMock()
 
     # Mock Voyage AI
-    with patch("agents.src.agents.email.graph_populator.get_vectorstore_adapter") as mock_vectorstore_factory:
+    with patch(
+        "agents.src.agents.email.graph_populator.get_vectorstore_adapter"
+    ) as mock_vectorstore_factory:
         with patch("agents.src.agents.email.graph_populator.anonymize_text") as mock_anon:
 
             mock_vectorstore = AsyncMock()

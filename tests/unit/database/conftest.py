@@ -32,7 +32,4 @@ def migration_files(migrations_dir: Path) -> list[Path]:
 @pytest.fixture
 def migration_contents(migration_files: list[Path]) -> dict[str, str]:
     """Dictionnaire {nom_fichier: contenu_sql} pour chaque migration."""
-    return {
-        f.stem: f.read_text(encoding="utf-8")
-        for f in migration_files
-    }
+    return {f.stem: f.read_text(encoding="utf-8") for f in migration_files}

@@ -177,12 +177,14 @@ async def create_tasks_with_validation(
             # Récupérer le receipt_id du dernier receipt créé pour cette action
             # (le middleware @friday_action l'a créé juste avant de retourner)
             async with db_pool.acquire() as conn:
-                receipt_id = await conn.fetchval("""
+                receipt_id = await conn.fetchval(
+                    """
                     SELECT id FROM core.action_receipts
                     WHERE module = 'email' AND action_type = 'extract_task'
                     ORDER BY created_at DESC
                     LIMIT 1
-                    """)
+                    """
+                )
 
             if receipt_id:
                 from bot.handlers.email_task_notifications import (

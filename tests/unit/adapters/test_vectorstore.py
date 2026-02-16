@@ -35,7 +35,6 @@ from agents.src.adapters.vectorstore import (
     get_vectorstore_adapter,
 )
 
-
 # ============================================================
 # Test VoyageAIAdapter Initialization
 # ============================================================

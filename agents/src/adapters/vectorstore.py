@@ -40,10 +40,7 @@ from typing import Any, Optional
 
 import asyncpg
 import structlog
-from agents.src.tools.anonymize import (
-    AnonymizationError,
-    anonymize_text,
-)
+from agents.src.tools.anonymize import AnonymizationError, anonymize_text
 from pydantic import BaseModel, Field
 
 from config.exceptions import PipelineError

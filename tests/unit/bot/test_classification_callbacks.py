@@ -3,9 +3,11 @@ Tests unitaires callbacks classification documents (Story 3.2 Task 5.6).
 
 Tests inline buttons : Approve, Correct, Reject, Reclassify, Finance perimeter
 """
+
 import uuid
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 
 @pytest.fixture
@@ -48,8 +50,11 @@ def mock_context():
 
 # ==================== Tests Approve ====================
 
+
 @pytest.mark.asyncio
-@patch.dict("os.environ", {"OWNER_USER_ID": "12345", "TOPIC_METRICS_ID": "0", "TELEGRAM_SUPERGROUP_ID": "0"})
+@patch.dict(
+    "os.environ", {"OWNER_USER_ID": "12345", "TOPIC_METRICS_ID": "0", "TELEGRAM_SUPERGROUP_ID": "0"}
+)
 async def test_approve_callback_success(mock_update, mock_context, mock_db_pool):
     """Test approbation classification réussie."""
     from bot.handlers.classification_callbacks import handle_classify_approve
@@ -100,8 +105,11 @@ async def test_approve_callback_already_processed(mock_update, mock_context, moc
 
 # ==================== Tests Reject ====================
 
+
 @pytest.mark.asyncio
-@patch.dict("os.environ", {"OWNER_USER_ID": "12345", "TOPIC_METRICS_ID": "0", "TELEGRAM_SUPERGROUP_ID": "0"})
+@patch.dict(
+    "os.environ", {"OWNER_USER_ID": "12345", "TOPIC_METRICS_ID": "0", "TELEGRAM_SUPERGROUP_ID": "0"}
+)
 async def test_reject_callback_success(mock_update, mock_context, mock_db_pool):
     """Test rejet classification réussi."""
     from bot.handlers.classification_callbacks import handle_classify_reject
@@ -117,6 +125,7 @@ async def test_reject_callback_success(mock_update, mock_context, mock_db_pool):
 
 
 # ==================== Tests Correct ====================
+
 
 @pytest.mark.asyncio
 @patch.dict("os.environ", {"OWNER_USER_ID": "12345"})
@@ -135,6 +144,7 @@ async def test_correct_callback_shows_categories(mock_update, mock_context, mock
 
 
 # ==================== Tests Reclassify ====================
+
 
 @pytest.mark.asyncio
 @patch.dict("os.environ", {"OWNER_USER_ID": "12345"})
@@ -168,6 +178,7 @@ async def test_reclassify_non_finance_applies_directly(mock_update, mock_context
 
 
 # ==================== Tests Finance Perimeter ====================
+
 
 @pytest.mark.asyncio
 @patch.dict("os.environ", {"OWNER_USER_ID": "12345"})
@@ -227,6 +238,7 @@ async def test_all_five_finance_perimeters_accepted(mock_update, mock_context, m
 
 
 # ==================== Tests Notification Formatting ====================
+
 
 def test_format_classification_message_pro():
     """Test formatage message notification pro."""

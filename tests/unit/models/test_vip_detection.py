@@ -5,12 +5,11 @@ Vérifie la validation Pydantic des schemas VIPSender et UrgencyResult.
 Story 2.3 - Detection VIP & Urgence
 """
 
-import pytest
-from pydantic import ValidationError
 from uuid import UUID
 
-from agents.src.models.vip_detection import VIPSender, UrgencyResult
-
+import pytest
+from agents.src.models.vip_detection import UrgencyResult, VIPSender
+from pydantic import ValidationError
 
 # ==========================================
 # Tests VIPSender - Valid Inputs

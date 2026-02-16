@@ -4,12 +4,12 @@ Tests unitaires pour bot/handlers/corrections.py (Story 1.7, Task 2.3).
 Teste la capture des corrections owner via inline button [Correct].
 """
 
-import pytest
 from unittest.mock import AsyncMock, Mock, patch
-from telegram import Update, CallbackQuery, Message, User, Chat
-from telegram.ext import ContextTypes
 
+import pytest
 from bot.handlers.corrections import CorrectionsHandler
+from telegram import CallbackQuery, Chat, Message, Update, User
+from telegram.ext import ContextTypes
 from tests.conftest import create_mock_pool_with_conn
 
 

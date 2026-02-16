@@ -8,25 +8,24 @@ TODO: Implémenter vrai setup testcontainers-python PostgreSQL 16.
       Priorité : quand testcontainers sera setupé pour le projet.
 """
 
-import pytest
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, patch
 
 import asyncpg
-from anthropic import AsyncAnthropic
-
-from agents.src.core.heartbeat_engine import HeartbeatEngine
-from agents.src.core.context_provider import ContextProvider
-from agents.src.core.context_manager import ContextManager
-from agents.src.core.check_registry import CheckRegistry
-from agents.src.core.llm_decider import LLMDecider
+import pytest
 from agents.src.core.check_executor import CheckExecutor
+from agents.src.core.check_registry import CheckRegistry
 from agents.src.core.checks import register_all_checks
-
+from agents.src.core.context_manager import ContextManager
+from agents.src.core.context_provider import ContextProvider
+from agents.src.core.heartbeat_engine import HeartbeatEngine
+from agents.src.core.llm_decider import LLMDecider
+from anthropic import AsyncAnthropic
 
 # ============================================================================
 # Fixtures
 # ============================================================================
+
 
 @pytest.fixture(scope="module")
 async def postgres_testcontainer():
@@ -106,14 +105,8 @@ async def setup_db_schema(db_pool_real):
 def full_heartbeat_stack(db_pool_real, redis_client_real):
     """Stack Heartbeat complet pour E2E."""
     # Context Manager + Provider
-    context_manager = ContextManager(
-        db_pool=db_pool_real,
-        redis_client=redis_client_real
-    )
-    context_provider = ContextProvider(
-        context_manager=context_manager,
-        db_pool=db_pool_real
-    )
+    context_manager = ContextManager(db_pool=db_pool_real, redis_client=redis_client_real)
+    context_provider = ContextProvider(context_manager=context_manager, db_pool=db_pool_real)
 
     # Check Registry + Checks Day 1
     check_registry = CheckRegistry()
@@ -123,21 +116,14 @@ def full_heartbeat_stack(db_pool_real, redis_client_real):
     # LLM Decider (mock Anthropic)
     llm_client_mock = AsyncMock(spec=AsyncAnthropic)
     response_mock = AsyncMock()
-    response_mock.content = [
-        AsyncMock(text='{"checks_to_run": [], "reasoning": "Silence"}')
-    ]
+    response_mock.content = [AsyncMock(text='{"checks_to_run": [], "reasoning": "Silence"}')]
     llm_client_mock.messages.create.return_value = response_mock
 
-    llm_decider = LLMDecider(
-        llm_client=llm_client_mock,
-        redis_client=redis_client_real
-    )
+    llm_decider = LLMDecider(llm_client=llm_client_mock, redis_client=redis_client_real)
 
     # Check Executor
     check_executor = CheckExecutor(
-        db_pool=db_pool_real,
-        redis_client=redis_client_real,
-        check_registry=check_registry
+        db_pool=db_pool_real, redis_client=redis_client_real, check_registry=check_registry
     )
 
     # Heartbeat Engine
@@ -147,7 +133,7 @@ def full_heartbeat_stack(db_pool_real, redis_client_real):
         context_provider=context_provider,
         check_registry=check_registry,
         llm_decider=llm_decider,
-        check_executor=check_executor
+        check_executor=check_executor,
     )
 
     return {
@@ -155,7 +141,7 @@ def full_heartbeat_stack(db_pool_real, redis_client_real):
         "db_pool": db_pool_real,
         "llm_client": llm_client_mock,
         "check_executor": check_executor,
-        "context_provider": context_provider
+        "context_provider": context_provider,
     }
 
 
@@ -163,12 +149,11 @@ def full_heartbeat_stack(db_pool_real, redis_client_real):
 # Tests Task 10.7: Tests E2E
 # ============================================================================
 
+
 @pytest.mark.asyncio
 @pytest.mark.e2e
 async def test_e2e_check_urgent_emails_detection(
-    full_heartbeat_stack,
-    db_pool_real,
-    setup_db_schema
+    full_heartbeat_stack, db_pool_real, setup_db_schema
 ):
     """
     Test E2E 1: Email urgent créé → Heartbeat détecte → notification.
@@ -190,10 +175,7 @@ async def test_e2e_check_urgent_emails_detection(
 
         # Mock fetch pour détails
         conn.fetch.return_value = [
-            {
-                "sender": "vip@example.com",
-                "subject": "URGENT: Demande importante"
-            }
+            {"sender": "vip@example.com", "subject": "URGENT: Demande importante"}
         ]
 
     # 2. Configurer LLM pour sélectionner check_urgent_emails
@@ -204,7 +186,7 @@ async def test_e2e_check_urgent_emails_detection(
     llm_client.messages.create.return_value = response_mock
 
     # 3. Mock notification Telegram
-    with patch.object(engine, '_send_notification') as mock_notify:
+    with patch.object(engine, "_send_notification") as mock_notify:
         # 4. Exécuter cycle
         result = await engine.run_heartbeat_cycle(mode="one-shot")
 
@@ -219,10 +201,7 @@ async def test_e2e_check_urgent_emails_detection(
 
 @pytest.mark.asyncio
 @pytest.mark.e2e
-async def test_e2e_quiet_hours_no_notification(
-    full_heartbeat_stack,
-    setup_db_schema
-):
+async def test_e2e_quiet_hours_no_notification(full_heartbeat_stack, setup_db_schema):
     """
     Test E2E 2: Cycle 03h (quiet hours) → aucune notification sauf CRITICAL.
 
@@ -245,10 +224,10 @@ async def test_e2e_quiet_hours_no_notification(
         is_quiet_hours=True,
         current_casquette=None,
         next_calendar_event=None,
-        last_activity_mainteneur=None
+        last_activity_mainteneur=None,
     )
 
-    with patch.object(context_provider, 'get_current_context', return_value=quiet_context):
+    with patch.object(context_provider, "get_current_context", return_value=quiet_context):
         # 2. Exécuter cycle
         result = await engine.run_heartbeat_cycle(mode="one-shot")
 
@@ -259,11 +238,7 @@ async def test_e2e_quiet_hours_no_notification(
 
 @pytest.mark.asyncio
 @pytest.mark.e2e
-async def test_e2e_llm_decider_context_aware(
-    full_heartbeat_stack,
-    db_pool_real,
-    setup_db_schema
-):
+async def test_e2e_llm_decider_context_aware(full_heartbeat_stack, db_pool_real, setup_db_schema):
     """
     Test E2E 3: Contexte casquette médecin → LLM sélectionne urgent_emails.
 
@@ -289,15 +264,17 @@ async def test_e2e_llm_decider_context_aware(
         next_calendar_event={
             "title": "Consultation patient",
             "start_time": "2026-02-17T15:00:00Z",
-            "casquette": "medecin"
+            "casquette": "medecin",
         },
-        last_activity_mainteneur=datetime(2026, 2, 17, 14, 0, tzinfo=timezone.utc)
+        last_activity_mainteneur=datetime(2026, 2, 17, 14, 0, tzinfo=timezone.utc),
     )
 
     # 2. Configurer LLM pour répondre selon contexte
     response_mock = AsyncMock()
     response_mock.content = [
-        AsyncMock(text='{"checks_to_run": ["check_urgent_emails"], "reasoning": "Casquette médecin + événement proche"}')
+        AsyncMock(
+            text='{"checks_to_run": ["check_urgent_emails"], "reasoning": "Casquette médecin + événement proche"}'
+        )
     ]
     llm_client.messages.create.return_value = response_mock
 
@@ -306,19 +283,23 @@ async def test_e2e_llm_decider_context_aware(
         conn.fetchval.return_value = 1
         conn.fetch.return_value = [{"sender": "patient@example.com", "subject": "Urgent"}]
 
-    with patch.object(context_provider, 'get_current_context', return_value=medecin_context):
+    with patch.object(context_provider, "get_current_context", return_value=medecin_context):
         # 4. Exécuter cycle
         result = await engine.run_heartbeat_cycle(mode="one-shot")
 
     # 5. Vérifier LLM décision context-aware
     assert result["status"] == "success"
     assert "check_urgent_emails" in result["selected_checks"]
-    assert "médecin" in result["llm_reasoning"].lower() or "casquette" in result["llm_reasoning"].lower()
+    assert (
+        "médecin" in result["llm_reasoning"].lower()
+        or "casquette" in result["llm_reasoning"].lower()
+    )
 
 
 # ============================================================================
 # Tests E2E Silence Rate (AC4)
 # ============================================================================
+
 
 @pytest.mark.asyncio
 @pytest.mark.e2e
@@ -355,6 +336,7 @@ async def test_e2e_silence_rate_calculation(db_pool_real, setup_db_schema):
 # Helper Functions
 # ============================================================================
 
+
 async def create_test_email(conn, priority="urgent", read=False):
     """Helper pour créer email test en DB."""
     await conn.execute(
@@ -365,5 +347,5 @@ async def create_test_email(conn, priority="urgent", read=False):
         "test@example.com",
         "Test subject",
         priority,
-        read
+        read,
     )

@@ -15,12 +15,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import UUID
 
 import pytest
-
-from agents.src.agents.email.sender_filter import (
-    SenderFilterError,
-    check_sender_filter,
-)
-
+from agents.src.agents.email.sender_filter import SenderFilterError, check_sender_filter
 
 # ==========================================
 # Fixtures

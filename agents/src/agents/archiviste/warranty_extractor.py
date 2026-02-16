@@ -18,10 +18,7 @@ from typing import Any, Dict, Optional
 
 import structlog
 from agents.src.adapters.llm import get_llm_adapter
-from agents.src.agents.archiviste.warranty_models import (
-    WarrantyCategory,
-    WarrantyInfo,
-)
+from agents.src.agents.archiviste.warranty_models import WarrantyCategory, WarrantyInfo
 from agents.src.agents.archiviste.warranty_prompts import (
     WARRANTY_EXTRACTION_SYSTEM_PROMPT,
     build_warranty_extraction_prompt,

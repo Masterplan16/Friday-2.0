@@ -10,6 +10,7 @@ Tests unitaires warranty_extractor.py (Story 3.4 AC1).
 
 JAMAIS d'appel Claude réel - Toujours mocker.
 """
+
 import json
 import sys
 from datetime import date
@@ -21,53 +22,56 @@ import pytest
 # Add project root to path
 sys.path.insert(0, ".")
 
-from agents.src.agents.archiviste.warranty_models import (
-    WarrantyCategory,
-    WarrantyInfo,
-)
-
+from agents.src.agents.archiviste.warranty_models import WarrantyCategory, WarrantyInfo
 
 # ============================================================================
 # FIXTURES
 # ============================================================================
 
-VALID_CLAUDE_RESPONSE = json.dumps({
-    "warranty_detected": True,
-    "item_name": "Imprimante HP DeskJet 3720",
-    "item_category": "electronics",
-    "vendor": "Amazon",
-    "purchase_date": "2025-06-15",
-    "warranty_duration_months": 24,
-    "purchase_amount": 149.99,
-    "confidence": 0.92,
-})
+VALID_CLAUDE_RESPONSE = json.dumps(
+    {
+        "warranty_detected": True,
+        "item_name": "Imprimante HP DeskJet 3720",
+        "item_category": "electronics",
+        "vendor": "Amazon",
+        "purchase_date": "2025-06-15",
+        "warranty_duration_months": 24,
+        "purchase_amount": 149.99,
+        "confidence": 0.92,
+    }
+)
 
-NO_WARRANTY_RESPONSE = json.dumps({
-    "warranty_detected": False,
-    "item_name": "",
-    "item_category": "other",
-    "vendor": None,
-    "purchase_date": "",
-    "warranty_duration_months": 0,
-    "purchase_amount": None,
-    "confidence": 0.1,
-})
+NO_WARRANTY_RESPONSE = json.dumps(
+    {
+        "warranty_detected": False,
+        "item_name": "",
+        "item_category": "other",
+        "vendor": None,
+        "purchase_date": "",
+        "warranty_duration_months": 0,
+        "purchase_amount": None,
+        "confidence": 0.1,
+    }
+)
 
-LOW_CONFIDENCE_RESPONSE = json.dumps({
-    "warranty_detected": True,
-    "item_name": "Produit inconnu",
-    "item_category": "other",
-    "vendor": None,
-    "purchase_date": "2025-01-01",
-    "warranty_duration_months": 12,
-    "purchase_amount": None,
-    "confidence": 0.60,
-})
+LOW_CONFIDENCE_RESPONSE = json.dumps(
+    {
+        "warranty_detected": True,
+        "item_name": "Produit inconnu",
+        "item_category": "other",
+        "vendor": None,
+        "purchase_date": "2025-01-01",
+        "warranty_duration_months": 12,
+        "purchase_amount": None,
+        "confidence": 0.60,
+    }
+)
 
 
 # ============================================================================
 # WARRANTY INFO MODEL TESTS
 # ============================================================================
+
 
 class TestWarrantyInfo:
     """Tests pour WarrantyInfo Pydantic model."""
@@ -92,6 +96,7 @@ class TestWarrantyInfo:
     def test_future_date_rejected(self):
         """Date d'achat dans le futur = ValueError."""
         from datetime import timedelta
+
         with pytest.raises(ValueError, match="future"):
             WarrantyInfo(
                 warranty_detected=True,
@@ -182,6 +187,7 @@ class TestWarrantyInfo:
 # EXTRACTOR FUNCTION TESTS
 # ============================================================================
 
+
 class TestExtractWarranty:
     """Tests pour extract_warranty_from_document."""
 
@@ -195,9 +201,7 @@ class TestExtractWarranty:
         mock_adapter.complete = AsyncMock(return_value=VALID_CLAUDE_RESPONSE)
         mock_llm.return_value = mock_adapter
 
-        from agents.src.agents.archiviste.warranty_extractor import (
-            extract_warranty_from_document,
-        )
+        from agents.src.agents.archiviste.warranty_extractor import extract_warranty_from_document
 
         result = await extract_warranty_from_document(
             document_id="test-doc-123",
@@ -218,9 +222,7 @@ class TestExtractWarranty:
         mock_adapter.complete = AsyncMock(return_value=NO_WARRANTY_RESPONSE)
         mock_llm.return_value = mock_adapter
 
-        from agents.src.agents.archiviste.warranty_extractor import (
-            extract_warranty_from_document,
-        )
+        from agents.src.agents.archiviste.warranty_extractor import extract_warranty_from_document
 
         result = await extract_warranty_from_document(
             document_id="test-doc-456",
@@ -240,9 +242,7 @@ class TestExtractWarranty:
         mock_adapter.complete = AsyncMock(return_value=LOW_CONFIDENCE_RESPONSE)
         mock_llm.return_value = mock_adapter
 
-        from agents.src.agents.archiviste.warranty_extractor import (
-            extract_warranty_from_document,
-        )
+        from agents.src.agents.archiviste.warranty_extractor import extract_warranty_from_document
 
         result = await extract_warranty_from_document(
             document_id="test-doc-789",
@@ -259,9 +259,7 @@ class TestExtractWarranty:
         """Presidio crash = NotImplementedError (fail-explicit)."""
         mock_anonymize.side_effect = Exception("Presidio service unavailable")
 
-        from agents.src.agents.archiviste.warranty_extractor import (
-            extract_warranty_from_document,
-        )
+        from agents.src.agents.archiviste.warranty_extractor import extract_warranty_from_document
 
         with pytest.raises(NotImplementedError, match="Presidio"):
             await extract_warranty_from_document(
@@ -279,9 +277,7 @@ class TestExtractWarranty:
         mock_adapter.complete = AsyncMock(side_effect=Exception("API error"))
         mock_llm.return_value = mock_adapter
 
-        from agents.src.agents.archiviste.warranty_extractor import (
-            extract_warranty_from_document,
-        )
+        from agents.src.agents.archiviste.warranty_extractor import extract_warranty_from_document
 
         with pytest.raises(NotImplementedError, match="Claude"):
             await extract_warranty_from_document(
@@ -299,9 +295,7 @@ class TestExtractWarranty:
         mock_adapter.complete = AsyncMock(return_value="ceci n'est pas du JSON")
         mock_llm.return_value = mock_adapter
 
-        from agents.src.agents.archiviste.warranty_extractor import (
-            extract_warranty_from_document,
-        )
+        from agents.src.agents.archiviste.warranty_extractor import extract_warranty_from_document
 
         with pytest.raises(NotImplementedError, match="parse"):
             await extract_warranty_from_document(
@@ -318,21 +312,25 @@ class TestExtractWarranty:
             "Facture [PERSON_1] HP Printer",
             {"[PERSON_1]": "Jean Dupont"},
         )
-        response = json.dumps({
-            "warranty_detected": True,
-            "item_name": "HP Printer",
-            "item_category": "electronics",
-            "vendor": "[PERSON_1]",
-            "purchase_date": "2025-06-15",
-            "warranty_duration_months": 24,
-            "purchase_amount": 149.99,
-            "confidence": 0.90,
-        })
+        response = json.dumps(
+            {
+                "warranty_detected": True,
+                "item_name": "HP Printer",
+                "item_category": "electronics",
+                "vendor": "[PERSON_1]",
+                "purchase_date": "2025-06-15",
+                "warranty_duration_months": 24,
+                "purchase_amount": 149.99,
+                "confidence": 0.90,
+            }
+        )
         mock_adapter = MagicMock()
         mock_adapter.complete = AsyncMock(return_value=response)
         mock_llm.return_value = mock_adapter
 
-        with patch("agents.src.agents.archiviste.warranty_extractor.deanonymize_text") as mock_deanon:
+        with patch(
+            "agents.src.agents.archiviste.warranty_extractor.deanonymize_text"
+        ) as mock_deanon:
             mock_deanon.return_value = "Jean Dupont"
 
             from agents.src.agents.archiviste.warranty_extractor import (
@@ -352,56 +350,66 @@ class TestExtractWarranty:
 # HELPER FUNCTION TESTS
 # ============================================================================
 
+
 class TestHelperFunctions:
     """Tests pour fonctions utilitaires."""
 
     def test_parse_date_iso(self):
         """Parse date ISO 8601."""
         from agents.src.agents.archiviste.warranty_extractor import _parse_date
+
         assert _parse_date("2025-06-15") == date(2025, 6, 15)
 
     def test_parse_date_fr_format(self):
         """Parse date format DD/MM/YYYY."""
         from agents.src.agents.archiviste.warranty_extractor import _parse_date
+
         assert _parse_date("15/06/2025") == date(2025, 6, 15)
 
     def test_parse_date_empty_raises(self):
         """Date vide = ValueError."""
         from agents.src.agents.archiviste.warranty_extractor import _parse_date
+
         with pytest.raises(ValueError):
             _parse_date("")
 
     def test_parse_category_valid(self):
         """Parse catégorie valide."""
         from agents.src.agents.archiviste.warranty_extractor import _parse_category
+
         assert _parse_category("electronics") == WarrantyCategory.ELECTRONICS
         assert _parse_category("APPLIANCES") == WarrantyCategory.APPLIANCES
 
     def test_parse_category_unknown(self):
         """Catégorie inconnue = OTHER."""
         from agents.src.agents.archiviste.warranty_extractor import _parse_category
+
         assert _parse_category("xyz") == WarrantyCategory.OTHER
 
     def test_parse_amount_valid(self):
         """Parse montant valide."""
         from agents.src.agents.archiviste.warranty_extractor import _parse_amount
+
         assert _parse_amount(149.99) == Decimal("149.99")
         assert _parse_amount("89.90") == Decimal("89.90")
 
     def test_parse_amount_none(self):
         """Montant None = None."""
         from agents.src.agents.archiviste.warranty_extractor import _parse_amount
+
         assert _parse_amount(None) is None
 
     def test_parse_amount_negative(self):
         """Montant négatif = None."""
         from agents.src.agents.archiviste.warranty_extractor import _parse_amount
+
         assert _parse_amount(-10) is None
 
 
 # ============================================================================
 # FEW-SHOT EXAMPLES VALIDATION
 # ============================================================================
+
 
 class TestFewShotExamples:
     """Test que les 5 exemples few-shot sont valides."""
@@ -421,7 +429,11 @@ class TestFewShotExamples:
                 vendor=output.get("vendor"),
                 purchase_date=date.fromisoformat(output["purchase_date"]),
                 warranty_duration_months=output["warranty_duration_months"],
-                purchase_amount=Decimal(str(output["purchase_amount"])) if output.get("purchase_amount") else None,
+                purchase_amount=(
+                    Decimal(str(output["purchase_amount"]))
+                    if output.get("purchase_amount")
+                    else None
+                ),
                 confidence=output["confidence"],
             )
             assert info.warranty_detected is True, f"Example {i+1} should detect warranty"

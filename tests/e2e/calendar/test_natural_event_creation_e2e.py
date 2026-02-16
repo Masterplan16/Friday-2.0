@@ -22,7 +22,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-
 # ============================================================================
 # FIXTURES E2E
 # ============================================================================
@@ -119,9 +118,7 @@ class TestE2ENaturalMessagePipeline:
 
         # Mock anonymization + Claude
         with (
-            patch(
-                "agents.src.agents.calendar.message_event_detector.anonymize_text"
-            ) as mock_anon,
+            patch("agents.src.agents.calendar.message_event_detector.anonymize_text") as mock_anon,
             patch(
                 "agents.src.agents.calendar.message_event_detector.AsyncAnthropic"
             ) as mock_anthropic_cls,
@@ -140,12 +137,15 @@ class TestE2ENaturalMessagePipeline:
             # Mock entity creation returns UUID
             conn.fetchval = AsyncMock(return_value=uuid.UUID(event_id))
 
-            with patch("os.getenv", side_effect=lambda k, d=None: {
-                "ANTHROPIC_API_KEY": "test-key",
-                "OWNER_USER_ID": "12345",
-                "TELEGRAM_SUPERGROUP_ID": "-100123",
-                "TOPIC_ACTIONS_ID": "456",
-            }.get(k, d)):
+            with patch(
+                "os.getenv",
+                side_effect=lambda k, d=None: {
+                    "ANTHROPIC_API_KEY": "test-key",
+                    "OWNER_USER_ID": "12345",
+                    "TELEGRAM_SUPERGROUP_ID": "-100123",
+                    "TOPIC_ACTIONS_ID": "456",
+                }.get(k, d),
+            ):
                 await handle_natural_event_message(mock_telegram_update, context)
 
         # Verifier notification envoyee avec inline buttons
@@ -204,9 +204,7 @@ class TestE2EConflictDetection:
     @pytest.mark.asyncio
     @patch("bot.handlers.event_creation_callbacks.TELEGRAM_SUPERGROUP_ID", -100123)
     @patch("bot.handlers.event_creation_callbacks.TOPIC_SYSTEM_ID", 789)
-    async def test_e2e_conflict_detected_after_creation(
-        self, mock_telegram_context
-    ):
+    async def test_e2e_conflict_detected_after_creation(self, mock_telegram_context):
         """
         E2E: [Creer] -> confirm -> detect conflict -> alerte Topic System
         """
@@ -255,7 +253,8 @@ class TestE2EConflictDetection:
 
         # Verifier alerte conflit envoyee au Topic System
         conflict_calls = [
-            c for c in context.bot.send_message.call_args_list
+            c
+            for c in context.bot.send_message.call_args_list
             if c.kwargs.get("message_thread_id") == 789
         ]
         assert len(conflict_calls) >= 1
@@ -291,11 +290,11 @@ class TestE2EGuidedCreation:
         # Simuler flow 6 etapes
         steps_data = [
             ("Consultation Dr Martin", 1),  # titre
-            ("17/02/2026", 2),              # date
-            ("14:00", 3),                   # heure debut
-            ("15:00", 4),                   # heure fin
-            ("Cabinet medical", 5),         # lieu
-            ("Dr Martin", 6),               # participants
+            ("17/02/2026", 2),  # date
+            ("14:00", 3),  # heure debut
+            ("15:00", 4),  # heure fin
+            ("Cabinet medical", 5),  # lieu
+            ("Dr Martin", 6),  # participants
         ]
 
         for step_input, step_num in steps_data:
@@ -382,12 +381,14 @@ class TestE2EModification:
         update2.effective_user.id = 12345
 
         redis.get = AsyncMock(
-            return_value=json.dumps({
-                "event_id": event_id,
-                "waiting_field": None,
-                "modifications": {},
-                "original": {"name": "Consultation"},
-            })
+            return_value=json.dumps(
+                {
+                    "event_id": event_id,
+                    "waiting_field": None,
+                    "modifications": {},
+                    "original": {"name": "Consultation"},
+                }
+            )
         )
         await handle_modify_field_callback(update2, context)
 
@@ -400,12 +401,14 @@ class TestE2EModification:
         update3.message.reply_text = AsyncMock()
 
         redis.get = AsyncMock(
-            return_value=json.dumps({
-                "event_id": event_id,
-                "waiting_field": "title",
-                "modifications": {},
-                "original": {"name": "Consultation"},
-            })
+            return_value=json.dumps(
+                {
+                    "event_id": event_id,
+                    "waiting_field": "title",
+                    "modifications": {},
+                    "original": {"name": "Consultation"},
+                }
+            )
         )
         result = await handle_modify_response(update3, context)
         assert result is True
@@ -420,12 +423,14 @@ class TestE2EModification:
         update4.effective_user.id = 12345
 
         redis.get = AsyncMock(
-            return_value=json.dumps({
-                "event_id": event_id,
-                "waiting_field": None,
-                "modifications": {"title": "Consultation Dr Dupont"},
-                "original": {"name": "Consultation"},
-            })
+            return_value=json.dumps(
+                {
+                    "event_id": event_id,
+                    "waiting_field": None,
+                    "modifications": {"title": "Consultation Dr Dupont"},
+                    "original": {"name": "Consultation"},
+                }
+            )
         )
 
         await handle_modify_validate_callback(update4, context)
@@ -474,9 +479,7 @@ class TestE2EPerformance:
             "confidence": 0.85,
         }
 
-        with patch(
-            "agents.src.agents.calendar.message_event_detector.anonymize_text"
-        ) as mock_anon:
+        with patch("agents.src.agents.calendar.message_event_detector.anonymize_text") as mock_anon:
             anon_result = MagicMock()
             anon_result.anonymized_text = message
             anon_result.mapping = {}

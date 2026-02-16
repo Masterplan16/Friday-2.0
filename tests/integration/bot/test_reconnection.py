@@ -5,8 +5,9 @@ Story 1.9 - HIGH-6 fix: Test manquant pour vérifier reconnexion auto.
 """
 
 import asyncio
-import pytest
 from unittest.mock import AsyncMock, Mock, patch
+
+import pytest
 from bot.main import FridayBot
 
 

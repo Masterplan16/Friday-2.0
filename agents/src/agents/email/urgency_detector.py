@@ -165,12 +165,14 @@ async def check_urgency_keywords(
     """
     try:
         async with db_pool.acquire() as conn:
-            rows = await conn.fetch("""
+            rows = await conn.fetch(
+                """
                 SELECT keyword, weight
                 FROM core.urgency_keywords
                 WHERE active = TRUE
                 ORDER BY weight DESC
-                """)
+                """
+            )
 
             if not rows:
                 logger.warning(

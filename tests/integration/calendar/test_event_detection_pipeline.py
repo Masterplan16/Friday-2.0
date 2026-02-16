@@ -1,7 +1,11 @@
 """Tests Intégration - Event Detection Pipeline (Story 7.1)"""
-import pytest
-import asyncpg
+
 from uuid import uuid4
+
+import asyncpg
+import pytest
+
+
 # Tests pipeline complet : email → extraction → DB → conflict detection
 # TODO: Implémenter tests complets après migration 037 appliquée
 @pytest.mark.integration

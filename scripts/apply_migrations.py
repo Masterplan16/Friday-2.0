@@ -144,13 +144,15 @@ async def ensure_migrations_table(conn: asyncpg.Connection) -> None:  # type: ig
     en avance avec IF NOT EXISTS (pas de conflit avec 001).
     """
     await conn.execute("CREATE SCHEMA IF NOT EXISTS core")
-    await conn.execute("""
+    await conn.execute(
+        """
         CREATE TABLE IF NOT EXISTS core.schema_migrations (
             version VARCHAR(255) PRIMARY KEY,
             applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
             checksum VARCHAR(64)
         )
-    """)
+    """
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -176,7 +178,8 @@ async def check_public_schema(conn: asyncpg.Connection) -> list[str]:  # type: i
     violations: list[str] = []
 
     # Tables dans public non creees par des extensions
-    rows: list[asyncpg.Record] = await conn.fetch("""
+    rows: list[asyncpg.Record] = await conn.fetch(
+        """
         SELECT t.tablename
         FROM pg_tables t
         LEFT JOIN pg_class c ON c.relname = t.tablename
@@ -184,11 +187,13 @@ async def check_public_schema(conn: asyncpg.Connection) -> list[str]:  # type: i
         LEFT JOIN pg_depend d ON d.objid = c.oid AND d.deptype = 'e'
         WHERE t.schemaname = 'public'
           AND d.objid IS NULL
-    """)
+    """
+    )
     violations.extend(f"table: public.{row['tablename']}" for row in rows)
 
     # Fonctions dans public non creees par des extensions
-    func_rows: list[asyncpg.Record] = await conn.fetch("""
+    func_rows: list[asyncpg.Record] = await conn.fetch(
+        """
         SELECT p.proname
         FROM pg_proc p
         JOIN pg_namespace n ON p.pronamespace = n.oid
@@ -196,17 +201,21 @@ async def check_public_schema(conn: asyncpg.Connection) -> list[str]:  # type: i
         WHERE n.nspname = 'public'
           AND p.prokind = 'f'
           AND d.objid IS NULL
-    """)
+    """
+    )
     violations.extend(f"function: public.{row['proname']}" for row in func_rows)
 
     # Vues dans public
-    view_rows: list[asyncpg.Record] = await conn.fetch("""
+    view_rows: list[asyncpg.Record] = await conn.fetch(
+        """
         SELECT viewname FROM pg_views WHERE schemaname = 'public'
-    """)
+    """
+    )
     violations.extend(f"view: public.{row['viewname']}" for row in view_rows)
 
     # Sequences dans public non creees par des extensions
-    seq_rows: list[asyncpg.Record] = await conn.fetch("""
+    seq_rows: list[asyncpg.Record] = await conn.fetch(
+        """
         SELECT c.relname
         FROM pg_class c
         JOIN pg_namespace n ON c.relnamespace = n.oid
@@ -214,11 +223,13 @@ async def check_public_schema(conn: asyncpg.Connection) -> list[str]:  # type: i
         WHERE n.nspname = 'public'
           AND c.relkind = 'S'
           AND d.objid IS NULL
-    """)
+    """
+    )
     violations.extend(f"sequence: public.{row['relname']}" for row in seq_rows)
 
     # Types custom dans public non crees par des extensions
-    type_rows: list[asyncpg.Record] = await conn.fetch("""
+    type_rows: list[asyncpg.Record] = await conn.fetch(
+        """
         SELECT t.typname
         FROM pg_type t
         JOIN pg_namespace n ON t.typnamespace = n.oid
@@ -226,7 +237,8 @@ async def check_public_schema(conn: asyncpg.Connection) -> list[str]:  # type: i
         WHERE n.nspname = 'public'
           AND t.typtype = 'c'
           AND d.objid IS NULL
-    """)
+    """
+    )
     violations.extend(f"type: public.{row['typname']}" for row in type_rows)
 
     return violations
@@ -399,12 +411,14 @@ async def show_status(conn: asyncpg.Connection, log: Any) -> None:  # type: igno
     Si la table n'existe pas, considere que 0 migrations sont appliquees.
     """
     # Verifier si la table existe SANS la creer (read-only)
-    table_exists: bool = await conn.fetchval("""
+    table_exists: bool = await conn.fetchval(
+        """
         SELECT EXISTS (
             SELECT 1 FROM information_schema.tables
             WHERE table_schema = 'core' AND table_name = 'schema_migrations'
         )
-    """)
+    """
+    )
 
     applied: set[str] = set()
     if table_exists:

@@ -5,10 +5,8 @@ Vérifie la validation Pydantic du schema EmailClassification.
 """
 
 import pytest
-from pydantic import ValidationError
-
 from agents.src.models.email_classification import EmailClassification
-
+from pydantic import ValidationError
 
 # ==========================================
 # Tests Valid Inputs

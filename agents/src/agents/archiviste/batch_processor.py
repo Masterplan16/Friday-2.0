@@ -27,9 +27,7 @@ from typing import List, Optional
 import asyncpg
 import redis.asyncio as aioredis
 import structlog
-from agents.src.agents.archiviste.batch_shared import (
-    is_system_file,
-)
+from agents.src.agents.archiviste.batch_shared import is_system_file
 
 logger = structlog.get_logger(__name__)
 

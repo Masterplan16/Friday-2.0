@@ -16,7 +16,6 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
-
 from agents.src.agents.dedup.models import ScanConfig
 from agents.src.agents.dedup.scanner import DedupScanner
 

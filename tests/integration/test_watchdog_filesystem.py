@@ -6,6 +6,7 @@ Tests integration Watchdog filesystem reel (Story 3.5 - Task 7.1).
 - Batch 20 fichiers simultanes → 20 events <5s
 - Hot-reload config integration
 """
+
 import asyncio
 import time
 from pathlib import Path
@@ -13,7 +14,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 import yaml
-
 from agents.src.agents.archiviste.watchdog_handler import FridayWatchdogHandler
 from agents.src.agents.archiviste.watchdog_observer import FridayWatchdogObserver
 
@@ -82,9 +82,7 @@ async def test_watchdog_real_file_creation(tmp_path, mock_redis_for_integration)
         await observer.stop()
 
     # Verifier qu'au moins un event Redis a ete publie
-    assert mock_redis_for_integration.xadd.called, (
-        "Watchdog should detect file creation within 5s"
-    )
+    assert mock_redis_for_integration.xadd.called, "Watchdog should detect file creation within 5s"
     call_args = mock_redis_for_integration.xadd.call_args
     event_data = call_args[0][1]
     assert event_data["filename"] == "scan_test.pdf"
@@ -153,9 +151,9 @@ async def test_watchdog_batch_detection(tmp_path, mock_redis_for_integration):
     # Verifier que des events ont ete publies
     # Note: PollingObserver peut ne pas detecter tous les fichiers en batch
     # dans un environnement CI, mais au minimum quelques-uns
-    assert mock_redis_for_integration.xadd.called, (
-        "Watchdog should detect at least some files in batch within 5s"
-    )
+    assert (
+        mock_redis_for_integration.xadd.called
+    ), "Watchdog should detect at least some files in batch within 5s"
     call_count = mock_redis_for_integration.xadd.call_count
     assert call_count >= 1, "Au moins un event devrait etre publie"
 
@@ -222,6 +220,7 @@ async def test_watchdog_config_hot_reload_integration(tmp_path, mock_redis_for_i
 
         # Ecrire nouvelle config
         import os
+
         time.sleep(0.1)
         config_file.write_text(yaml.dump(updated_config), encoding="utf-8")
         os.utime(str(config_file), (time.time() + 2, time.time() + 2))

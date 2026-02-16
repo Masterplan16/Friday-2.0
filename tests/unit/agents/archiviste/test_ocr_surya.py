@@ -3,12 +3,13 @@ Tests unitaires pour SuryaOCREngine (Story 3.1 - Task 1)
 
 Tests avec mocks de Surya pour vérifier les appels API et la gestion d'erreurs.
 """
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch, call
-from pathlib import Path
 
-from agents.src.agents.archiviste.ocr import SuryaOCREngine
+from pathlib import Path
+from unittest.mock import AsyncMock, MagicMock, call, patch
+
+import pytest
 from agents.src.agents.archiviste.models import OCRResult
+from agents.src.agents.archiviste.ocr import SuryaOCREngine
 
 
 @pytest.fixture
@@ -54,7 +55,9 @@ async def test_ocr_engine_initialization_cpu_mode(ocr_engine):
 @patch("agents.src.agents.archiviste.ocr.Image")
 @patch("agents.src.agents.archiviste.ocr.asyncio.to_thread")
 @patch("agents.src.agents.archiviste.ocr.Path")
-async def test_ocr_document_image_success(mock_path_class, mock_to_thread, mock_image, ocr_engine, mock_surya_result):
+async def test_ocr_document_image_success(
+    mock_path_class, mock_to_thread, mock_image, ocr_engine, mock_surya_result
+):
     """
     Test AC1 : OCR sur image JPG réussit et retourne OCRResult avec texte extrait.
 
@@ -100,7 +103,9 @@ async def test_ocr_document_image_success(mock_path_class, mock_to_thread, mock_
 @patch("agents.src.agents.archiviste.ocr.Image")
 @patch("agents.src.agents.archiviste.ocr.asyncio.to_thread")
 @patch("agents.src.agents.archiviste.ocr.Path")
-async def test_ocr_document_pdf_multipage(mock_path_class, mock_to_thread, mock_image, mock_fitz, ocr_engine):
+async def test_ocr_document_pdf_multipage(
+    mock_path_class, mock_to_thread, mock_image, mock_fitz, ocr_engine
+):
     """
     Test AC1 : OCR sur PDF multi-pages extrait tout le texte.
     """
@@ -303,6 +308,7 @@ async def test_ocr_model_lazy_loading(mock_path_class, mock_to_thread, mock_imag
     mock_result.text_lines = [mock_line]
 
     call_count = 0
+
     async def mock_thread_exec(func, *args, **kwargs):
         nonlocal call_count
         if "load_model" in func.__name__ or "load_processor" in func.__name__:
@@ -337,6 +343,7 @@ async def test_torch_device_configuration(ocr_engine):
     NOT in __init__(), to avoid side effects at import time.
     """
     import os
+
     assert ocr_engine.device == "cpu"
     # TORCH_DEVICE not set at init time (M2 fix: moved to _load_model_if_needed)
     # It will be set when model is loaded for the first time

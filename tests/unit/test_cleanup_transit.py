@@ -4,12 +4,13 @@ Tests unitaires pour cleanup zone transit.
 Story 1.15 - AC4 : Nettoyage zone transit VPS (fichiers temporaires PJ)
 """
 
-import subprocess
-import pytest
-import tempfile
 import os
-from pathlib import Path
+import subprocess
+import tempfile
 from datetime import datetime, timedelta
+from pathlib import Path
+
+import pytest
 
 
 def test_cleanup_transit_find_command_syntax():
@@ -95,7 +96,9 @@ def test_cleanup_transit_integration():
         assert str(old_file) in result.stdout, "Old file should be detected by find -mtime +1"
 
         # Verify recent file NOT detected
-        assert str(recent_file) not in result.stdout, "Recent file should NOT be detected by find -mtime +1"
+        assert (
+            str(recent_file) not in result.stdout
+        ), "Recent file should NOT be detected by find -mtime +1"
 
 
 def test_calculate_du_before_after():
@@ -105,13 +108,14 @@ def test_calculate_du_before_after():
     WHEN before et after sont comparés
     THEN freed = before - after
     """
+
     # Simuler fonction bash calculate freed space
     def calculate_freed_space(before_bytes: int, after_bytes: int) -> int:
         """Calculate freed bytes."""
         return max(0, before_bytes - after_bytes)
 
     before = 5_000_000  # 5 MB avant cleanup
-    after = 1_000_000   # 1 MB après cleanup
+    after = 1_000_000  # 1 MB après cleanup
     freed = calculate_freed_space(before, after)
 
     assert freed == 4_000_000, f"Expected 4 MB freed, got {freed} bytes"

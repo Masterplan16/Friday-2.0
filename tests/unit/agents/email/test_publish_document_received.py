@@ -8,7 +8,6 @@ import uuid
 from unittest.mock import AsyncMock, MagicMock, call, patch
 
 import pytest
-
 from agents.src.agents.email.attachment_extractor import _publish_document_received
 
 
@@ -129,9 +128,7 @@ async def test_publish_fails_after_3_attempts():
     THEN raise Exception après 3 tentatives (1 original + 2 retries)
     """
     redis_mock = AsyncMock()
-    redis_mock.xadd = AsyncMock(
-        side_effect=Exception("Redis connection failed permanently")
-    )
+    redis_mock.xadd = AsyncMock(side_effect=Exception("Redis connection failed permanently"))
 
     attachment_id = str(uuid.uuid4())
     email_id = str(uuid.uuid4())

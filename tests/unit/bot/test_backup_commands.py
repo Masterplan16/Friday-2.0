@@ -154,7 +154,9 @@ async def test_backup_command_unauthorized_user_rejected(mock_update, mock_conte
     await backup_command(mock_update, mock_context)
 
     # Assertions
-    mock_update.message.reply_text.assert_called_once_with("❌ Unauthorized: Commande réservée au Mainteneur")
+    mock_update.message.reply_text.assert_called_once_with(
+        "❌ Unauthorized: Commande réservée au Mainteneur"
+    )
 
 
 @pytest.mark.asyncio

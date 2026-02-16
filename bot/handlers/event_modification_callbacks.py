@@ -7,6 +7,7 @@ Buttons: [Titre] [Date] [Heure] [Lieu] [Participants] [Valider]
 
 import json
 import os
+import re
 import uuid
 from datetime import datetime, timezone
 from typing import Optional
@@ -343,10 +344,39 @@ def _apply_modifications(original: dict, modifications: dict) -> dict:
         if field == "title":
             modified["name"] = value
         elif field == "date":
-            # Mettre a jour start_datetime date part
-            properties["date_override"] = value
+            # Update date part of start_datetime
+            start_dt_str = properties.get("start_datetime", "")
+            if start_dt_str:
+                try:
+                    current_dt = datetime.fromisoformat(start_dt_str)
+                    parts = value.split("/")
+                    day = int(parts[0])
+                    month = int(parts[1])
+                    year = int(parts[2]) if len(parts) == 3 else current_dt.year
+                    new_dt = current_dt.replace(year=year, month=month, day=day)
+                    properties["start_datetime"] = new_dt.isoformat()
+                except (ValueError, IndexError):
+                    properties["start_datetime"] = value
+            else:
+                properties["start_datetime"] = value
         elif field == "time":
-            properties["time_override"] = value
+            # Update time part of start_datetime
+            start_dt_str = properties.get("start_datetime", "")
+            if start_dt_str:
+                try:
+                    current_dt = datetime.fromisoformat(start_dt_str)
+                    normalized = value.replace("h", ":")
+                    if normalized.endswith(":"):
+                        normalized += "00"
+                    time_parts = normalized.split(":")
+                    hour = int(time_parts[0])
+                    minute = int(time_parts[1]) if len(time_parts) > 1 else 0
+                    new_dt = current_dt.replace(hour=hour, minute=minute)
+                    properties["start_datetime"] = new_dt.isoformat()
+                except (ValueError, IndexError):
+                    properties["start_datetime"] = value
+            else:
+                properties["start_datetime"] = value
         elif field == "location":
             properties["location"] = value
         elif field == "participants":
@@ -388,6 +418,12 @@ async def _apply_modifications_db(db_pool, event_id: str, modifications: dict) -
                         uuid.UUID(event_id),
                         json.dumps(parts),
                     )
+                elif field == "date":
+                    # Update date part of start_datetime
+                    await _apply_date_modification_db(conn, event_id, value)
+                elif field == "time":
+                    # Update time part of start_datetime
+                    await _apply_time_modification_db(conn, event_id, value)
 
         logger.info(
             "Modifications applied to DB",
@@ -397,6 +433,79 @@ async def _apply_modifications_db(db_pool, event_id: str, modifications: dict) -
         logger.error(
             "Failed to apply modifications",
             extra={"event_id": event_id, "error": str(e)},
+        )
+
+
+async def _apply_date_modification_db(conn, event_id: str, date_value: str) -> None:
+    """Update date part of start_datetime in PostgreSQL."""
+    # Fetch current start_datetime
+    row = await conn.fetchrow(
+        "SELECT properties->>'start_datetime' AS start_dt FROM knowledge.entities WHERE id = $1",
+        uuid.UUID(event_id),
+    )
+    if not row or not row["start_dt"]:
+        return
+
+    try:
+        current_dt = datetime.fromisoformat(row["start_dt"])
+
+        # Parse new date (JJ/MM/AAAA or JJ/MM)
+        parts = date_value.split("/")
+        day = int(parts[0])
+        month = int(parts[1])
+        year = int(parts[2]) if len(parts) == 3 else current_dt.year
+
+        new_dt = current_dt.replace(year=year, month=month, day=day)
+        await conn.execute(
+            """
+            UPDATE knowledge.entities
+            SET properties = jsonb_set(properties, '{start_datetime}', to_jsonb($2::text))
+            WHERE id = $1
+            """,
+            uuid.UUID(event_id),
+            new_dt.isoformat(),
+        )
+    except (ValueError, IndexError) as e:
+        logger.warning(
+            "Failed to parse date modification",
+            extra={"event_id": event_id, "date_value": date_value, "error": str(e)},
+        )
+
+
+async def _apply_time_modification_db(conn, event_id: str, time_value: str) -> None:
+    """Update time part of start_datetime in PostgreSQL."""
+    row = await conn.fetchrow(
+        "SELECT properties->>'start_datetime' AS start_dt FROM knowledge.entities WHERE id = $1",
+        uuid.UUID(event_id),
+    )
+    if not row or not row["start_dt"]:
+        return
+
+    try:
+        current_dt = datetime.fromisoformat(row["start_dt"])
+
+        # Parse new time (HH:MM or HHhMM)
+        normalized = time_value.replace("h", ":")
+        if normalized.endswith(":"):
+            normalized += "00"
+        time_parts = normalized.split(":")
+        hour = int(time_parts[0])
+        minute = int(time_parts[1]) if len(time_parts) > 1 else 0
+
+        new_dt = current_dt.replace(hour=hour, minute=minute)
+        await conn.execute(
+            """
+            UPDATE knowledge.entities
+            SET properties = jsonb_set(properties, '{start_datetime}', to_jsonb($2::text))
+            WHERE id = $1
+            """,
+            uuid.UUID(event_id),
+            new_dt.isoformat(),
+        )
+    except (ValueError, IndexError) as e:
+        logger.warning(
+            "Failed to parse time modification",
+            extra={"event_id": event_id, "time_value": time_value, "error": str(e)},
         )
 
 
@@ -462,7 +571,7 @@ def register_event_modification_callbacks(application, db_pool) -> None:
         application.add_handler(
             CallbackQueryHandler(
                 handle_modify_field_callback,
-                pattern=f"^{prefix.replace(':', ':')}",
+                pattern=f"^{re.escape(prefix)}",
             )
         )
 

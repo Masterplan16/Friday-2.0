@@ -5,14 +5,12 @@ Vérifie la construction des prompts de classification.
 """
 
 import pytest
-
 from agents.src.agents.email.prompts import (
     CATEGORY_DESCRIPTIONS,
     build_classification_prompt,
     validate_classification_response,
 )
 from agents.src.middleware.models import CorrectionRule
-
 
 # ==========================================
 # Tests build_classification_prompt

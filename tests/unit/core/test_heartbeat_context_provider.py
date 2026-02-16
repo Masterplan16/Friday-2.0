@@ -5,29 +5,29 @@ Teste le ContextProvider du Heartbeat Engine (agents.src.core.context_provider),
 PAS le ContextProvider Story 7.1 (agents.src.core.context).
 """
 
-import pytest
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, Mock, patch
 
+import pytest
 from agents.src.core.context_provider import ContextProvider
 from agents.src.core.heartbeat_models import HeartbeatContext
-
 
 # ============================================================================
 # Fixtures
 # ============================================================================
 
+
 @pytest.fixture
 def mock_context_manager():
     """Mock ContextManager (Story 7.3)."""
-    from agents.src.core.models import UserContext, Casquette
+    from agents.src.core.models import Casquette, UserContext
 
     manager = AsyncMock()
     manager.get_current_context.return_value = UserContext(
         id=1,
         casquette=Casquette.MEDECIN,
         source="manual",
-        last_updated_at=datetime(2026, 2, 17, 14, 0, tzinfo=timezone.utc)
+        last_updated_at=datetime(2026, 2, 17, 14, 0, tzinfo=timezone.utc),
     )
     return manager
 
@@ -44,15 +44,13 @@ def mock_db_pool():
 @pytest.fixture
 def context_provider(mock_context_manager, mock_db_pool):
     """Fixture ContextProvider."""
-    return ContextProvider(
-        context_manager=mock_context_manager,
-        db_pool=mock_db_pool
-    )
+    return ContextProvider(context_manager=mock_context_manager, db_pool=mock_db_pool)
 
 
 # ============================================================================
 # Tests Task 3.2-3.3: Get Current Context
 # ============================================================================
+
 
 @pytest.mark.asyncio
 async def test_get_current_context_returns_heartbeat_context(context_provider):
@@ -122,7 +120,7 @@ async def test_context_next_calendar_event_integration(context_provider, mock_db
     mock_conn.fetchrow.return_value = {
         "title": "Consultation M. Dupont",
         "start_time": datetime(2026, 2, 17, 15, 0, tzinfo=timezone.utc),
-        "casquette": "medecin"
+        "casquette": "medecin",
     }
 
     context = await context_provider.get_current_context()
@@ -135,12 +133,15 @@ async def test_context_last_activity_mainteneur(context_provider, mock_db_pool):
     context = await context_provider.get_current_context()
 
     # Verifier last_activity_mainteneur (peut etre None ou datetime)
-    assert context.last_activity_mainteneur is None or isinstance(context.last_activity_mainteneur, datetime)
+    assert context.last_activity_mainteneur is None or isinstance(
+        context.last_activity_mainteneur, datetime
+    )
 
 
 # ============================================================================
 # Tests Task 3.3: Quiet Hours Edge Cases
 # ============================================================================
+
 
 @pytest.mark.asyncio
 async def test_quiet_hours_boundaries_22h():
@@ -152,7 +153,7 @@ async def test_quiet_hours_boundaries_22h():
         is_quiet_hours=True,
         current_casquette=None,
         next_calendar_event=None,
-        last_activity_mainteneur=None
+        last_activity_mainteneur=None,
     )
     assert context.is_quiet_hours is True
 
@@ -167,6 +168,6 @@ async def test_quiet_hours_boundaries_08h():
         is_quiet_hours=False,
         current_casquette=None,
         next_calendar_event=None,
-        last_activity_mainteneur=None
+        last_activity_mainteneur=None,
     )
     assert context.is_quiet_hours is False

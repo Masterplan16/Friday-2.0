@@ -5,10 +5,9 @@ from unittest.mock import AsyncMock, Mock
 from uuid import uuid4
 
 import pytest
-
 from bot.handlers.event_notifications import (
-    send_calendar_sync_success,
     send_calendar_modification_detected,
+    send_calendar_sync_success,
 )
 
 
@@ -59,9 +58,7 @@ class TestCalendarSyncNotifications:
     """Test suite for Google Calendar sync notifications."""
 
     @pytest.mark.asyncio
-    async def test_send_calendar_sync_success(
-        self, mock_bot, sample_event_created
-    ):
+    async def test_send_calendar_sync_success(self, mock_bot, sample_event_created):
         """Test notification création Google Calendar (Topic Actions)."""
         # Arrange
         supergroup_id = -1001234567890
@@ -92,9 +89,7 @@ class TestCalendarSyncNotifications:
         assert sample_event_created["html_link"] in message
 
     @pytest.mark.asyncio
-    async def test_send_calendar_modification_detected(
-        self, mock_bot, sample_event_modification
-    ):
+    async def test_send_calendar_modification_detected(self, mock_bot, sample_event_modification):
         """Test notification modification détectée (Topic Email & Communications)."""
         # Arrange
         supergroup_id = -1001234567890
@@ -131,9 +126,7 @@ class TestCalendarSyncNotifications:
         assert sample_event_modification["html_link"] in message
 
     @pytest.mark.asyncio
-    async def test_unicode_emojis_rendering(
-        self, mock_bot, sample_event_created
-    ):
+    async def test_unicode_emojis_rendering(self, mock_bot, sample_event_created):
         """Test Unicode emojis rendering correctement."""
         # Arrange
         # Add unicode emojis in event data

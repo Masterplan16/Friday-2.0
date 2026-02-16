@@ -3,12 +3,13 @@ Tests unitaires pattern_detector.py (Story 1.7) - CRIT-5 & HIGH-5 fix.
 
 Tests complets avec edge cases et data réaliste.
 """
-import pytest
+
 from datetime import datetime, timedelta
 from unittest.mock import AsyncMock, Mock
 from uuid import uuid4
 
-from services.feedback.pattern_detector import PatternDetector, PatternCluster
+import pytest
+from services.feedback.pattern_detector import PatternCluster, PatternDetector
 from tests.conftest import create_mock_pool_with_conn
 
 
@@ -307,4 +308,6 @@ async def test_detect_patterns_real_scenario(mock_db_pool):
         assert cluster.module == "email"
         assert cluster.action_type == "classify"
         assert len(cluster.corrections) >= 2  # Au moins 2 corrections dans cluster
-        assert cluster.similarity_score >= 0.85 or len(cluster.corrections) >= 3  # Soit haute similarité, soit plusieurs corrections
+        assert (
+            cluster.similarity_score >= 0.85 or len(cluster.corrections) >= 3
+        )  # Soit haute similarité, soit plusieurs corrections

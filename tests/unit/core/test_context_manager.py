@@ -14,24 +14,19 @@ Tests:
 - Singleton user_context UPDATE pas INSERT
 """
 
-import pytest
 import asyncio
 from datetime import datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
+import pytest
 from agents.src.core.context_manager import ContextManager, get_context_manager
-from agents.src.core.models import (
-    UserContext,
-    ContextSource,
-    Casquette,
-    OngoingEvent,
-)
-
+from agents.src.core.models import Casquette, ContextSource, OngoingEvent, UserContext
 
 # ============================================================================
 # Fixtures
 # ============================================================================
+
 
 @pytest.fixture
 def mock_db_pool():
@@ -53,16 +48,13 @@ def mock_redis():
 def context_manager(mock_db_pool, mock_redis):
     """Instance ContextManager avec mocks."""
     pool, _ = mock_db_pool
-    return ContextManager(
-        db_pool=pool,
-        redis_client=mock_redis,
-        cache_ttl=300
-    )
+    return ContextManager(db_pool=pool, redis_client=mock_redis, cache_ttl=300)
 
 
 # ============================================================================
 # Tests Détection Contexte
 # ============================================================================
+
 
 @pytest.mark.asyncio
 async def test_context_auto_detect_from_ongoing_event(context_manager, mock_db_pool):
@@ -75,23 +67,20 @@ async def test_context_auto_detect_from_ongoing_event(context_manager, mock_db_p
     end_time = now.replace(hour=15, minute=0, second=0, microsecond=0)
 
     event_id = uuid4()
-    conn.fetchrow = AsyncMock(side_effect=[
-        # 1er appel: user_context (updated_by='system')
-        {
-            "id": 1,
-            "current_casquette": None,
-            "last_updated_at": now,
-            "updated_by": "system"
-        },
-        # 2ème appel: ongoing event
-        {
-            "id": event_id,
-            "casquette": "medecin",
-            "title": "Consultation Dr Dupont",
-            "start_datetime": start_time,
-            "end_datetime": end_time
-        }
-    ])
+    conn.fetchrow = AsyncMock(
+        side_effect=[
+            # 1er appel: user_context (updated_by='system')
+            {"id": 1, "current_casquette": None, "last_updated_at": now, "updated_by": "system"},
+            # 2ème appel: ongoing event
+            {
+                "id": event_id,
+                "casquette": "medecin",
+                "title": "Consultation Dr Dupont",
+                "start_datetime": start_time,
+                "end_datetime": end_time,
+            },
+        ]
+    )
 
     # Mock cache Redis miss
     context_manager.redis_client.get.return_value = None
@@ -112,19 +101,16 @@ async def test_context_auto_detect_from_time_heuristic(context_manager, mock_db_
 
     # Mock: user_context (auto-detect)
     now = datetime.now().replace(hour=15, minute=0)  # 15h00 = enseignant
-    conn.fetchrow = AsyncMock(side_effect=[
-        # 1er appel: user_context
-        {
-            "id": 1,
-            "current_casquette": None,
-            "last_updated_at": now,
-            "updated_by": "system"
-        },
-        # 2ème appel: ongoing event (None)
-        None,
-        # 3ème appel: last event (None)
-        None
-    ])
+    conn.fetchrow = AsyncMock(
+        side_effect=[
+            # 1er appel: user_context
+            {"id": 1, "current_casquette": None, "last_updated_at": now, "updated_by": "system"},
+            # 2ème appel: ongoing event (None)
+            None,
+            # 3ème appel: last event (None)
+            None,
+        ]
+    )
 
     # Mock cache Redis miss
     context_manager.redis_client.get.return_value = None
@@ -147,12 +133,14 @@ async def test_context_manual_overrides_auto_detect(context_manager, mock_db_poo
 
     # Mock: user_context (updated_by='manual' → pas d'auto-detect)
     now = datetime.now()
-    conn.fetchrow = AsyncMock(return_value={
-        "id": 1,
-        "current_casquette": "chercheur",
-        "last_updated_at": now,
-        "updated_by": "manual"
-    })
+    conn.fetchrow = AsyncMock(
+        return_value={
+            "id": 1,
+            "current_casquette": "chercheur",
+            "last_updated_at": now,
+            "updated_by": "manual",
+        }
+    )
 
     # Mock cache Redis miss
     context_manager.redis_client.get.return_value = None
@@ -175,19 +163,16 @@ async def test_context_fallback_last_event(context_manager, mock_db_pool):
     _, conn = mock_db_pool
 
     now = datetime.now()
-    conn.fetchrow = AsyncMock(side_effect=[
-        # 1er appel: user_context (auto-detect)
-        {
-            "id": 1,
-            "current_casquette": None,
-            "last_updated_at": now,
-            "updated_by": "system"
-        },
-        # 2ème appel: ongoing event (None)
-        None,
-        # 3ème appel: last event (médecin)
-        {"casquette": "medecin"}
-    ])
+    conn.fetchrow = AsyncMock(
+        side_effect=[
+            # 1er appel: user_context (auto-detect)
+            {"id": 1, "current_casquette": None, "last_updated_at": now, "updated_by": "system"},
+            # 2ème appel: ongoing event (None)
+            None,
+            # 3ème appel: last event (médecin)
+            {"casquette": "medecin"},
+        ]
+    )
 
     # Mock cache Redis miss
     context_manager.redis_client.get.return_value = None
@@ -209,19 +194,16 @@ async def test_context_default_null_if_no_rules(context_manager, mock_db_pool):
     _, conn = mock_db_pool
 
     now = datetime.now()
-    conn.fetchrow = AsyncMock(side_effect=[
-        # 1er appel: user_context (auto-detect)
-        {
-            "id": 1,
-            "current_casquette": None,
-            "last_updated_at": now,
-            "updated_by": "system"
-        },
-        # 2ème appel: ongoing event (None)
-        None,
-        # 3ème appel: last event (None)
-        None
-    ])
+    conn.fetchrow = AsyncMock(
+        side_effect=[
+            # 1er appel: user_context (auto-detect)
+            {"id": 1, "current_casquette": None, "last_updated_at": now, "updated_by": "system"},
+            # 2ème appel: ongoing event (None)
+            None,
+            # 3ème appel: last event (None)
+            None,
+        ]
+    )
 
     # Mock cache Redis miss
     context_manager.redis_client.get.return_value = None
@@ -241,6 +223,7 @@ async def test_context_default_null_if_no_rules(context_manager, mock_db_pool):
 # Tests Cache Redis
 # ============================================================================
 
+
 @pytest.mark.asyncio
 async def test_context_cache_redis_avoids_double_query(context_manager, mock_db_pool):
     """Test: Cache Redis évite double query PostgreSQL."""
@@ -248,12 +231,15 @@ async def test_context_cache_redis_avoids_double_query(context_manager, mock_db_
 
     # Mock: Cache hit
     import json
-    cached_data = json.dumps({
-        "casquette": "medecin",
-        "source": "event",
-        "updated_at": datetime.now().isoformat(),
-        "updated_by": "system"
-    })
+
+    cached_data = json.dumps(
+        {
+            "casquette": "medecin",
+            "source": "event",
+            "updated_at": datetime.now().isoformat(),
+            "updated_by": "system",
+        }
+    )
     context_manager.redis_client.get.return_value = cached_data
 
     # Get context
@@ -280,12 +266,14 @@ async def test_context_set_invalidates_cache(context_manager, mock_db_pool):
 
     # Mock: Après invalidation cache, get_current_context() fait query DB
     now = datetime.now()
-    conn.fetchrow = AsyncMock(return_value={
-        "id": 1,
-        "current_casquette": "enseignant",
-        "last_updated_at": now,
-        "updated_by": "manual"
-    })
+    conn.fetchrow = AsyncMock(
+        return_value={
+            "id": 1,
+            "current_casquette": "enseignant",
+            "last_updated_at": now,
+            "updated_by": "manual",
+        }
+    )
 
     # Mock cache Redis miss après invalidation
     context_manager.redis_client.get.return_value = None
@@ -310,6 +298,7 @@ async def test_context_set_invalidates_cache(context_manager, mock_db_pool):
 # Tests Edge Cases
 # ============================================================================
 
+
 @pytest.mark.asyncio
 async def test_context_transition_logged(context_manager, mock_db_pool, caplog):
     """Test: Transition contexte logged (structlog)."""
@@ -317,12 +306,14 @@ async def test_context_transition_logged(context_manager, mock_db_pool, caplog):
 
     # Mock: UPDATE context
     conn.execute = AsyncMock()
-    conn.fetchrow = AsyncMock(return_value={
-        "id": 1,
-        "current_casquette": "chercheur",
-        "last_updated_at": datetime.now(),
-        "updated_by": "manual"
-    })
+    conn.fetchrow = AsyncMock(
+        return_value={
+            "id": 1,
+            "current_casquette": "chercheur",
+            "last_updated_at": datetime.now(),
+            "updated_by": "manual",
+        }
+    )
 
     # Mock cache Redis miss
     context_manager.redis_client.get.return_value = None
@@ -362,10 +353,7 @@ async def test_get_context_manager_factory():
     mock_pool = AsyncMock()
     mock_redis = AsyncMock()
 
-    manager = await get_context_manager(
-        db_pool=mock_pool,
-        redis_client=mock_redis
-    )
+    manager = await get_context_manager(db_pool=mock_pool, redis_client=mock_redis)
 
     assert isinstance(manager, ContextManager)
     assert manager.db_pool == mock_pool
@@ -377,39 +365,40 @@ async def test_get_context_manager_factory():
 # Tests Time Heuristic Rules
 # ============================================================================
 
+
 @pytest.mark.asyncio
-@pytest.mark.parametrize("hour,expected_casquette", [
-    (9, Casquette.MEDECIN),  # 09:00 → médecin (08:00-12:00)
-    (11, Casquette.MEDECIN),  # 11:00 → médecin
-    (14, Casquette.ENSEIGNANT),  # 14:00 → enseignant (14:00-16:00)
-    (15, Casquette.ENSEIGNANT),  # 15:00 → enseignant
-    (17, Casquette.CHERCHEUR),  # 17:00 → chercheur (16:00-18:00)
-    (20, None),  # 20:00 → None (hors plages)
-])
-async def test_time_heuristic_mapping(
-    context_manager,
-    mock_db_pool,
-    hour,
-    expected_casquette
-):
+@pytest.mark.parametrize(
+    "hour,expected_casquette",
+    [
+        (9, Casquette.MEDECIN),  # 09:00 → médecin (08:00-12:00)
+        (11, Casquette.MEDECIN),  # 11:00 → médecin
+        (14, Casquette.ENSEIGNANT),  # 14:00 → enseignant (14:00-16:00)
+        (15, Casquette.ENSEIGNANT),  # 15:00 → enseignant
+        (17, Casquette.CHERCHEUR),  # 17:00 → chercheur (16:00-18:00)
+        (20, None),  # 20:00 → None (hors plages)
+    ],
+)
+async def test_time_heuristic_mapping(context_manager, mock_db_pool, hour, expected_casquette):
     """Test: Mapping heure → casquette (AC1 Règle 3)."""
     _, conn = mock_db_pool
 
     # Mock: user_context (auto-detect)
     test_time = datetime.now().replace(hour=hour, minute=0)
-    conn.fetchrow = AsyncMock(side_effect=[
-        # 1er appel: user_context
-        {
-            "id": 1,
-            "current_casquette": None,
-            "last_updated_at": test_time,
-            "updated_by": "system"
-        },
-        # 2ème appel: ongoing event (None)
-        None,
-        # 3ème appel: last event (None si expected_casquette None)
-        None
-    ])
+    conn.fetchrow = AsyncMock(
+        side_effect=[
+            # 1er appel: user_context
+            {
+                "id": 1,
+                "current_casquette": None,
+                "last_updated_at": test_time,
+                "updated_by": "system",
+            },
+            # 2ème appel: ongoing event (None)
+            None,
+            # 3ème appel: last event (None si expected_casquette None)
+            None,
+        ]
+    )
 
     # Mock cache Redis miss
     context_manager.redis_client.get.return_value = None

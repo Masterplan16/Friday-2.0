@@ -15,7 +15,6 @@ from uuid import uuid4
 import asyncpg
 import pytest
 import redis.asyncio as aioredis
-
 from agents.src.agents.archiviste.embedding_pipeline import EmbeddingPipeline
 
 
@@ -99,7 +98,9 @@ async def test_pipeline_process_document_classified_event(db_pool, redis_client)
 
     # Cleanup
     await db_pool.execute("DELETE FROM knowledge.embeddings WHERE document_id = $1", document_id)
-    await db_pool.execute("DELETE FROM ingestion.document_metadata WHERE document_id = $1", document_id)
+    await db_pool.execute(
+        "DELETE FROM ingestion.document_metadata WHERE document_id = $1", document_id
+    )
 
 
 @pytest.mark.integration
@@ -144,4 +145,6 @@ async def test_pipeline_retry_on_failure(db_pool, redis_client):
     assert row is None  # Pas d'embedding pour document vide
 
     # Cleanup
-    await db_pool.execute("DELETE FROM ingestion.document_metadata WHERE document_id = $1", document_id)
+    await db_pool.execute(
+        "DELETE FROM ingestion.document_metadata WHERE document_id = $1", document_id
+    )

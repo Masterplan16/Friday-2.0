@@ -4,13 +4,12 @@ import json
 import os
 from datetime import datetime, timedelta
 from pathlib import Path
-from unittest.mock import AsyncMock, Mock, patch, MagicMock
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
+from agents.src.integrations.google_calendar.auth import GoogleCalendarAuth
 from google.auth.exceptions import RefreshError
 from google.oauth2.credentials import Credentials
-
-from agents.src.integrations.google_calendar.auth import GoogleCalendarAuth
 
 
 @pytest.fixture
@@ -70,9 +69,7 @@ class TestGoogleCalendarAuth:
         mock_flow.run_local_server.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_token_refresh_automatic(
-        self, temp_credentials_path, mock_credentials
-    ):
+    async def test_token_refresh_automatic(self, temp_credentials_path, mock_credentials):
         """Test automatic token refresh when expired."""
         # Arrange - Create expired token
         expired_creds = Mock(
@@ -106,9 +103,7 @@ class TestGoogleCalendarAuth:
 
         # Mock refresh request
         with patch("google.auth.transport.requests.Request") as mock_request:
-            with patch.object(
-                Credentials, "from_authorized_user_file", return_value=expired_creds
-            ):
+            with patch.object(Credentials, "from_authorized_user_file", return_value=expired_creds):
                 with patch.object(expired_creds, "refresh") as mock_refresh:
                     # Simulate successful refresh
                     def refresh_side_effect(req):
@@ -170,9 +165,7 @@ class TestGoogleCalendarAuth:
                 mock_flow.run_local_server.return_value = mock_credentials
                 mock_flow_factory.return_value = mock_flow
 
-                with patch.object(
-                    Credentials, "from_authorized_user_file", return_value=bad_creds
-                ):
+                with patch.object(Credentials, "from_authorized_user_file", return_value=bad_creds):
                     with patch("google.auth.transport.requests.Request"):
                         with patch.object(auth_manager, "save_credentials"):
                             # Act
@@ -215,9 +208,7 @@ class TestGoogleCalendarAuth:
             )
 
             # Act
-            decrypted = await auth_manager._decrypt_credentials_with_sops(
-                str(encrypted_path)
-            )
+            decrypted = await auth_manager._decrypt_credentials_with_sops(str(encrypted_path))
 
         # Assert
         assert decrypted is not None

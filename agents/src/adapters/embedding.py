@@ -26,10 +26,7 @@ from abc import ABC, abstractmethod
 from typing import Optional
 
 import structlog
-from agents.src.adapters.vectorstore import (
-    EmbeddingResponse,
-    VoyageAIAdapter,
-)
+from agents.src.adapters.vectorstore import EmbeddingResponse, VoyageAIAdapter
 from agents.src.tools.anonymize import anonymize_text
 
 logger = structlog.get_logger(__name__)

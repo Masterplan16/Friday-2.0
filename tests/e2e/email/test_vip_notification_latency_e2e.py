@@ -15,13 +15,11 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
 import pytest
-
 from agents.src.agents.email.vip_detector import (
     compute_email_hash,
     detect_vip_sender,
     update_vip_email_stats,
 )
-
 
 # ==========================================
 # Fixtures

@@ -14,14 +14,12 @@ import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-
+from agents.src.tools.desktop_search_consumer import DesktopSearchConsumer
 from agents.src.tools.desktop_search_wrapper import (
     _is_claude_cli_available,
     _parse_cli_output,
     search_desktop,
 )
-from agents.src.tools.desktop_search_consumer import DesktopSearchConsumer
-
 
 # ============================================================
 # Fixtures

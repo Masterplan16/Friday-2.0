@@ -14,12 +14,12 @@ Scenarios:
 import asyncio
 import json
 import os
+import sys
 import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
-import sys
 
 import asyncpg
 import pytest
@@ -32,7 +32,6 @@ sys.path.insert(0, str(repo_root))
 from agents.src.agents.email.vip_detector import compute_email_hash
 from agents.src.middleware.trust import init_trust_manager
 
-
 # ==========================================
 # Fixtures
 # ==========================================
@@ -41,12 +40,12 @@ from agents.src.middleware.trust import init_trust_manager
 @pytest.fixture
 async def redis_client():
     """Client Redis test"""
-    redis_url = os.getenv('REDIS_URL', 'redis://localhost:6379')
+    redis_url = os.getenv("REDIS_URL", "redis://localhost:6379")
     client = redis.from_url(redis_url, decode_responses=True)
 
     # Cleanup avant test
     try:
-        await client.delete('emails:received', 'emails:failed')
+        await client.delete("emails:received", "emails:failed")
     except:
         pass
 
@@ -54,7 +53,7 @@ async def redis_client():
 
     # Cleanup après test
     try:
-        await client.delete('emails:received', 'emails:failed')
+        await client.delete("emails:received", "emails:failed")
     except:
         pass
 
@@ -92,6 +91,7 @@ class MockAsyncPool:
     @asynccontextmanager
     async def acquire(self):
         """Mock acquire pour context manager"""
+
         # Setup mock conn pour différentes queries
         async def mock_fetchrow(query, *args):
             # VIP detection query
@@ -113,19 +113,21 @@ class MockAsyncPool:
             if "INSERT INTO ingestion.emails" in query:
                 email_id = f"email_{len(self.emails_stored)}"
                 # Stocker les données pour validation
-                self.emails_stored.append({
-                    "id": email_id,
-                    "account_id": args[0] if len(args) > 0 else None,
-                    "message_id": args[1] if len(args) > 1 else None,
-                    "from_anon": args[2] if len(args) > 2 else None,
-                    "subject_anon": args[3] if len(args) > 3 else None,
-                    "body_anon": args[4] if len(args) > 4 else None,
-                    "category": args[5] if len(args) > 5 else None,
-                    "confidence": args[6] if len(args) > 6 else None,
-                    "priority": args[7] if len(args) > 7 else None,
-                    "received_at": args[8] if len(args) > 8 else None,
-                    "has_attachments": args[9] if len(args) > 9 else None,
-                })
+                self.emails_stored.append(
+                    {
+                        "id": email_id,
+                        "account_id": args[0] if len(args) > 0 else None,
+                        "message_id": args[1] if len(args) > 1 else None,
+                        "from_anon": args[2] if len(args) > 2 else None,
+                        "subject_anon": args[3] if len(args) > 3 else None,
+                        "body_anon": args[4] if len(args) > 4 else None,
+                        "category": args[5] if len(args) > 5 else None,
+                        "confidence": args[6] if len(args) > 6 else None,
+                        "priority": args[7] if len(args) > 7 else None,
+                        "received_at": args[8] if len(args) > 8 else None,
+                        "has_attachments": args[9] if len(args) > 9 else None,
+                    }
+                )
                 return email_id
 
             # Trust level query
@@ -173,10 +175,10 @@ class MockAsyncPool:
 async def db_pool():
     """Mock asyncpg pool pour tests E2E"""
     # Setup env vars AVANT init_trust_manager
-    os.environ['TELEGRAM_BOT_TOKEN'] = 'test-bot-token'
-    os.environ['TELEGRAM_SUPERGROUP_ID'] = '123456'  # Must be int-parseable
-    os.environ['TOPIC_EMAIL_ID'] = '100'
-    os.environ['TOPIC_ACTIONS_ID'] = '200'
+    os.environ["TELEGRAM_BOT_TOKEN"] = "test-bot-token"
+    os.environ["TELEGRAM_SUPERGROUP_ID"] = "123456"  # Must be int-parseable
+    os.environ["TOPIC_EMAIL_ID"] = "100"
+    os.environ["TOPIC_ACTIONS_ID"] = "200"
 
     pool = MockAsyncPool()
 
@@ -235,14 +237,17 @@ def mock_emailengine():
 @pytest.fixture
 def mock_presidio():
     """Mock Presidio anonymization"""
-    with patch('agents.src.tools.anonymize.anonymize_text') as mock_anon:
+    with patch("agents.src.tools.anonymize.anonymize_text") as mock_anon:
         # Retourner texte anonymisé simple
         async def anonymize(text):
             if not text:
                 return ""
             # Remplacer emails par [EMAIL_X]
             import re
-            result = re.sub(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b', '[EMAIL_ANON]', text)
+
+            result = re.sub(
+                r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b", "[EMAIL_ANON]", text
+            )
             return result
 
         mock_anon.side_effect = anonymize
@@ -267,8 +272,8 @@ async def test_vip_urgent_email_pipeline(redis_client, db_pool, mock_emailengine
     """
 
     # Configuration test (env vars déjà set dans db_pool fixture)
-    os.environ['EMAILENGINE_SECRET'] = 'test-secret'
-    os.environ['EMAILENGINE_ENCRYPTION_KEY'] = 'test-encryption-key'
+    os.environ["EMAILENGINE_SECRET"] = "test-secret"
+    os.environ["EMAILENGINE_ENCRYPTION_KEY"] = "test-encryption-key"
 
     # Import consumer après env vars
     from services.email_processor.consumer import EmailProcessorConsumer
@@ -281,43 +286,53 @@ async def test_vip_urgent_email_pipeline(redis_client, db_pool, mock_emailengine
 
     # Publier événement dans Redis
     event = {
-        'account_id': 'account-test',
-        'message_id': 'msg_vip_urgent_123',
-        'from_anon': '[EMAIL_DOYEN]',
-        'subject_anon': 'URGENT - Validation diplomes',
-        'date': '2026-02-11T10:30:00Z',
-        'has_attachments': 'False',
+        "account_id": "account-test",
+        "message_id": "msg_vip_urgent_123",
+        "from_anon": "[EMAIL_DOYEN]",
+        "subject_anon": "URGENT - Validation diplomes",
+        "date": "2026-02-11T10:30:00Z",
+        "has_attachments": "False",
     }
 
-    event_id = await redis_client.xadd('emails:received', event)
+    event_id = await redis_client.xadd("emails:received", event)
 
     # Traiter événement (appel direct à process_email_event)
     await consumer.process_email_event(event_id, event)
 
     # Validations CORE workflow
-    assert len(db_pool.emails_stored) == 1, f"Expected 1 email stored, got {len(db_pool.emails_stored)}"
+    assert (
+        len(db_pool.emails_stored) == 1
+    ), f"Expected 1 email stored, got {len(db_pool.emails_stored)}"
     stored_email = db_pool.emails_stored[0]
 
     # Vérifier priority='urgent' (VIP + urgence keywords + deadline → score 1.0)
-    assert stored_email['priority'] == 'urgent', f"Expected priority='urgent', got '{stored_email['priority']}'"
+    assert (
+        stored_email["priority"] == "urgent"
+    ), f"Expected priority='urgent', got '{stored_email['priority']}'"
 
     # Vérifier from_anon et subject_anon
-    assert stored_email['from_anon'] == '[EMAIL_DOYEN]', f"Expected from_anon='[EMAIL_DOYEN]', got '{stored_email['from_anon']}'"
-    assert 'Validation' in stored_email['subject_anon'], "Subject should contain 'Validation'"
+    assert (
+        stored_email["from_anon"] == "[EMAIL_DOYEN]"
+    ), f"Expected from_anon='[EMAIL_DOYEN]', got '{stored_email['from_anon']}'"
+    assert "Validation" in stored_email["subject_anon"], "Subject should contain 'Validation'"
 
     # Vérifier category (stub 'inbox')
-    assert stored_email['category'] == 'inbox', f"Expected category='inbox', got '{stored_email['category']}'"
+    assert (
+        stored_email["category"] == "inbox"
+    ), f"Expected category='inbox', got '{stored_email['category']}'"
 
     # NOTE: Telegram notification uses own httpx.AsyncClient() so mock doesn't capture calls
     # Validation Telegram would require global httpx patch, skipped for simplicity
 
     # Cleanup
-    await redis_client.delete('emails:received')
+    await redis_client.delete("emails:received")
 
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
-async def test_vip_non_urgent_email_pipeline(redis_client, db_pool, mock_emailengine, mock_presidio):
+async def test_vip_non_urgent_email_pipeline(
+    redis_client, db_pool, mock_emailengine, mock_presidio
+):
     """
     Test E2E: Email VIP non-urgent → priority='high', notification topic Email
 
@@ -328,8 +343,8 @@ async def test_vip_non_urgent_email_pipeline(redis_client, db_pool, mock_emailen
     """
 
     # Setup env (env vars Telegram déjà set dans db_pool fixture)
-    os.environ['EMAILENGINE_SECRET'] = 'test-secret'
-    os.environ['EMAILENGINE_ENCRYPTION_KEY'] = 'test-encryption-key'
+    os.environ["EMAILENGINE_SECRET"] = "test-secret"
+    os.environ["EMAILENGINE_ENCRYPTION_KEY"] = "test-encryption-key"
 
     # Mock EmailEngine response pour email VIP non-urgent
     async def mock_get_normal(url, **kwargs):
@@ -358,31 +373,37 @@ async def test_vip_non_urgent_email_pipeline(redis_client, db_pool, mock_emailen
     db_pool.emails_stored = []
 
     event = {
-        'account_id': 'account-test',
-        'message_id': 'msg_vip_normal_456',
-        'from_anon': '[EMAIL_DOYEN]',
-        'subject_anon': 'Reunion pedagogique',
-        'date': '2026-02-11T11:00:00Z',
-        'has_attachments': 'False',
+        "account_id": "account-test",
+        "message_id": "msg_vip_normal_456",
+        "from_anon": "[EMAIL_DOYEN]",
+        "subject_anon": "Reunion pedagogique",
+        "date": "2026-02-11T11:00:00Z",
+        "has_attachments": "False",
     }
 
-    event_id = await redis_client.xadd('emails:received', event)
+    event_id = await redis_client.xadd("emails:received", event)
     await consumer.process_email_event(event_id, event)
 
     # Validations CORE workflow
-    assert len(db_pool.emails_stored) == 1, f"Expected 1 email stored, got {len(db_pool.emails_stored)}"
+    assert (
+        len(db_pool.emails_stored) == 1
+    ), f"Expected 1 email stored, got {len(db_pool.emails_stored)}"
     stored_email = db_pool.emails_stored[0]
 
     # Vérifier priority='high' (VIP mais pas urgent - score 0.5 < 0.6)
-    assert stored_email['priority'] == 'high', f"Expected priority='high', got '{stored_email['priority']}'"
+    assert (
+        stored_email["priority"] == "high"
+    ), f"Expected priority='high', got '{stored_email['priority']}'"
 
     # Vérifier from_anon et subject_anon
-    assert stored_email['from_anon'] == '[EMAIL_DOYEN]', f"Expected from_anon='[EMAIL_DOYEN]', got '{stored_email['from_anon']}'"
-    assert 'Reunion' in stored_email['subject_anon'], "Subject should contain 'Reunion'"
+    assert (
+        stored_email["from_anon"] == "[EMAIL_DOYEN]"
+    ), f"Expected from_anon='[EMAIL_DOYEN]', got '{stored_email['from_anon']}'"
+    assert "Reunion" in stored_email["subject_anon"], "Subject should contain 'Reunion'"
 
     # NOTE: Telegram notification uses own httpx.AsyncClient() so mock doesn't capture calls
 
-    await redis_client.delete('emails:received')
+    await redis_client.delete("emails:received")
 
 
 @pytest.mark.e2e
@@ -398,8 +419,8 @@ async def test_normal_email_pipeline(redis_client, db_pool, mock_emailengine, mo
     """
 
     # Setup env (env vars Telegram déjà set dans db_pool fixture)
-    os.environ['EMAILENGINE_SECRET'] = 'test-secret'
-    os.environ['EMAILENGINE_ENCRYPTION_KEY'] = 'test-encryption-key'
+    os.environ["EMAILENGINE_SECRET"] = "test-secret"
+    os.environ["EMAILENGINE_ENCRYPTION_KEY"] = "test-encryption-key"
 
     # Mock EmailEngine response pour email normal
     async def mock_get_normal(url, **kwargs):
@@ -428,31 +449,37 @@ async def test_normal_email_pipeline(redis_client, db_pool, mock_emailengine, mo
     db_pool.emails_stored = []
 
     event = {
-        'account_id': 'account-test',
-        'message_id': 'msg_normal_789',
-        'from_anon': '[EMAIL_COLLEAGUE]',
-        'subject_anon': 'Question projet',
-        'date': '2026-02-11T12:00:00Z',
-        'has_attachments': 'False',
+        "account_id": "account-test",
+        "message_id": "msg_normal_789",
+        "from_anon": "[EMAIL_COLLEAGUE]",
+        "subject_anon": "Question projet",
+        "date": "2026-02-11T12:00:00Z",
+        "has_attachments": "False",
     }
 
-    event_id = await redis_client.xadd('emails:received', event)
+    event_id = await redis_client.xadd("emails:received", event)
     await consumer.process_email_event(event_id, event)
 
     # Validations CORE workflow
-    assert len(db_pool.emails_stored) == 1, f"Expected 1 email stored, got {len(db_pool.emails_stored)}"
+    assert (
+        len(db_pool.emails_stored) == 1
+    ), f"Expected 1 email stored, got {len(db_pool.emails_stored)}"
     stored_email = db_pool.emails_stored[0]
 
     # Vérifier priority='normal' (non-VIP, pas urgent)
-    assert stored_email['priority'] == 'normal', f"Expected priority='normal', got '{stored_email['priority']}'"
+    assert (
+        stored_email["priority"] == "normal"
+    ), f"Expected priority='normal', got '{stored_email['priority']}'"
 
     # Vérifier from_anon et subject_anon
-    assert stored_email['from_anon'] == '[EMAIL_COLLEAGUE]', f"Expected from_anon='[EMAIL_COLLEAGUE]', got '{stored_email['from_anon']}'"
-    assert 'Question' in stored_email['subject_anon'], "Subject should contain 'Question'"
+    assert (
+        stored_email["from_anon"] == "[EMAIL_COLLEAGUE]"
+    ), f"Expected from_anon='[EMAIL_COLLEAGUE]', got '{stored_email['from_anon']}'"
+    assert "Question" in stored_email["subject_anon"], "Subject should contain 'Question'"
 
     # NOTE: Telegram notification uses own httpx.AsyncClient() so mock doesn't capture calls
 
-    await redis_client.delete('emails:received')
+    await redis_client.delete("emails:received")
 
 
 @pytest.mark.e2e

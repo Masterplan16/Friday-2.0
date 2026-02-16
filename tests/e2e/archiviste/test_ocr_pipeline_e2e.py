@@ -13,11 +13,12 @@ AC validés :
 - AC6 : RGPD strict (Presidio)
 - AC7 : Gestion erreurs robuste
 """
-import pytest
-import asyncio
-from pathlib import Path
-from datetime import datetime
 
+import asyncio
+from datetime import datetime
+from pathlib import Path
+
+import pytest
 from agents.src.agents.archiviste.pipeline import OCRPipeline
 
 
@@ -37,10 +38,7 @@ async def test_ocr_pipeline_end_to_end_facture():
     - Presidio + spaCy-fr installés
     """
     # Arrange
-    pipeline = OCRPipeline(
-        redis_url="redis://localhost:6379/0",
-        timeout_seconds=45  # AC4
-    )
+    pipeline = OCRPipeline(redis_url="redis://localhost:6379/0", timeout_seconds=45)  # AC4
 
     # Fichier test (à créer dans tests/fixtures/)
     test_file = Path("tests/fixtures/facture_test.pdf")
@@ -55,8 +53,7 @@ async def test_ocr_pipeline_end_to_end_facture():
         # Act
         start_time = datetime.now()
         result = await pipeline.process_document(
-            file_path=str(test_file),
-            filename="facture_test.pdf"
+            file_path=str(test_file), filename="facture_test.pdf"
         )
         duration = (datetime.now() - start_time).total_seconds()
 
@@ -75,8 +72,13 @@ async def test_ocr_pipeline_end_to_end_facture():
 
         # Assert - AC3 : Metadata extraites
         assert result["metadata"]["doc_type"] in [
-            "Facture", "Courrier", "Garantie", "Contrat",
-            "Releve", "Attestation", "Inconnu"
+            "Facture",
+            "Courrier",
+            "Garantie",
+            "Contrat",
+            "Releve",
+            "Attestation",
+            "Inconnu",
         ]
         assert result["metadata"]["emitter"]
         assert result["metadata"]["amount"] >= 0.0
@@ -92,8 +94,7 @@ async def test_ocr_pipeline_end_to_end_facture():
         # Assert - AC5 : Confidence ≥0.7 (ou warning si <0.7)
         # Note: On accepte <0.7 pour documents difficiles, mais on log
         global_confidence = min(
-            result["ocr_result"]["confidence"],
-            result["metadata"]["confidence"]
+            result["ocr_result"]["confidence"], result["metadata"]["confidence"]
         )
         if global_confidence < 0.7:
             print(f"WARNING: Low confidence {global_confidence:.2f} (expected ≥0.7)")
@@ -129,8 +130,7 @@ async def test_ocr_pipeline_timeout_handling():
     """
     # Arrange - Timeout très court pour forcer erreur
     pipeline = OCRPipeline(
-        redis_url="redis://localhost:6379/0",
-        timeout_seconds=1  # 1 seconde seulement
+        redis_url="redis://localhost:6379/0", timeout_seconds=1  # 1 seconde seulement
     )
 
     test_file = Path("tests/fixtures/facture_test.pdf")
@@ -143,10 +143,7 @@ async def test_ocr_pipeline_timeout_handling():
 
         # Act & Assert - Timeout doit être levé
         with pytest.raises(asyncio.TimeoutError):
-            await pipeline.process_document(
-                file_path=str(test_file),
-                filename="facture_test.pdf"
-            )
+            await pipeline.process_document(file_path=str(test_file), filename="facture_test.pdf")
 
         print("\n✅ Timeout handling OK")
 

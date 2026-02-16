@@ -4,13 +4,14 @@ Tests unitaires pour la configuration d'arborescence.
 Story 3.2 - Task 2.6
 Tests validation YAML schema, edge cases
 """
+
 import pytest
-from pydantic import ValidationError
 from agents.src.config.arborescence_config import (
     ArborescenceConfig,
+    get_arborescence_config,
     load_arborescence_config,
-    get_arborescence_config
 )
+from pydantic import ValidationError
 
 
 def test_load_arborescence_config_default():
@@ -155,11 +156,7 @@ def test_arborescence_config_root_path_not_empty():
     """Test root_path ne peut pas être vide."""
     with pytest.raises(ValidationError, match="root_path cannot be empty"):
         ArborescenceConfig(
-            root_path="",
-            transit_paths={},
-            categories={},
-            validation={},
-            anti_contamination={}
+            root_path="", transit_paths={}, categories={}, validation={}, anti_contamination={}
         )
 
 
@@ -175,7 +172,7 @@ def test_arborescence_config_missing_category_raises():
                 # Manque: universite, recherche, perso
             },
             validation={},
-            anti_contamination={}
+            anti_contamination={},
         )
 
 
@@ -195,10 +192,10 @@ def test_arborescence_config_missing_finance_perimeter_raises():
                 },
                 "universite": {},
                 "recherche": {},
-                "perso": {}
+                "perso": {},
             },
             validation={},
-            anti_contamination={}
+            anti_contamination={},
         )
 
 
@@ -210,15 +207,20 @@ def test_arborescence_config_extra_category_raises():
             transit_paths={},
             categories={
                 "pro": {},
-                "finance": {"subcategories": {
-                    "selarl": {}, "scm": {}, "sci_ravas": {},
-                    "sci_malbosc": {}, "personal": {}
-                }},
+                "finance": {
+                    "subcategories": {
+                        "selarl": {},
+                        "scm": {},
+                        "sci_ravas": {},
+                        "sci_malbosc": {},
+                        "personal": {},
+                    }
+                },
                 "universite": {},
                 "recherche": {},
                 "perso": {},
-                "extra_category": {}  # Catégorie non autorisée
+                "extra_category": {},  # Catégorie non autorisée
             },
             validation={},
-            anti_contamination={}
+            anti_contamination={},
         )

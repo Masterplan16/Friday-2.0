@@ -19,7 +19,6 @@ from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-
 from bot.handlers.create_event_command import (
     STATE_KEY_PREFIX,
     STATE_TTL,
@@ -33,7 +32,6 @@ from bot.handlers.create_event_command import (
     handle_restart_callback,
     register_create_event_command,
 )
-
 
 # ============================================================================
 # FIXTURES
@@ -175,9 +173,18 @@ class TestValidateDate:
         assert result is not None
         assert "invalide" in result.lower() or "format" in result.lower()
 
+    def test_valid_date_relative_demain(self):
+        """Date relative 'demain' valide."""
+        assert _validate_date("demain") is None
+
+    def test_valid_date_relative_lundi(self):
+        """Date relative 'lundi' valide."""
+        assert _validate_date("lundi") is None
+        assert _validate_date("mardi prochain") is None
+
     def test_invalid_date_format(self):
         """Format non reconnu."""
-        result = _validate_date("demain")
+        result = _validate_date("bientot peut-etre")
         assert result is not None
         assert "format" in result.lower()
 
@@ -318,7 +325,7 @@ class TestBuildDatetime:
     """Tests construction datetime."""
 
     def test_build_datetime_full(self):
-        """date + time -> datetime correct."""
+        """date + time -> datetime correct avec timezone Europe/Paris."""
         result = _build_datetime("17/02/2026", "14:30")
         assert result is not None
         assert result.year == 2026
@@ -326,6 +333,7 @@ class TestBuildDatetime:
         assert result.day == 17
         assert result.hour == 14
         assert result.minute == 30
+        assert result.tzinfo is not None  # Timezone-aware
 
     def test_build_datetime_h_format(self):
         """Format HHhMM."""
@@ -333,6 +341,14 @@ class TestBuildDatetime:
         assert result is not None
         assert result.hour == 14
         assert result.minute == 30
+        assert result.tzinfo is not None  # Timezone-aware
+
+    def test_build_datetime_relative_demain(self):
+        """Date relative 'demain' -> datetime correct."""
+        result = _build_datetime("demain", "10:00")
+        assert result is not None
+        assert result.hour == 10
+        assert result.minute == 0
 
     def test_build_datetime_invalid(self):
         """Inputs invalides -> None."""

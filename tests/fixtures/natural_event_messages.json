@@ -1,0 +1,112 @@
+[
+  {
+    "id": "msg_01",
+    "input": "Ajoute RDV cardio Dr Leblanc jeudi 14h30",
+    "current_date": "2026-02-10",
+    "expected": {
+      "event_detected": true,
+      "title": "Consultation cardiologie Dr Leblanc",
+      "casquette": "medecin",
+      "event_type": "medical",
+      "has_participants": true,
+      "min_confidence": 0.85
+    }
+  },
+  {
+    "id": "msg_02",
+    "input": "Note reunion pedagogique mardi 10h salle B203",
+    "current_date": "2026-02-10",
+    "expected": {
+      "event_detected": true,
+      "title_contains": "reunion",
+      "casquette": "enseignant",
+      "event_type": "meeting",
+      "has_location": true,
+      "min_confidence": 0.80
+    }
+  },
+  {
+    "id": "msg_03",
+    "input": "RDV demain 14h avec Dr Dupont",
+    "current_date": "2026-02-10",
+    "expected": {
+      "event_detected": true,
+      "casquette": "medecin",
+      "has_participants": true,
+      "min_confidence": 0.85
+    }
+  },
+  {
+    "id": "msg_04",
+    "input": "Reserve rappel soumission article avant le 28 fevrier",
+    "current_date": "2026-02-10",
+    "expected": {
+      "event_detected": true,
+      "casquette": "chercheur",
+      "event_type": "deadline",
+      "min_confidence": 0.80
+    }
+  },
+  {
+    "id": "msg_05",
+    "input": "Cree diner chez Marie samedi soir 20h avec Jean et Sophie",
+    "current_date": "2026-02-10",
+    "expected": {
+      "event_detected": true,
+      "casquette": "personnel",
+      "event_type": "personal",
+      "has_participants": true,
+      "min_confidence": 0.75
+    }
+  },
+  {
+    "id": "msg_06",
+    "input": "Programme cours L2 anatomie lundi prochain 14h amphi B",
+    "current_date": "2026-02-10",
+    "expected": {
+      "event_detected": true,
+      "casquette": "enseignant",
+      "has_location": true,
+      "min_confidence": 0.85
+    }
+  },
+  {
+    "id": "msg_07",
+    "input": "Planifie congres cardiologie du 10 au 12 mars a Lyon",
+    "current_date": "2026-02-10",
+    "expected": {
+      "event_detected": true,
+      "casquette": "chercheur",
+      "event_type": "conference",
+      "has_location": true,
+      "min_confidence": 0.80
+    }
+  },
+  {
+    "id": "msg_08_negative",
+    "input": "Salut, comment ca va ?",
+    "current_date": "2026-02-10",
+    "expected": {
+      "event_detected": false,
+      "intent_detected": false
+    }
+  },
+  {
+    "id": "msg_09_negative",
+    "input": "Merci pour le compte-rendu de la reunion",
+    "current_date": "2026-02-10",
+    "expected": {
+      "event_detected": false,
+      "intent_detected": false
+    }
+  },
+  {
+    "id": "msg_10_ambiguous",
+    "input": "Il faudrait organiser un truc bientot",
+    "current_date": "2026-02-10",
+    "expected": {
+      "event_detected": false,
+      "intent_detected": false
+    }
+  }
+]

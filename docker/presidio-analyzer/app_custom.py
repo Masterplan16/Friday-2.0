@@ -1,4 +1,5 @@
 """REST API server for analyzer with custom French model configuration."""
+
 import json
 import logging
 import os
@@ -6,12 +7,11 @@ from logging.config import fileConfig
 from pathlib import Path
 from typing import Tuple
 
-from flask import Flask, request, jsonify, Response
-from werkzeug.exceptions import HTTPException
-
+from flask import Flask, Response, jsonify, request
 from presidio_analyzer import AnalyzerEngine
 from presidio_analyzer.analyzer_request import AnalyzerRequest
 from presidio_analyzer.nlp_engine import NlpEngineProvider
+from werkzeug.exceptions import HTTPException
 
 DEFAULT_PORT = "3000"
 
@@ -99,8 +99,7 @@ class Server:
 
             except Exception as e:
                 self.logger.error(
-                    f"A fatal error occurred during execution of "
-                    f"AnalyzerEngine.analyze(). {e}"
+                    f"A fatal error occurred during execution of " f"AnalyzerEngine.analyze(). {e}"
                 )
                 return jsonify(error=e.args[0]), 500
 
@@ -141,7 +140,7 @@ class Server:
         """Create NlpEngine with custom configuration for French support."""
         try:
             # Load configuration from file
-            with open(config_path, 'r') as f:
+            with open(config_path, "r") as f:
                 config = json.load(f)
 
             self.logger.info(f"Loaded NLP config from {config_path}: {config}")
@@ -151,8 +150,8 @@ class Server:
             nlp_engine = provider.create_engine()
 
             # Log successful creation (can't access supported_languages directly)
-            model_configs = config.get('models', [])
-            lang_codes = [m.get('lang_code') for m in model_configs]
+            model_configs = config.get("models", [])
+            lang_codes = [m.get("lang_code") for m in model_configs]
             self.logger.info(f"Created NLP engine with configured languages: {lang_codes}")
 
             return nlp_engine
@@ -179,8 +178,7 @@ class Server:
             # Create a new SpacyRecognizer for French
             # Don't check if it exists first - get_recognizers("fr") raises exception if no recognizers exist
             fr_spacy_recognizer = SpacyRecognizer(
-                supported_language="fr",
-                supported_entities=["PERSON", "LOCATION", "ORGANIZATION"]
+                supported_language="fr", supported_entities=["PERSON", "LOCATION", "ORGANIZATION"]
             )
 
             # Add it to the registry
@@ -202,8 +200,7 @@ class Server:
 
         except Exception as e:
             self.logger.error(
-                f"Failed to add French SpacyRecognizer: {e}. "
-                f"French text analysis may not work."
+                f"Failed to add French SpacyRecognizer: {e}. " f"French text analysis may not work."
             )
 
 

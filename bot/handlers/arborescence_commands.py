@@ -166,7 +166,8 @@ async def _show_stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 
     try:
         async with db_pool.acquire() as conn:
-            rows = await conn.fetch("""
+            rows = await conn.fetch(
+                """
                 SELECT
                     COALESCE(classification_category, 'non classifié') as category,
                     COALESCE(classification_subcategory, '-') as subcategory,
@@ -175,14 +176,17 @@ async def _show_stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
                 WHERE classification_category IS NOT NULL
                 GROUP BY classification_category, classification_subcategory
                 ORDER BY count DESC
-                """)
+                """
+            )
 
             total = await conn.fetchval("SELECT COUNT(*) FROM ingestion.document_metadata")
 
-            classified = await conn.fetchval("""
+            classified = await conn.fetchval(
+                """
                 SELECT COUNT(*) FROM ingestion.document_metadata
                 WHERE classification_category IS NOT NULL
-                """)
+                """
+            )
 
         if not rows:
             await update.message.reply_text("Aucun document classifié pour le moment.")

@@ -17,7 +17,6 @@ from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-
 from bot.handlers.event_creation_callbacks import (
     _check_conflicts_immediate,
     _confirm_event,
@@ -26,7 +25,6 @@ from bot.handlers.event_creation_callbacks import (
     handle_event_create_callback,
     register_event_creation_callbacks,
 )
-
 
 # ============================================================================
 # FIXTURES
@@ -136,7 +134,9 @@ class TestHandleEventCreateCallback:
         assert "Consultation Dr Martin" in msg
 
     @pytest.mark.asyncio
-    async def test_create_event_not_found(self, mock_update, mock_context, mock_db_pool, sample_event_id):
+    async def test_create_event_not_found(
+        self, mock_update, mock_context, mock_db_pool, sample_event_id
+    ):
         """[Creer] avec event introuvable -> erreur."""
         pool, _ = mock_db_pool
         mock_context.bot_data["db_pool"] = pool
@@ -207,10 +207,13 @@ class TestGoogleCalendarSync:
             wraps=_sync_to_google_calendar,
         ):
             # Simuler ImportError en patchant le module
-            with patch.dict("sys.modules", {
-                "agents.src.integrations.google_calendar.config": None,
-                "agents.src.integrations.google_calendar.sync_manager": None,
-            }):
+            with patch.dict(
+                "sys.modules",
+                {
+                    "agents.src.integrations.google_calendar.config": None,
+                    "agents.src.integrations.google_calendar.sync_manager": None,
+                },
+            ):
                 result = await _sync_to_google_calendar(pool, sample_event_id, event_data)
 
         assert result is None
@@ -395,9 +398,7 @@ class TestHandleEventCancelCallback:
         assert "knowledge.entities" in sql
 
         # Verifie message confirmation
-        mock_update.callback_query.edit_message_text.assert_called_with(
-            "Creation annulee"
-        )
+        mock_update.callback_query.edit_message_text.assert_called_with("Creation annulee")
 
     @pytest.mark.asyncio
     async def test_cancel_without_db_pool(self, mock_update, mock_context, sample_event_id):
@@ -407,9 +408,7 @@ class TestHandleEventCancelCallback:
 
         await handle_event_cancel_callback(mock_update, mock_context)
 
-        mock_update.callback_query.edit_message_text.assert_called_with(
-            "Creation annulee"
-        )
+        mock_update.callback_query.edit_message_text.assert_called_with("Creation annulee")
 
 
 # ============================================================================

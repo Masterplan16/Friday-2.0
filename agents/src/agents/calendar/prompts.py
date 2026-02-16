@@ -226,9 +226,7 @@ def build_event_detection_prompt(
     # Story 7.3 AC1: Hint contexte casquette actuel (bias subtil)
     context_hint = ""
     if current_casquette is not None:
-        from agents.src.core.models import (
-            CASQUETTE_LABEL_MAPPING,
-        )
+        from agents.src.core.models import CASQUETTE_LABEL_MAPPING
 
         label = CASQUETTE_LABEL_MAPPING.get(current_casquette, current_casquette.value)
 

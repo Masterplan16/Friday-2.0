@@ -5,6 +5,7 @@ Tests E2E pipeline Watchdog (Story 3.5 - Task 8.1).
 - Watchdog → Redis → Consumer (OCR pipeline simulation)
 - CSV detection → Watchdog → Redis event avec workflow_target
 """
+
 import asyncio
 import time
 from pathlib import Path
@@ -12,7 +13,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 import yaml
-
 from agents.src.agents.archiviste.watchdog_observer import FridayWatchdogObserver
 
 
@@ -108,9 +108,7 @@ async def test_watchdog_to_ocr_pipeline(e2e_config):
         await observer.stop()
 
     # Verifier event publie
-    assert len(captured_events) >= 1, (
-        "Watchdog should detect PDF and publish to Redis within 5s"
-    )
+    assert len(captured_events) >= 1, "Watchdog should detect PDF and publish to Redis within 5s"
 
     event = captured_events[0]
     assert event["stream"] == "document.received"
@@ -124,9 +122,7 @@ async def test_watchdog_to_ocr_pipeline(e2e_config):
     assert "detected_at" in data
 
     # AC6: Latence detection → Redis <5s
-    assert detection_time < 5.0, (
-        f"Detection latency {detection_time:.1f}s exceeds 5s limit"
-    )
+    assert detection_time < 5.0, f"Detection latency {detection_time:.1f}s exceeds 5s limit"
 
 
 @pytest.mark.asyncio
@@ -175,10 +171,7 @@ async def test_watchdog_csv_import_workflow(e2e_config):
         # Attendre detection avec timeout
         timeout = 5.0
         while time.time() - start_time < timeout:
-            csv_found = [
-                e for e in captured_events
-                if e["data"].get("source") == "csv_bancaire"
-            ]
+            csv_found = [e for e in captured_events if e["data"].get("source") == "csv_bancaire"]
             if csv_found:
                 break
             await asyncio.sleep(0.3)
@@ -186,13 +179,8 @@ async def test_watchdog_csv_import_workflow(e2e_config):
         await observer.stop()
 
     # Verifier event CSV
-    csv_events = [
-        e for e in captured_events
-        if e["data"].get("source") == "csv_bancaire"
-    ]
-    assert len(csv_events) >= 1, (
-        "Watchdog should detect CSV and publish to Redis within 5s"
-    )
+    csv_events = [e for e in captured_events if e["data"].get("source") == "csv_bancaire"]
+    assert len(csv_events) >= 1, "Watchdog should detect CSV and publish to Redis within 5s"
 
     event = csv_events[0]
     data = event["data"]

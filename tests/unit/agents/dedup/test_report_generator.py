@@ -11,13 +11,7 @@ from datetime import datetime
 from pathlib import Path
 
 import pytest
-
-from agents.src.agents.dedup.models import (
-    DedupAction,
-    DedupGroup,
-    FileEntry,
-    ScanResult,
-)
+from agents.src.agents.dedup.models import DedupAction, DedupGroup, FileEntry, ScanResult
 from agents.src.agents.dedup.report_generator import ReportGenerator
 
 
@@ -43,7 +37,9 @@ def sample_result():
                 sha256_hash="abc123def456789012345678901234567890123456789012345678901234",
                 files=[
                     FileEntry(
-                        file_path=Path(r"C:\Users\lopez\BeeStation\Friday\Archives\Photos\vacances.jpg"),
+                        file_path=Path(
+                            r"C:\Users\lopez\BeeStation\Friday\Archives\Photos\vacances.jpg"
+                        ),
                         sha256_hash="abc123def456789012345678901234567890123456789012345678901234",
                         size_bytes=2_458_000,
                         action=DedupAction.keep,
@@ -140,7 +136,9 @@ class TestCSVGeneration:
                             reason="test",
                         ),
                         FileEntry(
-                            file_path=Path(r"C:\Users\lopez\Downloads\relevé_bancaire_février (1).pdf"),
+                            file_path=Path(
+                                r"C:\Users\lopez\Downloads\relevé_bancaire_février (1).pdf"
+                            ),
                             sha256_hash="abc123",
                             size_bytes=1000,
                             action=DedupAction.delete,

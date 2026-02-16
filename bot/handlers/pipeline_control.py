@@ -73,14 +73,12 @@ async def pipeline_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         if db_pool:
             try:
                 async with db_pool.acquire() as conn:
-                    row = await conn.fetchrow(
-                        """
+                    row = await conn.fetchrow("""
                         SELECT COALESCE(SUM(cost_usd), 0) as cost,
                                COUNT(*) as cnt
                         FROM core.llm_usage
                         WHERE timestamp::date = CURRENT_DATE
-                        """
-                    )
+                        """)
                     if row:
                         cost_today = float(row["cost"])
                         count_today = row["cnt"]
@@ -129,30 +127,25 @@ async def budget_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     try:
         async with db_pool.acquire() as conn:
             # Budget aujourd'hui
-            today = await conn.fetchrow(
-                """
+            today = await conn.fetchrow("""
                 SELECT COALESCE(SUM(cost_usd), 0) as cost,
                        COUNT(*) as calls,
                        COALESCE(SUM(input_tokens), 0) as input_tokens,
                        COALESCE(SUM(output_tokens), 0) as output_tokens
                 FROM core.llm_usage
                 WHERE timestamp::date = CURRENT_DATE
-                """
-            )
+                """)
 
             # Budget ce mois
-            month = await conn.fetchrow(
-                """
+            month = await conn.fetchrow("""
                 SELECT COALESCE(SUM(cost_usd), 0) as cost,
                        COUNT(*) as calls
                 FROM core.llm_usage
                 WHERE date_trunc('month', timestamp) = date_trunc('month', CURRENT_DATE)
-                """
-            )
+                """)
 
             # Budget par contexte (classification, extraction, embeddings)
-            by_context = await conn.fetch(
-                """
+            by_context = await conn.fetch("""
                 SELECT context,
                        COALESCE(SUM(cost_usd), 0) as cost,
                        COUNT(*) as calls
@@ -161,8 +154,7 @@ async def budget_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 GROUP BY context
                 ORDER BY cost DESC
                 LIMIT 5
-                """
-            )
+                """)
 
         # Projection fin de mois
         now = datetime.now(timezone.utc)

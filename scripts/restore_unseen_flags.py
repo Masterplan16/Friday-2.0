@@ -62,13 +62,11 @@ async def get_processed_uids_from_db():
 
     conn = await asyncpg.connect(db_url)
 
-    rows = await conn.fetch(
-        """
+    rows = await conn.fetch("""
         SELECT account_id, message_id
         FROM ingestion.emails
         ORDER BY account_id, message_id::integer
-        """
-    )
+        """)
 
     await conn.close()
 

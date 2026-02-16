@@ -160,16 +160,14 @@ async def confiance_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     try:
         pool = await _get_pool()
         async with pool.acquire() as conn:
-            rows = await conn.fetch(
-                """
+            rows = await conn.fetch("""
                 SELECT module, action_type, week_start, total_actions,
                        corrected_actions, accuracy, current_trust_level,
                        trust_changed
                 FROM core.trust_metrics
                 WHERE week_start >= (CURRENT_DATE - INTERVAL '28 days')
                 ORDER BY module, action_type, week_start DESC
-                """
-            )
+                """)
 
         if not rows:
             await update.message.reply_text(
@@ -444,14 +442,12 @@ async def journal_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
                     filter_module,
                 )
             else:
-                rows = await conn.fetch(
-                    """
+                rows = await conn.fetch("""
                     SELECT id, module, action_type, status, confidence,
                            input_summary, output_summary, created_at
                     FROM core.action_receipts
                     ORDER BY created_at DESC LIMIT 20
-                    """
-                )
+                    """)
 
         if not rows:
             await update.message.reply_text("Aucune action enregistree")
@@ -521,22 +517,18 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             db_ok = True
             lines.append("\u2705 PostgreSQL: OK")
 
-            today_rows = await conn.fetch(
-                """
+            today_rows = await conn.fetch("""
                 SELECT status, COUNT(*) as cnt
                 FROM core.action_receipts
                 WHERE created_at >= CURRENT_DATE
                 GROUP BY status
-                """
-            )
+                """)
 
-            pending_row = await conn.fetchrow(
-                """
+            pending_row = await conn.fetchrow("""
                 SELECT COUNT(*) as pending_count,
                        MIN(created_at) as oldest_pending
                 FROM core.action_receipts WHERE status = 'pending'
-                """
-            )
+                """)
     except ValueError as e:
         lines.append(f"\u274c PostgreSQL: {e}")
     except Exception as e:
@@ -617,8 +609,7 @@ async def budget_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     try:
         pool = await _get_pool()
         async with pool.acquire() as conn:
-            rows = await conn.fetch(
-                """
+            rows = await conn.fetch("""
                 SELECT
                     module,
                     COUNT(*) as action_count,
@@ -628,8 +619,7 @@ async def budget_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 WHERE created_at >= DATE_TRUNC('month', CURRENT_DATE)
                   AND payload ? 'llm_tokens_input'
                 GROUP BY module ORDER BY tokens_in + tokens_out DESC
-                """
-            )
+                """)
 
         # Verifier si tracking tokens actif
         total_tokens_in = sum(r["tokens_in"] for r in rows) if rows else 0
@@ -719,17 +709,14 @@ async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     try:
         pool = await _get_pool()
         async with pool.acquire() as conn:
-            stats_24h = await conn.fetchrow(
-                """
+            stats_24h = await conn.fetchrow("""
                 SELECT COUNT(*) as total,
                        ROUND(AVG(confidence)::numeric, 3) as avg_confidence
                 FROM core.action_receipts
                 WHERE created_at >= NOW() - INTERVAL '24 hours'
-                """
-            )
+                """)
 
-            stats_7d = await conn.fetchrow(
-                """
+            stats_7d = await conn.fetchrow("""
                 SELECT
                     COUNT(*) as total,
                     COUNT(*) FILTER (
@@ -739,36 +726,29 @@ async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
                     ROUND(AVG(confidence)::numeric, 3) as avg_confidence
                 FROM core.action_receipts
                 WHERE created_at >= NOW() - INTERVAL '7 days'
-                """
-            )
+                """)
 
-            stats_30d = await conn.fetchrow(
-                """
+            stats_30d = await conn.fetchrow("""
                 SELECT COUNT(*) as total
                 FROM core.action_receipts
                 WHERE created_at >= NOW() - INTERVAL '30 days'
-                """
-            )
+                """)
 
             # Top 5 modules (7 jours)
-            top_modules = await conn.fetch(
-                """
+            top_modules = await conn.fetch("""
                 SELECT module, COUNT(*) as cnt
                 FROM core.action_receipts
                 WHERE created_at >= NOW() - INTERVAL '7 days'
                 GROUP BY module ORDER BY cnt DESC LIMIT 5
-                """
-            )
+                """)
 
             # Repartition status (7 jours)
-            status_breakdown = await conn.fetch(
-                """
+            status_breakdown = await conn.fetch("""
                 SELECT status, COUNT(*) as cnt
                 FROM core.action_receipts
                 WHERE created_at >= NOW() - INTERVAL '7 days'
                 GROUP BY status ORDER BY cnt DESC
-                """
-            )
+                """)
 
         total_24h = stats_24h["total"] if stats_24h else 0
         total_7d = stats_7d["total"] if stats_7d else 0

@@ -206,15 +206,13 @@ async def _check_pipeline_activity(db_pool: asyncpg.Pool) -> Optional[str]:
     try:
         # 1. Vérifier dernière action archiviste dans core.action_receipts
         async with db_pool.acquire() as conn:
-            last_action = await conn.fetchrow(
-                """
+            last_action = await conn.fetchrow("""
                 SELECT created_at
                 FROM core.action_receipts
                 WHERE module = 'archiviste'
                 ORDER BY created_at DESC
                 LIMIT 1
-                """
-            )
+                """)
 
             if not last_action:
                 logger.debug("archiviste_pipeline_no_history")

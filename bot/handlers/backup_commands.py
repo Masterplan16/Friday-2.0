@@ -49,8 +49,7 @@ async def backup_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # Query derniers backups
     async with pool.acquire() as conn:
-        backups = await conn.fetch(
-            """
+        backups = await conn.fetch("""
             SELECT
                 backup_date,
                 filename,
@@ -63,8 +62,7 @@ async def backup_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             FROM core.backup_metadata
             ORDER BY backup_date DESC
             LIMIT 5
-        """
-        )
+        """)
 
     if not backups:
         await update.message.reply_text(

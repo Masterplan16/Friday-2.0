@@ -72,8 +72,7 @@ class BudgetMonitor:
 
         try:
             # Query vue core.api_budget_status
-            rows = await conn.fetch(
-                """
+            rows = await conn.fetch("""
                 SELECT
                     service,
                     monthly_limit_cents,
@@ -83,8 +82,7 @@ class BudgetMonitor:
                     status
                 FROM core.api_budget_status
                 ORDER BY usage_pct DESC
-                """
-            )
+                """)
 
             results = []
             for row in rows:

@@ -37,13 +37,11 @@ async def init_cold_start(reset: bool = False):
         conn = await asyncpg.connect(dsn=database_url)
 
         # Check si existe déjà
-        existing = await conn.fetchrow(
-            """
+        existing = await conn.fetchrow("""
             SELECT phase, emails_processed, accuracy
             FROM core.cold_start_tracking
             WHERE module = 'email' AND action_type = 'classify'
-            """
-        )
+            """)
 
         if existing and not reset:
             logger.info(
@@ -57,8 +55,7 @@ async def init_cold_start(reset: bool = False):
             return
 
         # Insert ou update
-        await conn.execute(
-            """
+        await conn.execute("""
             INSERT INTO core.cold_start_tracking
                 (module, action_type, phase, emails_processed, accuracy)
             VALUES ('email', 'classify', 'cold_start', 0, NULL)
@@ -67,8 +64,7 @@ async def init_cold_start(reset: bool = False):
                 phase = 'cold_start',
                 emails_processed = 0,
                 accuracy = NULL
-            """
-        )
+            """)
 
         action = "reset" if existing else "initialized"
         logger.info(

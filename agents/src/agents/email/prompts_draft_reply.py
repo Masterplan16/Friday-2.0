@@ -169,14 +169,12 @@ def _format_writing_examples(examples: list[dict]) -> str:
         subject = ex.get("subject", "No subject")
         body = ex.get("body", "No body")
 
-        parts.append(
-            f"""
+        parts.append(f"""
 Exemple {idx}:
 Sujet: {subject}
 Corps:
 {body}
----"""
-        )
+---""")
 
     return "\n".join(parts)
 

@@ -270,14 +270,12 @@ async def vip_list_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         # Utiliser pool au lieu de connexion directe (H1 fix)
         async with db_pool.acquire() as db:
             # Récupérer tous les VIPs actifs
-            vips = await db.fetch(
-                """
+            vips = await db.fetch("""
                 SELECT email_anon, label, emails_received_count, last_email_at, designation_source
                 FROM core.vip_senders
                 WHERE active = TRUE
                 ORDER BY emails_received_count DESC, label ASC
-                """
-            )
+                """)
 
             if not vips:
                 await update.message.reply_text(

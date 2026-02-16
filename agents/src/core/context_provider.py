@@ -191,8 +191,7 @@ class ContextProvider:
         try:
             async with self.db_pool.acquire() as conn:
                 # C7 fix: field name is start_datetime (not start_time)
-                row = await conn.fetchrow(
-                    """
+                row = await conn.fetchrow("""
                     SELECT
                         name as title,
                         (properties->>'start_datetime')::timestamptz as start_time,
@@ -203,8 +202,7 @@ class ContextProvider:
                       AND (properties->>'start_datetime')::timestamptz < NOW() + INTERVAL '24 hours'
                     ORDER BY (properties->>'start_datetime')::timestamptz ASC
                     LIMIT 1
-                    """
-                )
+                    """)
 
                 if row:
                     return {
@@ -230,13 +228,11 @@ class ContextProvider:
         try:
             async with self.db_pool.acquire() as conn:
                 # Query dernière activité (simplified pour MVP)
-                row = await conn.fetchrow(
-                    """
+                row = await conn.fetchrow("""
                     SELECT MAX(created_at) as last_activity
                     FROM core.action_receipts
                     WHERE status IN ('auto', 'approved')
-                    """
-                )
+                    """)
 
                 if row and row["last_activity"]:
                     return cast(datetime, row["last_activity"])

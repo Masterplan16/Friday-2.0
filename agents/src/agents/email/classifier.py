@@ -267,13 +267,11 @@ async def _fetch_current_casquette(
     """
     try:
         async with db_pool.acquire() as conn:
-            row = await conn.fetchrow(
-                """
+            row = await conn.fetchrow("""
                 SELECT current_casquette, updated_by
                 FROM core.user_context
                 WHERE id = 1
-                """
-            )
+                """)
 
             if not row or row["current_casquette"] is None:
                 # Auto-detect actif ou pas encore initialisé
@@ -513,16 +511,14 @@ async def _check_cold_start_progression(db_pool: asyncpg.Pool) -> None:
     try:
         async with db_pool.acquire() as conn:
             # C3 fix: Incrémentation atomique avec RETURNING (évite race condition)
-            row = await conn.fetchrow(
-                """
+            row = await conn.fetchrow("""
                 UPDATE core.cold_start_tracking
                 SET
                     emails_processed = emails_processed + 1,
                     updated_at = NOW()
                 WHERE module = 'email' AND action_type = 'classify'
                 RETURNING phase, emails_processed, accuracy
-                """
-            )
+                """)
 
             if not row:
                 logger.warning("cold_start_tracking_missing", module="email", action="classify")
@@ -548,8 +544,7 @@ async def _check_cold_start_progression(db_pool: asyncpg.Pool) -> None:
             # H3 fix: Si >= 10 emails → calculer accuracy et décider promotion
             if phase == "cold_start":
                 # Calculer accuracy depuis core.action_receipts
-                accuracy_row = await conn.fetchrow(
-                    """
+                accuracy_row = await conn.fetchrow("""
                     SELECT
                         COUNT(*) FILTER (WHERE status IN ('auto', 'approved', 'executed')) as correct,
                         COUNT(*) as total
@@ -560,8 +555,7 @@ async def _check_cold_start_progression(db_pool: asyncpg.Pool) -> None:
                           FROM core.cold_start_tracking
                           WHERE module = 'email' AND action_type = 'classify'
                       )
-                    """
-                )
+                    """)
 
                 if not accuracy_row or accuracy_row["total"] == 0:
                     logger.warning(

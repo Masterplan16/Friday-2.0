@@ -74,16 +74,14 @@ async def warranties_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
     try:
         db_pool = await _get_db_pool(context)
 
-        rows = await db_pool.fetch(
-            """
+        rows = await db_pool.fetch("""
             SELECT item_name, item_category, vendor, expiration_date,
                    purchase_amount,
                    (expiration_date - CURRENT_DATE) AS days_remaining
             FROM knowledge.warranties
             WHERE status = 'active'
             ORDER BY item_category, expiration_date ASC
-            """
-        )
+            """)
 
         if not rows:
             await update.message.reply_text(
@@ -138,8 +136,7 @@ async def warranty_expiring_command(update: Update, context: ContextTypes.DEFAUL
     try:
         db_pool = await _get_db_pool(context)
 
-        rows = await db_pool.fetch(
-            """
+        rows = await db_pool.fetch("""
             SELECT item_name, item_category, vendor, expiration_date,
                    purchase_amount,
                    (expiration_date - CURRENT_DATE) AS days_remaining
@@ -147,8 +144,7 @@ async def warranty_expiring_command(update: Update, context: ContextTypes.DEFAUL
             WHERE status = 'active'
               AND expiration_date BETWEEN CURRENT_DATE AND (CURRENT_DATE + INTERVAL '60 days')
             ORDER BY expiration_date ASC
-            """
-        )
+            """)
 
         if not rows:
             await update.message.reply_text(

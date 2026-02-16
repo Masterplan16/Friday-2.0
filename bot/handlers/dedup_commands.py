@@ -90,8 +90,7 @@ async def scan_dedup_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
     # Send initial message with progress
     metrics_topic_id = int(os.getenv("TOPIC_METRICS_ID", "0"))
     msg = await update.message.reply_text(
-        "Scan deduplication PC en cours...\n"
-        "Initialisation du scanner...",
+        "Scan deduplication PC en cours...\n" "Initialisation du scanner...",
         message_thread_id=metrics_topic_id or None,
     )
 
@@ -235,9 +234,7 @@ async def _update_scan_progress(bot, chat_id, message_id, topic_id, stats, elaps
         pass  # Ignore edit errors (message identical, etc.)
 
 
-async def handle_dedup_report_callback(
-    update: Update, context: ContextTypes.DEFAULT_TYPE
-) -> None:
+async def handle_dedup_report_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle [Voir rapport] button - send CSV file."""
     query = update.callback_query
     await query.answer()
@@ -260,9 +257,7 @@ async def handle_dedup_report_callback(
         )
 
 
-async def handle_dedup_delete_callback(
-    update: Update, context: ContextTypes.DEFAULT_TYPE
-) -> None:
+async def handle_dedup_delete_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle [Lancer suppression] button - show confirmation preview."""
     query = update.callback_query
     await query.answer()
@@ -283,9 +278,7 @@ async def handle_dedup_delete_callback(
                 f"  {group.keeper.file_path.name} ({_format_size(group.keeper.size_bytes)})"
             )
         for d in group.to_delete[:1]:
-            delete_examples.append(
-                f"  {d.file_path.name} ({_format_size(d.size_bytes)})"
-            )
+            delete_examples.append(f"  {d.file_path.name} ({_format_size(d.size_bytes)})")
 
     total_to_delete = sum(len(g.to_delete) for g in result.groups)
     keep_str = "\n".join(keep_examples[:5]) or "  (aucun)"
@@ -325,9 +318,7 @@ async def handle_dedup_delete_callback(
     )
 
 
-async def handle_dedup_confirm_callback(
-    update: Update, context: ContextTypes.DEFAULT_TYPE
-) -> None:
+async def handle_dedup_confirm_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle [CONFIRMER] button - start batch deletion."""
     query = update.callback_query
     await query.answer()
@@ -423,9 +414,7 @@ async def handle_dedup_confirm_callback(
         await query.edit_message_text(f"Erreur suppression : {e}")
 
 
-async def handle_dedup_cancel_callback(
-    update: Update, context: ContextTypes.DEFAULT_TYPE
-) -> None:
+async def handle_dedup_cancel_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle [Annuler] button."""
     query = update.callback_query
     await query.answer()
@@ -438,7 +427,11 @@ async def handle_dedup_cancel_callback(
         scanner.cancel()
 
     # Cleanup bot_data
-    for key in [f"dedup_result_{dedup_id}", f"dedup_report_{dedup_id}", f"dedup_scanner_{dedup_id}"]:
+    for key in [
+        f"dedup_result_{dedup_id}",
+        f"dedup_report_{dedup_id}",
+        f"dedup_scanner_{dedup_id}",
+    ]:
         context.bot_data.pop(key, None)
 
     await query.edit_message_text("Operation dedup annulee.")

@@ -1959,6 +1959,85 @@ Total : 4 événements · 1 conflit à résoudre
 
 ---
 
+## 🔄 Scan & Déduplication PC (Story 3.8)
+
+### Qu'est-ce que c'est ?
+
+Friday scanne votre PC pour détecter les fichiers en double (même contenu SHA256) et propose de supprimer les copies redondantes en les envoyant à la Corbeille Windows (rollback possible).
+
+### Commande `/scan_dedup`
+
+Lance un scan PC-wide pour trouver les doublons.
+
+**Usage** :
+```
+/scan_dedup
+```
+
+**Workflow complet** :
+1. **Scan** : Friday scanne récursivement `C:\Users\lopez` (exclusions intelligentes : Windows, AppData, .git, etc.)
+2. **Priorité** : Pour chaque groupe de doublons, Friday sélectionne le fichier à garder (BeeStation > Desktop > Downloads)
+3. **Rapport CSV** : Généré automatiquement dans `BeeStation\Friday\Reports\`
+4. **Notification Telegram** : Résumé + boutons inline
+
+**Exemple notification** :
+```
+Scan termine
+
+Fichiers scannes : 45,231
+Groupes doublons : 127
+Doublons detectes : 312
+Espace recuperable : 4.2 Go
+Duree : 12m34s
+
+Rapport CSV : dedup_report_2026-02-16_143025.csv
+
+[Voir rapport] [Lancer suppression] [Annuler]
+```
+
+### Boutons inline
+
+| Bouton | Action |
+|--------|--------|
+| **Voir rapport** | Envoie le fichier CSV dans Telegram |
+| **Lancer suppression** | Affiche prévisualisation + demande confirmation |
+| **CONFIRMER** | Lance suppression batch (send2trash → Corbeille) |
+| **Annuler** | Annule l'opération |
+
+### Règles de priorité (conservation)
+
+Friday garde le fichier avec le meilleur score :
+
+| Critère | Poids | Exemple |
+|---------|-------|---------|
+| **Emplacement** | 0-100 | BeeStation (100) > Desktop (50) > Downloads (30) |
+| **Résolution** | 0-50 | 4K+ (50) > HD (30) > SD (10) |
+| **EXIF date** | 0-20 | Photo avec date originale (+20) |
+| **Nom fichier** | -10 à 30 | Descriptif (+30) > Générique (0) > Copie (-10) |
+
+### Safety checks (4 vérifications avant chaque suppression)
+
+1. Le fichier existe encore
+2. Le hash SHA256 n'a pas changé (fichier non modifié depuis scan)
+3. Le fichier n'est pas dans une zone système protégée
+4. Le fichier "keeper" du groupe existe encore
+
+### Limitations
+
+- 1 scan à la fois (rate limiting)
+- Timeout : 4h max par scan
+- Fichiers < 100 octets et > 2 Go ignorés
+- Extensions système ignorées (.sys, .dll, .exe, .tmp)
+
+### Sécurité
+
+- ✅ **send2trash** : Fichiers envoyés à la Corbeille (récupérables)
+- ✅ **Re-hash avant suppression** : Vérifie que le fichier n'a pas été modifié
+- ✅ **Owner-only** : Seul le Mainteneur peut lancer un scan
+- ✅ **Audit DB** : Chaque job enregistré dans `core.dedup_jobs`
+
+---
+
 ## ❓ Questions Fréquentes (FAQ)
 
 ### Je ne vois pas les topics sur mobile ?

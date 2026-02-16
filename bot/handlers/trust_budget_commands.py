@@ -837,11 +837,11 @@ async def pending_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
     verbose = parse_verbose_flag(context.args)
 
-    # Filtrage module optionnel
+    # Filtrage module optionnel (H2 fix: skip tous les flags, pas juste -v)
     filter_module = None
     if context.args:
         for arg in context.args:
-            if arg != "-v":
+            if not arg.startswith("-"):
                 filter_module = arg
                 break
 
@@ -879,9 +879,9 @@ async def pending_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
         # Formater output
         count = len(rows)
-        header = f"📋 **Actions en attente de validation** ({count})"
+        header = f"📋 Actions en attente de validation ({count})"
         if filter_module:
-            header = f"📋 **Actions en attente - Module: {filter_module}** ({count})"
+            header = f"📋 Actions en attente - Module: {filter_module} ({count})"
 
         lines = [header, ""]
 
@@ -889,11 +889,9 @@ async def pending_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             id_short = str(row["id"])[:8]
             timestamp = format_timestamp(row["created_at"])
             module_action = f"{row['module']}.{row['action_type']}"
-            confidence = (
-                format_confidence(row["confidence"]) if row["confidence"] else "N/A"
-            )
+            confidence = format_confidence(row["confidence"]) if row["confidence"] else "N/A"
 
-            lines.append(f"⏳ `{id_short}` | {module_action} | {timestamp}")
+            lines.append(f"⏳ {id_short} | {module_action} | {timestamp}")
 
             if verbose and row["input_summary"]:
                 input_trunc = truncate_text(row["input_summary"], 150)
@@ -903,31 +901,35 @@ async def pending_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
                 output_trunc = truncate_text(row["output_summary"], 150)
                 lines.append(f"   → {output_trunc}")
 
-            lines.append(f"   Confidence: {confidence} | [Voir détail: /receipt {id_short}]")
+            lines.append(f"   Confidence: {confidence} | Voir detail: /receipt {id_short}")
             lines.append("")
 
         # Footer
-        lines.append("💡 Utilisez /receipt <id> pour voir le détail complet")
+        lines.append("💡 Utilisez /receipt <id> pour voir le detail complet")
         lines.append("🔘 Validez via les inline buttons dans le topic Actions & Validations")
 
-        # Si limite atteinte, avertir
+        # Si limite atteinte, avertir (H1 fix: respecter filtre module dans count)
         if count >= 20:
+            count_query = "SELECT COUNT(*) FROM core.action_receipts WHERE status = 'pending'"
+            count_params: list = []
+            if filter_module:
+                count_query += " AND module = $1"
+                count_params.append(filter_module)
             async with pool.acquire() as conn:
-                total = await conn.fetchval(
-                    "SELECT COUNT(*) FROM core.action_receipts WHERE status = 'pending'"
-                )
+                total = await conn.fetchval(count_query, *count_params)
             if total > 20:
                 lines.insert(
                     1,
-                    f"⚠️ Affichage limité aux 20 plus récentes ({total} total). Utilisez /pending <module> pour filtrer.",
+                    f"⚠️ Affichage limite aux 20 plus recentes ({total} total). Utilisez /pending <module> pour filtrer.",
                 )
                 lines.insert(2, "")
 
         text = "\n".join(lines)
-        await send_message_with_split(update, text, parse_mode="Markdown")
+        # M1 fix: pas de parse_mode Markdown (contenu utilisateur non echappe)
+        await send_message_with_split(update, text)
 
     except ValueError as e:
-        await update.message.reply_text(f"Configuration erreur: {e}", parse_mode="Markdown")
+        await update.message.reply_text(f"Configuration erreur: {e}")
     except Exception as e:
         logger.error("/pending command failed", error=str(e), exc_info=True)
-        await update.message.reply_text(_ERR_DB, parse_mode="Markdown")
+        await update.message.reply_text(_ERR_DB)

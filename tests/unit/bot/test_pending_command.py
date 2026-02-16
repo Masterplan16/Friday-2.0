@@ -86,7 +86,7 @@ async def test_pending_command_shows_only_pending_actions(
     # Vérifier que seules les actions pending sont listées
     mock_send.assert_called_once()
     text = mock_send.call_args[0][1]
-    assert "📋 **Actions en attente de validation** (2)" in text
+    assert "📋 Actions en attente de validation (2)" in text
     assert "⏳" in text
     assert "abc12345" in text
     assert "def67890" in text
@@ -168,6 +168,8 @@ async def test_pending_command_format_output(mock_update, mock_context, mock_poo
     assert "Catégorie: pro" in text  # output_summary
     assert "/receipt abc12345" in text  # Lien receipt
     assert "💡 Utilisez /receipt <id>" in text  # Footer
+    # M1 fix: pas de parse_mode Markdown (contenu utilisateur non echappe)
+    assert mock_send.call_args[1].get("parse_mode") is None or "parse_mode" not in mock_send.call_args[1]
 
 
 # ────────────────────────────────────────────────────────────
@@ -211,7 +213,7 @@ async def test_pending_command_filter_by_module(mock_update, mock_context, mock_
     assert "module = $1" in query
 
     text = mock_send.call_args[0][1]
-    assert "📋 **Actions en attente - Module: email** (1)" in text
+    assert "📋 Actions en attente - Module: email (1)" in text
 
 
 # ────────────────────────────────────────────────────────────
@@ -312,7 +314,7 @@ async def test_pending_command_pagination_limit_20(mock_update, mock_context, mo
                 await pending_command(mock_update, mock_context)
 
     text = mock_send.call_args[0][1]
-    assert "⚠️ Affichage limité aux 20 plus récentes (25 total)" in text
+    assert "⚠️ Affichage limite aux 20 plus recentes (25 total)" in text
 
 
 # ────────────────────────────────────────────────────────────
@@ -396,3 +398,135 @@ async def test_pending_command_combined_module_verbose(
     # Vérifier mode verbose
     assert "📥 Input:" in text
     assert "Input détaillé" in text
+
+
+# ────────────────────────────────────────────────────────────
+# Fix M2 : Test pagination + filtre module combinés (H1 fix)
+# ────────────────────────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_pending_command_pagination_with_module_filter(
+    mock_update, mock_context, mock_pool
+):
+    """H1 fix: Le total count respecte le filtre module dans la pagination."""
+    from bot.handlers.trust_budget_commands import pending_command
+
+    mock_context.args = ["email"]
+
+    # Simuler 20 actions email retournées + total email = 30
+    mock_rows = [
+        {
+            "id": f"action{i:02d}-1234-1234-1234-123456789abc",
+            "module": "email",
+            "action_type": "classify",
+            "created_at": datetime(2026, 2, 16, 14, i, tzinfo=timezone.utc),
+            "input_summary": f"Input {i}",
+            "output_summary": f"Output {i}",
+            "confidence": Decimal("0.85"),
+        }
+        for i in range(20)
+    ]
+
+    conn_mock = mock_pool.acquire.return_value.__aenter__.return_value
+    conn_mock.fetch = AsyncMock(return_value=mock_rows)
+    conn_mock.fetchval = AsyncMock(return_value=30)  # 30 email pending (pas total global)
+
+    with patch("bot.handlers.trust_budget_commands._get_pool", return_value=mock_pool):
+        with patch("bot.handlers.trust_budget_commands._OWNER_USER_ID", 12345):
+            with patch(
+                "bot.handlers.trust_budget_commands.send_message_with_split"
+            ) as mock_send:
+                await pending_command(mock_update, mock_context)
+
+    # Vérifier que le count query inclut le filtre module
+    fetchval_call = conn_mock.fetchval.call_args
+    count_query = fetchval_call[0][0]
+    assert "module = $1" in count_query, "Count query doit filtrer par module"
+
+    text = mock_send.call_args[0][1]
+    assert "30 total" in text
+    assert "Module: email" in text
+
+
+# ────────────────────────────────────────────────────────────
+# Fix M3 : Test --verbose ne pollue pas le filtre module (H2 fix)
+# ────────────────────────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_pending_command_long_verbose_flag_not_parsed_as_module(
+    mock_update, mock_context, mock_pool
+):
+    """H2 fix: --verbose ne doit pas etre interprete comme nom de module."""
+    from bot.handlers.trust_budget_commands import pending_command
+
+    mock_context.args = ["--verbose", "email"]
+
+    mock_pool.acquire.return_value.__aenter__.return_value.fetch = AsyncMock(
+        return_value=[
+            {
+                "id": "abc12345-1234-1234-1234-123456789abc",
+                "module": "email",
+                "action_type": "classify",
+                "created_at": datetime(2026, 2, 16, 14, 32, tzinfo=timezone.utc),
+                "input_summary": "Input verbose",
+                "output_summary": "Output verbose",
+                "confidence": Decimal("0.89"),
+            }
+        ]
+    )
+
+    with patch("bot.handlers.trust_budget_commands._get_pool", return_value=mock_pool):
+        with patch("bot.handlers.trust_budget_commands._OWNER_USER_ID", 12345):
+            with patch(
+                "bot.handlers.trust_budget_commands.send_message_with_split"
+            ) as mock_send:
+                await pending_command(mock_update, mock_context)
+
+    # Vérifier que le module filtre est "email" (pas "--verbose")
+    fetch_call = conn_mock = (
+        mock_pool.acquire.return_value.__aenter__.return_value.fetch.call_args
+    )
+    query = fetch_call[0][0]
+    assert "module = $1" in query, "Doit filtrer par module email"
+
+    text = mock_send.call_args[0][1]
+    assert "Module: email" in text
+    # Verbose doit etre actif aussi
+    assert "📥 Input:" in text
+
+
+# ────────────────────────────────────────────────────────────
+# Fix L1 : Test confidence=None
+# ────────────────────────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_pending_command_confidence_none(mock_update, mock_context, mock_pool):
+    """L1 fix: confidence=None affiche N/A."""
+    from bot.handlers.trust_budget_commands import pending_command
+
+    mock_pool.acquire.return_value.__aenter__.return_value.fetch = AsyncMock(
+        return_value=[
+            {
+                "id": "nullconf-1234-1234-1234-123456789abc",
+                "module": "email",
+                "action_type": "classify",
+                "created_at": datetime(2026, 2, 16, 14, 0, tzinfo=timezone.utc),
+                "input_summary": "Input test",
+                "output_summary": "Output test",
+                "confidence": None,
+            }
+        ]
+    )
+
+    with patch("bot.handlers.trust_budget_commands._get_pool", return_value=mock_pool):
+        with patch("bot.handlers.trust_budget_commands._OWNER_USER_ID", 12345):
+            with patch(
+                "bot.handlers.trust_budget_commands.send_message_with_split"
+            ) as mock_send:
+                await pending_command(mock_update, mock_context)
+
+    text = mock_send.call_args[0][1]
+    assert "N/A" in text

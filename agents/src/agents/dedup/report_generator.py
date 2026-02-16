@@ -92,13 +92,9 @@ class ReportGenerator:
                     exif_date = entry.exif_date
 
                     if resolution is None:
-                        resolution = self.priority_engine.get_resolution_string(
-                            entry.file_path
-                        )
+                        resolution = self.priority_engine.get_resolution_string(entry.file_path)
                     if exif_date is None:
-                        exif_date = self.priority_engine.get_exif_date_string(
-                            entry.file_path
-                        )
+                        exif_date = self.priority_engine.get_exif_date_string(entry.file_path)
 
                     writer.writerow(
                         {

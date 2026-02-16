@@ -38,7 +38,6 @@ END $$;
 -- =============================================================================
 
 DROP INDEX IF EXISTS core.idx_tasks_email_task;
-RAISE NOTICE 'Index idx_tasks_email_task supprimé';
 
 -- =============================================================================
 -- ÉTAPE 3: Restaurer CHECK constraint sans email_task
@@ -57,8 +56,6 @@ COMMENT ON CONSTRAINT tasks_type_check ON core.tasks IS
      - manual: Tâche créée manuellement via Telegram (default)
      - reminder: Tâche créée depuis conversation avec agent (Story 4.6)
      NOTE: email_task retiré par rollback migration 032';
-
-RAISE NOTICE 'CHECK constraint tasks_type_check restauré (sans email_task)';
 
 -- =============================================================================
 -- ÉTAPE 4: Supprimer colonne due_date SI créée par migration 032
@@ -110,8 +107,6 @@ COMMENT ON COLUMN core.tasks.payload IS
      }
 
      NOTE: Payload email_task retiré par rollback migration 032';
-
-RAISE NOTICE 'Migration 032 rollback completed successfully';
 
 COMMIT;
 

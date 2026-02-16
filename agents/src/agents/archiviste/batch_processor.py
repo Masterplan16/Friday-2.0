@@ -280,9 +280,7 @@ class BatchProcessor:
     async def _wait_if_paused(self):
         """Wait while batch is paused via bot_data or progress tracker."""
         pause_key = f"batch_paused_{self.batch_id}"
-        while self.bot_data.get(pause_key, False) or (
-            self.progress and self.progress.paused
-        ):
+        while self.bot_data.get(pause_key, False) or (self.progress and self.progress.paused):
             await asyncio.sleep(1)
 
     async def process(self):
@@ -591,15 +589,11 @@ class BatchProcessor:
 
         # Success rate
         total = self.progress.total_files
-        success_rate = (
-            (self.progress.success / total * 100) if total > 0 else 0
-        )
+        success_rate = (self.progress.success / total * 100) if total > 0 else 0
 
         # Categories breakdown
         categories_lines = []
-        for cat, count in sorted(
-            self.progress.categories.items(), key=lambda x: -x[1]
-        ):
+        for cat, count in sorted(self.progress.categories.items(), key=lambda x: -x[1]):
             categories_lines.append(f"  - {cat} : {count} fichiers")
         categories_str = "\n".join(categories_lines) or "  (aucune)"
 
@@ -685,9 +679,7 @@ class BatchProcessor:
                     self.progress.failed,
                     self.progress.skipped,
                     json.dumps(self.progress.categories),
-                    json.dumps(
-                        [{"file": f, "error": e} for f, e in self.progress.failed_files]
-                    ),
+                    json.dumps([{"file": f, "error": e} for f, e in self.progress.failed_files]),
                     report,
                     datetime.fromtimestamp(self.progress.start_time),
                 )

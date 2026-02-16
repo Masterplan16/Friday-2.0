@@ -72,13 +72,17 @@ class SafeDeleter:
             chunk_size: For re-hashing verification
             progress_callback: Called after each file for progress updates
         """
-        self.excluded_folders = excluded_folders if excluded_folders is not None else {
-            "windows",
-            "program files",
-            "program files (x86)",
-            "appdata\\local\\temp",
-            "$recycle.bin",
-        }
+        self.excluded_folders = (
+            excluded_folders
+            if excluded_folders is not None
+            else {
+                "windows",
+                "program files",
+                "program files (x86)",
+                "appdata\\local\\temp",
+                "$recycle.bin",
+            }
+        )
         self.chunk_size = chunk_size
         self.progress_callback = progress_callback
         self._cancelled = False
@@ -160,18 +164,14 @@ class SafeDeleter:
 
                 except PermissionError as e:
                     result.errors += 1
-                    result.error_details.append(
-                        (str(entry.file_path), f"Permission denied: {e}")
-                    )
+                    result.error_details.append((str(entry.file_path), f"Permission denied: {e}"))
                     logger.warning(
                         "dedup_delete_permission_denied",
                         file_path=str(entry.file_path),
                     )
                 except Exception as e:
                     result.errors += 1
-                    result.error_details.append(
-                        (str(entry.file_path), str(e))
-                    )
+                    result.error_details.append((str(entry.file_path), str(e)))
                     logger.error(
                         "dedup_delete_failed",
                         file_path=str(entry.file_path),

@@ -28,18 +28,39 @@ logger = structlog.get_logger(__name__)
 
 # Image extensions for resolution/EXIF checks
 IMAGE_EXTENSIONS = {
-    ".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".tif", ".webp", ".heic", ".heif",
+    ".jpg",
+    ".jpeg",
+    ".png",
+    ".bmp",
+    ".tiff",
+    ".tif",
+    ".webp",
+    ".heic",
+    ".heif",
 }
 
 # Photo extensions (subset of images, typically from cameras)
 PHOTO_EXTENSIONS = {
-    ".jpg", ".jpeg", ".heic", ".heif", ".tiff", ".tif",
+    ".jpg",
+    ".jpeg",
+    ".heic",
+    ".heif",
+    ".tiff",
+    ".tif",
 }
 
 # Generic filename patterns (camera/screenshot defaults)
 GENERIC_PREFIXES = [
-    "img_", "dsc_", "pxl_", "screenshot_", "scan_", "photo_",
-    "image_", "pic_", "cap_", "wp_",
+    "img_",
+    "dsc_",
+    "pxl_",
+    "screenshot_",
+    "scan_",
+    "photo_",
+    "image_",
+    "pic_",
+    "cap_",
+    "wp_",
 ]
 
 # Duplicate suffix patterns
@@ -70,9 +91,7 @@ class PriorityEngine:
         "Temp": 10,
     }
 
-    def select_keeper(
-        self, group: DedupGroup
-    ) -> DedupGroup:
+    def select_keeper(self, group: DedupGroup) -> DedupGroup:
         """
         Select 1 file to KEEP, mark others for DELETE.
 

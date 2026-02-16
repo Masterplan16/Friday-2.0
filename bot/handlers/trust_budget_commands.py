@@ -437,11 +437,11 @@ async def journal_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
                     """)
 
         if not rows:
-            await update.message.reply_text("Aucune action enregistree", parse_mode="Markdown")
+            await update.message.reply_text("Aucune action enregistree")
             return
 
         filter_label = f" (filtre: {filter_module})" if filter_module else ""
-        lines = [f"**Journal** (20 dernieres actions{filter_label})\n"]
+        lines = [f"Journal (20 dernieres actions{filter_label})\n"]
 
         for row in rows:
             ts = format_timestamp(row["created_at"])
@@ -450,25 +450,22 @@ async def journal_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
             # Story 2.6 AC4: Format spécialisé pour emails envoyés
             if row["module"] == "email" and row["action_type"] == "draft_reply":
-                # Extraire recipient_anon depuis output_summary
                 output_summary = row.get("output_summary", "")
-                # Format: "Email envoyé → [RECIPIENT_ANON]" ou similaire
-                lines.append(f"`{ts}` {emoji} Email envoyé → {output_summary} {conf}")
+                lines.append(f"{ts} {emoji} Email envoye -> {output_summary} {conf}")
             else:
-                # Format générique pour autres actions
-                lines.append(f"`{ts}` {row['module']}.{row['action_type']} " f"{emoji} {conf}")
+                lines.append(f"{ts} {row['module']}.{row['action_type']} {emoji} {conf}")
 
             if verbose and row.get("input_summary"):
                 lines.append(f"  Input: {truncate_text(row['input_summary'], 150)}")
 
         text = "\n".join(lines)
-        await send_message_with_split(update, text, parse_mode="Markdown")
+        await send_message_with_split(update, text)
 
     except ValueError as e:
-        await update.message.reply_text(f"Configuration erreur: {e}", parse_mode="Markdown")
+        await update.message.reply_text(f"Configuration erreur: {e}")
     except Exception as e:
         logger.error("/journal command failed", error=str(e), exc_info=True)
-        await update.message.reply_text(_ERR_DB, parse_mode="Markdown")
+        await update.message.reply_text(_ERR_DB)
 
 
 # ────────────────────────────────────────────────────────────
@@ -490,10 +487,10 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     verbose = parse_verbose_flag(context.args)
     logger.info("/status command received", user_id=user_id, verbose=verbose)
 
-    lines = ["**Dashboard Friday 2.0**\n"]
+    lines = ["Dashboard Friday 2.0\n"]
 
     # Health checks
-    lines.append("**Services:**")
+    lines.append("Services:")
 
     # PostgreSQL check + actions (M1 fix: single connection)
     db_ok = False
@@ -557,7 +554,7 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     # Actions du jour + pending
     if db_ok:
         total_today = sum(r["cnt"] for r in today_rows)
-        lines.append(f"\n**Actions aujourd'hui:** {total_today}")
+        lines.append(f"\nActions aujourd'hui: {total_today}")
 
         if verbose and today_rows:
             status_breakdown = ", ".join(f"{r['status']}={r['cnt']}" for r in today_rows)
@@ -567,14 +564,14 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         if pending_count > 0:
             oldest = pending_row["oldest_pending"]
             oldest_str = format_timestamp(oldest) if oldest else "?"
-            lines.append(f"\n\u23f3 **Pending:** {pending_count} " f"(plus ancien: {oldest_str})")
+            lines.append(f"\n\u23f3 Pending: {pending_count} (plus ancien: {oldest_str})")
         else:
             lines.append("\n\u2705 Aucune action pending")
     else:
         lines.append("\nActions: indisponible (DB down)")
 
     text = "\n".join(lines)
-    await send_message_with_split(update, text, parse_mode="Markdown")
+    await send_message_with_split(update, text)
 
 
 # ────────────────────────────────────────────────────────────
@@ -617,12 +614,11 @@ async def budget_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
         if total_tokens_in == 0 and total_tokens_out == 0:
             await update.message.reply_text(
-                "**Budget API Claude**\n\n"
+                "Budget API Claude\n\n"
                 "Tracking tokens non encore actif.\n"
                 "Les tokens seront suivis quand le LLM adapter "
-                "injectera `llm_tokens_input`/`llm_tokens_output` dans le payload.\n\n"
+                "injectera llm_tokens_input/llm_tokens_output dans le payload.\n\n"
                 f"Budget mensuel: {format_eur(_MONTHLY_BUDGET_EUR)}",
-                parse_mode="Markdown",
             )
             return
 
@@ -642,7 +638,7 @@ async def budget_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         projected_eur = daily_rate * days_in_month
 
         lines = [
-            "**Budget API Claude** (mois en cours)\n",
+            "Budget API Claude (mois en cours)\n",
             f"Tokens input: {total_tokens_in:,}",
             f"Tokens output: {total_tokens_out:,}",
             f"Cout: {format_eur(cost_eur)} / {format_eur(_MONTHLY_BUDGET_EUR)}",
@@ -653,12 +649,12 @@ async def budget_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         # Alerte si >80% budget
         if pct_budget > 80:
             lines.append(
-                f"\n\u26a0\ufe0f **ALERTE**: Budget consomme a {pct_budget:.1f}% " f"(seuil 80%)"
+                f"\n\u26a0\ufe0f ALERTE: Budget consomme a {pct_budget:.1f}% (seuil 80%)"
             )
 
         # Detail par module (M4 fix: verbose only)
         if verbose and rows:
-            lines.append("\n**Par module:**")
+            lines.append("\nPar module:")
             for row in rows:
                 mod_cost_usd = (
                     row["tokens_in"] * _USD_INPUT_PER_1M / 1_000_000
@@ -671,13 +667,13 @@ async def budget_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 )
 
         text = "\n".join(lines)
-        await send_message_with_split(update, text, parse_mode="Markdown")
+        await send_message_with_split(update, text)
 
     except ValueError as e:
-        await update.message.reply_text(f"Configuration erreur: {e}", parse_mode="Markdown")
+        await update.message.reply_text(f"Configuration erreur: {e}")
     except Exception as e:
         logger.error("/budget command failed", error=str(e), exc_info=True)
-        await update.message.reply_text(_ERR_DB, parse_mode="Markdown")
+        await update.message.reply_text(_ERR_DB)
 
 
 # ────────────────────────────────────────────────────────────
@@ -750,7 +746,6 @@ async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         if total_7d == 0 and total_24h == 0 and total_30d == 0:
             await update.message.reply_text(
                 "Aucune action enregistree sur les 30 derniers jours.",
-                parse_mode="Markdown",
             )
             return
 
@@ -759,7 +754,7 @@ async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         success_rate = (success_cnt / total_7d * 100) if total_7d > 0 else 0
 
         lines = [
-            "**Statistiques Friday 2.0**\n",
+            "Statistiques Friday 2.0\n",
             f"Actions 24h: {total_24h}",
             f"Actions 7j: {total_7d}",
             f"Actions 30j: {total_30d}",
@@ -773,7 +768,7 @@ async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
         # Repartition status (M4 fix: verbose only)
         if verbose and status_breakdown:
-            lines.append("\n**Status (7j):**")
+            lines.append("\nStatus (7j):")
             for row in status_breakdown:
                 lines.append(
                     f"  {format_status_emoji(row['status'])} {row['status']}: {row['cnt']}"
@@ -781,7 +776,7 @@ async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
         # Top modules
         if top_modules:
-            lines.append("\n**Top modules (7j):**")
+            lines.append("\nTop modules (7j):")
             for i, row in enumerate(top_modules, 1):
                 lines.append(f"  {i}. {row['module']}: {row['cnt']} actions")
 
@@ -791,13 +786,13 @@ async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
             lines.append(f"\n\u26a0\ufe0f Erreurs 7j: {error_cnt}")
 
         text = "\n".join(lines)
-        await send_message_with_split(update, text, parse_mode="Markdown")
+        await send_message_with_split(update, text)
 
     except ValueError as e:
-        await update.message.reply_text(f"Configuration erreur: {e}", parse_mode="Markdown")
+        await update.message.reply_text(f"Configuration erreur: {e}")
     except Exception as e:
         logger.error("/stats command failed", error=str(e), exc_info=True)
-        await update.message.reply_text(_ERR_DB, parse_mode="Markdown")
+        await update.message.reply_text(_ERR_DB)
 
 
 # ────────────────────────────────────────────────────────────

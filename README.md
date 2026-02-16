@@ -384,6 +384,80 @@ Fichiers :
 
 ---
 
+### 🗓️ Multi-casquettes & Conflits Calendrier (Story 7.3) ✅
+
+**Friday gère automatiquement les 3 rôles professionnels et détecte les conflits d'agenda**
+
+| Feature | Description |
+|---------|-------------|
+| **Casquettes** | 🩺 Médecin · 🎓 Enseignant · 🔬 Chercheur · 👤 Personnel |
+| **Auto-détection contexte** | 5 règles priorité : manual > event > time > last_event > default |
+| **Influence classification** | Bias subtil (`LÉGÈREMENT`) sur classification email/événement selon contexte |
+| **Détection conflits** | Allen's interval algebra (13 relations temporelles) |
+| **Résolution Telegram** | Inline buttons : Annuler · Reporter · Accepter |
+| **Heartbeat check** | Vérification conflits 7j toutes les 2h (skip quiet hours 22h-08h) |
+| **Briefing multi-casquettes** | Événements groupés par casquette, ordre chronologique |
+| **Tables PostgreSQL** | `core.user_context` (singleton) + `core.calendar_conflicts` |
+
+**Workflow Auto-détection** :
+
+```
+Heartbeat Engine (2h)
+  ↓
+Context Manager (5 règles priorité)
+  ↓
+  ┌── Règle 1 (Manual) : User /casquette → override tout ───────┐
+  │                                                               ▼
+  ├── Règle 2 (Event) : Événement en cours → contexte=casquette ─┤
+  │                                                               │
+  ├── Règle 3 (Time) : Tranche horaire typique (14h = medecin) ──┤
+  │                                                               │
+  ├── Règle 4 (Last Event) : Dernier événement <2h ──────────────┤
+  │                                                               │
+  └── Règle 5 (Default) : Casquette par défaut = medecin ────────┘
+                                                                  ▼
+                                                    UPDATE core.user_context
+                                                                  ▼
+                                        Influence classification email/événements
+```
+
+**Commandes Telegram** :
+- `/casquette` — Changer contexte manuellement (inline buttons 3 casquettes)
+- `/conflits` — Dashboard conflits non résolus (7 jours par défaut)
+- `/conflits 14j` — Dashboard conflits 14 jours
+
+**Exemple notification conflit** :
+```
+⚠️ 2 conflits calendrier détectés dans les 7 prochains jours
+
+📅 Demain 14h30 : 🩺 Consultation Dr Dupont ↔ 🎓 Cours L2 Anatomie
+   Chevauchement : 30 minutes
+
+   [Annuler cours] [Reporter consultation] [Accepter les 2]
+
+📅 Vendredi 16h : 🔬 Séminaire labo ↔ 🎓 Réunion péda
+   Chevauchement : 30 minutes
+
+   [Annuler réunion] [Reporter séminaire] [Accepter les 2]
+```
+
+**Résolution dialogue multi-étapes** :
+```
+1. User clique "Reporter consultation"
+2. Friday : "Nouvelle date/heure ?"
+3. User : "Demain 16h"
+4. Friday parse → UPDATE event → RESOLVE conflict
+5. Confirmation : "✅ Consultation reportée demain 16h"
+```
+
+**État machine Redis** : `conflict:reschedule:{user_id}` (TTL 15 min)
+
+**Tests** : 125 tests (18 unit context + 24 bot + 10 heartbeat + 6 influence + 8 integration + 5 E2E + 54 autres)
+
+**Documentation** : [docs/multi-casquettes-conflicts.md](docs/multi-casquettes-conflicts.md) (~650 lignes)
+
+---
+
 ## 🛡️ Self-Healing ✅
 
 Friday 2.0 intègre un système de **self-healing automatique** en 4 tiers pour garantir une disponibilité 24/7 sans intervention manuelle.

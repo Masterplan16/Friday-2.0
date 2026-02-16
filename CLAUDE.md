@@ -642,6 +642,68 @@ Prérequis à tout. Infrastructure, Trust Layer, sécurité RGPD, Telegram, Self
 | **6** | 6.1-6.4 | Mémoire Éternelle & Migration 110k emails | Epic 1 |
 | **7** | 7.1-7.3 | Agenda & Calendrier Multi-casquettes | Epic 1 + 2 |
 
+### Epic 7 : Agenda & Calendrier Multi-casquettes (3 stories | 12 FRs)
+
+Gestion des 3 rôles professionnels (médecin/enseignant/chercheur) et détection automatique des conflits calendrier.
+
+| Story | Titre | Status | Fichiers clés |
+|-------|-------|--------|---------------|
+| **7.1** | Détection Événements Calendrier | **in-progress** | `agents/src/agents/calendar/event_detector.py`, `prompts.py`, `models.py` |
+| **7.2** | Sync Google Calendar (dépend Story 4.1 Heartbeat) | backlog | — |
+| **7.3** | Multi-casquettes & Conflits Calendrier | **TERMINÉE** ✅ | Voir ci-dessous |
+
+#### Story 7.3 : Multi-casquettes & Conflits (TERMINÉE ✅ 2026-02-16)
+
+**Composants implémentés** (~7,900 lignes, 125 tests) :
+
+**Core** (4 fichiers, ~1,250 lignes) :
+- `agents/src/core/models.py` : UserContext, Casquette, ContextSource, ConflictStatus
+- `agents/src/core/context_manager.py` (~350 lignes) : Auto-détection contexte 5 règles priorité
+- `database/migrations/037_context_conflicts.sql` : Tables `user_context` + `calendar_conflicts`
+- `agents/src/agents/calendar/conflict_detector.py` : Allen's interval algebra
+
+**Telegram** (4 fichiers, ~1,726 lignes) :
+- `bot/handlers/casquette_commands.py` (~280 lignes) : `/casquette` command + inline buttons
+- `bot/handlers/casquette_callbacks.py` : Callbacks changement casquette
+- `bot/handlers/conflict_commands.py` (~398 lignes) : `/conflits` dashboard
+- `bot/handlers/conflict_notifications.py` (~378 lignes) : Notifications conflits
+- `bot/handlers/conflict_callbacks.py` (~670 lignes) : Résolution conflits + state machine
+
+**Heartbeat** (2 fichiers, ~550 lignes) :
+- `agents/src/core/heartbeat_checks/calendar_conflicts.py` (~361 lignes) : Check périodique 7j
+- `bot/handlers/briefing.py` : Briefing multi-casquettes (3 casquettes)
+
+**Influence contexte** (2 fichiers modifiés) :
+- `agents/src/agents/email/classifier.py` + `prompts.py` : Bias subtil classification email
+- `agents/src/agents/calendar/event_detector.py` + `prompts.py` : Bias subtil détection événements
+
+**Tests** (14 fichiers, 125 tests) :
+- `tests/unit/core/test_context_manager.py` (18 tests)
+- `tests/unit/bot/test_*` (24 tests)
+- `tests/unit/agents/test_context_influence.py` (6 tests)
+- `tests/unit/core/test_heartbeat_check_calendar_conflicts.py` (10 tests)
+- `tests/integration/test_context_pipeline.py` (8 tests)
+- `tests/e2e/test_multi_casquettes_e2e.py` (5 tests)
+
+**Documentation** (1 guide complet, ~650 lignes) :
+- `docs/multi-casquettes-conflicts.md` : Guide complet architecture + utilisation
+
+**Fonctionnalités** :
+- ✅ Auto-détection contexte casquette (5 règles priorité : manual > event > time > last_event > default)
+- ✅ Influence subtile classification emails/événements (`LÉGÈREMENT` dans prompts)
+- ✅ Détection conflits Allen's interval algebra (13 relations temporelles)
+- ✅ Résolution conflits Telegram (annuler, reporter, accepter)
+- ✅ Heartbeat check conflits 7j (2h, skip quiet hours 22h-08h)
+- ✅ Briefing multi-casquettes (groupé par casquette, ordre chrono)
+- ✅ Commandes Telegram `/casquette` + `/conflits`
+
+**Dépendances** :
+- Epic 1 (PostgreSQL, Redis, Bot Telegram, Trust Layer)
+- Story 4.1 Heartbeat Engine (pour checks périodiques)
+- Story 7.1 Event Detection (pour événements calendrier)
+
+**Voir** : [docs/multi-casquettes-conflicts.md](docs/multi-casquettes-conflicts.md) pour guide complet
+
 ### Séquence d'implémentation suggérée
 
 1. **Epic 1** (Socle) — prérequis à tout, stories 1.1→1.15 séquentielles
@@ -757,6 +819,9 @@ New-BurntToastNotification -Text "Claude", "Toujours en cours..."
 
 - **Setup PC Backup** : [docs/pc-backup-setup.md](docs/pc-backup-setup.md)
   *Configuration complète PC Mainteneur pour recevoir backups quotidiens VPS via rsync/Tailscale. Guides par OS (Windows/WSL, Linux, macOS), SSH setup, tests validation*
+
+- **Multi-casquettes & Conflits** : [docs/multi-casquettes-conflicts.md](docs/multi-casquettes-conflicts.md) ✅ **Story 7.3**
+  *Guide complet système multi-casquettes (médecin/enseignant/chercheur). Auto-détection contexte 5 règles priorité, influence classification, détection conflits Allen's algebra, résolution Telegram, Heartbeat checks. ~650 lignes*
 
 ### Configuration & Scripts implémentation
 

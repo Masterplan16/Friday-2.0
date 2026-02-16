@@ -32,6 +32,7 @@ from bot.handlers import (
     trust_budget_commands,
     trust_commands,
     vip_commands,
+    warranty_commands,
 )
 from telegram.ext import (
     Application,
@@ -189,6 +190,11 @@ class FridayBot:
         # Story 7.3 - Commande /conflits (dashboard conflits calendrier)
         self.application.add_handler(CommandHandler("conflits", conflict_commands.handle_conflits_command))
 
+        # Story 3.4 - Commandes /warranties, /warranty_expiring, /warranty_stats
+        self.application.add_handler(CommandHandler("warranties", warranty_commands.warranties_command))
+        self.application.add_handler(CommandHandler("warranty_expiring", warranty_commands.warranty_expiring_command))
+        self.application.add_handler(CommandHandler("warranty_stats", warranty_commands.warranty_stats_command))
+
         # Story 1.10 - Inline buttons callbacks (Approve/Reject/Correct)
         from bot.action_executor import ActionExecutor
         from bot.handlers.callbacks import register_callbacks_handlers
@@ -234,6 +240,11 @@ class FridayBot:
             from bot.handlers.classification_callbacks_register import register_classification_callbacks_handlers
             register_classification_callbacks_handlers(self.application, db_pool)
             logger.info("Story 3.2 classification callback handlers registered")
+
+            # Story 3.4 - Warranty callbacks (Confirm/Edit/Delete)
+            from bot.handlers.warranty_callbacks import register_warranty_callbacks_handlers
+            register_warranty_callbacks_handlers(self.application, db_pool)
+            logger.info("Story 3.4 warranty callback handlers registered")
 
             # Story 7.3 - Casquette callbacks (Médecin/Enseignant/Chercheur/Auto)
             from bot.handlers.casquette_callbacks_register import register_casquette_callbacks_handlers

@@ -1279,6 +1279,243 @@ Vérifiez les credentials OAuth2 et la config.
 
 ---
 
+## 🗓️ Multi-casquettes & Conflits Calendrier (Story 7.3)
+
+### Qu'est-ce que c'est ?
+
+Friday gère vos **3 rôles professionnels** (médecin, enseignant, chercheur) et détecte automatiquement les **conflits d'agenda** entre casquettes.
+
+**3 casquettes** :
+- 🩺 **Médecin** : Consultations, gardes, formations médicales
+- 🎓 **Enseignant** : Cours, TD, TP, examens, réunions pédagogiques
+- 🔬 **Chercheur** : Conférences, publications, réunions labo
+
+**Auto-détection contexte** (5 règles priorité) :
+1. **Manuel** (max) : Vous avez défini via `/casquette`
+2. **Event** : Événement en cours dans calendrier
+3. **Time** : Tranche horaire typique (14h = médecin)
+4. **Last Event** : Dernier événement <2h
+5. **Default** : Casquette par défaut (médecin)
+
+**Influence classification** : Le contexte actuel crée un bias **LÉGER** sur classification email/événements.
+- Email @chu.fr + contexte=medecin → favorise catégorie "pro"
+- "Réunion équipe" + contexte=enseignant → favorise casquette=enseignant
+
+---
+
+### Commande `/casquette`
+
+Changer manuellement votre casquette actuelle (override toutes autres règles).
+
+**Usage** :
+```
+/casquette
+```
+
+**Exemple** :
+```
+User : /casquette
+
+Friday : Sélectionnez votre casquette actuelle :
+
+[🩺 Médecin] [🎓 Enseignant] [🔬 Chercheur]
+```
+
+**Après sélection (ex: Enseignant)** :
+```
+✅ Casquette changée : Enseignant
+
+Vos emails et événements seront désormais biaisés vers l'enseignement.
+Pour revenir à l'auto-détection, utilisez à nouveau /casquette.
+```
+
+**Effet** :
+- Contexte reste `enseignant` jusqu'à prochain changement manuel
+- Emails @univ.fr → favorise catégorie "universite"
+- Événements ambigus → favorise casquette "enseignant"
+
+---
+
+### Commande `/conflits`
+
+Afficher les conflits calendrier non résolus (7 jours par défaut).
+
+**Usage** :
+```
+/conflits           # 7 prochains jours
+/conflits 14j       # 14 prochains jours
+/conflits 30j       # 30 prochains jours
+```
+
+**Exemple** :
+```
+User : /conflits
+
+Friday :
+⚠️ 2 conflits calendrier détectés dans les 7 prochains jours
+
+1. 🩺 Consultation Dr Dupont ↔ 🎓 Cours L2 Anatomie
+   📅 Demain 14h30-15h00 | Chevauchement : 30 minutes
+   📍 Cabinet médical ↔ Amphi B
+
+   [Annuler cours] [Reporter consultation] [Accepter les 2]
+
+2. 🔬 Séminaire labo ↔ 🎓 Réunion péda
+   📅 Vendredi 16h00-17h30 | Chevauchement : 30 minutes
+   📍 Labo 301 ↔ Salle B203
+
+   [Annuler réunion] [Reporter séminaire] [Accepter les 2]
+
+Utilisez les boutons pour résoudre chaque conflit.
+```
+
+**Aucun conflit** :
+```
+✅ Aucun conflit calendrier dans les 7 prochains jours
+```
+
+---
+
+### Résolution Conflits - Boutons Inline
+
+#### 1. Annuler événement
+```
+User : Clique [Annuler cours]
+
+Friday : ✅ Événement annulé : Cours L2 Anatomie
+         Conflit résolu. L'autre événement est conservé.
+```
+
+**Effet** :
+- Événement supprimé (marqué `deleted=TRUE`)
+- Conflit marqué `resolved=TRUE` avec `resolution_type='cancel'`
+
+#### 2. Reporter événement (dialogue multi-étapes)
+```
+User : Clique [Reporter consultation]
+
+Friday : 📅 Nouvelle date/heure pour "Consultation Dr Dupont" ?
+         (Format libre : "demain 16h", "vendredi 10h30", "2026-03-15 14h")
+
+User : demain 16h
+
+Friday : ✅ "Consultation Dr Dupont" reportée demain 16h
+         Conflit résolu. L'autre événement est conservé.
+```
+
+**État machine** : Redis `conflict:reschedule:{user_id}` (TTL 15 min)
+
+**Formats date acceptés** :
+- Relatifs : `demain`, `après-demain`, `lundi prochain`
+- Absolus : `2026-03-15`, `15 mars`
+- Heures : `14h`, `14h30`, `14:30`
+
+#### 3. Accepter les 2 événements
+```
+User : Clique [Accepter les 2]
+
+Friday : ✅ Conflit accepté : les 2 événements sont conservés
+         (Consultation Dr Dupont + Cours L2 Anatomie)
+
+         Vous avez confirmé pouvoir gérer ce multi-casquette.
+```
+
+**Effet** :
+- Les 2 événements restent inchangés
+- Conflit marqué `resolved=TRUE` avec `resolution_type='accept'`
+- Plus de notifications pour ce conflit
+
+---
+
+### Notifications Automatiques (Heartbeat)
+
+Friday vérifie les conflits **toutes les 2h (08h-22h)** sur les **7 prochains jours**.
+
+**Notification Topic 🤖 Actions & Validations** :
+```
+⚠️ 1 conflit calendrier détecté dans les 7 prochains jours
+
+📅 Demain 14h30 : 🩺 Consultation Dr Dupont ↔ 🎓 Cours L2 Anatomie
+   Chevauchement : 30 minutes
+
+Utilisez /conflits pour voir les détails et résoudre.
+```
+
+**Quiet hours** : Skip notifications 22h-08h (configuré dans Heartbeat Engine)
+
+**Fréquence** :
+- Check toutes les 2h pendant journée
+- Notification 1x par conflit (pas de spam)
+- Re-notification si conflit non résolu après 24h
+
+---
+
+### Briefing Multi-casquettes
+
+Le briefing quotidien (08h) groupe vos événements par casquette.
+
+**Exemple `/briefing` (appelé automatiquement 08h)** :
+```
+📅 Briefing du 2026-02-17 (Lundi)
+
+🩺 MÉDECIN (2 événements)
+  10h00-10h30 : Consultation Dr Martin (Cabinet)
+  14h30-18h00 : Garde CHU (CHU Toulouse)
+
+🎓 ENSEIGNANT (1 événement)
+  14h00-16h00 : Cours L2 Anatomie (Amphi B)
+    ⚠️ Conflit avec Garde CHU (14h30-18h00) - Chevauchement : 1h30
+
+🔬 CHERCHEUR (1 événement)
+  16h30-18h00 : Séminaire recherche (Labo 301)
+
+Total : 4 événements · 1 conflit à résoudre
+```
+
+**Ordre** : Chronologique global (pas par casquette)
+
+---
+
+### Métriques & Observability
+
+**Métriques collectées** :
+- `context_updates_total` : Total changements contexte
+- `context_updates_by_source` : Changements par source (manual, event, time, etc.)
+- `conflicts_detected_total` : Total conflits détectés
+- `conflicts_resolved_total` : Conflits résolus (par type : cancel/reschedule/accept)
+- `classification_with_context_bias` : Classifications avec contexte vs sans
+
+**Logs structurés** (JSON) :
+```json
+{
+  "timestamp": "2026-02-17T14:30:00Z",
+  "service": "context-manager",
+  "level": "INFO",
+  "message": "Context updated",
+  "context": {
+    "old_casquette": "medecin",
+    "new_casquette": "enseignant",
+    "source": "event",
+    "event_id": "abc-123"
+  }
+}
+```
+
+---
+
+### Documentation Complète
+
+**Guide technique détaillé** : [docs/multi-casquettes-conflicts.md](../multi-casquettes-conflicts.md) (~650 lignes)
+- Architecture tables PostgreSQL
+- Allen's interval algebra (13 relations temporelles)
+- Pipeline auto-détection contexte
+- Algorithme détection conflits
+- Influence contexte sur classification
+- Tests (125 tests : unit, intégration, E2E)
+- Troubleshooting
+
+---
+
 ## ❓ Questions Fréquentes (FAQ)
 
 ### Je ne vois pas les topics sur mobile ?

@@ -11,9 +11,9 @@ import shutil
 import uuid
 from pathlib import Path
 from typing import Optional
-import structlog
-import asyncpg
 
+import asyncpg
+import structlog
 from agents.src.agents.archiviste.models import ClassificationResult, MovedFile
 from agents.src.config.arborescence_config import get_arborescence_config
 

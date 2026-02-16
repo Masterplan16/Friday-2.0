@@ -6,20 +6,18 @@ pour résolution Mainteneur (annuler/déplacer/ignorer).
 """
 
 import os
+from datetime import datetime
 from typing import Optional
 
 import structlog
-from datetime import datetime
-
-from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.error import TelegramError
-
 from agents.src.agents.calendar.models import CalendarConflict
 from agents.src.core.models import (
-    Casquette,
     CASQUETTE_EMOJI_MAPPING,
     CASQUETTE_LABEL_MAPPING,
+    Casquette,
 )
+from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.error import TelegramError
 
 logger = structlog.get_logger(__name__)
 

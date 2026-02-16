@@ -5,17 +5,16 @@ Enregistre les CallbackQueryHandlers pour les inline buttons classification
 """
 
 import asyncpg
-from telegram.ext import Application, CallbackQueryHandler
 import structlog
-
 from bot.handlers.classification_callbacks import (
     handle_classify_approve,
-    handle_classify_correct,
-    handle_classify_reject,
-    handle_classify_reclassify,
-    handle_classify_finance,
     handle_classify_back,
+    handle_classify_correct,
+    handle_classify_finance,
+    handle_classify_reclassify,
+    handle_classify_reject,
 )
+from telegram.ext import Application, CallbackQueryHandler
 
 logger = structlog.get_logger(__name__)
 

@@ -14,14 +14,13 @@ from typing import Optional
 
 import asyncpg
 import structlog
+from agents.src.agents.archiviste.warranty_db import delete_warranty
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import (
+    Application,
     CallbackQueryHandler,
     ContextTypes,
-    Application,
 )
-
-from agents.src.agents.archiviste.warranty_db import delete_warranty
 
 logger = structlog.get_logger(__name__)
 

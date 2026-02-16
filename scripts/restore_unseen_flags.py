@@ -168,8 +168,9 @@ async def restore_all_seen_for_account(account_id, account_config, dry_run=True)
     Mode --all: cherche TOUS les emails SEEN dans INBOX et les remet en UNSEEN.
     Utile si on veut restaurer y compris des emails pas dans la DB.
     """
-    import aioimaplib
     import re
+
+    import aioimaplib
 
     host = account_config["imap_host"]
     port = account_config["imap_port"]

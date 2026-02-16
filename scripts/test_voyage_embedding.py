@@ -32,8 +32,9 @@ agents_src = Path(__file__).parent.parent / "agents" / "src"
 sys.path.insert(0, str(agents_src))
 
 import structlog
-from adapters.vectorstore import get_vectorstore_adapter
 from dotenv import load_dotenv
+
+from adapters.vectorstore import get_vectorstore_adapter
 
 logger = structlog.get_logger(__name__)
 

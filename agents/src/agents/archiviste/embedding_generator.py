@@ -42,7 +42,7 @@ from agents.src.adapters.embedding import get_embedding_adapter
 from agents.src.agents.archiviste.models import EmbeddingResult
 from agents.src.middleware.models import ActionResult
 from agents.src.middleware.trust import friday_action
-from agents.src.tools.anonymize import anonymize_text, AnonymizationResult
+from agents.src.tools.anonymize import AnonymizationResult, anonymize_text
 
 logger = structlog.get_logger(__name__)
 

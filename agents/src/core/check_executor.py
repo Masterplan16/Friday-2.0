@@ -15,10 +15,9 @@ Usage:
 
 import asyncpg
 import structlog
-from redis.asyncio import Redis
-
 from agents.src.core.check_registry import CheckRegistry
 from agents.src.core.heartbeat_models import CheckResult
+from redis.asyncio import Redis
 
 logger = structlog.get_logger(__name__)
 

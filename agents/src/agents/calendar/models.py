@@ -4,12 +4,13 @@ Pydantic models pour detection evenements
 Story 7.1 AC1-AC7: Models Event, EventDetectionResult
 """
 
-from pydantic import BaseModel, Field, field_validator, model_validator
-from typing import List, Optional
 from datetime import datetime, timezone
 from enum import Enum
+from typing import List, Optional
 
 from agents.src.core.models import Casquette
+from pydantic import BaseModel, Field, field_validator, model_validator
+
 from config.exceptions import AgentError, PipelineError
 
 

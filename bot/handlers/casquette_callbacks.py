@@ -13,15 +13,14 @@ Callbacks:
 import os
 
 import structlog
-from telegram import Update
-from telegram.ext import ContextTypes
-
 from agents.src.core.context_manager import ContextManager
 from agents.src.core.models import (
-    Casquette,
     CASQUETTE_EMOJI_MAPPING,
     CASQUETTE_LABEL_MAPPING,
+    Casquette,
 )
+from telegram import Update
+from telegram.ext import ContextTypes
 
 logger = structlog.get_logger(__name__)
 

@@ -18,11 +18,11 @@ import json
 import logging
 import os
 import sys
-from pathlib import Path
-from typing import Any, Dict, Optional
+import time
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
-import time
+from pathlib import Path
+from typing import Any, Dict, Optional
 
 import asyncpg
 import httpx
@@ -35,26 +35,26 @@ repo_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(repo_root))
 
 from agents.src.adapters.email import (
-    get_email_adapter,
     EmailAdapter,
     EmailAdapterError,
     IMAPUIDNotFoundError,
+    get_email_adapter,
 )
-from agents.src.tools.anonymize import anonymize_text
+from agents.src.agents.calendar.event_detector import (  # Story 7.1: Event detection
+    extract_events_from_email,
+)
+from agents.src.agents.email.attachment_extractor import extract_attachments
+from agents.src.agents.email.classifier import classify_email  # A.5: Branche classifier
+from agents.src.agents.email.draft_reply import draft_email_reply
+from agents.src.agents.email.sender_filter import check_sender_filter  # Story 2.8 Task 5
+from agents.src.agents.email.urgency_detector import detect_urgency
 from agents.src.agents.email.vip_detector import (
     compute_email_hash,
     detect_vip_sender,
     update_vip_email_stats,
 )
-from agents.src.agents.email.urgency_detector import detect_urgency
-from agents.src.agents.email.attachment_extractor import extract_attachments
-from agents.src.agents.email.classifier import classify_email  # A.5: Branche classifier
-from agents.src.agents.email.draft_reply import draft_email_reply
-from agents.src.agents.email.sender_filter import check_sender_filter  # Story 2.8 Task 5
-from agents.src.agents.calendar.event_detector import (
-    extract_events_from_email,
-)  # Story 7.1: Event detection
 from agents.src.middleware.trust import init_trust_manager
+from agents.src.tools.anonymize import anonymize_text
 
 # ============================================
 # Logging Setup
@@ -631,8 +631,8 @@ class EmailProcessorConsumer:
             # 3. Trust level = propose → Validation Telegram requise
             if category != "spam":
                 try:
-                    from agents.src.agents.email.task_extractor import extract_tasks_from_email
                     from agents.src.agents.email.task_creator import create_tasks_with_validation
+                    from agents.src.agents.email.task_extractor import extract_tasks_from_email
 
                     # Extraire tâches via Claude Sonnet 4.5
                     extraction_result = await extract_tasks_from_email(

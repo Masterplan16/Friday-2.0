@@ -33,7 +33,7 @@ from agents.src.adapters.embedding import get_embedding_adapter
 from agents.src.agents.archiviste.models import SearchResult
 from agents.src.middleware.models import ActionResult
 from agents.src.middleware.trust import friday_action
-from agents.src.tools.anonymize import anonymize_text, AnonymizationResult
+from agents.src.tools.anonymize import AnonymizationResult, anonymize_text
 from agents.src.tools.search_metrics import search_metrics
 
 logger = structlog.get_logger(__name__)

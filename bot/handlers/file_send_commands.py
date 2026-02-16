@@ -21,13 +21,12 @@ from typing import Optional
 
 import asyncpg
 import structlog
-from telegram import Update
-from telegram.ext import ContextTypes
-from pydantic import BaseModel, Field
-
 from agents.src.adapters.llm import ClaudeAdapter
 from agents.src.adapters.vectorstore import get_vectorstore_adapter
 from agents.src.tools.anonymize import presidio_anonymize
+from pydantic import BaseModel, Field
+from telegram import Update
+from telegram.ext import ContextTypes
 
 logger = structlog.get_logger(__name__)
 

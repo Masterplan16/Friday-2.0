@@ -14,11 +14,10 @@ from datetime import datetime, timedelta
 from typing import Any, Dict, Optional
 
 import structlog
-from anthropic import AsyncAnthropic, APIError, RateLimitError
-
 from agents.src.agents.email.models import TaskExtractionResult
 from agents.src.agents.email.prompts import TASK_EXTRACTION_PROMPT
 from agents.src.tools.anonymize import anonymize_text
+from anthropic import APIError, AsyncAnthropic, RateLimitError
 
 logger = structlog.get_logger(__name__)
 

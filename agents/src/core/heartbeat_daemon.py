@@ -23,16 +23,15 @@ from typing import Optional
 
 import asyncpg
 import structlog
-from redis.asyncio import Redis
-from anthropic import AsyncAnthropic
-
-from agents.src.core.heartbeat_engine import HeartbeatEngine
-from agents.src.core.context_provider import ContextProvider
-from agents.src.core.context_manager import ContextManager
-from agents.src.core.check_registry import CheckRegistry
-from agents.src.core.llm_decider import LLMDecider
 from agents.src.core.check_executor import CheckExecutor
+from agents.src.core.check_registry import CheckRegistry
 from agents.src.core.checks import register_all_checks
+from agents.src.core.context_manager import ContextManager
+from agents.src.core.context_provider import ContextProvider
+from agents.src.core.heartbeat_engine import HeartbeatEngine
+from agents.src.core.llm_decider import LLMDecider
+from anthropic import AsyncAnthropic
+from redis.asyncio import Redis
 
 # Configuration structlog
 structlog.configure(

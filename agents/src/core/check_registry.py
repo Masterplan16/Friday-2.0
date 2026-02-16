@@ -23,9 +23,9 @@ Usage:
     high_checks = registry.get_checks_by_priority(CheckPriority.HIGH)
 """
 
-import structlog
 from typing import List, Optional
 
+import structlog
 from agents.src.core.heartbeat_models import Check, CheckPriority
 
 logger = structlog.get_logger(__name__)

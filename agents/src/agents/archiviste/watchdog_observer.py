@@ -20,15 +20,14 @@ from pathlib import Path
 from typing import List, Optional
 
 import structlog
-from redis import asyncio as aioredis
-from watchdog.observers import Observer
-from watchdog.observers.polling import PollingObserver
-
 from agents.src.agents.archiviste.watchdog_config import (
     WatchdogConfigManager,
     WatchdogConfigSchema,
 )
 from agents.src.agents.archiviste.watchdog_handler import FridayWatchdogHandler
+from redis import asyncio as aioredis
+from watchdog.observers import Observer
+from watchdog.observers.polling import PollingObserver
 
 logger = structlog.get_logger(__name__)
 

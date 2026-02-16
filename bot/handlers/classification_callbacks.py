@@ -9,9 +9,9 @@ import logging
 import os
 import uuid
 
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ContextTypes
 import asyncpg
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram.ext import ContextTypes
 
 logger = logging.getLogger(__name__)
 
@@ -472,8 +472,8 @@ async def handle_classify_back(
                 return
 
         from bot.handlers.classification_notifications import (
-            _format_classification_message,
             _create_classification_keyboard,
+            _format_classification_message,
         )
 
         payload = row["payload"] or {}

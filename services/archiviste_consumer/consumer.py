@@ -26,9 +26,8 @@ from typing import Any, Optional
 
 import asyncpg
 import structlog
-from redis.asyncio import Redis
-
 from agents.src.agents.archiviste.pipeline import OCRPipeline
+from redis.asyncio import Redis
 
 logger = structlog.get_logger(__name__)
 

@@ -18,7 +18,7 @@ from typing import List, Optional
 
 import structlog
 from redis import asyncio as aioredis
-from watchdog.events import FileSystemEventHandler, FileCreatedEvent, FileMovedEvent
+from watchdog.events import FileCreatedEvent, FileMovedEvent, FileSystemEventHandler
 
 logger = structlog.get_logger(__name__)
 

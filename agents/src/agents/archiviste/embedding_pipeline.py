@@ -32,8 +32,8 @@ from uuid import UUID
 import asyncpg
 import redis.asyncio as aioredis
 import structlog
-
 from agents.src.agents.archiviste.embedding_generator import EmbeddingGenerator
+
 from config.exceptions import PipelineError
 
 logger = structlog.get_logger(__name__)

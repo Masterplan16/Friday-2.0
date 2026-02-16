@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 """Count emails per account for a date range."""
 
-import asyncio, os, ssl, aioimaplib
+import asyncio
+import os
+import ssl
+
+import aioimaplib
 
 
 async def main():

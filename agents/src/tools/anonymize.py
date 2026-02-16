@@ -27,8 +27,9 @@ from typing import Dict, List, Optional
 
 import httpx
 import structlog
-from config.exceptions import PipelineError
 from pydantic import BaseModel, Field
+
+from config.exceptions import PipelineError
 
 # Configuration Presidio (via env vars)
 # Note: Port 3000 = port interne container (5001/5002 = ports HOST)

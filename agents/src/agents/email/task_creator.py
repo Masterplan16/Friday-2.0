@@ -11,7 +11,6 @@ from typing import List
 from uuid import UUID
 
 import asyncpg
-
 from agents.src.agents.email.models import TaskDetected
 from agents.src.middleware.models import ActionResult
 from agents.src.middleware.trust import friday_action

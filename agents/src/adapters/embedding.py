@@ -26,11 +26,11 @@ from abc import ABC, abstractmethod
 from typing import Optional
 
 import structlog
-from agents.src.tools.anonymize import anonymize_text
 from agents.src.adapters.vectorstore import (
-    VoyageAIAdapter,
     EmbeddingResponse,
+    VoyageAIAdapter,
 )
+from agents.src.tools.anonymize import anonymize_text
 
 logger = structlog.get_logger(__name__)
 

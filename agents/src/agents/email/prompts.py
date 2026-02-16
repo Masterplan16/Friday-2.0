@@ -9,11 +9,11 @@ Story 7.3 Task 9.1: Injection contexte casquette actuel (bias subtil)
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Sequence, Optional  # H4 fix: Add Sequence for immutability
+from typing import TYPE_CHECKING, Optional, Sequence  # H4 fix: Add Sequence for immutability
 
 if TYPE_CHECKING:
-    from agents.src.middleware.models import CorrectionRule
     from agents.src.core.models import Casquette
+    from agents.src.middleware.models import CorrectionRule
 
 
 # M3 fix: Configuration centralisée (éviter magic numbers)
@@ -138,8 +138,8 @@ def _format_context_hint(current_casquette: Optional["Casquette"]) -> str:
 
     # Import local pour éviter circular dependency
     from agents.src.core.models import (
-        Casquette,
         CASQUETTE_LABEL_MAPPING,
+        Casquette,
     )
 
     label = CASQUETTE_LABEL_MAPPING.get(current_casquette, current_casquette.value)

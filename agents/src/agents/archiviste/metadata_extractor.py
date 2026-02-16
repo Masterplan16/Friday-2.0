@@ -15,11 +15,10 @@ from datetime import datetime
 from typing import Optional
 
 import structlog
-
-from agents.src.agents.archiviste.models import MetadataExtraction, OCRResult
-from agents.src.middleware.trust import friday_action
-from agents.src.middleware.models import ActionResult
 from agents.src.adapters.llm import get_llm_adapter
+from agents.src.agents.archiviste.models import MetadataExtraction, OCRResult
+from agents.src.middleware.models import ActionResult
+from agents.src.middleware.trust import friday_action
 from agents.src.tools.anonymize import anonymize_text, deanonymize_text
 
 logger = structlog.get_logger(__name__)

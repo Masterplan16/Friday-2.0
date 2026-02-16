@@ -262,9 +262,10 @@ class IMAPDirectAdapter(EmailAdapter):
     async def get_message(self, account_id: str, message_id: str) -> EmailMessage:
         """Fetch email complet via IMAP FETCH."""
         try:
-            import aioimaplib
             import ssl
             from pathlib import Path
+
+            import aioimaplib
 
             account = self._get_account(account_id)
 

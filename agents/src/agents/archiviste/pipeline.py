@@ -23,15 +23,14 @@ import asyncio
 import json
 import time
 from datetime import datetime, timezone
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
 
 import structlog
-from redis import asyncio as aioredis
-
-from agents.src.agents.archiviste.ocr import SuryaOCREngine
 from agents.src.agents.archiviste.metadata_extractor import MetadataExtractor
-from agents.src.agents.archiviste.renamer import DocumentRenamer
 from agents.src.agents.archiviste.models import OCRResult
+from agents.src.agents.archiviste.ocr import SuryaOCREngine
+from agents.src.agents.archiviste.renamer import DocumentRenamer
+from redis import asyncio as aioredis
 
 logger = structlog.get_logger(__name__)
 

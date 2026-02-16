@@ -14,15 +14,16 @@ Story: 2.6 Envoi Emails Approuves - Task 1.2 (notifications)
 # TODO(M4 - Story future): Migrer vers structlog pour logs structurés JSON
 import html
 import logging
-from typing import Dict, Optional
 from datetime import datetime
+from typing import Dict, Optional
+
 import asyncpg
 import httpx
 from telegram import Bot
 
 # Import email adapter (D25: remplace EmailEngineClient)
 try:
-    from agents.src.adapters.email import get_email_adapter, EmailAdapterError, SMTPSendError
+    from agents.src.adapters.email import EmailAdapterError, SMTPSendError, get_email_adapter
 except ImportError:
     get_email_adapter = None  # type: ignore[assignment,misc]
     EmailAdapterError = Exception  # type: ignore[assignment,misc]

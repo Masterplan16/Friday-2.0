@@ -18,10 +18,9 @@ from pathlib import Path
 from typing import Optional
 
 import structlog
-
 from agents.src.agents.archiviste.models import MetadataExtraction, RenameResult
-from agents.src.middleware.trust import friday_action
 from agents.src.middleware.models import ActionResult
+from agents.src.middleware.trust import friday_action
 
 logger = structlog.get_logger(__name__)
 

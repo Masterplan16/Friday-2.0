@@ -4,7 +4,7 @@ Prompts Claude Sonnet 4.5 pour detection evenements
 Story 7.1 AC7: Few-shot learning (5 exemples francais)
 """
 
-from typing import Dict, Any, List
+from typing import Any, Dict, List
 
 # ============================================================================
 # EXEMPLES FEW-SHOT (AC7)
@@ -227,8 +227,8 @@ def build_event_detection_prompt(
     context_hint = ""
     if current_casquette is not None:
         from agents.src.core.models import (
-            Casquette,
             CASQUETTE_LABEL_MAPPING,
+            Casquette,
         )
 
         label = CASQUETTE_LABEL_MAPPING.get(current_casquette, current_casquette.value)

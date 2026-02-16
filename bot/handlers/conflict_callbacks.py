@@ -10,20 +10,18 @@ State machine Redis pour dialogue déplacement :
 - state:conflict:move:{user_id} = {"event_id": "...", "step": "waiting_date" | "waiting_time", "new_date": "..."}
 """
 
-import os
 import json
+import os
 import uuid
-from datetime import datetime, date, time, timedelta, timezone
-
-import structlog
+from datetime import date, datetime, time, timedelta, timezone
 from typing import Optional
 
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ContextTypes
 import asyncpg
 import redis.asyncio as redis
-
-from agents.src.agents.calendar.models import ResolutionAction, ConflictResolution
+import structlog
+from agents.src.agents.calendar.models import ConflictResolution, ResolutionAction
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram.ext import ContextTypes
 
 logger = structlog.get_logger(__name__)
 

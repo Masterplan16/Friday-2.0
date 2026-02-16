@@ -7,7 +7,6 @@ Single-user auth for owner. Token from API_TOKEN env var (age/SOPS encrypted).
 import structlog
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-
 from services.gateway.config import GatewaySettings, get_settings
 
 logger = structlog.get_logger()

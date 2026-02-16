@@ -12,11 +12,11 @@ Friday (llm, anonymize). En cas de dependance manquante, le module
 leve ImportError avec un message explicite.
 """
 
-from agents.src.agents.archiviste.models import OCRResult, MetadataExtraction, RenameResult
-from agents.src.agents.archiviste.ocr import SuryaOCREngine
 from agents.src.agents.archiviste.metadata_extractor import MetadataExtractor
-from agents.src.agents.archiviste.renamer import DocumentRenamer
+from agents.src.agents.archiviste.models import MetadataExtraction, OCRResult, RenameResult
+from agents.src.agents.archiviste.ocr import SuryaOCREngine
 from agents.src.agents.archiviste.pipeline import OCRPipeline
+from agents.src.agents.archiviste.renamer import DocumentRenamer
 
 __all__ = [
     "OCRResult",

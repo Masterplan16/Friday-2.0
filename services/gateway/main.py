@@ -16,13 +16,12 @@ from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from redis.asyncio import Redis
-
 from services.gateway.auth import get_current_user
 from services.gateway.config import GatewaySettings, get_settings
 from services.gateway.healthcheck import HealthChecker
 from services.gateway.logging_config import setup_logging
-from services.gateway.schemas import AuthUser, HealthResponse
 from services.gateway.routes import heartbeat, webhooks
+from services.gateway.schemas import AuthUser, HealthResponse
 
 logger = structlog.get_logger()
 

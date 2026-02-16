@@ -6,10 +6,9 @@ Enregistre les CallbackQueryHandlers pour les inline buttons casquettes
 
 import asyncpg
 import redis.asyncio as redis
-from telegram.ext import Application, CallbackQueryHandler
 import structlog
-
 from bot.handlers.casquette_callbacks import handle_casquette_button
+from telegram.ext import Application, CallbackQueryHandler
 
 logger = structlog.get_logger(__name__)
 

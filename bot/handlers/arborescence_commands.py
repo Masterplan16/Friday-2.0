@@ -11,9 +11,9 @@ Commandes :
 import logging
 import os
 
+import asyncpg
 from telegram import Update
 from telegram.ext import ContextTypes
-import asyncpg
 
 logger = logging.getLogger(__name__)
 

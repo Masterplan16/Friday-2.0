@@ -15,9 +15,10 @@ Date: 2026-02-16
 Story: 3.3 - Task 8
 """
 
-import structlog
 from collections import deque
 from typing import Optional
+
+import structlog
 
 logger = structlog.get_logger(__name__)
 

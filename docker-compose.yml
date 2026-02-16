@@ -200,7 +200,7 @@ services:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
       - ENVIRONMENT=${ENVIRONMENT:-production}
-      - PYTHONPATH=/agents
+      - PYTHONPATH=/agents/src
     volumes:
       - ./services/gateway:/app:ro
       - ./agents/src:/agents:ro

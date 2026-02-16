@@ -148,7 +148,7 @@ class DocumentRenamer:
 
         Règles:
         - Espaces → tirets (-)
-        - Caractères interdits Windows (\/:*?"<>|) → supprimés
+        - Caractères interdits Windows (\\/:*?"<>|) → supprimés
         - Longueur max: 50 caractères (Task 3.3)
         - Si vide après sanitization → "Inconnu" (Task 3.4)
 

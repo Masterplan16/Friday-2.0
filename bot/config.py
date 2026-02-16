@@ -19,7 +19,6 @@ class ConfigurationError(Exception):
     """Exception levée si la configuration est invalide ou incomplète."""
 
 
-
 def load_bot_config() -> BotConfig:
     """
     Charge la configuration complète du bot Telegram.

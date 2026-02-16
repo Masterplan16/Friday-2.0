@@ -75,10 +75,8 @@ class EmailAdapterError(Exception):
     """Erreur adaptateur email"""
 
 
-
 class IMAPConnectionError(EmailAdapterError):
     """Erreur connexion IMAP"""
-
 
 
 class IMAPUIDNotFoundError(EmailAdapterError):
@@ -90,15 +88,14 @@ class IMAPUIDNotFoundError(EmailAdapterError):
     """
 
 
-
 class SMTPSendError(EmailAdapterError):
     """Erreur envoi SMTP"""
-
 
 
 # ============================================================================
 # Interface abstraite
 # ============================================================================
+
 
 class EmailAdapter(ABC):
     """

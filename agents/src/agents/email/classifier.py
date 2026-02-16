@@ -37,7 +37,6 @@ class EmailClassifierError(Exception):
     """Erreur dans le processus de classification d'email."""
 
 
-
 @friday_action(module="email", action="classify", trust_default="auto")
 async def classify_email(
     email_id: str,

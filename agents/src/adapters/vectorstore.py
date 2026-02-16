@@ -113,15 +113,14 @@ class VectorStoreError(PipelineError):
     """Erreur vectorstore"""
 
 
-
 class EmbeddingProviderError(VectorStoreError):
     """Erreur provider embeddings (Voyage AI, OpenAI, etc.)"""
-
 
 
 # ============================================================
 # Interface Abstraite
 # ============================================================
+
 
 class VectorStoreAdapter(ABC):
     """

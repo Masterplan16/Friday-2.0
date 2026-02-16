@@ -11,10 +11,11 @@ State machine Redis pour dialogue déplacement :
 """
 
 import os
-import logging
 import json
 import uuid
-from datetime import datetime, date, time, timedelta
+from datetime import datetime, date, time, timedelta, timezone
+
+import structlog
 from typing import Optional
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
@@ -25,7 +26,7 @@ import redis.asyncio as redis
 from agents.src.agents.calendar.models import ResolutionAction, ConflictResolution
 
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 # ============================================================================
@@ -34,11 +35,6 @@ logger = logging.getLogger(__name__)
 
 # TTL état Redis pour dialogue déplacement (5 minutes)
 MOVE_STATE_TTL = 300
-
-# Topic ID pour notifications résolution
-TOPIC_ACTIONS_ID = os.getenv("TOPIC_ACTIONS_ID")
-TELEGRAM_SUPERGROUP_ID = os.getenv("TELEGRAM_SUPERGROUP_ID")
-
 
 # ============================================================================
 # ROUTER PRINCIPAL (AC6)
@@ -63,6 +59,14 @@ async def handle_conflict_button(
     Story 7.3 AC6: Résolution conflits via inline buttons
     """
     query = update.callback_query
+    if not query:
+        return
+
+    # H1 fix: Vérifier que l'utilisateur est le propriétaire
+    owner_id = os.getenv("OWNER_USER_ID")
+    if owner_id and str(query.from_user.id) != owner_id:
+        return
+
     await query.answer()
 
     # Parser callback_data
@@ -233,7 +237,7 @@ async def handle_conflict_cancel(
         await redis_client.xadd('calendar:conflict.resolved', {
             'event_id': event_id,
             'action': 'cancel',
-            'resolved_at': datetime.utcnow().isoformat(),
+            'resolved_at': datetime.now(timezone.utc).isoformat(),
             'resolved_by': str(query.from_user.id)
         })
 
@@ -621,7 +625,7 @@ async def handle_move_time_response(
             'event_id': event_id,
             'action': 'move',
             'new_datetime': new_datetime.isoformat(),
-            'resolved_at': datetime.utcnow().isoformat(),
+            'resolved_at': datetime.now(timezone.utc).isoformat(),
             'resolved_by': str(user_id)
         })
 

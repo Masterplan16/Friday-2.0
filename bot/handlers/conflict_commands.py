@@ -10,12 +10,14 @@ Affiche :
 - 📊 Stats mois (total, répartition par casquettes)
 """
 
+import os
+
 import asyncpg
 import structlog
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, timezone
 from telegram import Update
 from telegram.ext import ContextTypes
-from typing import Dict, Tuple
+from typing import Any, Dict, Tuple
 
 from agents.src.core.models import (
     Casquette,
@@ -51,6 +53,11 @@ async def handle_conflits_command(
     """
     message = update.message
     if not message:
+        return
+
+    # H1 fix: Vérifier que l'utilisateur est le propriétaire
+    owner_id = os.getenv("OWNER_USER_ID")
+    if owner_id and str(message.from_user.id) != owner_id:
         return
 
     db_pool = context.bot_data.get("db_pool")
@@ -150,7 +157,7 @@ async def _get_resolved_week_count(db_pool: asyncpg.Pool) -> int:
     Returns:
         Nombre conflits résolus (int)
     """
-    one_week_ago = datetime.now() - timedelta(days=7)
+    one_week_ago = datetime.now(timezone.utc) - timedelta(days=7)
 
     async with db_pool.acquire() as conn:
         row = await conn.fetchrow(
@@ -166,7 +173,7 @@ async def _get_resolved_week_count(db_pool: asyncpg.Pool) -> int:
     return row["count"] if row else 0
 
 
-async def _get_month_stats(db_pool: asyncpg.Pool) -> Dict[str, any]:
+async def _get_month_stats(db_pool: asyncpg.Pool) -> Dict[str, Any]:
     """
     Récupère stats mois conflits (AC7)
 
@@ -183,7 +190,7 @@ async def _get_month_stats(db_pool: asyncpg.Pool) -> Dict[str, any]:
         ]
     }
     """
-    one_month_ago = datetime.now() - timedelta(days=30)
+    one_month_ago = datetime.now(timezone.utc) - timedelta(days=30)
 
     async with db_pool.acquire() as conn:
         # Total conflits mois
@@ -256,7 +263,7 @@ async def _get_month_stats(db_pool: asyncpg.Pool) -> Dict[str, any]:
 def _format_dashboard_message(
     unresolved_conflicts: list,
     resolved_week: int,
-    month_stats: Dict[str, any]
+    month_stats: Dict[str, Any]
 ) -> str:
     """
     Formate message dashboard conflits (AC7)

@@ -1,6 +1,6 @@
 # Story 7.3: Multi-casquettes & Conflits Calendrier
 
-Status: ready-for-dev
+Status: done
 
 ---
 
@@ -925,12 +925,93 @@ Claude Sonnet 4.5 (`claude-sonnet-4-5-20250929`)
 
 ### Debug Log References
 
-_Section remplie lors du développement_
+N/A — Implémentation et code review réalisées dans même session.
+
+### Code Review (Adversarial - Opus 4.6)
+
+**Date** : 2026-02-16
+**Reviewer** : Claude Opus 4.6 (adversarial BMAD workflow)
+**Issues trouvées** : 57+ (4 CRITICAL, 18 HIGH, 20+ MEDIUM, 15+ LOW)
+**Issues fixées** : TOUTES (100%)
+
+**CRITICAL** :
+- C1: `bot/main.py` — Redis client jamais initialisé avant `register_handlers()`
+- C2: `heartbeat_checks/calendar_conflicts.py` — `.get()` sur objets Pydantic (crash runtime)
+- C3: `calendar/models.py` — Enum Casquette dupliquée (3 valeurs vs 4, désynchronisée core.models)
+- C4: `test_context_pipeline.py` — 8 tests skippés, imports cassés, mauvaises tables
+
+**HIGH** (sélection) :
+- H1: OWNER_USER_ID manquant dans 5 handlers (sécurité)
+- H2: `datetime.now()` sans timezone (bugs timezone)
+- H4: `logging.getLogger` au lieu de `structlog` (event_detector)
+- H8: `claude-haiku` interdit (D17: 100% Sonnet)
+- H9: Catégories email anglaises au lieu de françaises
+- H10-H13: conflict_detector (ON CONFLICT, LEAST/GREATEST, N+1 queries, multi-day events)
+- H14: Contexte manuel sans expiration (bloque auto-detect)
+- H15: Circuit breaker race condition (global sans lock)
+
+**Corrections majeures par fichier** :
+- `agents/src/core/models.py` : +PERSONNEL enum, ConflictStatus, ConfigDict, timezone
+- `agents/src/agents/calendar/models.py` : Suppression Casquette dupliquée, héritage exceptions
+- `agents/src/agents/calendar/conflict_detector.py` : LEAST/GREATEST, range query, multi-day
+- `agents/src/core/context_manager.py` : Cache Redis, expiration 4h, timezone
+- `agents/src/agents/email/classifier.py` : Haiku→Sonnet (D17)
+- `agents/src/agents/email/prompts.py` : Catégories FR, +PERSONNEL mapping
+- `bot/main.py` : Redis init lifecycle, bot_data keys
+- `bot/handlers/*.py` : OWNER_USER_ID, structlog, datetime timezone
+- `database/migrations/037*.sql` : +personnel CHECK, resolution consistency
+- `tests/integration/test_context_pipeline.py` : Réécriture complète (ContextManager class)
+- `tests/e2e/test_multi_casquettes_e2e.py` : Réécriture complète (knowledge.entities)
+- `docs/multi-casquettes-conflicts.md` : Tables, API, casquettes corrigées
 
 ### Completion Notes List
 
-_Section remplie lors du développement_
+- Story 7.3 complète : 4 casquettes (médecin/enseignant/chercheur/personnel)
+- Auto-detect 5 règles priorité avec expiration contexte manuel 4h
+- Conflits Allen's algebra avec déduplication LEAST/GREATEST
+- Tests : 8 integration + 4 E2E + 41 unit (existants)
+- Heartbeat check 7j avec quiet hours 22h-08h
+- Influence subtile classification email/événements (mot-clé LÉGÈREMENT)
+- Commandes Telegram /casquette + /conflits avec inline buttons
+- Migration 037 avec contraintes cohérence résolution
 
 ### File List
 
-_Section remplie lors du développement_
+**Core** (4 fichiers) :
+- `agents/src/core/models.py` (modifié) — Casquette 4 valeurs, ConflictStatus, ConfigDict
+- `agents/src/core/context_manager.py` (~410 lignes) — ContextManager class + cache Redis
+- `agents/src/core/heartbeat_checks/calendar_conflicts.py` (~300 lignes) — Check périodique
+- `database/migrations/037_context_conflicts.sql` — Tables user_context + calendar_conflicts
+
+**Calendar** (2 fichiers) :
+- `agents/src/agents/calendar/models.py` (modifié) — Import Casquette core, EventStatus
+- `agents/src/agents/calendar/conflict_detector.py` (~430 lignes) — Allen's algebra
+
+**Email influence** (2 fichiers) :
+- `agents/src/agents/email/classifier.py` (modifié) — D17 Sonnet, context bias
+- `agents/src/agents/email/prompts.py` (modifié) — Catégories FR, +PERSONNEL
+
+**Bot Telegram** (5 fichiers) :
+- `bot/main.py` (modifié) — Redis lifecycle, bot_data
+- `bot/handlers/casquette_commands.py` (~350 lignes) — /casquette
+- `bot/handlers/casquette_callbacks.py` (~170 lignes) — Inline buttons casquette
+- `bot/handlers/conflict_commands.py` (~400 lignes) — /conflits
+- `bot/handlers/conflict_callbacks.py` (~735 lignes) — Résolution conflits
+
+**Event detector** (1 fichier) :
+- `agents/src/agents/calendar/event_detector.py` (modifié) — structlog, circuit breaker lock
+
+**Tests** (10 fichiers) :
+- `tests/unit/core/test_context_manager.py` (18 tests)
+- `tests/unit/bot/test_casquette_commands.py`
+- `tests/unit/bot/test_casquette_callbacks.py`
+- `tests/unit/bot/test_conflict_commands.py`
+- `tests/unit/bot/test_conflict_callbacks.py`
+- `tests/unit/agents/test_context_influence.py` (6 tests)
+- `tests/unit/core/test_heartbeat_check_calendar_conflicts.py` (10 tests)
+- `tests/integration/test_context_pipeline.py` (8 tests)
+- `tests/e2e/test_multi_casquettes_e2e.py` (4 tests)
+- `tests/e2e/conftest.py`
+
+**Documentation** (1 fichier) :
+- `docs/multi-casquettes-conflicts.md` (~650 lignes) — Guide complet

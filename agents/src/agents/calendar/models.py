@@ -4,10 +4,13 @@ Pydantic models pour detection evenements
 Story 7.1 AC1-AC7: Models Event, EventDetectionResult
 """
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
+
+from agents.src.core.models import Casquette
+from config.exceptions import AgentError, PipelineError
 
 
 class EventType(str, Enum):
@@ -20,16 +23,6 @@ class EventType(str, Enum):
     CONFERENCE = "conference"
     PERSONAL = "personal"
     OTHER = "other"
-
-
-class Casquette(str, Enum):
-    """
-    Casquettes multi-roles Mainteneur (FR42)
-    """
-    MEDECIN = "medecin"
-    ENSEIGNANT = "enseignant"
-    CHERCHEUR = "chercheur"
-    PERSONNEL = "personnel"
 
 
 class EventStatus(str, Enum):
@@ -171,7 +164,7 @@ class EventDetectionResult(BaseModel):
         return v
 
 
-class EventExtractionError(Exception):
+class EventExtractionError(AgentError):
     """
     Exception levee lors d'erreur extraction evenement
 
@@ -180,7 +173,7 @@ class EventExtractionError(Exception):
     pass
 
 
-class EventValidationError(Exception):
+class EventValidationError(PipelineError):
     """
     Exception levee lors d'erreur validation Pydantic Event
 
@@ -212,7 +205,7 @@ class CalendarEvent(BaseModel):
     casquette: Casquette = Field(..., description="Casquette (médecin/enseignant/chercheur)")
     start_datetime: datetime = Field(..., description="Début événement")
     end_datetime: datetime = Field(..., description="Fin événement")
-    status: str = Field(default="confirmed", description="Statut événement")
+    status: EventStatus = Field(default=EventStatus.CONFIRMED, description="Statut événement")
 
 
 class CalendarConflict(BaseModel):
@@ -225,7 +218,7 @@ class CalendarConflict(BaseModel):
     event2: CalendarEvent = Field(..., description="Second événement en conflit")
     overlap_minutes: int = Field(..., gt=0, description="Durée chevauchement en minutes")
     detected_at: datetime = Field(
-        default_factory=datetime.now,
+        default_factory=lambda: datetime.now(timezone.utc),
         description="Timestamp détection conflit"
     )
 
@@ -246,3 +239,9 @@ class ConflictResolution(BaseModel):
         None,
         description="Raison résolution (optionnel)"
     )
+
+    @model_validator(mode="after")
+    def move_requires_new_datetime(self) -> "ConflictResolution":
+        if self.action == ResolutionAction.MOVE and self.new_datetime is None:
+            raise ValueError("new_datetime est requis quand action=move")
+        return self

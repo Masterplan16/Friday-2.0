@@ -10,6 +10,8 @@ Callbacks:
 - casquette:auto → Réactive auto-detect
 """
 
+import os
+
 import structlog
 from telegram import Update
 from telegram.ext import ContextTypes
@@ -49,6 +51,11 @@ async def handle_casquette_button(
     """
     query = update.callback_query
     if not query:
+        return
+
+    # H1 fix: Vérifier que l'utilisateur est le propriétaire
+    owner_id = os.getenv("OWNER_USER_ID")
+    if owner_id and str(query.from_user.id) != owner_id:
         return
 
     # Répondre immédiatement pour éviter timeout

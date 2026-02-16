@@ -90,7 +90,7 @@ def build_classification_prompt(
         "Format exact :\n"
         "```\n"
         "{\n"
-        '  "category": "medical",  // UNE des catégories ci-dessus\n'
+        '  "category": "pro",  // UNE des catégories ci-dessus\n'
         '  "confidence": 0.92,      // Score 0.0-1.0\n'
         '  "reasoning": "Expéditeur @urssaf.fr, sujet cotisations SELARL",  // Explication claire\n'
         '  "keywords": ["SELARL", "cotisations", "URSSAF"],  // Mots-clés identifiés\n'
@@ -98,7 +98,7 @@ def build_classification_prompt(
         "}\n"
         "```\n\n"
         "**RÈGLES STRICTES** :\n"
-        "- Si tu as un doute → category='unknown' + confidence faible (<0.6)\n"
+        "- Si tu as un doute → category='inconnu' + confidence faible (<0.6)\n"
         f"- Reasoning doit expliquer ta décision (minimum {CLASSIFICATION_CONFIG['reasoning_min_length']} caractères)\n"  # M3 fix
         f"- Keywords : {CLASSIFICATION_CONFIG['keywords_min']}-{CLASSIFICATION_CONFIG['keywords_max']} mots-clés max qui ont influencé ta décision\n"  # M3 fix
         "- Confidence : sois réaliste (pas systématiquement >0.9)\n"
@@ -152,6 +152,7 @@ def _format_context_hint(current_casquette: Optional["Casquette"]) -> str:
         Casquette.MEDECIN: "pro (professionnel médical)",
         Casquette.ENSEIGNANT: "universite (enseignement)",
         Casquette.CHERCHEUR: "recherche (académique)",
+        Casquette.PERSONNEL: "perso (personnel)",
     }
 
     category_hint = casquette_to_category_hint.get(current_casquette, "")

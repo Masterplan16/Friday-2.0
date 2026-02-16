@@ -71,6 +71,12 @@ async def detect_calendar_conflicts(
                 if event1.casquette != event2.casquette:
                     overlap_minutes = calculate_overlap(event1, event2)
 
+                    # Skip si pas de chevauchement réel (événements se touchent
+                    # exactement, ex: 10h-11h et 11h-12h = 0 min overlap).
+                    # CalendarConflict.overlap_minutes a gt=0, donc 0 invalide.
+                    if overlap_minutes == 0:
+                        continue
+
                     conflict = CalendarConflict(
                         event1=event1,
                         event2=event2,
@@ -117,7 +123,13 @@ async def save_conflict_to_db(
     """
     async with db_pool.acquire() as conn:
         try:
-            # INSERT avec ON CONFLICT sur index unique
+            # INSERT avec LEAST/GREATEST pour normaliser l'ordre event1/event2
+            # et éviter doublons (A,B) vs (B,A).
+            # ON CONFLICT DO NOTHING s'appuie sur idx_conflicts_unique_pair
+            # (index partiel unique sur LEAST/GREATEST WHERE resolved = FALSE).
+            # PostgreSQL ne supporte pas ON CONFLICT sur index d'expressions
+            # directement, mais DO NOTHING fonctionne car l'index unique
+            # déclenche le conflit sur la paire normalisée.
             conflict_id = await conn.fetchval("""
                 INSERT INTO knowledge.calendar_conflicts (
                     event1_id,
@@ -125,7 +137,7 @@ async def save_conflict_to_db(
                     overlap_minutes,
                     detected_at
                 )
-                VALUES ($1, $2, $3, $4)
+                VALUES (LEAST($1, $2), GREATEST($1, $2), $3, $4)
                 ON CONFLICT DO NOTHING
                 RETURNING id
             """,
@@ -154,6 +166,15 @@ async def save_conflict_to_db(
         except asyncpg.ForeignKeyViolationError as e:
             logger.error(
                 "conflict_save_fk_error",
+                error=str(e),
+                event1_id=conflict.event1.id,
+                event2_id=conflict.event2.id
+            )
+            raise
+
+        except asyncpg.DataError as e:
+            logger.error(
+                "conflict_save_data_error",
                 error=str(e),
                 event1_id=conflict.event1.id,
                 event2_id=conflict.event2.id
@@ -223,18 +244,39 @@ async def get_conflicts_range(
         )
         ```
     """
+    # Une seule requête SQL pour toute la plage (H12: évite N+1 queries)
+    events = await _get_events_for_range(start_date, end_date, db_pool)
+
+    if len(events) < 2:
+        logger.debug("no_conflicts_insufficient_events", events_count=len(events))
+        return []
+
+    # Détection conflits en mémoire (double boucle O(n²))
     conflicts = []
 
-    current_date = start_date
-    while current_date <= end_date:
-        daily_conflicts = await detect_calendar_conflicts(current_date, db_pool)
-        conflicts.extend(daily_conflicts)
-        current_date += timedelta(days=1)
+    for i, event1 in enumerate(events):
+        for event2 in events[i+1:]:
+            if _has_temporal_overlap(event1, event2):
+                if event1.casquette != event2.casquette:
+                    overlap_minutes = calculate_overlap(event1, event2)
+
+                    # Skip si pas de chevauchement réel (événements se touchent exactement)
+                    if overlap_minutes == 0:
+                        continue
+
+                    conflict = CalendarConflict(
+                        event1=event1,
+                        event2=event2,
+                        overlap_minutes=overlap_minutes
+                    )
+
+                    conflicts.append(conflict)
 
     logger.info(
         "conflicts_range_detected",
         start_date=str(start_date),
         end_date=str(end_date),
+        events_fetched=len(events),
         conflicts_count=len(conflicts)
     )
 
@@ -247,7 +289,10 @@ async def get_conflicts_range(
 
 async def _get_events_for_day(target_date: date, db_pool: asyncpg.Pool) -> list[CalendarEvent]:
     """
-    Récupère événements confirmés pour une journée.
+    Récupère événements confirmés qui chevauchent une journée.
+
+    Inclut les événements multi-jours qui commencent avant ou finissent après
+    la date cible (chevauchement temporel, pas seulement DATE(start) = target).
 
     Args:
         target_date: Date cible
@@ -257,6 +302,8 @@ async def _get_events_for_day(target_date: date, db_pool: asyncpg.Pool) -> list[
         Liste CalendarEvent triés par start_datetime
     """
     async with db_pool.acquire() as conn:
+        # Chevauchement temporel : l'événement commence avant la fin du jour
+        # ET finit après le début du jour (capte les événements multi-jours)
         rows = await conn.fetch("""
             SELECT
                 id,
@@ -268,11 +315,70 @@ async def _get_events_for_day(target_date: date, db_pool: asyncpg.Pool) -> list[
             FROM knowledge.entities
             WHERE entity_type = 'EVENT'
               AND (properties->>'status') = 'confirmed'
-              AND DATE((properties->>'start_datetime')::timestamptz) = $1
+              AND (properties->>'start_datetime')::timestamptz < ($1::date + interval '1 day')
+              AND (properties->>'end_datetime')::timestamptz > $1::date
               AND properties->>'casquette' IS NOT NULL
             ORDER BY (properties->>'start_datetime')::timestamptz ASC
         """, target_date)
 
+    return _rows_to_calendar_events(rows)
+
+
+async def _get_events_for_range(
+    start_date: date,
+    end_date: date,
+    db_pool: asyncpg.Pool
+) -> list[CalendarEvent]:
+    """
+    Récupère événements confirmés qui chevauchent une plage de dates.
+
+    Une seule requête SQL pour toute la plage (évite N+1 queries).
+    Inclut les événements multi-jours.
+
+    Args:
+        start_date: Date début (inclusive)
+        end_date: Date fin (inclusive)
+        db_pool: Pool PostgreSQL
+
+    Returns:
+        Liste CalendarEvent triés par start_datetime
+    """
+    async with db_pool.acquire() as conn:
+        # Chevauchement temporel avec la plage complète :
+        # événement commence avant la fin de la plage (end_date + 1 jour)
+        # ET finit après le début de la plage (start_date)
+        rows = await conn.fetch("""
+            SELECT
+                id,
+                properties->>'title' AS title,
+                properties->>'casquette' AS casquette,
+                (properties->>'start_datetime')::timestamptz AS start_datetime,
+                (properties->>'end_datetime')::timestamptz AS end_datetime,
+                properties->>'status' AS status
+            FROM knowledge.entities
+            WHERE entity_type = 'EVENT'
+              AND (properties->>'status') = 'confirmed'
+              AND (properties->>'start_datetime')::timestamptz < ($2::date + interval '1 day')
+              AND (properties->>'end_datetime')::timestamptz > $1::date
+              AND properties->>'casquette' IS NOT NULL
+            ORDER BY (properties->>'start_datetime')::timestamptz ASC
+        """, start_date, end_date)
+
+    return _rows_to_calendar_events(rows)
+
+
+def _rows_to_calendar_events(rows: list) -> list[CalendarEvent]:
+    """
+    Convertit rows asyncpg en liste CalendarEvent.
+
+    Filtre les événements avec casquettes invalides (log warning).
+
+    Args:
+        rows: Résultats asyncpg
+
+    Returns:
+        Liste CalendarEvent validés
+    """
     events = []
     for row in rows:
         # Valider casquette

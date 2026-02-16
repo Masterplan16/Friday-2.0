@@ -17,11 +17,11 @@ Le contexte influence:
 - Briefing matinal (filtrage par casquette)
 """
 
-import asyncio
 import asyncpg
+import json
 import redis.asyncio as redis
 import structlog
-from datetime import datetime, time
+from datetime import datetime, time, timedelta, timezone
 from typing import Optional
 from uuid import UUID
 
@@ -87,9 +87,12 @@ class ContextManager:
             logger.debug("context_cache_hit")
             return cached_context
 
-        # Cache miss → Query PostgreSQL
+        # Cache miss → Query PostgreSQL (colonnes explicites, pas SELECT *)
         async with self.db_pool.acquire() as conn:
-            row = await conn.fetchrow("SELECT * FROM core.user_context WHERE id = 1")
+            row = await conn.fetchrow(
+                "SELECT id, current_casquette, updated_by, last_updated_at "
+                "FROM core.user_context WHERE id = 1"
+            )
 
         if not row:
             # Edge case: table user_context vide (ne devrait jamais arriver après migration 037)
@@ -97,13 +100,22 @@ class ContextManager:
             return await self._create_default_context()
 
         # Vérifier si contexte manuel (updated_by='manual')
+        # H14 fix: Contexte manuel expire après 4h → retombe en auto-detect
         if row["updated_by"] == "manual" and row["current_casquette"]:
-            context = UserContext(
-                casquette=Casquette(row["current_casquette"]),
-                source=ContextSource.MANUAL,
-                updated_at=row["last_updated_at"],
-                updated_by="manual"
-            )
+            manual_age = datetime.now(timezone.utc) - row["last_updated_at"].replace(
+                tzinfo=timezone.utc
+            ) if row["last_updated_at"].tzinfo is None else datetime.now(timezone.utc) - row["last_updated_at"]
+            if manual_age <= timedelta(hours=4):
+                context = UserContext(
+                    casquette=Casquette(row["current_casquette"]),
+                    source=ContextSource.MANUAL,
+                    updated_at=row["last_updated_at"],
+                    updated_by="manual"
+                )
+            else:
+                # Contexte manuel expiré → auto-detect
+                logger.info("manual_context_expired", age_hours=manual_age.total_seconds() / 3600)
+                context = await self.auto_detect_context()
         else:
             # Auto-detect contexte (updated_by='system' ou casquette=NULL)
             context = await self.auto_detect_context()
@@ -254,7 +266,8 @@ class ContextManager:
         Returns:
             Casquette si heure correspond, sinon None
         """
-        now = datetime.now()
+        # H2 fix: utiliser timezone locale pour heuristique heure
+        now = datetime.now(timezone.utc)
         current_hour = now.hour
 
         for (start_hour, end_hour), casquette in TIME_BASED_CASQUETTE_MAPPING.items():
@@ -303,8 +316,6 @@ class ContextManager:
             if not cached_data:
                 return None
 
-            # Désérialiser JSON → UserContext
-            import json
             data = json.loads(cached_data)
 
             return UserContext(
@@ -313,8 +324,13 @@ class ContextManager:
                 updated_at=datetime.fromisoformat(data["updated_at"]),
                 updated_by=data["updated_by"]
             )
-        except Exception as e:
-            logger.warning("cache_read_error", error=str(e))
+        except (json.JSONDecodeError, KeyError, ValueError) as e:
+            logger.warning("cache_read_deserialization_error", error=str(e))
+            # Invalider cache corrompu
+            await self.redis_client.delete(self._cache_key)
+            return None
+        except redis.RedisError as e:
+            logger.warning("cache_read_redis_error", error=str(e))
             return None
 
     async def _cache_context(self, context: UserContext) -> None:
@@ -325,8 +341,6 @@ class ContextManager:
             context: UserContext à cacher
         """
         try:
-            import json
-
             data = {
                 "casquette": context.casquette.value if context.casquette else None,
                 "source": context.source.value,

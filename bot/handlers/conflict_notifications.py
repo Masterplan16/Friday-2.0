@@ -6,8 +6,9 @@ pour résolution Mainteneur (annuler/déplacer/ignorer).
 """
 
 import os
-import logging
 from typing import Optional
+
+import structlog
 from datetime import datetime
 
 from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup
@@ -21,7 +22,7 @@ from agents.src.core.models import (
 )
 
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 # ============================================================================

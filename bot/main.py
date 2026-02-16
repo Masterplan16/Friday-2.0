@@ -52,6 +52,7 @@ class FridayBot:
         self.config = None
         self.application: Application | None = None
         self.db_pool: asyncpg.Pool | None = None
+        self.redis_client = None
         self.is_running = False
         self.heartbeat_task = None
         self.email_monitoring_task = None
@@ -111,6 +112,22 @@ class FridayBot:
                 else:
                     logger.warning("DATABASE_URL non configurée, commandes /vip désactivées")
                     self.db_pool = None
+
+                # Initialiser Redis client (C1 fix: avant register_handlers)
+                redis_url = os.getenv("REDIS_URL")
+                if redis_url:
+                    try:
+                        import redis.asyncio as redis_async
+
+                        self.redis_client = redis_async.from_url(redis_url)
+                        await self.redis_client.ping()
+                        logger.info("Redis client initialisé")
+                    except Exception as redis_err:
+                        logger.warning(
+                            "Impossible de connecter Redis",
+                            error=str(redis_err),
+                        )
+                        self.redis_client = None
 
                 return  # Succès
 
@@ -248,17 +265,16 @@ class FridayBot:
 
             # Story 7.3 - Casquette callbacks (Médecin/Enseignant/Chercheur/Auto)
             from bot.handlers.casquette_callbacks_register import register_casquette_callbacks_handlers
-            redis_client = getattr(self, "redis_client", None)
-            if redis_client:
-                register_casquette_callbacks_handlers(self.application, db_pool, redis_client)
+            if self.redis_client:
+                register_casquette_callbacks_handlers(self.application, db_pool, self.redis_client)
                 logger.info("Story 7.3 casquette callback handlers registered")
             else:
                 logger.warning("redis_client not available, casquette callback handlers not registered")
 
             # Story 7.3 - Conflict callbacks (Cancel/Move/Ignore conflits calendrier)
             from bot.handlers.conflict_callbacks_register import register_conflict_callbacks_handlers
-            if redis_client:
-                register_conflict_callbacks_handlers(self.application, db_pool, redis_client)
+            if self.redis_client:
+                register_conflict_callbacks_handlers(self.application, db_pool, self.redis_client)
                 logger.info("Story 7.3 conflict callback handlers registered")
             else:
                 logger.warning("redis_client not available, conflict callback handlers not registered")
@@ -410,21 +426,10 @@ class FridayBot:
             self.application.bot_data["db_pool"] = self.db_pool
             logger.info("DB pool disponible pour handlers via bot_data")
 
-        # Initialiser Redis client pour pipeline control (A.0)
-        redis_url = os.getenv("REDIS_URL")
-        if redis_url:
-            try:
-                import redis.asyncio as redis_async
-
-                redis_client = redis_async.from_url(redis_url)
-                await redis_client.ping()
-                self.application.bot_data["redis"] = redis_client
-                logger.info("Redis client disponible pour handlers via bot_data")
-            except Exception as redis_err:
-                logger.warning(
-                    "Impossible de connecter Redis, commande /pipeline desactivee",
-                    error=str(redis_err),
-                )
+        # H5 fix: Clé consistante "redis_client" dans bot_data
+        if self.redis_client:
+            self.application.bot_data["redis_client"] = self.redis_client
+            logger.info("Redis client disponible pour handlers via bot_data")
 
         # Démarrer polling Telegram
         logger.info("Démarrage polling Telegram...")
@@ -459,6 +464,11 @@ class FridayBot:
         if self.db_pool:
             await self.db_pool.close()
             logger.info("PostgreSQL pool fermé")
+
+        # Fermer Redis client
+        if self.redis_client:
+            await self.redis_client.close()
+            logger.info("Redis client fermé")
 
         # Arrêter application
         if self.application:

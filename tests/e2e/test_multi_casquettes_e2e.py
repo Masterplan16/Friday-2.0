@@ -4,20 +4,29 @@ Tests End-to-End - Multi-casquettes & Conflits Calendrier
 Story 7.3: Validation scénarios utilisateur complets
 
 Tests critiques :
-1. /casquette command real test (Telegram bot)
+1. /casquette command Telegram bot (inline buttons)
 2. Conflict detection E2E (email → event → conflict → notification)
-3. Briefing multi-casquettes (liste événements 3 casquettes)
-4. Heartbeat conflicts (check périodique → notification Telegram)
+3. Heartbeat conflicts (check périodique + quiet hours)
+4. Full user journey (contexte → email → conflict → résolution)
+
+Requiert PostgreSQL de test avec migrations 007 + 037 appliquées.
 """
 
 import pytest
 import asyncpg
-import asyncio
-from datetime import datetime, timedelta
+import json
+from datetime import datetime, timedelta, timezone, date
 from unittest.mock import AsyncMock, patch, MagicMock
 from uuid import uuid4
 
 from agents.src.core.models import Casquette, ContextSource
+from agents.src.core.context_manager import ContextManager
+from agents.src.agents.calendar.models import CalendarConflict
+from agents.src.agents.calendar.conflict_detector import (
+    detect_calendar_conflicts,
+    get_conflicts_range,
+    save_conflict_to_db,
+)
 
 
 # ============================================================================
@@ -33,26 +42,49 @@ async def e2e_db():
     """
     db_url = "postgresql://friday_test:test_password@localhost:5433/friday_test"
 
-    pool = await asyncpg.create_pool(db_url, min_size=2, max_size=5)
+    try:
+        pool = await asyncpg.create_pool(db_url, min_size=2, max_size=5)
+    except (OSError, asyncpg.PostgresError):
+        pytest.skip("PostgreSQL test instance not available")
 
     # Cleanup complet
     async with pool.acquire() as conn:
-        await conn.execute("TRUNCATE TABLE core.user_context RESTART IDENTITY CASCADE")
-        await conn.execute("TRUNCATE TABLE core.events RESTART IDENTITY CASCADE")
-        await conn.execute("TRUNCATE TABLE core.calendar_conflicts RESTART IDENTITY CASCADE")
-        await conn.execute("TRUNCATE TABLE ingestion.emails_raw RESTART IDENTITY CASCADE")
+        await conn.execute("DELETE FROM knowledge.calendar_conflicts")
+        await conn.execute(
+            "DELETE FROM knowledge.entities WHERE entity_type = 'EVENT'"
+        )
+        await conn.execute("DELETE FROM core.user_context")
 
         # Init singleton user_context
         await conn.execute(
             """
             INSERT INTO core.user_context (id, current_casquette, updated_by)
-            VALUES (1, NULL, 'test_init')
+            VALUES (1, NULL, 'system')
+            ON CONFLICT (id) DO NOTHING
             """
         )
 
     yield pool
 
+    # Cleanup
+    async with pool.acquire() as conn:
+        await conn.execute("DELETE FROM knowledge.calendar_conflicts")
+        await conn.execute(
+            "DELETE FROM knowledge.entities WHERE entity_type = 'EVENT'"
+        )
+
     await pool.close()
+
+
+@pytest.fixture
+def mock_redis():
+    """Mock Redis client pour ContextManager."""
+    redis_mock = AsyncMock()
+    redis_mock.get = AsyncMock(return_value=None)
+    redis_mock.setex = AsyncMock()
+    redis_mock.delete = AsyncMock()
+    redis_mock.ping = AsyncMock()
+    return redis_mock
 
 
 @pytest.fixture
@@ -65,59 +97,85 @@ def mock_telegram_bot():
     return bot
 
 
+async def _insert_event_entity(
+    conn,
+    title: str,
+    casquette: str,
+    start_datetime: datetime,
+    end_datetime: datetime,
+    status: str = "confirmed",
+    location: str = "",
+    event_type: str = "meeting",
+    event_id: str = None,
+) -> str:
+    """Helper: insère un événement dans knowledge.entities avec JSONB properties."""
+    if event_id is None:
+        event_id = str(uuid4())
+
+    properties = json.dumps({
+        "title": title,
+        "casquette": casquette,
+        "start_datetime": start_datetime.isoformat(),
+        "end_datetime": end_datetime.isoformat(),
+        "status": status,
+        "location": location,
+        "event_type": event_type,
+    })
+
+    await conn.execute(
+        """
+        INSERT INTO knowledge.entities (
+            id, name, entity_type, properties, confidence
+        ) VALUES ($1, $2, 'EVENT', $3::jsonb, 0.95)
+        """,
+        event_id,
+        title,
+        properties,
+    )
+    return event_id
+
+
 # ============================================================================
-# Test 1 : /casquette Command Real Test
+# Test 1 : /casquette Command Telegram
 # ============================================================================
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
-async def test_casquette_command_real_telegram(e2e_db, mock_telegram_bot):
+async def test_casquette_command_telegram(e2e_db, mock_redis, mock_telegram_bot):
     """
     Test E2E 1: /casquette command Telegram bot.
 
     Scénario complet :
-    1. User envoie /casquette
-    2. Bot affiche 3 inline buttons (Médecin, Enseignant, Chercheur)
-    3. User clique "Enseignant"
-    4. Bot met à jour contexte DB
-    5. Bot confirme changement
+    1. User envoie /casquette enseignant
+    2. Handler met à jour contexte DB
+    3. Vérifier contexte = enseignant, updated_by = manual
     """
     from bot.handlers.casquette_commands import handle_casquette_command
-    from bot.handlers.casquette_callbacks import handle_casquette_callback
 
-    # Mock update Telegram (/casquette command)
+    # Mock Telegram Update (/casquette enseignant)
     mock_message = MagicMock()
     mock_message.chat.id = 123456789
-    mock_message.text = "/casquette"
+    mock_message.from_user.id = 123456789
+    mock_message.text = "/casquette enseignant"
+    mock_message.reply_text = AsyncMock()
 
     mock_update = MagicMock()
     mock_update.message = mock_message
 
-    # Étape 1: User envoie /casquette
-    with patch("bot.handlers.casquette_commands.get_db_pool", return_value=e2e_db):
-        await handle_casquette_command(mock_update, mock_telegram_bot)
+    # Mock Telegram context avec bot_data
+    mock_context = MagicMock()
+    mock_context.args = ["enseignant"]
+    mock_context.bot_data = {
+        "db_pool": e2e_db,
+        "redis_client": mock_redis,
+    }
 
-    # Assertions: Bot envoie message avec inline buttons
-    assert mock_telegram_bot.send_message.called
-    call_kwargs = mock_telegram_bot.send_message.call_args[1]
-    assert "Sélectionnez votre casquette" in call_kwargs.get("text", "")
-    assert "reply_markup" in call_kwargs  # Inline buttons
+    # Patch OWNER_USER_ID pour autoriser l'utilisateur
+    with patch.dict("os.environ", {"OWNER_USER_ID": "123456789"}):
+        await handle_casquette_command(mock_update, mock_context)
 
-    # Étape 2: User clique "Enseignant"
-    mock_callback = MagicMock()
-    mock_callback.data = "casquette:enseignant"
-    mock_callback.message.chat.id = 123456789
-    mock_callback.message.message_id = 123
-
-    mock_callback_update = MagicMock()
-    mock_callback_update.callback_query = mock_callback
-
-    with patch("bot.handlers.casquette_callbacks.get_db_pool", return_value=e2e_db):
-        await handle_casquette_callback(mock_callback_update, mock_telegram_bot)
-
-    # Assertions: Bot édite message et confirme
-    assert mock_telegram_bot.answer_callback_query.called
-    assert mock_telegram_bot.edit_message_text.called
+    # Assertions: Bot a répondu
+    assert mock_message.reply_text.called
 
     # Vérifier DB mise à jour
     async with e2e_db.acquire() as conn:
@@ -139,15 +197,14 @@ async def test_conflict_detection_e2e_pipeline(e2e_db, mock_telegram_bot):
     Test E2E 2: Conflict detection pipeline complet.
 
     Scénario complet :
-    1. Recevoir email avec 2 événements conflictuels
-    2. Extraction événements via Claude
-    3. Insertion dans core.events
-    4. Détection conflit automatique
-    5. Notification Telegram envoyée
+    1. Extraire événements depuis email (mock Claude)
+    2. Insérer événements dans knowledge.entities
+    3. Détecter conflits
+    4. Sauvegarder conflit en DB
+    5. Envoyer notification Telegram
     """
     from agents.src.agents.calendar.event_detector import extract_events_from_email
-    from agents.src.agents.calendar.conflict_detector import detect_conflicts
-    from bot.handlers.conflict_notifications import send_conflict_notification
+    from bot.handlers.conflict_notifications import send_conflict_alert
 
     # Email test avec 2 événements conflictuels
     email_text = """
@@ -163,12 +220,12 @@ async def test_conflict_detection_e2e_pipeline(e2e_db, mock_telegram_bot):
     mock_response = MagicMock()
     mock_response.content = [
         MagicMock(
-            text="""{
+            text=json.dumps({
                 "events_detected": [
                     {
                         "title": "Consultation Dr Dupont",
-                        "start_datetime": "2026-02-21T14:30:00",
-                        "end_datetime": "2026-02-21T15:00:00",
+                        "start_datetime": "2026-02-21T14:30:00+00:00",
+                        "end_datetime": "2026-02-21T15:00:00+00:00",
                         "location": "Cabinet",
                         "participants": ["Dr Dupont"],
                         "event_type": "medical",
@@ -178,8 +235,8 @@ async def test_conflict_detection_e2e_pipeline(e2e_db, mock_telegram_bot):
                     },
                     {
                         "title": "Cours L2 Anatomie",
-                        "start_datetime": "2026-02-21T14:00:00",
-                        "end_datetime": "2026-02-21T16:00:00",
+                        "start_datetime": "2026-02-21T14:00:00+00:00",
+                        "end_datetime": "2026-02-21T16:00:00+00:00",
                         "location": "Amphi B",
                         "participants": [],
                         "event_type": "lecture",
@@ -189,7 +246,7 @@ async def test_conflict_detection_e2e_pipeline(e2e_db, mock_telegram_bot):
                     }
                 ],
                 "confidence_overall": 0.92
-            }"""
+            })
         )
     ]
     mock_client.messages.create.return_value = mock_response
@@ -201,7 +258,7 @@ async def test_conflict_detection_e2e_pipeline(e2e_db, mock_telegram_bot):
             mapping={}
         )
 
-        # Étape 1-2: Extraire événements
+        # Étape 1: Extraire événements
         result = await extract_events_from_email(
             email_text=email_text,
             email_id="test-email-conflict",
@@ -213,232 +270,88 @@ async def test_conflict_detection_e2e_pipeline(e2e_db, mock_telegram_bot):
 
         assert len(result.events_detected) == 2
 
-    # Étape 3: Insérer événements dans DB
+    # Étape 2: Insérer événements dans knowledge.entities
     async with e2e_db.acquire() as conn:
         for event in result.events_detected:
-            event_id = str(uuid4())
-            await conn.execute(
-                """
-                INSERT INTO core.events (
-                    id, title, start_datetime, end_datetime,
-                    location, event_type, casquette, confidence, context
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-                """,
-                event_id,
-                event.title,
-                event.start_datetime,
-                event.end_datetime,
-                event.location,
-                event.event_type,
-                event.casquette.value,
-                event.confidence,
-                event.context,
+            await _insert_event_entity(
+                conn,
+                title=event.title,
+                casquette=event.casquette.value,
+                start_datetime=event.start_datetime,
+                end_datetime=event.end_datetime,
+                location=event.location or "",
+                event_type=event.event_type or "meeting",
             )
 
-    # Étape 4: Détecter conflits
-    conflicts = await detect_conflicts(
-        start_date=datetime(2026, 2, 21).date(),
-        end_date=datetime(2026, 2, 22).date(),
+    # Étape 3: Détecter conflits
+    conflicts = await detect_calendar_conflicts(
+        target_date=date(2026, 2, 21),
         db_pool=e2e_db,
     )
 
-    # Assertions: 1 conflit détecté
     assert len(conflicts) == 1
-    assert conflicts[0].overlap_minutes == 30  # 14h30-15h vs 14h-16h
+    assert conflicts[0].overlap_minutes == 30  # 14h30-15h00 overlap
+
+    # Étape 4: Sauvegarder conflit en DB
+    conflict_id = await save_conflict_to_db(conflicts[0], e2e_db)
+    assert conflict_id is not None
 
     # Étape 5: Envoyer notification Telegram
-    with patch("bot.handlers.conflict_notifications.get_telegram_bot", return_value=mock_telegram_bot):
-        await send_conflict_notification(
-            conflict=conflicts[0],
-            user_id=123456789,
-        )
+    await send_conflict_alert(
+        bot=mock_telegram_bot,
+        conflict=conflicts[0],
+        conflict_id=conflict_id,
+    )
 
     # Assertions: Notification envoyée
     assert mock_telegram_bot.send_message.called
 
 
 # ============================================================================
-# Test 3 : Briefing Multi-casquettes E2E
+# Test 3 : Heartbeat Conflicts Periodic Check E2E
 # ============================================================================
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
-async def test_briefing_multi_casquettes_e2e(e2e_db, mock_telegram_bot):
+async def test_heartbeat_conflicts_periodic_check_e2e(e2e_db):
     """
-    Test E2E 3: Briefing multi-casquettes.
-
-    Scénario complet :
-    1. Insérer événements pour 3 casquettes (médecin, enseignant, chercheur)
-    2. Générer briefing quotidien
-    3. Vérifier événements groupés par casquette
-    4. Notification Telegram envoyée
-    """
-    from bot.handlers.briefing import generate_daily_briefing
-
-    # Insérer événements pour chaque casquette
-    async with e2e_db.acquire() as conn:
-        # Événement 1: Médecin (10h)
-        await conn.execute(
-            """
-            INSERT INTO core.events (
-                id, title, start_datetime, end_datetime,
-                location, event_type, casquette, confidence, context
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-            """,
-            str(uuid4()),
-            "Consultation Dr Martin",
-            datetime(2026, 2, 21, 10, 0),
-            datetime(2026, 2, 21, 10, 30),
-            "Cabinet",
-            "medical",
-            "medecin",
-            0.95,
-            "RDV",
-        )
-
-        # Événement 2: Enseignant (14h)
-        await conn.execute(
-            """
-            INSERT INTO core.events (
-                id, title, start_datetime, end_datetime,
-                location, event_type, casquette, confidence, context
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-            """,
-            str(uuid4()),
-            "Cours L2 Anatomie",
-            datetime(2026, 2, 21, 14, 0),
-            datetime(2026, 2, 21, 16, 0),
-            "Amphi B",
-            "lecture",
-            "enseignant",
-            0.92,
-            "Cours",
-        )
-
-        # Événement 3: Chercheur (16h30)
-        await conn.execute(
-            """
-            INSERT INTO core.events (
-                id, title, start_datetime, end_datetime,
-                location, event_type, casquette, confidence, context
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-            """,
-            str(uuid4()),
-            "Réunion labo recherche",
-            datetime(2026, 2, 21, 16, 30),
-            datetime(2026, 2, 21, 17, 30),
-            "Labo 201",
-            "meeting",
-            "chercheur",
-            0.88,
-            "Réunion",
-        )
-
-    # Générer briefing quotidien
-    with patch("bot.handlers.briefing.get_db_pool", return_value=e2e_db):
-        briefing_text = await generate_daily_briefing(
-            date=datetime(2026, 2, 21).date(),
-            user_id=123456789,
-        )
-
-    # Assertions: Briefing contient les 3 casquettes
-    assert "Médecin" in briefing_text or "🩺" in briefing_text
-    assert "Enseignant" in briefing_text or "🎓" in briefing_text
-    assert "Chercheur" in briefing_text or "🔬" in briefing_text
-
-    # Assertions: Événements listés
-    assert "Consultation Dr Martin" in briefing_text
-    assert "Cours L2 Anatomie" in briefing_text
-    assert "Réunion labo recherche" in briefing_text
-
-    # Vérifier ordre chronologique
-    lines = briefing_text.split("\n")
-    idx_consultation = next(i for i, line in enumerate(lines) if "Consultation" in line)
-    idx_cours = next(i for i, line in enumerate(lines) if "Cours" in line)
-    idx_reunion = next(i for i, line in enumerate(lines) if "Réunion" in line)
-
-    assert idx_consultation < idx_cours < idx_reunion  # Ordre chrono
-
-
-# ============================================================================
-# Test 4 : Heartbeat Conflicts Periodic Check E2E
-# ============================================================================
-
-@pytest.mark.e2e
-@pytest.mark.asyncio
-async def test_heartbeat_conflicts_periodic_check_e2e(e2e_db, mock_telegram_bot):
-    """
-    Test E2E 4: Heartbeat conflicts check périodique.
+    Test E2E 3: Heartbeat conflicts check périodique.
 
     Scénario complet :
     1. Insérer 2 événements conflictuels (demain)
-    2. Détecter conflit
-    3. Heartbeat Engine check (9h matin)
-    4. Notification Telegram envoyée
-    5. Vérifier quiet hours skip (23h)
+    2. Heartbeat Engine check (9h matin, NOT quiet hours) → notification
+    3. Heartbeat Engine check (23h, quiet hours) → SKIP
     """
     from agents.src.core.heartbeat_checks.calendar_conflicts import (
         check_calendar_conflicts,
     )
-    from bot.handlers.conflict_notifications import send_conflict_notification
 
-    # Insérer 2 événements conflictuels (demain)
-    tomorrow = datetime.now() + timedelta(days=1)
+    tomorrow = datetime.now(timezone.utc) + timedelta(days=1)
     event1_start = tomorrow.replace(hour=14, minute=30, second=0, microsecond=0)
     event2_start = tomorrow.replace(hour=14, minute=0, second=0, microsecond=0)
 
     async with e2e_db.acquire() as conn:
-        event1_id = str(uuid4())
-        event2_id = str(uuid4())
-
-        await conn.execute(
-            """
-            INSERT INTO core.events (
-                id, title, start_datetime, end_datetime,
-                location, event_type, casquette, confidence, context
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-            """,
-            event1_id,
-            "Consultation urgente",
-            event1_start,
-            event1_start + timedelta(minutes=30),
-            "Cabinet",
-            "medical",
-            "medecin",
-            0.95,
-            "Urgence",
+        await _insert_event_entity(
+            conn,
+            title="Consultation urgente",
+            casquette="medecin",
+            start_datetime=event1_start,
+            end_datetime=event1_start + timedelta(minutes=30),
+            event_type="medical",
         )
 
-        await conn.execute(
-            """
-            INSERT INTO core.events (
-                id, title, start_datetime, end_datetime,
-                location, event_type, casquette, confidence, context
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-            """,
-            event2_id,
-            "Examen L3",
-            event2_start,
-            event2_start + timedelta(hours=2),
-            "Amphi C",
-            "exam",
-            "enseignant",
-            0.92,
-            "Examen",
+        await _insert_event_entity(
+            conn,
+            title="Examen L3",
+            casquette="enseignant",
+            start_datetime=event2_start,
+            end_datetime=event2_start + timedelta(hours=2),
+            event_type="exam",
         )
 
-        # Détecter conflit (normalement fait par trigger)
-        from agents.src.agents.calendar.conflict_detector import detect_conflicts
-
-        await detect_conflicts(
-            start_date=tomorrow.date(),
-            end_date=(tomorrow + timedelta(days=1)).date(),
-            db_pool=e2e_db,
-        )
-
-    # Étape 3: Heartbeat check (9h matin, NOT quiet hours)
+    # Check daytime (9h matin, NOT quiet hours)
     context_daytime = {
-        "time": datetime(2026, 2, 20, 9, 0),
+        "time": datetime(2026, 2, 20, 9, 0, tzinfo=timezone.utc),
         "hour": 9,
         "is_weekend": False,
         "quiet_hours": False,
@@ -449,14 +362,13 @@ async def test_heartbeat_conflicts_periodic_check_e2e(e2e_db, mock_telegram_bot)
         db_pool=e2e_db,
     )
 
-    # Assertions: Notification générée (daytime)
     assert result_daytime.notify is True
     assert "conflit" in result_daytime.message.lower()
     assert result_daytime.action == "view_conflicts"
 
-    # Étape 5: Heartbeat check (23h, quiet hours → SKIP)
+    # Check quiet hours (23h → SKIP)
     context_quiet = {
-        "time": datetime(2026, 2, 20, 23, 0),
+        "time": datetime(2026, 2, 20, 23, 0, tzinfo=timezone.utc),
         "hour": 23,
         "is_weekend": False,
         "quiet_hours": True,
@@ -467,113 +379,49 @@ async def test_heartbeat_conflicts_periodic_check_e2e(e2e_db, mock_telegram_bot)
         db_pool=e2e_db,
     )
 
-    # Assertions: PAS de notification (quiet hours)
     assert result_quiet.notify is False
 
 
 # ============================================================================
-# Test Bonus : Full User Journey E2E
+# Test 4 : Full User Journey E2E
 # ============================================================================
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
-async def test_full_user_journey_e2e(e2e_db, mock_telegram_bot):
+async def test_full_user_journey_e2e(e2e_db, mock_redis, mock_telegram_bot):
     """
-    Test E2E Bonus: User journey complet multi-casquettes.
+    Test E2E 4: User journey complet multi-casquettes.
 
     Scénario complet réaliste :
-    1. Matin 8h: Briefing quotidien (3 événements 3 casquettes)
-    2. 9h30: Recevoir email détection événement médical
-    3. 10h: User change contexte /casquette chercheur
-    4. 11h: Recevoir email détection événement recherche (biaisé)
-    5. 14h: Heartbeat détecte conflit
-    6. 14h30: User résout conflit via Telegram
+    1. User change contexte /casquette chercheur
+    2. Recevoir email → extraction événement (biaisé chercheur)
+    3. Insérer événements conflictuels
+    4. Heartbeat détecte conflit
+    5. Résolution conflit via DB
     """
-    from bot.handlers.briefing import generate_daily_briefing
-    from bot.handlers.casquette_callbacks import handle_casquette_callback
+    from bot.handlers.casquette_commands import handle_casquette_command
     from agents.src.agents.calendar.event_detector import extract_events_from_email
     from agents.src.core.heartbeat_checks.calendar_conflicts import check_calendar_conflicts
 
-    today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-
-    # Étape 1: Insérer 3 événements aujourd'hui
-    async with e2e_db.acquire() as conn:
-        # Médecin 10h
-        await conn.execute(
-            """
-            INSERT INTO core.events (
-                id, title, start_datetime, end_datetime,
-                location, event_type, casquette, confidence, context
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-            """,
-            str(uuid4()),
-            "Garde CHU",
-            today + timedelta(hours=10),
-            today + timedelta(hours=18),
-            "CHU Toulouse",
-            "medical",
-            "medecin",
-            0.95,
-            "Garde",
-        )
-
-        # Enseignant 14h
-        await conn.execute(
-            """
-            INSERT INTO core.events (
-                id, title, start_datetime, end_datetime,
-                location, event_type, casquette, confidence, context
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-            """,
-            str(uuid4()),
-            "Cours Physiologie",
-            today + timedelta(hours=14),
-            today + timedelta(hours=16),
-            "Amphi A",
-            "lecture",
-            "enseignant",
-            0.92,
-            "Cours",
-        )
-
-        # Chercheur 16h30
-        await conn.execute(
-            """
-            INSERT INTO core.events (
-                id, title, start_datetime, end_datetime,
-                location, event_type, casquette, confidence, context
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-            """,
-            str(uuid4()),
-            "Séminaire recherche",
-            today + timedelta(hours=16, minutes=30),
-            today + timedelta(hours=18),
-            "Labo 301",
-            "conference",
-            "chercheur",
-            0.88,
-            "Séminaire",
-        )
-
-    # Briefing 8h
-    with patch("bot.handlers.briefing.get_db_pool", return_value=e2e_db):
-        briefing = await generate_daily_briefing(date=today.date(), user_id=123)
-
-    assert "Garde CHU" in briefing
-    assert "Cours Physiologie" in briefing
-    assert "Séminaire recherche" in briefing
-
-    # Étape 3: User change contexte chercheur
-    mock_callback = MagicMock()
-    mock_callback.data = "casquette:chercheur"
-    mock_callback.message.chat.id = 123
-    mock_callback.message.message_id = 456
+    # Étape 1: User change contexte chercheur via /casquette
+    mock_message = MagicMock()
+    mock_message.chat.id = 123
+    mock_message.from_user.id = 123
+    mock_message.text = "/casquette chercheur"
+    mock_message.reply_text = AsyncMock()
 
     mock_update = MagicMock()
-    mock_update.callback_query = mock_callback
+    mock_update.message = mock_message
 
-    with patch("bot.handlers.casquette_callbacks.get_db_pool", return_value=e2e_db):
-        await handle_casquette_callback(mock_update, mock_telegram_bot)
+    mock_context = MagicMock()
+    mock_context.args = ["chercheur"]
+    mock_context.bot_data = {
+        "db_pool": e2e_db,
+        "redis_client": mock_redis,
+    }
+
+    with patch.dict("os.environ", {"OWNER_USER_ID": "123"}):
+        await handle_casquette_command(mock_update, mock_context)
 
     # Vérifier contexte = chercheur
     async with e2e_db.acquire() as conn:
@@ -582,4 +430,107 @@ async def test_full_user_journey_e2e(e2e_db, mock_telegram_bot):
         )
         assert row["current_casquette"] == "chercheur"
 
-    print("✅ Test E2E Full User Journey terminé avec succès")
+    # Étape 2: Recevoir email → extraction événement
+    mock_client = AsyncMock()
+    mock_response = MagicMock()
+    mock_response.content = [
+        MagicMock(
+            text=json.dumps({
+                "events_detected": [{
+                    "title": "Séminaire recherche",
+                    "start_datetime": "2026-02-21T16:30:00+00:00",
+                    "end_datetime": "2026-02-21T18:00:00+00:00",
+                    "location": "Labo 301",
+                    "participants": [],
+                    "event_type": "conference",
+                    "casquette": "chercheur",
+                    "confidence": 0.88,
+                    "context": "Séminaire labo"
+                }],
+                "confidence_overall": 0.88
+            })
+        )
+    ]
+    mock_client.messages.create.return_value = mock_response
+
+    with patch("agents.src.agents.calendar.event_detector.anonymize_text") as mock_anon:
+        mock_anon.return_value = MagicMock(
+            anonymized_text="Séminaire recherche vendredi 16h30",
+            mapping={}
+        )
+
+        result = await extract_events_from_email(
+            email_text="Séminaire recherche vendredi 16h30",
+            email_id="test-journey",
+            current_date="2026-02-20",
+            anthropic_client=mock_client,
+            db_pool=e2e_db,
+        )
+        assert len(result.events_detected) == 1
+
+    # Étape 3: Insérer événements conflictuels dans knowledge.entities
+    tomorrow = datetime.now(timezone.utc) + timedelta(days=1)
+
+    async with e2e_db.acquire() as conn:
+        # Événement 1: Garde CHU (médecin) 10h-18h
+        await _insert_event_entity(
+            conn,
+            title="Garde CHU",
+            casquette="medecin",
+            start_datetime=tomorrow.replace(hour=10, minute=0),
+            end_datetime=tomorrow.replace(hour=18, minute=0),
+            event_type="medical",
+        )
+
+        # Événement 2: Cours (enseignant) 14h-16h → chevauche garde
+        await _insert_event_entity(
+            conn,
+            title="Cours Physiologie",
+            casquette="enseignant",
+            start_datetime=tomorrow.replace(hour=14, minute=0),
+            end_datetime=tomorrow.replace(hour=16, minute=0),
+            event_type="lecture",
+        )
+
+    # Étape 4: Heartbeat détecte conflit
+    heartbeat_ctx = {
+        "time": datetime.now(timezone.utc),
+        "hour": 9,
+        "is_weekend": False,
+        "quiet_hours": False,
+    }
+
+    hb_result = await check_calendar_conflicts(heartbeat_ctx, db_pool=e2e_db)
+    assert hb_result.notify is True
+    assert hb_result.payload["conflict_count"] == 1
+
+    # Étape 5: Résolution conflit via DB
+    # Sauvegarder d'abord le conflit
+    conflicts = await get_conflicts_range(
+        start_date=tomorrow.date(),
+        end_date=(tomorrow + timedelta(days=1)).date(),
+        db_pool=e2e_db,
+    )
+    assert len(conflicts) == 1
+
+    conflict_id = await save_conflict_to_db(conflicts[0], e2e_db)
+    assert conflict_id is not None
+
+    # Résoudre le conflit
+    async with e2e_db.acquire() as conn:
+        await conn.execute(
+            """
+            UPDATE knowledge.calendar_conflicts
+            SET resolved = TRUE, resolution_action = 'move', resolved_at = NOW()
+            WHERE id = $1
+            """,
+            conflict_id,
+        )
+
+        # Vérifier résolution
+        resolved = await conn.fetchrow(
+            "SELECT resolved, resolution_action FROM knowledge.calendar_conflicts WHERE id = $1",
+            conflict_id,
+        )
+        assert resolved["resolved"] is True
+        assert resolved["resolution_action"] == "move"

@@ -6,11 +6,12 @@
 
 ## 📋 Vue d'ensemble
 
-Le système **multi-casquettes** permet à Friday de gérer les 3 rôles professionnels du Mainteneur :
+Le système **multi-casquettes** permet à Friday de gérer les 4 rôles du Mainteneur :
 
 - 🩺 **Médecin** : Consultations, gardes, formations médicales
 - 🎓 **Enseignant** : Cours, TD, TP, examens, réunions pédagogiques
 - 🔬 **Chercheur** : Conférences, publications, réunions labo
+- 👤 **Personnel** : Vie privée, administratif personnel
 
 Le système détecte automatiquement le contexte actuel et influence subtilement la classification des emails et événements pour améliorer la pertinence des décisions de Friday.
 
@@ -54,159 +55,89 @@ Stocke le contexte actuel du Mainteneur.
 
 ```sql
 CREATE TABLE core.user_context (
-    id INTEGER PRIMARY KEY CHECK (id = 1),  -- Singleton
-    current_casquette TEXT CHECK (current_casquette IN ('medecin', 'enseignant', 'chercheur')),
-    updated_by TEXT NOT NULL,  -- 'manual' | 'event' | 'time' | 'last_event' | 'default'
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-
-    CONSTRAINT valid_update_source CHECK (
-        updated_by IN ('manual', 'event', 'time', 'last_event', 'default')
-    )
+    id INT PRIMARY KEY DEFAULT 1,
+    current_casquette TEXT CHECK (current_casquette IN ('medecin', 'enseignant', 'chercheur', 'personnel')),
+    last_updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_by TEXT NOT NULL DEFAULT 'system' CHECK (updated_by IN ('system', 'manual')),
+    CONSTRAINT singleton_user_context CHECK (id = 1)
 );
-
--- Index pour lectures fréquentes
-CREATE INDEX idx_user_context_updated ON core.user_context(updated_at DESC);
 ```
 
-#### `core.calendar_conflicts`
+#### `knowledge.calendar_conflicts`
 
-Stocke les conflits détectés entre événements.
+Stocke les conflits détectés entre événements. Les événements sont dans `knowledge.entities` (entity_type = 'EVENT') avec propriétés JSONB.
 
 ```sql
-CREATE TABLE core.calendar_conflicts (
+CREATE TABLE knowledge.calendar_conflicts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    event1_id UUID NOT NULL REFERENCES core.events(id) ON DELETE CASCADE,
-    event2_id UUID NOT NULL REFERENCES core.events(id) ON DELETE CASCADE,
-
-    -- Métadonnées événements (dénormalisées pour performance)
-    event1_title TEXT NOT NULL,
-    event2_title TEXT NOT NULL,
-    event1_start_datetime TIMESTAMPTZ NOT NULL,
-    event2_start_datetime TIMESTAMPTZ NOT NULL,
-    event1_casquette TEXT NOT NULL,
-    event2_casquette TEXT NOT NULL,
-
-    -- Métadonnées conflit
-    overlap_minutes INTEGER NOT NULL,  -- Durée chevauchement en minutes
+    event1_id UUID NOT NULL REFERENCES knowledge.entities(id) ON DELETE CASCADE,
+    event2_id UUID NOT NULL REFERENCES knowledge.entities(id) ON DELETE CASCADE,
     detected_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-
-    -- Résolution
+    overlap_minutes INT NOT NULL CHECK (overlap_minutes > 0),
     resolved BOOLEAN NOT NULL DEFAULT FALSE,
-    resolution_type TEXT CHECK (resolution_type IN ('cancel', 'reschedule', 'accept')),
-    cancelled_event_id UUID REFERENCES core.events(id) ON DELETE SET NULL,
-    rescheduled_event_id UUID REFERENCES core.events(id) ON DELETE SET NULL,
     resolved_at TIMESTAMPTZ,
+    resolution_action TEXT CHECK (resolution_action IN ('cancel', 'move', 'ignore')),
 
-    -- Contraintes
-    CONSTRAINT different_events CHECK (event1_id != event2_id),
-    CONSTRAINT positive_overlap CHECK (overlap_minutes > 0),
-    CONSTRAINT resolution_needs_type CHECK (
-        (resolved = FALSE AND resolution_type IS NULL) OR
-        (resolved = TRUE AND resolution_type IS NOT NULL)
+    CONSTRAINT check_different_events CHECK (event1_id != event2_id),
+    CONSTRAINT check_resolution_consistency CHECK (
+        (resolved = FALSE AND resolved_at IS NULL AND resolution_action IS NULL)
+        OR (resolved = TRUE AND resolved_at IS NOT NULL AND resolution_action IS NOT NULL)
     )
 );
 
--- Index pour recherche conflits non résolus
-CREATE INDEX idx_conflicts_unresolved ON core.calendar_conflicts(resolved)
-    WHERE resolved = FALSE;
+-- Index partiel conflits non résolus
+CREATE INDEX idx_conflicts_unresolved ON knowledge.calendar_conflicts(detected_at DESC) WHERE resolved = FALSE;
 
--- Index pour recherche conflits par événement
-CREATE INDEX idx_conflicts_event1 ON core.calendar_conflicts(event1_id);
-CREATE INDEX idx_conflicts_event2 ON core.calendar_conflicts(event2_id);
+-- Déduplication paire normalisée LEAST/GREATEST
+CREATE UNIQUE INDEX idx_conflicts_unique_pair ON knowledge.calendar_conflicts(
+    LEAST(event1_id, event2_id), GREATEST(event1_id, event2_id)
+) WHERE resolved = FALSE;
 ```
 
 ### Context Manager
 
 #### Fichier : `agents/src/core/context_manager.py` (~350 lignes)
 
-**Fonctions principales** :
+**Classe ContextManager** (avec cache Redis 5 min) :
 
 ```python
-async def get_current_context(db_pool: asyncpg.Pool) -> Optional[UserContext]:
-    """
-    Récupère le contexte actuel depuis core.user_context.
+class ContextManager:
+    def __init__(self, db_pool: asyncpg.Pool, redis_client: redis.Redis, cache_ttl: int = 300):
+        ...
 
-    Returns:
-        UserContext avec current_casquette, updated_by, updated_at
-    """
+    async def get_current_context(self) -> UserContext:
+        """Récupère contexte actuel (cache Redis → DB → auto-detect)."""
 
-async def update_context_from_event(
-    event_id: str,
-    event_casquette: Casquette,
-    event_start: datetime,
-    db_pool: asyncpg.Pool,
-) -> bool:
-    """
-    Met à jour contexte depuis un événement (règle #2 : event).
+    async def set_context(self, casquette: Optional[Casquette], source: str = "manual") -> UserContext:
+        """Force contexte manuellement (commande /casquette). Invalide cache Redis."""
 
-    Logique :
-    - Check si contexte actuel est 'manual' (priorité max) → skip
-    - Check si événement démarre dans <30 min → update
-    - Update core.user_context avec updated_by='event'
+    async def auto_detect_context(self) -> UserContext:
+        """
+        Auto-détection 5 règles priorité:
+        1. Manuel (non expiré, <4h) → MANUAL
+        2. Événement en cours (NOW() entre start/end) → EVENT
+        3. Heuristique heure (08h-12h médecin, 14h-16h enseignant, 16h-18h chercheur) → TIME
+        4. Dernier événement passé → LAST_EVENT
+        5. Défaut (NULL) → DEFAULT
+        """
 
-    Returns:
-        True si contexte mis à jour, False sinon
-    """
-
-async def update_context_from_time(
-    current_time: datetime,
-    db_pool: asyncpg.Pool,
-) -> bool:
-    """
-    Met à jour contexte depuis tranche horaire (règle #3 : time).
-
-    Règles horaires par défaut :
-    - 08h-12h : enseignant (cours matin)
-    - 14h-18h : medecin (consultations après-midi)
-    - 18h-23h : chercheur (recherche soir)
-
-    Returns:
-        True si contexte mis à jour, False sinon
-    """
-
-async def should_update_context(
-    current_source: ContextSource,
-    new_source: ContextSource,
-) -> bool:
-    """
-    Détermine si le nouveau contexte doit override l'actuel.
-
-    Priorité décroissante : manual > event > time > last_event > default
-
-    Returns:
-        True si new_source prioritaire, False sinon
-    """
-
-async def auto_detect_context(
-    current_time: datetime,
-    db_pool: asyncpg.Pool,
-) -> Optional[Casquette]:
-    """
-    Auto-détection complète du contexte (appelé par Heartbeat Engine).
-
-    Pipeline :
-    1. Check contexte actuel
-    2. Check événement en cours ou à venir (<30 min)
-    3. Fallback tranche horaire (time)
-    4. Fallback dernier événement (<2h)
-    5. Fallback défaut (medecin)
-
-    Returns:
-        Casquette détectée ou None si erreur
-    """
+    async def invalidate_cache(self) -> None:
+        """Invalide cache Redis contexte."""
 ```
+
+**Note** : Le contexte manuel expire après 4h (retombe en auto-detect).
 
 #### Règles de priorité
 
 | Règle | Source | Priorité | Durée validité | Exemple |
 |-------|--------|----------|----------------|---------|
-| 1. Manuel | `manual` | **MAX** | Jusqu'à override manuel | User fait `/casquette chercheur` |
-| 2. Event | `event` | Haute | Événement en cours + 2h | Cours 14h-16h → enseignant jusqu'à 18h |
-| 3. Time | `time` | Moyenne | Durée tranche horaire | 14h → medecin (consultations) |
-| 4. Last Event | `last_event` | Faible | 2h après fin événement | Dernier événement = conférence → chercheur |
-| 5. Default | `default` | MIN | Permanent | Casquette par défaut = medecin |
+| 1. Manuel | `MANUAL` | **MAX** | 4 heures (puis auto-detect) | User fait `/casquette chercheur` |
+| 2. Event | `EVENT` | Haute | Durée événement | Cours 14h-16h → enseignant |
+| 3. Time | `TIME` | Moyenne | Durée tranche horaire | 08h-12h médecin, 14h-16h enseignant, 16h-18h chercheur |
+| 4. Last Event | `LAST_EVENT` | Faible | Indéfinie | Dernier événement passé |
+| 5. Default | `DEFAULT` | MIN | Permanent | NULL (pas de casquette forcée) |
 
-**Anti-oscillation** : Une fois qu'un contexte est défini, il ne change pas immédiatement si événement mineur. Hystérésis de 30 minutes pour éviter les switches constants.
+**H14** : Le contexte manuel expire après 4h pour éviter qu'un oubli de reset bloque la détection automatique.
 
 ---
 
@@ -231,53 +162,20 @@ Le système utilise **Allen's interval algebra** (1983) pour détecter les 13 re
 **Implémentation** : `agents/src/agents/calendar/conflict_detector.py`
 
 ```python
-async def detect_conflicts(
-    start_date: date,
-    end_date: date,
-    db_pool: asyncpg.Pool,
-) -> List[CalendarConflict]:
-    """
-    Détecte conflits sur période donnée (typiquement 7-14 jours).
+async def detect_calendar_conflicts(target_date: date, db_pool: asyncpg.Pool) -> list[CalendarConflict]:
+    """Détecte conflits pour une journée donnée. Inclut événements multi-jours."""
 
-    Algorithme :
-    1. Fetch tous événements sur période (WHERE start_datetime BETWEEN...)
-    2. Pour chaque paire d'événements :
-        a. Calculer relation Allen
-        b. Si overlap detected → calculer overlap_minutes
-        c. Créer CalendarConflict
-    3. Insérer conflits dans core.calendar_conflicts
-    4. Retourner liste conflits détectés
+async def get_conflicts_range(start_date: date, end_date: date, db_pool: asyncpg.Pool) -> list[CalendarConflict]:
+    """Détecte conflits sur plage dates (utilisé par Heartbeat check 7j)."""
 
-    Performance : O(n²) mais limité à 7-14 jours (max ~50 événements = 2500 comparaisons)
-    """
+async def save_conflict_to_db(conflict: CalendarConflict, db_pool: asyncpg.Pool) -> Optional[str]:
+    """Sauvegarde conflit avec déduplication LEAST/GREATEST + ON CONFLICT DO NOTHING."""
+
+def calculate_overlap(event1: CalendarEvent, event2: CalendarEvent) -> int:
+    """Calcule durée chevauchement en minutes."""
 ```
 
-### Triggers PostgreSQL
-
-**Trigger automatique** : Détecte conflits à chaque insertion/update d'événement.
-
-```sql
-CREATE OR REPLACE FUNCTION detect_conflicts_on_event_change()
-RETURNS TRIGGER AS $$
-BEGIN
-    -- Appeler fonction Python detect_conflicts via Redis Stream
-    PERFORM pg_notify('event_changed', json_build_object(
-        'event_id', NEW.id,
-        'start_datetime', NEW.start_datetime,
-        'end_datetime', NEW.end_datetime
-    )::text);
-
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER trigger_detect_conflicts
-    AFTER INSERT OR UPDATE ON core.events
-    FOR EACH ROW
-    EXECUTE FUNCTION detect_conflicts_on_event_change();
-```
-
-**Redis Stream** : `events:changed` → Consumer Python → `detect_conflicts()`
+Les événements sont stockés dans `knowledge.entities` (entity_type = 'EVENT') avec propriétés en JSONB. La détection est en Python (O(n²) limité à ~50 événements max par jour). Pas de trigger SQL — la détection est appelée par le Heartbeat Engine (Story 4.1) ou manuellement.
 
 ---
 

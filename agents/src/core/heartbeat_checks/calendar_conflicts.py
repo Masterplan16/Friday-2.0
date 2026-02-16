@@ -9,7 +9,7 @@ Quiet hours: 22h-8h (skip), sauf conflit urgent (<6h)
 """
 
 import asyncpg
-from datetime import datetime, date, time, timedelta
+from datetime import datetime, date, timedelta
 from typing import Dict, Any, Optional
 import structlog
 
@@ -46,6 +46,7 @@ async def check_calendar_conflicts(
 
     Story 7.3 AC5: Heartbeat check conflits calendrier
     """
+    pool_created = False
     try:
         # 1. Vérifier quiet hours (skip sauf conflit urgent)
         if _should_skip_quiet_hours(context):
@@ -68,8 +69,6 @@ async def check_calendar_conflicts(
 
             db_pool = await asyncpg.create_pool(database_url)
             pool_created = True
-        else:
-            pool_created = False
 
         # 3. Détecter conflits sur 7 jours
         today = date.today()
@@ -81,17 +80,12 @@ async def check_calendar_conflicts(
             db_pool=db_pool
         )
 
-        # Fermer pool si créé localement
-        if pool_created and db_pool:
-            await db_pool.close()
-
-        # 4. Filtrer conflits non résolus
-        unresolved_conflicts = [c for c in conflicts if not c.get("resolved", False)]
-
-        if not unresolved_conflicts:
+        # C2 fix: detect_calendar_conflicts retourne CalendarConflict (Pydantic),
+        # pas des dicts. Tous les conflits détectés sont frais = non résolus.
+        if not conflicts:
             logger.debug(
                 "heartbeat_check_calendar_conflicts_ok",
-                total_conflicts=len(conflicts),
+                total_conflicts=0,
                 unresolved=0
             )
             return CheckResult(
@@ -99,38 +93,33 @@ async def check_calendar_conflicts(
                 message=""
             )
 
-        # 5. Vérifier si aucun événement dans 7 jours → skip
-        # Note: Si conflits trouvés, il y a forcément des événements
-        # Cette condition est redondante mais explicite selon Task 7.1
-
-        # 6. Notifier si conflits détectés
+        # 4. Notifier si conflits détectés
         logger.info(
             "heartbeat_check_calendar_conflicts_found",
-            unresolved_conflicts=len(unresolved_conflicts),
+            unresolved_conflicts=len(conflicts),
             total_conflicts=len(conflicts)
         )
 
         # Formater message notification
-        message = _format_conflict_notification(unresolved_conflicts, context)
+        message = _format_conflict_notification(conflicts, context)
 
         return CheckResult(
             notify=True,
             message=message,
             action="view_conflicts",
             payload={
-                "conflict_count": len(unresolved_conflicts),
+                "conflict_count": len(conflicts),
                 "date_range": {
                     "start": today.isoformat(),
                     "end": end_date.isoformat()
                 },
                 "conflicts": [
                     {
-                        "id": c.get("id"),
-                        "event1_id": c.get("event1_id"),
-                        "event2_id": c.get("event2_id"),
-                        "overlap_minutes": c.get("overlap_minutes")
+                        "event1_id": c.event1.id,
+                        "event2_id": c.event2.id,
+                        "overlap_minutes": c.overlap_minutes
                     }
-                    for c in unresolved_conflicts
+                    for c in conflicts
                 ]
             }
         )
@@ -145,6 +134,10 @@ async def check_calendar_conflicts(
             notify=False,
             error=str(e)
         )
+    finally:
+        # Pool leak fix: toujours fermer si créé localement
+        if pool_created and db_pool:
+            await db_pool.close()
 
 
 # ============================================================================
@@ -223,26 +216,21 @@ def _format_conflict_notification(
         ""
     ]
 
-    # Grouper conflits par date
+    # Grouper conflits par date (C2 fix: attributs Pydantic, pas .get())
     conflicts_by_date: Dict[str, list] = {}
     for c in conflicts:
-        # Parse date depuis event1 start_datetime
-        event1_start = c.get("event1_start_datetime")
-        if event1_start:
-            if isinstance(event1_start, str):
-                event1_start = datetime.fromisoformat(event1_start)
+        # CalendarConflict.event1 est un CalendarEvent Pydantic
+        event1_start = c.event1.start_datetime
+        conflict_date = event1_start.date()
+        date_key = conflict_date.isoformat()
 
-            conflict_date = event1_start.date()
-            date_key = conflict_date.isoformat()
+        if date_key not in conflicts_by_date:
+            conflicts_by_date[date_key] = []
 
-            if date_key not in conflicts_by_date:
-                conflicts_by_date[date_key] = []
-
-            conflicts_by_date[date_key].append(c)
+        conflicts_by_date[date_key].append(c)
 
     # Formater lignes par date (max 3 dates)
     today = date.today()
-    shown_dates = 0
     max_dates = 3
 
     for date_str in sorted(conflicts_by_date.keys())[:max_dates]:
@@ -262,16 +250,14 @@ def _format_conflict_notification(
 
         # Formater conflit (premier de la date)
         first_conflict = date_conflicts[0]
-        event1_title = first_conflict.get("event1_title", "Événement 1")
-        event2_title = first_conflict.get("event2_title", "Événement 2")
+        event1_title = first_conflict.event1.title
+        event2_title = first_conflict.event2.title
 
         # Tronquer titres si trop longs
         event1_short = _truncate_title(event1_title, 25)
         event2_short = _truncate_title(event2_title, 25)
 
         lines.append(f"📅 <b>{date_label}</b> : {event1_short} ⚡ {event2_short}")
-
-        shown_dates += 1
 
     # Si plus de 3 dates avec conflits
     remaining_dates = len(conflicts_by_date) - max_dates

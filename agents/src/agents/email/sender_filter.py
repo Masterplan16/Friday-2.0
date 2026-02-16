@@ -32,7 +32,6 @@ class SenderFilterError(Exception):
     """Erreur dans le processus de filtrage sender."""
 
 
-
 async def check_sender_filter(
     email_id: str,
     sender_email: Optional[str],

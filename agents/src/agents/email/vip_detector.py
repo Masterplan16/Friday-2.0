@@ -26,7 +26,6 @@ class VIPDetectorError(Exception):
     """Erreur dans le processus de détection VIP."""
 
 
-
 def compute_email_hash(email: str) -> str:
     """
     Calcule le hash SHA256 d'un email pour lookup VIP.

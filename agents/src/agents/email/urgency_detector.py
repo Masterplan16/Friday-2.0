@@ -29,7 +29,6 @@ class UrgencyDetectorError(Exception):
     """Erreur dans le processus de detection urgence."""
 
 
-
 @friday_action(module="email", action="detect_urgency", trust_default="auto")
 async def detect_urgency(
     email_text: str,

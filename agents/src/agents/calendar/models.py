@@ -158,7 +158,6 @@ class EventExtractionError(AgentError):
     """
 
 
-
 class EventValidationError(PipelineError):
     """
     Exception levee lors d'erreur validation Pydantic Event
@@ -167,10 +166,10 @@ class EventValidationError(PipelineError):
     """
 
 
-
 # ============================================================================
 # Story 7.3: Multi-casquettes & Conflits (AC4, AC6)
 # ============================================================================
+
 
 class ResolutionAction(str, Enum):
     """Action de résolution conflit (AC6)."""

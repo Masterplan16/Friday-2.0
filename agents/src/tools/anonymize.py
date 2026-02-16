@@ -99,7 +99,6 @@ class AnonymizationError(PipelineError):
     """Erreur pipeline anonymisation (hérite de PipelineError selon hiérarchie Story 1.2)"""
 
 
-
 async def anonymize_text(
     text: str,
     language: str = "fr",

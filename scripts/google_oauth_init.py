@@ -100,9 +100,7 @@ def main():
 
     try:
         # Creer le flow OAuth2
-        flow = InstalledAppFlow.from_client_secrets_file(
-            str(CLIENT_SECRET_PATH), CALENDAR_SCOPES
-        )
+        flow = InstalledAppFlow.from_client_secrets_file(str(CLIENT_SECRET_PATH), CALENDAR_SCOPES)
 
         # Lancer le serveur local et ouvrir le navigateur
         print("Ouverture du navigateur...")

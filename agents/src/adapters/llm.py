@@ -55,7 +55,6 @@ class LLMError(PipelineError):
     """Erreur appel LLM"""
 
 
-
 class ClaudeAdapter:
     """
     Adapter pour Claude Sonnet 4.5 avec anonymisation RGPD obligatoire.

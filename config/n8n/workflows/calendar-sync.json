@@ -1,0 +1,171 @@
+{
+  "name": "Calendar Sync - Daily Backup",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 6 * * *"
+            }
+          ]
+        }
+      },
+      "name": "Cron Daily 06:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://gateway:8000/api/v1/calendar/sync",
+        "options": {
+          "timeout": 120000
+        },
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
+      },
+      "name": "Trigger Calendar Sync",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.status}}",
+              "operation": "equals",
+              "value2": "success"
+            }
+          ]
+        }
+      },
+      "name": "Check Success",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        680,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{$env.TELEGRAM_SUPERGROUP_ID}}",
+        "messageThreadId": "={{$env.TOPIC_SYSTEM_ID}}",
+        "text": "✅ Calendar Sync: Backup quotidien terminé avec succès\n\nÉvénements:\n- Créés: {{$json.events_created}}\n- Mis à jour: {{$json.events_updated}}\n\nProchaine sync automatique: 06:00 demain",
+        "additionalFields": {
+          "parse_mode": "HTML"
+        }
+      },
+      "name": "Telegram Success",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        900,
+        200
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "1",
+          "name": "Friday Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{$env.TELEGRAM_SUPERGROUP_ID}}",
+        "messageThreadId": "={{$env.TOPIC_SYSTEM_ID}}",
+        "text": "🚨 <b>Calendar Sync: Échec backup quotidien</b>\n\nErreur: {{$json.error || 'Timeout ou erreur HTTP'}}\n\n<b>Actions requises:</b>\n• Vérifier OAuth2 credentials Google Calendar\n• Vérifier logs: <code>docker logs friday-calendar-sync</code>\n• Re-trigger manuel: POST /api/v1/calendar/sync",
+        "additionalFields": {
+          "parse_mode": "HTML"
+        }
+      },
+      "name": "Telegram Alert System",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        900,
+        400
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "1",
+          "name": "Friday Telegram Bot"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Cron Daily 06:00": {
+      "main": [
+        [
+          {
+            "node": "Trigger Calendar Sync",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trigger Calendar Sync": {
+      "main": [
+        [
+          {
+            "node": "Check Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Success": {
+      "main": [
+        [
+          {
+            "node": "Telegram Success",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Telegram Alert System",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "calendar",
+      "id": "calendar-sync"
+    },
+    {
+      "name": "backup",
+      "id": "daily-backup"
+    },
+    {
+      "name": "story-7.2",
+      "id": "story-7-2"
+    }
+  ],
+  "triggerCount": 1,
+  "updatedAt": "2026-02-16T00:00:00.000Z",
+  "versionId": "1"
+}

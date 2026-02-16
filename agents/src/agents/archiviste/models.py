@@ -214,3 +214,51 @@ class MovedFile(BaseModel):
     destination_path: str = Field(..., description="Chemin destination final")
     success: bool = Field(..., description="Succès de l'opération")
     error: Optional[str] = Field(None, description="Message d'erreur si échec")
+
+
+class EmbeddingResult(BaseModel):
+    """
+    Résultat de génération d'embedding pour un document (Story 3.3 - Task 1.5).
+
+    Attributes:
+        document_id: UUID du document dans ingestion.document_metadata
+        embedding_vector: Vecteur embedding (1024 dimensions pour voyage-4-large)
+        model_name: Nom du modèle utilisé (voyage-4-large)
+        confidence: Score de confiance [0.0-1.0]
+        metadata: Métadonnées optionnelles (filename, category, etc.)
+    """
+
+    document_id: str = Field(..., description="UUID du document")
+    embedding_vector: list[float] = Field(..., description="Vecteur embedding 1024 dims")
+    model_name: str = Field(default="voyage-4-large", description="Modèle embeddings")
+    confidence: float = Field(..., ge=0.0, le=1.0, description="Score de confiance")
+    metadata: dict = Field(default_factory=dict, description="Métadonnées optionnelles")
+
+    @field_validator("embedding_vector")
+    @classmethod
+    def validate_dimensions(cls, v: list[float]) -> list[float]:
+        """Valide que l'embedding a exactement 1024 dimensions."""
+        if len(v) != 1024:
+            raise ValueError(f"Expected 1024 dimensions, got {len(v)}")
+        return v
+
+
+class SearchResult(BaseModel):
+    """
+    Résultat de recherche sémantique (Story 3.3 - Task 4.9).
+
+    Attributes:
+        document_id: UUID du document trouvé
+        title: Titre du document (filename ou metadata.title)
+        path: Chemin absolu vers le fichier
+        score: Score de similarité cosinus [0.0-1.0]
+        excerpt: Extrait pertinent du document (200 chars)
+        metadata: Métadonnées complètes du document
+    """
+
+    document_id: str = Field(..., description="UUID du document")
+    title: str = Field(..., description="Titre du document")
+    path: str = Field(..., description="Chemin absolu fichier")
+    score: float = Field(..., ge=0.0, le=1.0, description="Score similarité cosinus")
+    excerpt: str = Field(..., max_length=250, description="Extrait pertinent ~200 chars")
+    metadata: dict = Field(default_factory=dict, description="Métadonnées document")

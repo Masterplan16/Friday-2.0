@@ -5,17 +5,22 @@ Story 7.1 AC1: Extraction evenements avec anonymisation Presidio
 Story 7.1 AC4: Conversion dates relatives → absolues
 Story 7.1 AC5: Classification multi-casquettes
 Story 7.1 AC7: Few-shot learning (5 exemples)
+Story 7.3 Task 9.2: Injection contexte casquette actuel (bias subtil)
 """
 
 import json
 import logging
 import asyncio
 import time
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, TYPE_CHECKING
 from datetime import datetime, timezone
+
+if TYPE_CHECKING:
+    from agents.src.core.models import Casquette
 
 from anthropic import AsyncAnthropic, RateLimitError, APIError
 from pydantic import ValidationError
+import asyncpg
 
 from agents.src.agents.calendar.models import (
     Event,
@@ -70,7 +75,9 @@ async def extract_events_from_email(
     email_id: Optional[str] = None,
     metadata: Optional[Dict[str, Any]] = None,
     current_date: Optional[str] = None,
-    anthropic_client: Optional[AsyncAnthropic] = None
+    anthropic_client: Optional[AsyncAnthropic] = None,
+    db_pool: Optional[asyncpg.Pool] = None,
+    current_casquette: Optional["Casquette"] = None
 ) -> EventDetectionResult:
     """
     Extrait evenements depuis email via Claude Sonnet 4.5
@@ -89,6 +96,8 @@ async def extract_events_from_email(
         metadata: Metadata email (sender, subject, date)
         current_date: Date actuelle ISO 8601 (ex: "2026-02-10", auto si None)
         anthropic_client: Client Anthropic (auto-cree si None)
+        db_pool: Pool asyncpg pour fetch contexte casquette (Story 7.3 AC1)
+        current_casquette: Casquette actuelle (si None, fetch depuis DB si db_pool fourni)
 
     Returns:
         EventDetectionResult avec events_detected[] et confidence_overall
@@ -131,6 +140,18 @@ async def extract_events_from_email(
     # Heure actuelle
     current_time = datetime.now(timezone.utc).strftime("%H:%M:%S")
 
+    # === PHASE 1.5: Fetch current casquette context (Story 7.3 AC1) ===
+    if current_casquette is None and db_pool is not None:
+        current_casquette = await _fetch_current_casquette(db_pool)
+        if current_casquette:
+            logger.debug(
+                "Context casquette fetched",
+                extra={
+                    "email_id": email_id,
+                    "casquette": current_casquette.value
+                }
+            )
+
     # AC1: Anonymisation Presidio AVANT sanitize (NER sur texte brut)
     logger.debug(
         "Anonymisation email via Presidio",
@@ -151,12 +172,13 @@ async def extract_events_from_email(
     # Sanitize APRES anonymisation (protection prompt injection)
     email_sanitized = sanitize_email_text(email_anonymized)
 
-    # Construire prompt avec few-shot examples (AC7)
+    # Construire prompt avec few-shot examples (AC7) + context hint (Story 7.3)
     prompt = build_event_detection_prompt(
         email_text=email_sanitized,
         current_date=current_date,
         current_time=current_time,
-        timezone="Europe/Paris"
+        timezone="Europe/Paris",
+        current_casquette=current_casquette
     )
 
     # Appeler Claude avec retry (NFR17)
@@ -359,17 +381,21 @@ async def detect_events_action(
         metadata: Metadata email (sender, subject, date)
         current_date: Date actuelle ISO 8601
         anthropic_client: Client Anthropic
-        **kwargs: Args injectes par decorateur (correction_rules, etc.)
+        **kwargs: Args injectes par decorateur (correction_rules, db_pool, etc.)
 
     Returns:
         ActionResult avec confidence et reasoning
     """
+    # Extraire db_pool depuis kwargs (injecte par decorateur si disponible)
+    db_pool = kwargs.get("db_pool")
+
     result = await extract_events_from_email(
         email_text=email_text,
         email_id=email_id,
         metadata=metadata,
         current_date=current_date,
-        anthropic_client=anthropic_client
+        anthropic_client=anthropic_client,
+        db_pool=db_pool
     )
 
     subject = ""
@@ -425,6 +451,55 @@ async def _deanonymize_participants(
             deanonymized.append(participant)
 
     return deanonymized
+
+
+async def _fetch_current_casquette(
+    db_pool: asyncpg.Pool,
+) -> Optional["Casquette"]:
+    """
+    Fetch casquette actuelle depuis core.user_context
+
+    Args:
+        db_pool: Pool asyncpg
+
+    Returns:
+        Casquette actuelle ou None si non definie
+
+    Story 7.3 AC1: Contexte influence detection evenements
+    """
+    try:
+        async with db_pool.acquire() as conn:
+            row = await conn.fetchrow(
+                """
+                SELECT current_casquette, updated_by
+                FROM core.user_context
+                WHERE id = 1
+                """
+            )
+
+            if not row or row["current_casquette"] is None:
+                return None
+
+            from agents.src.core.models import Casquette
+
+            casquette_value = row["current_casquette"]
+
+            try:
+                casquette = Casquette(casquette_value)
+                return casquette
+            except ValueError:
+                logger.warning(
+                    "Casquette value invalide dans user_context",
+                    extra={"casquette_value": casquette_value}
+                )
+                return None
+
+    except Exception as e:
+        logger.warning(
+            "Echec fetch contexte casquette",
+            extra={"error": str(e), "fallback": "no_context_bias"}
+        )
+        return None
 
 
 async def _async_sleep(seconds: float):

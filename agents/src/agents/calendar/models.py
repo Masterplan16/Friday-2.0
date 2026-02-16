@@ -187,3 +187,62 @@ class EventValidationError(Exception):
     Usage: start_datetime invalide, confidence hors range, casquette invalide
     """
     pass
+
+
+# ============================================================================
+# Story 7.3: Multi-casquettes & Conflits (AC4, AC6)
+# ============================================================================
+
+class ResolutionAction(str, Enum):
+    """Action de résolution conflit (AC6)."""
+    CANCEL = "cancel"  # Annuler événement
+    MOVE = "move"  # Déplacer événement
+    IGNORE = "ignore"  # Ignorer conflit
+
+
+class CalendarEvent(BaseModel):
+    """
+    Événement calendrier simplifié pour détection conflits.
+
+    Utilisé par conflict_detector pour représenter événements.
+    Version simplifiée de Event (Story 7.1) avec seulement champs nécessaires.
+    """
+    id: str = Field(..., description="UUID événement (string)")
+    title: str = Field(..., description="Titre événement")
+    casquette: Casquette = Field(..., description="Casquette (médecin/enseignant/chercheur)")
+    start_datetime: datetime = Field(..., description="Début événement")
+    end_datetime: datetime = Field(..., description="Fin événement")
+    status: str = Field(default="confirmed", description="Statut événement")
+
+
+class CalendarConflict(BaseModel):
+    """
+    Conflit entre 2 événements calendrier (AC4).
+
+    Conflit = 2 événements chevauchent temporellement avec casquettes différentes.
+    """
+    event1: CalendarEvent = Field(..., description="Premier événement en conflit")
+    event2: CalendarEvent = Field(..., description="Second événement en conflit")
+    overlap_minutes: int = Field(..., gt=0, description="Durée chevauchement en minutes")
+    detected_at: datetime = Field(
+        default_factory=datetime.now,
+        description="Timestamp détection conflit"
+    )
+
+
+class ConflictResolution(BaseModel):
+    """
+    Action de résolution conflit (AC6).
+
+    Utilisé par callbacks Telegram pour résoudre conflits.
+    """
+    action: ResolutionAction = Field(..., description="Action: cancel, move, ignore")
+    event_id: str = Field(..., description="UUID événement concerné (string)")
+    new_datetime: Optional[datetime] = Field(
+        None,
+        description="Nouvelle date/heure si action=move"
+    )
+    reason: Optional[str] = Field(
+        None,
+        description="Raison résolution (optionnel)"
+    )

@@ -3,13 +3,15 @@ Module de classification d'emails (Story 2.2).
 
 Utilise Claude Sonnet 4.5 pour classifier automatiquement les emails
 en 8 catégories avec injection de règles de correction.
+
+Story 7.3 Task 9.1: Injection contexte casquette actuel (bias subtil)
 """
 
 from __future__ import annotations
 
 import time
 from json import JSONDecodeError  # L1 fix: Import specific exception
-from typing import TYPE_CHECKING, Sequence
+from typing import TYPE_CHECKING, Sequence, Optional
 
 import asyncpg
 import structlog
@@ -22,6 +24,7 @@ from agents.src.models.email_classification import EmailClassification
 
 if TYPE_CHECKING:
     from typing import Any
+    from agents.src.core.models import Casquette
 
 logger = structlog.get_logger(__name__)
 
@@ -75,10 +78,20 @@ async def classify_email(
             rules_count=len(correction_rules),
         )
 
+        # === PHASE 1.5: Fetch current casquette context (Story 7.3 AC1) ===
+        current_casquette = await _fetch_current_casquette(db_pool)
+        if current_casquette:
+            logger.info(
+                "context_casquette_fetched",
+                email_id=email_id,
+                casquette=current_casquette.value,
+            )
+
         # === PHASE 2: Build prompts ===
         system_prompt, user_prompt = build_classification_prompt(
             email_text=email_text,
             correction_rules=correction_rules,
+            current_casquette=current_casquette,  # Story 7.3 AC1
         )
 
         # === PHASE 3: Call Claude with retry ===
@@ -232,6 +245,67 @@ async def _fetch_correction_rules(
         )
         # Mode dégradé : continuer sans règles
         return []
+
+
+async def _fetch_current_casquette(
+    db_pool: asyncpg.Pool,
+) -> Optional["Casquette"]:
+    """
+    Récupère la casquette actuelle du Mainteneur depuis core.user_context (Story 7.3 AC1).
+
+    Args:
+        db_pool: Pool de connexions PostgreSQL
+
+    Returns:
+        Casquette actuelle (médecin/enseignant/chercheur) ou None si auto-detect
+
+    Notes:
+        - Si erreur fetch → log warning + retourne None (mode dégradé)
+        - Si updated_by='manual' → contexte forcé manuellement (prioritaire)
+        - Si updated_by='system' → contexte auto-détecté
+        - Si current_casquette IS NULL → auto-detect actif, retourne None
+
+    Story 7.3 Task 9.1: Injection contexte casquette dans classification email
+    """
+    try:
+        async with db_pool.acquire() as conn:
+            row = await conn.fetchrow(
+                """
+                SELECT current_casquette, updated_by
+                FROM core.user_context
+                WHERE id = 1
+                """
+            )
+
+            if not row or row["current_casquette"] is None:
+                # Auto-detect actif ou pas encore initialisé
+                return None
+
+            # Importer Casquette enum
+            from agents.src.core.models import Casquette
+
+            casquette_value = row["current_casquette"]
+
+            try:
+                casquette = Casquette(casquette_value)
+                return casquette
+            except ValueError:
+                logger.warning(
+                    "invalid_casquette_value",
+                    casquette_value=casquette_value,
+                    message="Casquette value invalide dans core.user_context"
+                )
+                return None
+
+    except Exception as e:
+        logger.warning(
+            "context_casquette_fetch_failed",
+            error=str(e),
+            error_type=type(e).__name__,
+            fallback="no_context_bias",
+        )
+        # Mode dégradé : pas de bias contextuel
+        return None
 
 
 async def _call_claude_with_retry(

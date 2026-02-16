@@ -205,7 +205,7 @@ def test_urgency_result_valid_confidence_boundaries():
     low = UrgencyResult(
         is_urgent=False,
         confidence=0.0,
-        reasoning="No urgency detected",
+        reasoning="Email analysis shows no indicators of urgency or high priority",
     )
     assert low.confidence == 0.0
 
@@ -213,7 +213,7 @@ def test_urgency_result_valid_confidence_boundaries():
     high = UrgencyResult(
         is_urgent=True,
         confidence=1.0,
-        reasoning="Maximum urgency",
+        reasoning="Multiple critical indicators detected requiring immediate attention and action",
     )
     assert high.confidence == 1.0
 
@@ -240,7 +240,7 @@ def test_urgency_result_invalid_confidence_out_of_range_low():
         UrgencyResult(
             is_urgent=False,
             confidence=-0.1,
-            reasoning="Valid reasoning",
+            reasoning="Valid reasoning for test validation with sufficient length",
         )
 
     errors = exc_info.value.errors()
@@ -255,7 +255,7 @@ def test_urgency_result_invalid_confidence_out_of_range_high():
         UrgencyResult(
             is_urgent=True,
             confidence=1.5,
-            reasoning="Valid reasoning",
+            reasoning="Valid reasoning for test validation with sufficient length",
         )
 
     errors = exc_info.value.errors()

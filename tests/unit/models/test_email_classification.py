@@ -64,7 +64,7 @@ def test_email_classification_valid_all_priorities():
         classification = EmailClassification(
             category="pro",
             confidence=0.85,
-            reasoning="Test reasoning",
+            reasoning="Email classification test with valid reasoning content",
             suggested_priority=priority,
         )
         assert classification.suggested_priority == priority
@@ -97,7 +97,7 @@ def test_email_classification_confidence_boundaries():
     high_conf = EmailClassification(
         category="pro",
         confidence=1.0,
-        reasoning="Absolutely certain",
+        reasoning="Email content clearly indicates high certainty classification result",
     )
     assert high_conf.confidence == 1.0
 
@@ -173,7 +173,7 @@ def test_email_classification_invalid_priority():
         EmailClassification(
             category="pro",
             confidence=0.85,
-            reasoning="Test reasoning",
+            reasoning="Email classification test with valid reasoning content",
             suggested_priority="invalid_priority",
         )
 
@@ -207,7 +207,7 @@ def test_email_classification_to_dict():
     classification = EmailClassification(
         category="pro",
         confidence=0.92,
-        reasoning="Test reasoning",
+        reasoning="Email classification test with valid reasoning content",
         keywords=["test"],
         suggested_priority="high",
     )

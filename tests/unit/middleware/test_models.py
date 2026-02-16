@@ -134,7 +134,7 @@ def test_action_result_status():
             input_summary="Email de test@example.com: Subject",
             output_summary="→ Category: urgent",
             confidence=0.95,
-            reasoning="Statut invalide",
+            reasoning="Valid reasoning to test invalid status field rejection",
             status="invalid_status",
         )
 

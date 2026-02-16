@@ -61,7 +61,7 @@ async def test_pipeline_full_sequence(
             input_summary="OCR de test.pdf",
             output_summary="Facture Laboratoire Cerba",
             confidence=0.88,
-            reasoning="Facture medicale",
+            reasoning="Facture medicale standard document",
             payload={
                 "metadata": mock_metadata,
                 "ocr_result": mock_ocr_result,
@@ -78,7 +78,7 @@ async def test_pipeline_full_sequence(
         new_filename="2026-02-08_Facture_Laboratoire-Cerba_145EUR.pdf",
         metadata=mock_metadata,
         confidence=0.88,
-        reasoning="Renommage Facture",
+        reasoning="Renommage Facture effectue avec succes",
     )
     mock_ren = mock_renamer_cls.return_value
     mock_ren.rename_document = AsyncMock(
@@ -86,7 +86,7 @@ async def test_pipeline_full_sequence(
             input_summary="Fichier original: test.pdf",
             output_summary="Nouveau nom: 2026-02-08_Facture_Laboratoire-Cerba_145EUR.pdf",
             confidence=0.88,
-            reasoning="Renommage Facture",
+            reasoning="Renommage Facture effectue avec succes",
             payload={
                 "rename_result": mock_rename_result,
                 "original_filename": "test.pdf",
@@ -150,10 +150,10 @@ async def test_pipeline_rename_crash_fail_explicit(
     mock_extractor = mock_extractor_cls.return_value
     mock_extractor.extract_metadata = AsyncMock(
         return_value=ActionResult(
-            input_summary="test",
-            output_summary="test",
+            input_summary="Test document for validation",
+            output_summary="Test processing completed",
             confidence=0.88,
-            reasoning="test",
+            reasoning="Test reasoning with sufficient length for validation",
             payload={
                 "metadata": mock_metadata,
                 "ocr_result": mock_ocr_result,
@@ -216,10 +216,10 @@ async def test_pipeline_result_json_serializable(
     mock_extractor = mock_extractor_cls.return_value
     mock_extractor.extract_metadata = AsyncMock(
         return_value=ActionResult(
-            input_summary="test",
-            output_summary="test",
+            input_summary="Test document for validation",
+            output_summary="Test processing completed",
             confidence=0.88,
-            reasoning="test",
+            reasoning="Test reasoning with sufficient length for validation",
             payload={
                 "metadata": mock_metadata,
                 "ocr_result": mock_ocr_result,
@@ -234,17 +234,17 @@ async def test_pipeline_result_json_serializable(
     mock_ren = mock_renamer_cls.return_value
     mock_ren.rename_document = AsyncMock(
         return_value=ActionResult(
-            input_summary="test",
-            output_summary="test",
+            input_summary="Test document for validation",
+            output_summary="Test processing completed",
             confidence=0.88,
-            reasoning="test",
+            reasoning="Test reasoning with sufficient length for validation",
             payload={
                 "rename_result": RenameResult(
                     original_filename="test.pdf",
                     new_filename="2026-02-08_Facture_Test_145EUR.pdf",
                     metadata=mock_metadata,
                     confidence=0.88,
-                    reasoning="test",
+                    reasoning="Document renamed according to standard format with extracted metadata",
                 ),
                 "original_filename": "test.pdf",
                 "new_filename": "2026-02-08_Facture_Test_145EUR.pdf",
@@ -280,10 +280,10 @@ async def test_pipeline_publishes_dot_notation_events(
     mock_extractor = mock_extractor_cls.return_value
     mock_extractor.extract_metadata = AsyncMock(
         return_value=ActionResult(
-            input_summary="test",
-            output_summary="test",
+            input_summary="Test document for validation",
+            output_summary="Test processing completed",
             confidence=0.88,
-            reasoning="test",
+            reasoning="Test reasoning with sufficient length for validation",
             payload={
                 "metadata": mock_metadata,
                 "ocr_result": mock_ocr_result,
@@ -298,17 +298,17 @@ async def test_pipeline_publishes_dot_notation_events(
     mock_ren = mock_renamer_cls.return_value
     mock_ren.rename_document = AsyncMock(
         return_value=ActionResult(
-            input_summary="test",
-            output_summary="test",
+            input_summary="Test document for validation",
+            output_summary="Test processing completed",
             confidence=0.88,
-            reasoning="test",
+            reasoning="Test reasoning with sufficient length for validation",
             payload={
                 "rename_result": RenameResult(
                     original_filename="test.pdf",
                     new_filename="2026-02-08_Facture_Test_145EUR.pdf",
                     metadata=mock_metadata,
                     confidence=0.88,
-                    reasoning="test",
+                    reasoning="Document renamed according to standard format with extracted metadata",
                 ),
                 "original_filename": "test.pdf",
                 "new_filename": "2026-02-08_Facture_Test_145EUR.pdf",

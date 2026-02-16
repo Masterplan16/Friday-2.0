@@ -287,7 +287,7 @@ async def test_extract_metadata_confidence_calculation(
     mock_llm = AsyncMock()
     mock_get_llm.return_value = mock_llm
     mock_llm.complete.return_value = MagicMock(
-        content='{"date": "2026-02-08", "doc_type": "Facture", "emitter": "Test", "amount": 100.0, "confidence": 0.92, "reasoning": "OK"}',
+        content='{"date": "2026-02-08", "doc_type": "Facture", "emitter": "Test", "amount": 100.0, "confidence": 0.92, "reasoning": "Metadata extraction completed successfully with high confidence"}',
         usage=MagicMock(input_tokens=50, output_tokens=20),
     )
 
@@ -351,7 +351,7 @@ async def test_extract_metadata_preserves_emitter_raw(
     mock_llm = AsyncMock()
     mock_get_llm.return_value = mock_llm
     mock_llm.complete.return_value = MagicMock(
-        content='{"date": "2026-02-08", "doc_type": "Facture", "emitter": "Labo / Tests*?", "amount": 50.0, "confidence": 0.88, "reasoning": "OK"}',
+        content='{"date": "2026-02-08", "doc_type": "Facture", "emitter": "Labo / Tests*?", "amount": 50.0, "confidence": 0.88, "reasoning": "Metadata extraction completed successfully with high confidence"}',
         usage=MagicMock(input_tokens=60, output_tokens=25),
     )
 

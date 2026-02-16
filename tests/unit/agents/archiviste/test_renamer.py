@@ -110,7 +110,7 @@ async def test_rename_document_emitter_with_special_chars(renamer):
         emitter="Labo / Tests*?",
         amount=50.0,
         confidence=0.85,
-        reasoning="Facture labo",
+        reasoning="Facture laboratoire medical identifiee avec confiance elevee",
     )
     original_filename = "test.pdf"
 
@@ -217,7 +217,7 @@ async def test_rename_document_confidence_min_preserved(renamer):
         emitter="Test",
         amount=100.0,
         confidence=0.75,
-        reasoning="Confiance moyenne",
+        reasoning="Document classifie avec niveau de confiance moyen mais acceptable",
     )
     original_filename = "test.pdf"
 
@@ -243,7 +243,7 @@ async def test_rename_document_emitter_too_long_truncated(renamer):
         emitter=long_emitter,
         amount=100.0,
         confidence=0.90,
-        reasoning="Émetteur long",
+        reasoning="Emetteur avec nom particulierement long necessite troncature pour lisibilite",
     )
     original_filename = "test.pdf"
 
@@ -281,7 +281,7 @@ async def test_rename_document_amount_decimal_formatted(renamer):
             emitter="Test",
             amount=amount,
             confidence=0.90,
-            reasoning="Test montant",
+            reasoning="Formatage montant financier avec separateur milliers applique correctement",
         )
 
         # Act

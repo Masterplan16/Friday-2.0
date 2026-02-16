@@ -118,14 +118,14 @@ development_status:
   3-3-recherche-semantique-documents: done  # 2026-02-16: IMPLEMENTATION COMPLETE. Code review 22 issues fixes. Post-review: @friday_action decorator applique, desktop_search_consumer.py cree, 76 tests total (15+11+10+16+14+2+8), 3 docs (desktop-search-claude-cli, benchmark-pgvector, telegram-user-guide section). 18 fichiers crees, 5 modifies. 7/7 AC valides.
   3-4-suivi-garanties: done  # 2026-02-16: CODE REVIEW ADVERSARIAL COMPLETE (Opus 4.6) — 10 issues fixés (1C+5H+3M) + 1 BONUS CRITICAL (colonnes edges fausses). C1 trigger function name, H1 priorités CRITICAL/HIGH/MEDIUM AC3, H2 Decimal precision, H3 belongs_to edge + entity nodes, H4 delete cleanup graph, H5 exception semantics, M1 import placement, M2 conftest dedup, M3 payload immutability. BONUS: from_node_id/to_node_id/relation_type (migration 007 schema). 67 tests, 10 fichiers modifiés review. 7/7 AC validés.
   3-5-detection-nouveaux-fichiers: done  # 2026-02-16: CODE REVIEW ADVERSARIAL COMPLETE (Opus 4.6) — 11 issues fixés (4H+4M+3L). H1 AC5 error_directory+pipeline.error, H2/H3 tests assertions renforcées (wait-then-assert), H4 path traversal is_relative_to. M2 AC7 Redis Pub/Sub reload notification, M3 loop stocké (deprecated fix). 49 tests (44U+3I+2E2E) PASS. Watchdog 6.0.0 multi-path, Redis Streams document.received, hot-reload config, retry backoff. 10 fichiers modifiés review.
-  3-6-fichiers-via-telegram: backlog
+  3-6-fichiers-via-telegram: in-progress  # 2026-02-16: Story créée - Envoi/réception fichiers via Telegram. Handler upload + intent detection LLM + semantic search pgvector + envoi fichier <20 Mo. Pipeline Archiviste integration complète. M (12-18h).
   3-7-traitement-batch-dossier: backlog
   3-8-scan-dedup-pc: backlog  # 2026-02-11: Story créée - Scan PC-wide (C:\Users\lopez\) + déduplication SHA256 tous fichiers (photos/documents/vidéos). Chemins prioritaires: BeeStation\Photos & BeeStation\Documents. Règles: Emplacement > Résolution > EXIF > Nom. Dry-run CSV obligatoire, suppression validation Telegram. M (12-18h).
   epic-3-retrospective: optional
 
   # Epic 4: Intelligence Proactive & Briefings (7 stories | 8 FRs)
   epic-4: in-progress
-  4-1-heartbeat-engine-core: ready-for-dev  # 2026-02-16: Story created - Context-aware Heartbeat Engine with LLM decider. CRITICAL for Stories 4.2-4.5. L (20-30h).
+  4-1-heartbeat-engine-core: done  # 2026-02-16: COMPLETE ✅ - Heartbeat Engine avec LLM décideur Claude Sonnet 4.5. 50 tests PASS (39U+8I+3E2E), ~3,500 lignes, circuit breakers, quiet hours, 80% silence rate philosophy. 3 checks Day 1 (urgent_emails, financial_alerts, thesis_reminders). Docker daemon + Gateway endpoint + n8n workflow cron. Docs 830 lignes. Mode daemon/one-shot. Trust Layer intégré. PRODUCTION READY.
   4-2-briefing-matinal-8h: backlog
   4-3-digest-soir-18h: backlog
   4-4-rapport-hebdomadaire: backlog

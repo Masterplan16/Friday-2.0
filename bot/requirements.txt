@@ -16,6 +16,9 @@ asyncpg==0.29.0  # PostgreSQL async driver
 redis==5.0.1  # Redis client
 aioredis==2.0.1  # Async Redis
 
+# LLM
+anthropic>=0.39.0  # Claude API (batch_commands.py)
+
 # Utils
 PyYAML==6.0.1  # YAML config parsing
 

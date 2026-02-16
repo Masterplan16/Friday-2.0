@@ -1297,6 +1297,8 @@ class EmailProcessorConsumer:
             source_type: Type source ("email")
             source_id: ID source (UUID email)
         """
+        created_events = []  # H2: Collecter events pour Redis APRES commit
+
         try:
             async with self.db_pool.acquire() as conn:
                 async with conn.transaction():
@@ -1357,26 +1359,31 @@ class EmailProcessorConsumer:
                                 event.confidence
                             )
 
-                        # AC2: Créer relations EVENT → PARTICIPANT
-                        # TODO: Implémenter extraction PERSON entities depuis participants
-                        # Story 7.1 simplification: Stocker participants dans properties uniquement
+                        # TODO (Story 6.1): Créer relations EVENT->PARTICIPANT et EVENT->LOCATION
+                        # quand knowledge.entities contiendra les entités PERSON/LOCATION.
+                        # Day 1: participants stockés dans properties JSONB uniquement.
 
-                        # AC3: Publier événement calendar.event.detected dans Redis Streams
-                        await self.redis.xadd('calendar:event.detected', {
-                            'event_id': str(event_id),
-                            'email_id': email_id,
-                            'status': 'proposed',
-                            'title': event.title,
-                            'casquette': event.casquette.value,
-                            'start_datetime': event.start_datetime.isoformat(),
-                            'confidence': str(event.confidence)
+                        # H2: Collecter pour publication Redis APRES commit transaction
+                        created_events.append({
+                            "event_id": str(event_id),
+                            "email_id": email_id,
+                            "title": event.title,
+                            "casquette": event.casquette.value,
+                            "start_datetime": event.start_datetime.isoformat(),
+                            "confidence": str(event.confidence),
                         })
 
-                        logger.info(
-                            "calendar_event_published",
-                            event_id=str(event_id),
-                            stream="calendar:event.detected"
-                        )
+            # H2: Publier dans Redis Streams APRES commit transaction PG
+            for evt in created_events:
+                await self.redis.xadd('calendar:event.detected', {
+                    **evt,
+                    'status': 'proposed',
+                })
+                logger.info(
+                    "calendar_event_published",
+                    event_id=evt["event_id"],
+                    stream="calendar:event.detected"
+                )
 
         except Exception as e:
             logger.error(

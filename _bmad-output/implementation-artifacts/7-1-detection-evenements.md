@@ -1,6 +1,6 @@
 # Story 7.1: Detection Evenements
 
-Status: ready-for-dev
+Status: done
 
 ---
 

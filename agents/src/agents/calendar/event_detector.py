@@ -9,11 +9,12 @@ Story 7.1 AC7: Few-shot learning (5 exemples)
 
 import json
 import logging
+import asyncio
 import time
 from typing import Dict, Any, Optional
 from datetime import datetime, timezone
 
-from anthropic import Anthropic, RateLimitError, APIError
+from anthropic import AsyncAnthropic, RateLimitError, APIError
 from pydantic import ValidationError
 
 from agents.src.agents.calendar.models import (
@@ -27,7 +28,9 @@ from agents.src.agents.calendar.prompts import (
     build_event_detection_prompt,
     sanitize_email_text
 )
-from agents.src.tools.anonymize import anonymize_text, deanonymize_text
+from agents.src.tools.anonymize import anonymize_text
+from agents.src.middleware.trust import friday_action
+from agents.src.middleware.models import ActionResult
 
 
 # ============================================================================
@@ -54,7 +57,8 @@ logger = logging.getLogger(__name__)
 # CIRCUIT BREAKER STATE
 # ============================================================================
 
-_circuit_breaker_failures = 0  # Compteur echecs consecutifs
+_circuit_breaker_failures = 0
+_circuit_breaker_lock = asyncio.Lock()
 
 
 # ============================================================================
@@ -66,7 +70,7 @@ async def extract_events_from_email(
     email_id: Optional[str] = None,
     metadata: Optional[Dict[str, Any]] = None,
     current_date: Optional[str] = None,
-    anthropic_client: Optional[Anthropic] = None
+    anthropic_client: Optional[AsyncAnthropic] = None
 ) -> EventDetectionResult:
     """
     Extrait evenements depuis email via Claude Sonnet 4.5
@@ -100,16 +104,17 @@ async def extract_events_from_email(
     """
     global _circuit_breaker_failures
 
-    # Verifier circuit breaker
-    if _circuit_breaker_failures >= CIRCUIT_BREAKER_THRESHOLD:
-        logger.error(
-            "Circuit breaker OUVERT - %d echecs consecutifs",
-            _circuit_breaker_failures,
-            extra={"circuit_breaker_failures": _circuit_breaker_failures}
-        )
-        raise EventExtractionError(
-            f"Circuit breaker ouvert apres {_circuit_breaker_failures} echecs"
-        )
+    # Verifier circuit breaker (thread-safe)
+    async with _circuit_breaker_lock:
+        if _circuit_breaker_failures >= CIRCUIT_BREAKER_THRESHOLD:
+            logger.error(
+                "Circuit breaker OUVERT - %d echecs consecutifs",
+                _circuit_breaker_failures,
+                extra={"circuit_breaker_failures": _circuit_breaker_failures}
+            )
+            raise EventExtractionError(
+                f"Circuit breaker ouvert apres {_circuit_breaker_failures} echecs"
+            )
 
     # Initialiser client Anthropic si non fourni
     if anthropic_client is None:
@@ -117,7 +122,7 @@ async def extract_events_from_email(
         api_key = os.getenv("ANTHROPIC_API_KEY")
         if not api_key:
             raise EventExtractionError("ANTHROPIC_API_KEY manquante")
-        anthropic_client = Anthropic(api_key=api_key)
+        anthropic_client = AsyncAnthropic(api_key=api_key)
 
     # Date actuelle par defaut
     if current_date is None:
@@ -126,17 +131,16 @@ async def extract_events_from_email(
     # Heure actuelle
     current_time = datetime.now(timezone.utc).strftime("%H:%M:%S")
 
-    # Sanitize email text (protection prompt injection)
-    email_text_sanitized = sanitize_email_text(email_text)
-
-    # AC1: Anonymisation Presidio AVANT appel Claude (CRITIQUE RGPD)
+    # AC1: Anonymisation Presidio AVANT sanitize (NER sur texte brut)
     logger.debug(
         "Anonymisation email via Presidio",
-        extra={"email_id": email_id, "text_length": len(email_text_sanitized)}
+        extra={"email_id": email_id, "text_length": len(email_text)}
     )
 
     try:
-        email_anonymized, presidio_mapping = await anonymize_text(email_text_sanitized)
+        anonymization_result = await anonymize_text(email_text)
+        email_anonymized = anonymization_result.anonymized_text
+        presidio_mapping = anonymization_result.mapping
     except Exception as e:
         logger.error(
             "Echec anonymisation Presidio",
@@ -144,9 +148,12 @@ async def extract_events_from_email(
         )
         raise EventExtractionError(f"Erreur anonymisation Presidio: {e}")
 
+    # Sanitize APRES anonymisation (protection prompt injection)
+    email_sanitized = sanitize_email_text(email_anonymized)
+
     # Construire prompt avec few-shot examples (AC7)
     prompt = build_event_detection_prompt(
-        email_text=email_anonymized,
+        email_text=email_sanitized,
         current_date=current_date,
         current_time=current_time,
         timezone="Europe/Paris"
@@ -169,7 +176,7 @@ async def extract_events_from_email(
                 }
             )
 
-            response = anthropic_client.messages.create(
+            response = await anthropic_client.messages.create(
                 model=LLM_MODEL,
                 max_tokens=LLM_MAX_TOKENS,
                 temperature=LLM_TEMPERATURE,
@@ -328,6 +335,68 @@ async def extract_events_from_email(
 
 
 # ============================================================================
+# WRAPPER @friday_action (Story 1.6 - Trust Layer)
+# ============================================================================
+
+@friday_action(module="calendar", action="detect_event", trust_default="propose")
+async def detect_events_action(
+    email_text: str,
+    email_id: Optional[str] = None,
+    metadata: Optional[Dict[str, Any]] = None,
+    current_date: Optional[str] = None,
+    anthropic_client: Optional[AsyncAnthropic] = None,
+    **kwargs,
+) -> ActionResult:
+    """
+    Wrapper @friday_action pour extract_events_from_email
+
+    Trust level = propose (Day 1) : validation Telegram requise
+    Retourne ActionResult standardise pour le Trust Layer
+
+    Args:
+        email_text: Texte email brut
+        email_id: UUID email source
+        metadata: Metadata email (sender, subject, date)
+        current_date: Date actuelle ISO 8601
+        anthropic_client: Client Anthropic
+        **kwargs: Args injectes par decorateur (correction_rules, etc.)
+
+    Returns:
+        ActionResult avec confidence et reasoning
+    """
+    result = await extract_events_from_email(
+        email_text=email_text,
+        email_id=email_id,
+        metadata=metadata,
+        current_date=current_date,
+        anthropic_client=anthropic_client
+    )
+
+    subject = ""
+    if metadata:
+        subject = metadata.get("subject", "")[:50]
+
+    email_short = (email_id or "unknown")[:8]
+
+    events_summary = "; ".join(
+        f"{e.title} ({e.casquette.value})" for e in result.events_detected[:3]
+    )
+    if len(result.events_detected) > 3:
+        events_summary += f" ... +{len(result.events_detected) - 3}"
+
+    return ActionResult(
+        input_summary=f"Email {email_short}: {subject}",
+        output_summary=f"{len(result.events_detected)} evenement(s) detecte(s): {events_summary}" if result.events_detected else "Aucun evenement detecte",
+        confidence=result.confidence_overall,
+        reasoning=f"Detection via Claude Sonnet 4.5 - {result.processing_time_ms}ms - {len(result.events_detected)} events",
+        payload={
+            "events_detected": [e.model_dump() for e in result.events_detected],
+            "processing_time_ms": result.processing_time_ms,
+            "model_used": result.model_used,
+        },
+    )
+
+# ============================================================================
 # HELPERS
 # ============================================================================
 
@@ -362,5 +431,4 @@ async def _async_sleep(seconds: float):
     """
     Helper async sleep (asyncio.sleep)
     """
-    import asyncio
     await asyncio.sleep(seconds)

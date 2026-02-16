@@ -1,3 +1,1 @@
-"""
-Tests integration module calendar (Story 7.1)
-"""
+"""Tests integration pour Google Calendar."""

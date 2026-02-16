@@ -113,7 +113,7 @@ EVENT_DETECTION_EXAMPLES: List[Dict[str, Any]] = [
                     "location": "Chez Marie",
                     "participants": ["Marie", "Jean", "Sophie"],
                     "event_type": "personal",
-                    "casquette": "medecin",  # Contexte par defaut si ambigu
+                    "casquette": "personnel",
                     "confidence": 0.75,
                     "context": "Diner chez Marie samedi soir 20h"
                 }
@@ -140,11 +140,12 @@ Ta mission est d'extraire TOUS les evenements mentionnes dans un email et de les
 - Evenements personnels (diners, sorties, vacances)
 
 **Classification multi-casquettes (OBLIGATOIRE):**
-Tu DOIS classifier chaque evenement dans UNE des 3 casquettes suivantes:
+Tu DOIS classifier chaque evenement dans UNE des 4 casquettes suivantes:
 
 1. **medecin**: Consultations patients, gardes hopital, reunions service medical, formations continues medicales
 2. **enseignant**: Cours, TD, TP, reunions pedagogiques, examens, corrections, jurys
 3. **chercheur**: Reunions laboratoire, conferences scientifiques, soumissions articles, seminaires recherche
+4. **personnel**: Diners, sorties, vacances, rendez-vous personnels, famille, amis
 
 **Regles d'extraction:**
 - Si l'email mentionne plusieurs evenements distincts, extrais-les TOUS separement
@@ -179,7 +180,7 @@ Utilise ces placeholders dans participants si presents.
       "location": "Lieu si mentionne",
       "participants": ["Nom1", "Nom2"],
       "event_type": "medical|meeting|deadline|conference|personal",
-      "casquette": "medecin|enseignant|chercheur",
+      "casquette": "medecin|enseignant|chercheur|personnel",
       "confidence": 0.92,
       "context": "Snippet texte email source"
     }

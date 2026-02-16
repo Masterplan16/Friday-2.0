@@ -4,6 +4,7 @@ Tests unitaires pour migration 036 - Support EVENT entity_type
 Story 7.1 AC2: Validation contraintes CHECK, index, commentaires EVENT
 """
 
+import os
 import pytest
 import asyncpg
 from datetime import datetime, timezone
@@ -16,11 +17,7 @@ async def db_pool(event_loop):
     Fixture PostgreSQL pool pour tests migration 036
     """
     pool = await asyncpg.create_pool(
-        host="localhost",
-        port=5432,
-        user="friday",
-        password="friday_dev",
-        database="friday_test",
+        dsn=os.getenv("DATABASE_TEST_URL", "postgresql://friday:friday_dev@localhost:5432/friday_test"),
         min_size=1,
         max_size=5
     )

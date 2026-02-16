@@ -29,6 +29,7 @@ class Casquette(str, Enum):
     MEDECIN = "medecin"
     ENSEIGNANT = "enseignant"
     CHERCHEUR = "chercheur"
+    PERSONNEL = "personnel"
 
 
 class EventStatus(str, Enum):
@@ -81,7 +82,7 @@ class Event(BaseModel):
 
     casquette: Casquette = Field(
         ...,
-        description="Classification multi-casquettes (AC5: medecin|enseignant|chercheur)"
+        description="Classification multi-casquettes (AC5: medecin|enseignant|chercheur|personnel)"
     )
 
     confidence: float = Field(

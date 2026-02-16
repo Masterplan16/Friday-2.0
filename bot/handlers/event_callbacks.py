@@ -6,6 +6,7 @@ Gère les actions : Approve, Modify, Ignore pour événements détectés
 
 import logging
 import json
+import uuid
 from datetime import datetime
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
@@ -30,8 +31,8 @@ async def handle_event_approve(
     Actions :
     1. Update status proposed → confirmed dans knowledge.entities
     2. Publier événement calendar.event.confirmed dans Redis Streams
-    3. Éditer message Telegram : ✅ Événement ajouté à l'agenda
-    4. Story 7.2 : Déclencher sync Google Calendar (future)
+    3. Story 7.2: Sync Google Calendar (write_event_to_google)
+    4. Éditer message Telegram : ✅ Événement ajouté à l'agenda + lien Google Calendar
 
     Args:
         update: Update Telegram
@@ -39,6 +40,7 @@ async def handle_event_approve(
         db_pool: Pool PostgreSQL
 
     Story 7.1 AC3: Approve événement → status confirmed
+    Story 7.2 AC3: Write event to Google Calendar
     """
     query = update.callback_query
     await query.answer()
@@ -50,7 +52,7 @@ async def handle_event_approve(
         await query.edit_message_text("❌ Erreur : callback invalide")
         return
 
-    event_id = callback_parts[1]
+    event_id = uuid.UUID(callback_parts[1])
 
     try:
         # 1. Update status proposed → confirmed
@@ -90,20 +92,63 @@ async def handle_event_approve(
             redis_client = context.bot_data.get("redis_client")
             if redis_client:
                 await redis_client.xadd('calendar:event.confirmed', {
-                    'event_id': event_id,
+                    'event_id': str(event_id),
                     'status': 'confirmed',
                     'confirmed_at': datetime.utcnow().isoformat(),
                     'confirmed_by': str(query.from_user.id)
                 })
 
-        # 3. Éditer message Telegram
+        # 3. Story 7.2: Sync to Google Calendar
+        google_event_id = None
+        html_link = None
+        casquette = event_props.get("casquette", "médecin")
+
+        sync_manager = context.bot_data.get("google_calendar_sync")
+        if sync_manager:
+            try:
+                google_event_id = await sync_manager.write_event_to_google(str(event_id))
+
+                # Récupérer le html_link mis à jour
+                updated_row = await db_pool.fetchrow(
+                    "SELECT properties FROM knowledge.entities WHERE id = $1",
+                    event_id
+                )
+                html_link = updated_row["properties"].get("html_link")
+
+                logger.info(
+                    "event_synced_to_google",
+                    event_id=event_id,
+                    google_event_id=google_event_id,
+                    casquette=casquette
+                )
+            except Exception as e:
+                logger.error(
+                    "google_calendar_sync_failed",
+                    event_id=event_id,
+                    error=str(e),
+                    exc_info=True
+                )
+                # Continue même si sync Google Calendar échoue
+
+        # 4. Éditer message Telegram
         start_datetime = event_props.get("start_datetime", "date inconnue")
-        await query.edit_message_text(
+
+        message = (
             f"✅ <b>Événement ajouté à l'agenda</b>\n\n"
             f"<b>{event_name}</b>\n"
-            f"📆 {start_datetime}\n\n"
-            f"<i>Approuvé par {query.from_user.first_name}</i>",
-            parse_mode="HTML"
+            f"📆 {start_datetime}\n"
+            f"📍 Calendrier : {casquette.capitalize()}\n\n"
+        )
+
+        if html_link:
+            message += f"🔗 <a href='{html_link}'>Voir dans Google Calendar</a>\n\n"
+
+        message += f"<i>Approuvé par {query.from_user.first_name}</i>"
+
+        await query.edit_message_text(
+            message,
+            parse_mode="HTML",
+            disable_web_page_preview=True
         )
 
     except Exception as e:
@@ -152,7 +197,7 @@ async def handle_event_modify(
         await query.edit_message_text("❌ Erreur : callback invalide")
         return
 
-    event_id = callback_parts[1]
+    event_id = uuid.UUID(callback_parts[1])
 
     # Story 7.1 simplification : Éditer message avec bouton "Annuler modification"
     # Full dialogue Telegram = Story 7.3 (avancé)
@@ -208,7 +253,7 @@ async def handle_event_ignore(
         await query.edit_message_text("❌ Erreur : callback invalide")
         return
 
-    event_id = callback_parts[1]
+    event_id = uuid.UUID(callback_parts[1])
 
     try:
         # 1. Update status proposed → cancelled
@@ -290,7 +335,7 @@ async def handle_event_back(
         logger.error("Invalid callback_data", callback_data=query.data)
         return
 
-    event_id = callback_parts[1]
+    event_id = uuid.UUID(callback_parts[1])
 
     try:
         # Récupérer données événement

@@ -236,10 +236,10 @@ async def test_event_detection_logs_sanitized(mock_anthropic_client, caplog):
     mock_anthropic_client.messages.create.return_value = mock_response
 
     # Mock Presidio avec PII mapping
-    mock_anonymize = AsyncMock(return_value=(
-        "RDV PERSON_1 jeudi",
-        {"PERSON_1": "Dr Dupont"}  # PII réelle
-    ))
+    mock_anon_result2 = Mock()
+    mock_anon_result2.anonymized_text = "RDV PERSON_1 jeudi"
+    mock_anon_result2.mapping = {"PERSON_1": "Dr Dupont"}  # PII réelle
+    mock_anonymize = AsyncMock(return_value=mock_anon_result2)
 
     with patch('agents.src.agents.calendar.event_detector.anonymize_text', mock_anonymize):
         await extract_events_from_email(

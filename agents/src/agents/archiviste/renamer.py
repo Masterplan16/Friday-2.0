@@ -121,7 +121,7 @@ class DocumentRenamer:
                 confidence=metadata.confidence,
                 reasoning=f"Renommage {metadata.doc_type} de {metadata.emitter} ({metadata.amount}EUR)",
                 payload={
-                    "rename_result": rename_result,
+                    "rename_result": rename_result.model_dump(mode="json"),
                     "original_filename": original_filename,
                     "new_filename": new_filename,
                 },

@@ -29,7 +29,7 @@ RUN pip install --no-cache-dir pytest pytest-asyncio pytest-cov httpx
 
 COPY . .
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+CMD ["uvicorn", "run:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
 
 # ============================================
 # Production stage - optimized
@@ -48,4 +48,4 @@ USER appuser
 
 EXPOSE 8000
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]
+CMD ["uvicorn", "run:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]

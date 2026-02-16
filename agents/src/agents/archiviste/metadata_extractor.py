@@ -73,7 +73,9 @@ Réponds UNIQUEMENT avec le JSON, sans texte avant ou après.
 """
 
     @friday_action(module="archiviste", action="extract_metadata", trust_default="propose")
-    async def extract_metadata(self, ocr_result: OCRResult, filename: str, **kwargs) -> ActionResult:
+    async def extract_metadata(
+        self, ocr_result: OCRResult, filename: str, **kwargs
+    ) -> ActionResult:
         """
         Extraire métadonnées depuis résultat OCR (AC3, AC6).
 
@@ -181,8 +183,16 @@ Réponds UNIQUEMENT avec le JSON, sans texte avant ou après.
                     confidence=global_confidence,
                     reasoning=metadata.reasoning,
                     payload={
-                        "metadata": metadata.model_dump(mode='json') if hasattr(metadata, 'model_dump') else metadata.dict(),
-                        "ocr_result": ocr_result.model_dump(mode='json') if hasattr(ocr_result, 'model_dump') else ocr_result.dict(),
+                        "metadata": (
+                            metadata.model_dump(mode="json")
+                            if hasattr(metadata, "model_dump")
+                            else metadata.dict()
+                        ),
+                        "ocr_result": (
+                            ocr_result.model_dump(mode="json")
+                            if hasattr(ocr_result, "model_dump")
+                            else ocr_result.dict()
+                        ),
                         "filename": filename,
                         "anonymized_text": anonymized_text,
                     },

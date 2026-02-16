@@ -20,10 +20,9 @@ from agents.src.core.context_provider import ContextProvider
 from agents.src.core.heartbeat_engine import HeartbeatEngine
 from agents.src.core.llm_decider import LLMDecider
 from anthropic import AsyncAnthropic
+from auth import get_current_user
 from fastapi import APIRouter, Depends, HTTPException, Request
 from redis.asyncio import Redis
-
-from auth import get_current_user
 
 logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/api/v1/heartbeat", tags=["heartbeat"])

@@ -1,6 +1,6 @@
 # Story 7.4: Création Événements via Message Naturel Telegram
 
-Status: ready-for-dev
+Status: review
 
 ---
 
@@ -444,7 +444,7 @@ async def test_e2e_natural_message_to_google_calendar(real_telegram_bot, real_go
 
 ### Task 1 : Module Extraction Événement Message (AC1)
 
-- [ ] 1.1 : Créer `agents/src/agents/calendar/message_event_detector.py` (~400 lignes)
+- [x] 1.1 : Créer `agents/src/agents/calendar/message_event_detector.py` (~400 lignes)
   - Fonction `extract_event_from_message(message, user_id, current_date)` :
     - Récupère contexte casquette via `ContextManager.get_current_context()`
     - Anonymise message via `anonymize_text()` (Story 1.5)
@@ -463,7 +463,7 @@ async def test_e2e_natural_message_to_google_calendar(real_telegram_bot, real_go
     - Support timezone Europe/Paris
   - Circuit breaker Claude API (retry 3x, rate limit handling)
   - Logging structlog sanitize PII (IDs seulement)
-- [ ] 1.2 : Créer `agents/src/agents/calendar/message_prompts.py` (~200 lignes)
+- [x] 1.2 : Créer `agents/src/agents/calendar/message_prompts.py` (~200 lignes)
   - `MESSAGE_EVENT_EXTRACTION_PROMPT` : Template extraction
     - Few-shot 7 exemples (réutiliser Story 7.1 + 2 nouveaux)
     - Format JSON identique Story 7.1

@@ -13,21 +13,20 @@ AC2: Pipeline Archiviste complet
 AC6: Error handling & retry
 """
 
+import asyncio
+import hashlib
 import json
 import os
 import time
-import hashlib
-import asyncio
-from pathlib import Path
-from typing import Optional, List
+from collections import deque
 from dataclasses import dataclass
 from datetime import datetime
-from collections import deque
+from pathlib import Path
+from typing import List, Optional
 
-import structlog
 import asyncpg
 import redis.asyncio as aioredis
-
+import structlog
 from agents.src.agents.archiviste.batch_shared import (
     is_system_file,
 )

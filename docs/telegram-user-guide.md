@@ -1722,6 +1722,107 @@ Vérifiez les credentials OAuth2 et la config.
 
 ---
 
+## 📝 Création Événements via Message Naturel (Story 7.4)
+
+### Message naturel
+
+Envoyez un message en langage naturel dans le topic **💬 Chat & Proactive** :
+
+```
+Vous : Ajoute consultation Dr Martin demain 14h
+```
+
+Friday détecte l'intention, extrait les détails et propose l'événement dans **Topic 🤖 Actions & Validations** :
+
+```
+📅 Nouvel événement proposé
+
+Titre : Consultation Dr Martin
+Date : Lundi 17 février 2026, 14h00
+Casquette : 🩺 Médecin
+Confidence : 88%
+Source : Message Telegram
+
+[✅ Créer]  [✏️ Modifier]  [❌ Annuler]
+```
+
+**Exemples de messages supportés** :
+- "RDV demain 14h"
+- "Cours L2 anatomie lundi 10h amphi B"
+- "Séminaire dans 2 semaines"
+- "Deadline soumission article 28 février"
+- "Note garde week-end prochain"
+
+### Commande /creer_event
+
+Pour une création guidée étape par étape :
+
+```
+Vous : /creer_event
+
+Friday : 📅 Création d'événement guidée
+         Étape 1/6 : Quel est le titre de l'événement ?
+
+Vous : Consultation Dr Martin
+
+Friday : Étape 2/6 : Quelle date ? (format: JJ/MM/AAAA ou JJ/MM)
+
+Vous : 17/02/2026
+
+Friday : Étape 3/6 : Heure de début ? (format: HH:MM)
+
+Vous : 14:00
+
+Friday : Étape 4/6 : Heure de fin ? (format: HH:MM, ou '.' pour passer)
+
+Vous : 15:00
+
+Friday : Étape 5/6 : Lieu ? (ou '.' pour passer)
+
+Vous : Cabinet médical
+
+Friday : Étape 6/6 : Participants ? (séparés par virgule, ou '.' pour passer)
+
+Vous : Dr Martin
+
+Friday : 📋 Résumé de l'événement
+         Titre : Consultation Dr Martin
+         Date : Lundi 17 février 2026, 14h00
+         Fin : 15:00
+         Lieu : Cabinet médical
+         Participants : Dr Martin
+
+         [✅ Créer]  [🔄 Recommencer]  [❌ Annuler]
+```
+
+### Modification avant création
+
+Cliquez **[✏️ Modifier]** pour modifier un champ :
+
+```
+Friday : 📝 Modification événement
+         Titre : Consultation Dr Martin
+         Date : Lundi 17 février 2026, 14h00
+         Lieu : Cabinet médical
+
+         Quel champ modifier ?
+         [📝 Titre] [📅 Date] [⏰ Heure]
+         [📍 Lieu] [👤 Participants]
+         [✅ Valider] [❌ Annuler]
+```
+
+### Après création
+
+Quand vous cliquez **[✅ Créer]** :
+1. Événement confirmé dans PostgreSQL
+2. Synchronisé vers Google Calendar (si configuré)
+3. Détection de conflits immédiate
+4. Notification confirmation dans Topic Actions
+
+Si un conflit est détecté, alerte dans **Topic 🚨 System & Alerts**.
+
+---
+
 ## 🗓️ Multi-casquettes & Conflits Calendrier (Story 7.3)
 
 ### Qu'est-ce que c'est ?

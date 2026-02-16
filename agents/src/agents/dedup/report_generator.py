@@ -18,7 +18,6 @@ from pathlib import Path
 from typing import Optional
 
 import structlog
-
 from agents.src.agents.dedup.models import DedupGroup, ScanResult
 from agents.src.agents.dedup.priority_engine import PriorityEngine
 

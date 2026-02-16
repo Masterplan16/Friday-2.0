@@ -642,15 +642,16 @@ Prérequis à tout. Infrastructure, Trust Layer, sécurité RGPD, Telegram, Self
 | **6** | 6.1-6.4 | Mémoire Éternelle & Migration 110k emails | Epic 1 |
 | **7** | 7.1-7.3 | Agenda & Calendrier Multi-casquettes | Epic 1 + 2 |
 
-### Epic 7 : Agenda & Calendrier Multi-casquettes (3 stories | 12 FRs)
+### Epic 7 : Agenda & Calendrier Multi-casquettes (4 stories | 19 FRs)
 
-Gestion des 3 rôles professionnels (médecin/enseignant/chercheur) et détection automatique des conflits calendrier.
+Gestion des 3 rôles professionnels (médecin/enseignant/chercheur), détection automatique des conflits calendrier, et création événements via message naturel Telegram.
 
 | Story | Titre | Status | Fichiers clés |
 |-------|-------|--------|---------------|
 | **7.1** | Détection Événements Calendrier | **TERMINÉE** ✅ | `agents/src/agents/calendar/event_detector.py`, `prompts.py`, `models.py` |
 | **7.2** | Sync Google Calendar Bidirectionnelle | **TERMINÉE** ✅ | Voir ci-dessous |
 | **7.3** | Multi-casquettes & Conflits Calendrier | **TERMINÉE** ✅ | Voir ci-dessous |
+| **7.4** | Création Événements Message Naturel | **review** | Voir ci-dessous |
 
 #### Story 7.2 : Sync Google Calendar Bidirectionnelle (TERMINÉE ✅ 2026-02-16)
 
@@ -764,6 +765,54 @@ Gestion des 3 rôles professionnels (médecin/enseignant/chercheur) et détectio
 - Story 7.1 Event Detection (pour événements calendrier)
 
 **Voir** : [docs/multi-casquettes-conflicts.md](docs/multi-casquettes-conflicts.md) pour guide complet
+
+#### Story 7.4 : Création Événements Message Naturel (review 2026-02-16)
+
+**Composants implémentés** (~2,800 lignes, 91+ tests) :
+
+**Message Event Extraction** (2 fichiers, ~550 lignes) :
+- `agents/src/agents/calendar/message_event_detector.py` (~570 lignes) : Extraction événement via Claude + intent detection regex + circuit breaker + ContextManager integration
+- `agents/src/agents/calendar/message_prompts.py` (~200 lignes) : 7 few-shot examples + system prompt + casquette context injection
+
+**Telegram Handlers** (4 fichiers, ~1,200 lignes) :
+- `bot/handlers/natural_event_creation.py` (~180 lignes) : Handler message naturel + création entité EVENT proposed
+- `bot/handlers/event_proposal_notifications.py` (~150 lignes) : Notification inline buttons [Créer][Modifier][Annuler]
+- `bot/handlers/event_creation_callbacks.py` (~350 lignes) : Callbacks création/annulation + Google Calendar sync + détection conflits
+- `bot/handlers/create_event_command.py` (~450 lignes) : Commande /creer_event guidée 6 étapes + state machine Redis
+- `bot/handlers/event_modification_callbacks.py` (~350 lignes) : Menu modification champs + validation
+
+**Tests** (7 fichiers, ~1,500 lignes) :
+- `tests/unit/agents/calendar/test_message_event_detector.py` (18 tests)
+- `tests/unit/agents/calendar/test_context_integration.py` (6 tests)
+- `tests/unit/bot/test_natural_event_creation.py` (12 tests)
+- `tests/unit/bot/test_event_creation_callbacks.py` (14 tests)
+- `tests/unit/bot/test_create_event_command.py` (24 tests)
+- `tests/unit/bot/test_event_modification_callbacks.py` (12 tests)
+- `tests/e2e/calendar/test_natural_event_creation_e2e.py` (5 tests)
+
+**Documentation** (2 fichiers) :
+- `docs/natural-event-creation-spec.md` : Spec technique complète
+- `docs/telegram-user-guide.md` : Section création événements ajoutée
+
+**Fonctionnalités** :
+- Message naturel Telegram -> extraction Claude Sonnet 4.5 -> proposition inline buttons
+- Commande /creer_event guidée 6 étapes (state machine Redis, TTL 10 min)
+- Modification événement proposé (menu inline buttons, champs individuels)
+- Anonymisation Presidio AVANT appel Claude (RGPD)
+- Integration ContextManager Story 7.3 (5 règles priorité casquette)
+- Sync Google Calendar après confirmation (Story 7.2 reuse)
+- Détection conflits immédiate après création (Story 7.3 Allen's algebra)
+- Circuit breaker Claude API (3 échecs max)
+- Intent detection regex rapide (pas d'appel LLM si pas d'intention)
+
+**Dépendances** :
+- Story 7.1 Event Detection (models, prompts)
+- Story 7.2 Google Calendar Sync (write_event_to_google)
+- Story 7.3 Multi-casquettes & Conflits (ContextManager, conflict_detector)
+- Story 1.5 Presidio (anonymize_text)
+- Story 1.6 Trust Layer (@friday_action)
+
+**Voir** : [docs/natural-event-creation-spec.md](docs/natural-event-creation-spec.md) pour spec technique
 
 ### Séquence d'implémentation suggérée
 

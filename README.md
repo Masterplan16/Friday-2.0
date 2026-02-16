@@ -458,6 +458,50 @@ Context Manager (5 règles priorité)
 
 ---
 
+### 📅 Création Événements via Message Naturel (Story 7.4) ✅
+
+**Friday crée des événements d'agenda directement depuis un message Telegram naturel**
+
+| Feature | Description |
+|---------|-------------|
+| **Message naturel** | "Ajoute réunion demain 14h avec Dr Dupont" → Événement proposé |
+| **Extraction LLM** | Claude Sonnet 4.5 : titre, date, heure, lieu, participants, casquette |
+| **Dates relatives** | "demain", "lundi prochain", "dans 2 semaines" converties automatiquement |
+| **Commande guidée** | `/creer_event` : dialogue 6 étapes (titre, date, heure, fin, lieu, participants) |
+| **Modification** | Inline buttons [Titre] [Date] [Heure] [Lieu] [Participants] [Valider] |
+| **RGPD** | Presidio anonymisation AVANT appel Claude (mapping restauré participants) |
+| **Confidence** | Seuil 0.70 : en dessous → message reformulation + fallback `/creer_event` |
+| **Trust Layer** | trust=propose : validation Telegram requise avant création |
+| **Google Calendar** | Sync automatique après confirmation (Story 7.2 reuse) |
+| **Conflits** | Détection immédiate après création (Story 7.3 Allen's algebra) |
+
+**Workflow message naturel** :
+
+```
+Message Telegram → Détection intention (regex)
+  ↓
+  Presidio anonymisation (RGPD)
+  ↓
+  Claude Sonnet 4.5 (extraction JSON)
+  ↓
+  Entité EVENT (status=proposed) → PostgreSQL
+  ↓
+  Notification Topic Actions [Créer] [Modifier] [Annuler]
+  ↓
+  [Créer] → status=confirmed → Google Calendar sync → Détection conflits
+```
+
+**Commandes Telegram** :
+- Message naturel : "Ajoute consultation demain 10h" → Extraction automatique
+- `/creer_event` — Saisie guidée 6 étapes (fallback)
+- Inline buttons : [Créer] [Modifier] [Annuler] sur proposition
+
+**Tests** : 91 tests (18 extraction + 12 handler + 14 callbacks + 24 commande + 12 modification + 6 contexte + 5 E2E)
+
+**Documentation** : [docs/natural-event-creation-spec.md](docs/natural-event-creation-spec.md)
+
+---
+
 ## 🛡️ Self-Healing ✅
 
 Friday 2.0 intègre un système de **self-healing automatique** en 4 tiers pour garantir une disponibilité 24/7 sans intervention manuelle.

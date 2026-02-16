@@ -150,17 +150,19 @@ async def extract_event_from_message(
     anthropic_client: Optional[AsyncAnthropic] = None,
     db_pool: Optional[asyncpg.Pool] = None,
     current_casquette: Optional["Casquette"] = None,
+    context_manager: Optional[Any] = None,
 ) -> MessageEventResult:
     """
     Extrait un evenement depuis un message Telegram via Claude Sonnet 4.5.
 
     Pipeline:
-    1. Anonymisation Presidio (AC1 - RGPD)
-    2. Sanitize prompt injection
-    3. Appel Claude avec few-shot prompt (7 exemples)
-    4. Parsing JSON response
-    5. Validation Pydantic Event
-    6. Deanonymisation participants
+    1. Fetch contexte casquette via ContextManager (AC5)
+    2. Anonymisation Presidio (AC1 - RGPD)
+    3. Sanitize prompt injection
+    4. Appel Claude avec few-shot prompt (7 exemples)
+    5. Parsing JSON response
+    6. Validation Pydantic Event
+    7. Deanonymisation participants
 
     Args:
         message: Message Telegram brut (peut contenir PII)
@@ -168,7 +170,8 @@ async def extract_event_from_message(
         current_date: Date actuelle ISO 8601 (auto si None)
         anthropic_client: Client Anthropic (auto-cree si None)
         db_pool: Pool asyncpg pour fetch contexte casquette
-        current_casquette: Casquette actuelle (si None, fetch depuis DB)
+        current_casquette: Casquette actuelle (si None, fetch depuis ContextManager ou DB)
+        context_manager: ContextManager Story 7.3 (si fourni, priorite sur db_pool)
 
     Returns:
         MessageEventResult avec event extrait et confidence
@@ -205,12 +208,35 @@ async def extract_event_from_message(
 
     current_time = datetime.now(timezone.utc).strftime("%H:%M:%S")
 
-    # Fetch casquette contexte si non fournie (Story 7.3 AC1)
+    # AC5: Fetch casquette contexte via ContextManager (Story 7.3 - 5 regles priorite)
+    context_source = None
+    if current_casquette is None and context_manager is not None:
+        try:
+            user_context = await context_manager.get_current_context()
+            current_casquette = user_context.casquette
+            context_source = user_context.source.value if user_context.source else "unknown"
+            if current_casquette:
+                logger.info(
+                    "Context casquette from ContextManager",
+                    extra={
+                        "user_id": user_id,
+                        "casquette": current_casquette.value,
+                        "source": context_source,
+                    },
+                )
+        except Exception as e:
+            logger.warning(
+                "ContextManager failed, falling back to DB query",
+                extra={"error": str(e)},
+            )
+
+    # Fallback: fetch direct depuis DB si ContextManager non disponible
     if current_casquette is None and db_pool is not None:
         current_casquette = await _fetch_current_casquette(db_pool)
+        context_source = "db_fallback"
         if current_casquette:
             logger.debug(
-                "Context casquette fetched for message extraction",
+                "Context casquette fetched via DB fallback",
                 extra={"user_id": user_id, "casquette": current_casquette.value},
             )
 
@@ -398,7 +424,9 @@ async def extract_event_from_message(
             "user_id": user_id,
             "event_detected": True,
             "event_title": event.title,
-            "casquette": event.casquette.value,
+            "casquette_input": current_casquette.value if current_casquette else "none",
+            "casquette_output": event.casquette.value,
+            "context_source": context_source or "explicit",
             "confidence": confidence,
             "processing_time_ms": processing_time_ms,
         },

@@ -113,7 +113,7 @@ development_status:
   epic-2-retrospective: done  # 2026-02-15: Retrospective Epic 2 completee - Pipeline email 9/9 stories, ROI $187/an, Decision D25 success, 2 action items
 
   # Epic 3: Archiviste & Recherche Documentaire (8 stories | 11+ FRs)
-  epic-3: in-progress
+  epic-3: done  # 2026-02-16: 8/8 stories done, retrospective done, code deployed VPS, 120+ issues fixes, Decision D23/D19 validated
   3-1-ocr-renommage-intelligent: done  # 2026-02-15: CODE REVIEW ADVERSARIAL COMPLETE ✅ - 14 issues fixés (4C+4H+3M+3L). C1 PG INSERT, C2 3 fichiers tests, C4 datetime crash, H1 rename fail-explicit, H4 double sanitization, M1 dot notation Redis. 55 tests (9+9+11+6+11+7+2), 20 fichiers (16 créés + 4 modifiés). 7/7 AC validés.
   3-2-classement-arborescence: done  # 2026-02-16: CODE REVIEW ADVERSARIAL (Opus 4.6) — 16 issues fixés (4C+5H+4M+3L) + tasks restantes complétées. Notifications Telegram (proposal/success/error), inline buttons classification (approve/correct/reject/reclassify/finance), /arbo command (display/stats/add/remove), E2E tests (20 docs dataset, anti-contamination AC6, latence <10s), docs archiviste-classification-spec.md, monitoring latence médiane. 7/7 AC validés. 10 fichiers créés, 5 modifiés.
   3-3-recherche-semantique-documents: done  # 2026-02-16: IMPLEMENTATION COMPLETE. Code review 22 issues fixes. Post-review: @friday_action decorator applique, desktop_search_consumer.py cree, 76 tests total (15+11+10+16+14+2+8), 3 docs (desktop-search-claude-cli, benchmark-pgvector, telegram-user-guide section). 18 fichiers crees, 5 modifies. 7/7 AC valides.

@@ -13,28 +13,27 @@ Tests :
 - Trust Layer ActionResult
 """
 
-import pytest
 import json
-from datetime import datetime, date, time
+from datetime import date, datetime, time
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
-from telegram import Update, CallbackQuery, User, Message, Chat
-from telegram.ext import ContextTypes
-
+import pytest
 from bot.handlers.conflict_callbacks import (
     handle_conflict_button,
     handle_conflict_cancel,
-    handle_conflict_move,
     handle_conflict_ignore,
+    handle_conflict_move,
     handle_move_date_response,
     handle_move_time_response,
 )
-
+from telegram import CallbackQuery, Chat, Message, Update, User
+from telegram.ext import ContextTypes
 
 # ============================================================================
 # Fixtures
 # ============================================================================
+
 
 @pytest.fixture
 def mock_db_pool():
@@ -100,7 +99,7 @@ def mock_context(mock_db_pool, mock_redis_client):
     context.bot_data = {
         "db_pool": db_pool,
         "redis_client": mock_redis_client,
-        "google_calendar_sync": AsyncMock()
+        "google_calendar_sync": AsyncMock(),
     }
 
     return context
@@ -109,6 +108,7 @@ def mock_context(mock_db_pool, mock_redis_client):
 # ============================================================================
 # Tests Annulation Événement (AC6)
 # ============================================================================
+
 
 @pytest.mark.asyncio
 async def test_conflict_cancel_success(mock_telegram_update, mock_context, mock_db_pool):
@@ -120,14 +120,16 @@ async def test_conflict_cancel_success(mock_telegram_update, mock_context, mock_
     db_pool, conn = mock_db_pool
 
     # Mock DB responses
-    conn.fetchrow = AsyncMock(return_value={
-        "name": "Consultation Dr Dupont",
-        "properties": {
-            "google_event_id": "google_123",
-            "casquette": "medecin",
-            "start_datetime": "2026-02-17T14:30:00"
+    conn.fetchrow = AsyncMock(
+        return_value={
+            "name": "Consultation Dr Dupont",
+            "properties": {
+                "google_event_id": "google_123",
+                "casquette": "medecin",
+                "start_datetime": "2026-02-17T14:30:00",
+            },
         }
-    })
+    )
 
     conn.execute = AsyncMock(return_value="UPDATE 1")
 
@@ -153,13 +155,12 @@ async def test_conflict_cancel_success(mock_telegram_update, mock_context, mock_
 
     # Assertions: Google Calendar deleted
     sync_manager.delete_event_from_google.assert_called_once_with(
-        google_event_id="google_123",
-        casquette="medecin"
+        google_event_id="google_123", casquette="medecin"
     )
 
     # Assertions: Redis Streams published
     redis_client.xadd.assert_called_once()
-    assert redis_client.xadd.call_args[0][0] == 'calendar:conflict.resolved'
+    assert redis_client.xadd.call_args[0][0] == "calendar:conflict.resolved"
 
 
 @pytest.mark.asyncio
@@ -184,6 +185,7 @@ async def test_conflict_cancel_event_not_found(mock_telegram_update, mock_contex
 # Tests Déplacement Événement (AC6)
 # ============================================================================
 
+
 @pytest.mark.asyncio
 async def test_conflict_move_step1_start_dialogue(mock_telegram_update, mock_context, mock_db_pool):
     """Test AC6: Déplacement step 1 → demande nouvelle date."""
@@ -193,12 +195,12 @@ async def test_conflict_move_step1_start_dialogue(mock_telegram_update, mock_con
     query.data = f"conflict:move:{event_id}"
 
     db_pool, conn = mock_db_pool
-    conn.fetchrow = AsyncMock(return_value={
-        "name": "Cours L2 Anatomie",
-        "properties": {
-            "start_datetime": "2026-02-17T14:00:00"
+    conn.fetchrow = AsyncMock(
+        return_value={
+            "name": "Cours L2 Anatomie",
+            "properties": {"start_datetime": "2026-02-17T14:00:00"},
         }
-    })
+    )
 
     redis_client = mock_context.bot_data["redis_client"]
     redis_client.set = AsyncMock()
@@ -207,7 +209,11 @@ async def test_conflict_move_step1_start_dialogue(mock_telegram_update, mock_con
 
     # Assertions: État Redis créé
     redis_client.set.assert_called_once()
-    state_key, state_json, ex = redis_client.set.call_args[0][0], redis_client.set.call_args[0][1], redis_client.set.call_args[1]["ex"]
+    state_key, state_json, ex = (
+        redis_client.set.call_args[0][0],
+        redis_client.set.call_args[0][1],
+        redis_client.set.call_args[1]["ex"],
+    )
 
     assert state_key == f"state:conflict:move:{query.from_user.id}"
     assert ex == 300  # TTL 5 minutes
@@ -241,7 +247,7 @@ async def test_conflict_move_step2_validate_date(mock_telegram_message_update, m
         "event_id": str(uuid4()),
         "step": "waiting_date",
         "event_name": "Consultation Dr Dupont",
-        "original_start": "2026-02-17T14:30:00"
+        "original_start": "2026-02-17T14:30:00",
     }
     redis_client.get = AsyncMock(return_value=json.dumps(state))
     redis_client.set = AsyncMock()
@@ -284,7 +290,7 @@ async def test_conflict_move_step2_invalid_date_format(mock_telegram_message_upd
         "event_id": str(uuid4()),
         "step": "waiting_date",
         "event_name": "Consultation",
-        "original_start": "2026-02-17T14:30:00"
+        "original_start": "2026-02-17T14:30:00",
     }
     redis_client.get = AsyncMock(return_value=json.dumps(state))
 
@@ -301,7 +307,9 @@ async def test_conflict_move_step2_invalid_date_format(mock_telegram_message_upd
 
 
 @pytest.mark.asyncio
-async def test_conflict_move_step3_finalize(mock_telegram_message_update, mock_context, mock_db_pool):
+async def test_conflict_move_step3_finalize(
+    mock_telegram_message_update, mock_context, mock_db_pool
+):
     """Test AC6: Déplacement step 3 → finalisation (UPDATE DB + PATCH Google)."""
     update = mock_telegram_message_update
     message = update.message
@@ -321,7 +329,7 @@ async def test_conflict_move_step3_finalize(mock_telegram_message_update, mock_c
         "step": "waiting_time",
         "new_date": "20/02/2026",
         "event_name": "Consultation Dr Dupont",
-        "original_start": "2026-02-17T14:30:00"
+        "original_start": "2026-02-17T14:30:00",
     }
     redis_client.get = AsyncMock(return_value=json.dumps(state))
     redis_client.set = AsyncMock()
@@ -329,15 +337,17 @@ async def test_conflict_move_step3_finalize(mock_telegram_message_update, mock_c
     redis_client.xadd = AsyncMock()
 
     # Mock DB
-    conn.fetchrow = AsyncMock(return_value={
-        "name": "Consultation Dr Dupont",
-        "properties": {
-            "google_event_id": "google_123",
-            "casquette": "medecin",
-            "start_datetime": "2026-02-17T14:30:00",
-            "end_datetime": "2026-02-17T15:30:00"
+    conn.fetchrow = AsyncMock(
+        return_value={
+            "name": "Consultation Dr Dupont",
+            "properties": {
+                "google_event_id": "google_123",
+                "casquette": "medecin",
+                "start_datetime": "2026-02-17T14:30:00",
+                "end_datetime": "2026-02-17T15:30:00",
+            },
         }
-    })
+    )
     conn.execute = AsyncMock()
 
     # Mock Google Calendar sync
@@ -358,7 +368,7 @@ async def test_conflict_move_step3_finalize(mock_telegram_message_update, mock_c
 
     # Assertions: Redis Streams published
     redis_client.xadd.assert_called_once()
-    assert redis_client.xadd.call_args[0][0] == 'calendar:conflict.resolved'
+    assert redis_client.xadd.call_args[0][0] == "calendar:conflict.resolved"
 
     # Assertions: État Redis supprimé
     redis_client.delete.assert_called_once_with(state_key)
@@ -388,7 +398,7 @@ async def test_conflict_move_step3_invalid_time_format(mock_telegram_message_upd
         "step": "waiting_time",
         "new_date": "20/02/2026",
         "event_name": "Consultation",
-        "original_start": "2026-02-17T14:30:00"
+        "original_start": "2026-02-17T14:30:00",
     }
     redis_client.get = AsyncMock(return_value=json.dumps(state))
 
@@ -407,6 +417,7 @@ async def test_conflict_move_step3_invalid_time_format(mock_telegram_message_upd
 # ============================================================================
 # Tests Ignorer Conflit (AC6)
 # ============================================================================
+
 
 @pytest.mark.asyncio
 async def test_conflict_ignore_success(mock_telegram_update, mock_context, mock_db_pool):

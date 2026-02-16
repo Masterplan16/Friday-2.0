@@ -9,11 +9,7 @@ Tests couvrant :
 """
 
 import pytest
-from services.gateway.healthcheck import (
-    HealthChecker,
-    SERVICE_CHECKS,
-    CRITICAL_SERVICES,
-)
+from services.gateway.healthcheck import CRITICAL_SERVICES, SERVICE_CHECKS, HealthChecker
 
 
 class TestServiceConfiguration:
@@ -21,15 +17,15 @@ class TestServiceConfiguration:
 
     def test_presidio_analyzer_in_service_checks(self):
         """Presidio Analyzer doit être dans SERVICE_CHECKS (Story 1.5)"""
-        assert "presidio_analyzer" in SERVICE_CHECKS, (
-            "presidio_analyzer manquant dans SERVICE_CHECKS (requis Story 1.5)"
-        )
+        assert (
+            "presidio_analyzer" in SERVICE_CHECKS
+        ), "presidio_analyzer manquant dans SERVICE_CHECKS (requis Story 1.5)"
 
     def test_presidio_anonymizer_in_service_checks(self):
         """Presidio Anonymizer doit être dans SERVICE_CHECKS (Story 1.5)"""
-        assert "presidio_anonymizer" in SERVICE_CHECKS, (
-            "presidio_anonymizer manquant dans SERVICE_CHECKS (requis Story 1.5)"
-        )
+        assert (
+            "presidio_anonymizer" in SERVICE_CHECKS
+        ), "presidio_anonymizer manquant dans SERVICE_CHECKS (requis Story 1.5)"
 
     def test_presidio_services_have_correct_config(self):
         """Vérifier que les services Presidio ont les bonnes URLs"""
@@ -80,9 +76,9 @@ class TestServiceConfiguration:
             assert "url" in config, f"{service_name} manque 'url'"
 
             # Type doit être 'http' pour tous les services actuels
-            assert config["type"] == "http", (
-                f"{service_name} a type '{config['type']}' au lieu de 'http'"
-            )
+            assert (
+                config["type"] == "http"
+            ), f"{service_name} a type '{config['type']}' au lieu de 'http'"
 
     def test_service_urls_are_docker_internal(self):
         """
@@ -94,17 +90,15 @@ class TestServiceConfiguration:
             url = config["url"]
 
             # Ne devrait PAS utiliser localhost ou 127.0.0.1
-            assert "localhost" not in url, (
-                f"{service_name} utilise localhost (devrait être nom service Docker)"
-            )
-            assert "127.0.0.1" not in url, (
-                f"{service_name} utilise 127.0.0.1 (devrait être nom service Docker)"
-            )
+            assert (
+                "localhost" not in url
+            ), f"{service_name} utilise localhost (devrait être nom service Docker)"
+            assert (
+                "127.0.0.1" not in url
+            ), f"{service_name} utilise 127.0.0.1 (devrait être nom service Docker)"
 
             # Doit utiliser http:// (pas https pour réseau interne)
-            assert url.startswith("http://"), (
-                f"{service_name} URL doit commencer par http://"
-            )
+            assert url.startswith("http://"), f"{service_name} URL doit commencer par http://"
 
 
 @pytest.mark.asyncio

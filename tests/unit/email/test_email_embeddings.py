@@ -19,8 +19,8 @@ import os
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from agents.src.agents.email.graph_populator import populate_email_graph
 from agents.src.adapters.memorystore import PostgreSQLMemorystore
+from agents.src.agents.email.graph_populator import populate_email_graph
 
 
 @pytest.mark.integration
@@ -43,7 +43,9 @@ async def test_email_creates_embedding_automatically():
     mock_memorystore.create_edge = AsyncMock()
 
     # Mock vectorstore + anonymization
-    with patch("agents.src.agents.email.graph_populator.get_vectorstore_adapter") as mock_vectorstore_factory:
+    with patch(
+        "agents.src.agents.email.graph_populator.get_vectorstore_adapter"
+    ) as mock_vectorstore_factory:
         with patch("agents.src.agents.email.graph_populator.anonymize_text") as mock_anon:
             mock_vectorstore = AsyncMock()
 
@@ -119,7 +121,9 @@ async def test_email_embedding_anonymizes_pii():
     mock_memorystore.create_edge = AsyncMock()
 
     # Mock vectorstore + anonymization
-    with patch("agents.src.agents.email.graph_populator.get_vectorstore_adapter") as mock_vectorstore_factory:
+    with patch(
+        "agents.src.agents.email.graph_populator.get_vectorstore_adapter"
+    ) as mock_vectorstore_factory:
         with patch("agents.src.agents.email.graph_populator.anonymize_text") as mock_anon:
             mock_vectorstore = AsyncMock()
 
@@ -189,7 +193,9 @@ async def test_email_embedding_error_handling():
     mock_memorystore.create_edge = AsyncMock()
 
     # Mock vectorstore qui lève exception
-    with patch("agents.src.agents.email.graph_populator.get_vectorstore_adapter") as mock_vectorstore_factory:
+    with patch(
+        "agents.src.agents.email.graph_populator.get_vectorstore_adapter"
+    ) as mock_vectorstore_factory:
         mock_vectorstore = AsyncMock()
         mock_vectorstore.embed = AsyncMock(side_effect=Exception("Voyage API timeout"))
 

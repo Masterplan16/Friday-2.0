@@ -9,6 +9,7 @@ Tests unitaires warranty_orchestrator.py (Story 3.4 AC5, AC7).
 - Integration Story 3.2 classification
 - Edge cases (DB error, Redis down, Telegram error)
 """
+
 import asyncio
 import json
 import sys
@@ -26,6 +27,7 @@ sys.path.insert(0, ".")
 # ============================================================================
 # FIXTURES
 # ============================================================================
+
 
 def _mock_extraction_result(warranty_detected=True, confidence=0.92):
     """Create mock ActionResult from extract_warranty_from_document."""
@@ -130,6 +132,7 @@ class TestWarrantyOrchestrator:
     @patch("agents.src.agents.archiviste.warranty_orchestrator.extract_warranty_from_document")
     async def test_timeout_exceeded(self, mock_extract):
         """Timeout 10s déclenché = ActionResult avec erreur."""
+
         async def slow_extract(*args, **kwargs):
             await asyncio.sleep(15)
             return _mock_extraction_result()

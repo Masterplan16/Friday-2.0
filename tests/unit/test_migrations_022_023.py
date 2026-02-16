@@ -4,15 +4,18 @@ Tests unitaires pour migrations 022-023 (cleanup RGPD).
 Story 1.15 - Vérification migrations SQL appliquées correctement
 """
 
-import pytest
-import asyncpg
 import os
+
+import asyncpg
+import pytest
 
 
 @pytest.fixture
 async def db_pool():
     """Fixture pour connexion PostgreSQL test."""
-    database_url = os.getenv("DATABASE_URL", "postgresql://friday:friday@localhost:5432/friday_test")
+    database_url = os.getenv(
+        "DATABASE_URL", "postgresql://friday:friday@localhost:5432/friday_test"
+    )
     pool = await asyncpg.create_pool(database_url)
     yield pool
     await pool.close()
@@ -95,7 +98,9 @@ async def test_migration_023_creates_deleted_at_column(db_pool):
 
     assert column_info is not None, "Migration 023 failed: deleted_at column not found"
     assert column_info["column_name"] == "deleted_at"
-    assert column_info["data_type"] == "timestamp with time zone", "deleted_at should be TIMESTAMPTZ"
+    assert (
+        column_info["data_type"] == "timestamp with time zone"
+    ), "deleted_at should be TIMESTAMPTZ"
     assert column_info["is_nullable"] == "YES", "deleted_at should be nullable"
 
     # Verify index exists
@@ -142,24 +147,26 @@ async def test_purged_at_allows_null_and_timestamp(db_pool):
         INSERT INTO core.action_receipts (id, module, action, created_at, purged_at, status, trust_level, confidence)
         VALUES ($1, $2, $3, NOW(), NULL, $4, $5, $6)
         """,
-        "test-purged-at-nullable", "test", "test_action", "auto", "auto", 0.95
+        "test-purged-at-nullable",
+        "test",
+        "test_action",
+        "auto",
+        "auto",
+        0.95,
     )
 
     receipt = await db_pool.fetchrow(
-        "SELECT purged_at FROM core.action_receipts WHERE id = $1",
-        "test-purged-at-nullable"
+        "SELECT purged_at FROM core.action_receipts WHERE id = $1", "test-purged-at-nullable"
     )
     assert receipt["purged_at"] is None, "purged_at should accept NULL"
 
     # Update with purged_at=NOW()
     await db_pool.execute(
-        "UPDATE core.action_receipts SET purged_at = NOW() WHERE id = $1",
-        "test-purged-at-nullable"
+        "UPDATE core.action_receipts SET purged_at = NOW() WHERE id = $1", "test-purged-at-nullable"
     )
 
     receipt = await db_pool.fetchrow(
-        "SELECT purged_at FROM core.action_receipts WHERE id = $1",
-        "test-purged-at-nullable"
+        "SELECT purged_at FROM core.action_receipts WHERE id = $1", "test-purged-at-nullable"
     )
     assert receipt["purged_at"] is not None, "purged_at should accept TIMESTAMPTZ"
 
@@ -177,7 +184,9 @@ async def test_deleted_at_allows_null_and_timestamp(db_pool):
     THEN les deux inserts réussissent
     """
     # Cleanup préalable
-    await db_pool.execute("DELETE FROM core.backup_metadata WHERE filename = 'test-deleted-at-nullable.dump.age'")
+    await db_pool.execute(
+        "DELETE FROM core.backup_metadata WHERE filename = 'test-deleted-at-nullable.dump.age'"
+    )
 
     # Insert with deleted_at=NULL
     await db_pool.execute(
@@ -185,26 +194,31 @@ async def test_deleted_at_allows_null_and_timestamp(db_pool):
         INSERT INTO core.backup_metadata (filename, backup_date, size_bytes, checksum_sha256, retention_policy, deleted_at)
         VALUES ($1, NOW(), $2, $3, $4, NULL)
         """,
-        "test-deleted-at-nullable.dump.age", 1000000, "a" * 64, "keep_7_days"
+        "test-deleted-at-nullable.dump.age",
+        1000000,
+        "a" * 64,
+        "keep_7_days",
     )
 
     backup = await db_pool.fetchrow(
         "SELECT deleted_at FROM core.backup_metadata WHERE filename = $1",
-        "test-deleted-at-nullable.dump.age"
+        "test-deleted-at-nullable.dump.age",
     )
     assert backup["deleted_at"] is None, "deleted_at should accept NULL"
 
     # Update with deleted_at=NOW()
     await db_pool.execute(
         "UPDATE core.backup_metadata SET deleted_at = NOW() WHERE filename = $1",
-        "test-deleted-at-nullable.dump.age"
+        "test-deleted-at-nullable.dump.age",
     )
 
     backup = await db_pool.fetchrow(
         "SELECT deleted_at FROM core.backup_metadata WHERE filename = $1",
-        "test-deleted-at-nullable.dump.age"
+        "test-deleted-at-nullable.dump.age",
     )
     assert backup["deleted_at"] is not None, "deleted_at should accept TIMESTAMPTZ"
 
     # Cleanup
-    await db_pool.execute("DELETE FROM core.backup_metadata WHERE filename = 'test-deleted-at-nullable.dump.age'")
+    await db_pool.execute(
+        "DELETE FROM core.backup_metadata WHERE filename = 'test-deleted-at-nullable.dump.age'"
+    )

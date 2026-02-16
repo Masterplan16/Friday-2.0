@@ -24,7 +24,6 @@ from agents.src.adapters.vectorstore import (
     get_vectorstore_adapter,
 )
 
-
 # ============================================================
 # Fixtures
 # ============================================================
@@ -102,10 +101,14 @@ async def test_pgvector_store_duplicate_upsert(db_pool: asyncpg.Pool, clean_embe
     embedding_v2 = [0.2] * 1024
 
     # Insert initial
-    await store.store(node_id=node_id, embedding=embedding_v1, metadata={"version": 1, "test": True})
+    await store.store(
+        node_id=node_id, embedding=embedding_v1, metadata={"version": 1, "test": True}
+    )
 
     # Upsert (même node_id)
-    await store.store(node_id=node_id, embedding=embedding_v2, metadata={"version": 2, "test": True})
+    await store.store(
+        node_id=node_id, embedding=embedding_v2, metadata={"version": 2, "test": True}
+    )
 
     # Vérifier upsert (PAS de duplicate)
     async with db_pool.acquire() as conn:
@@ -142,9 +145,15 @@ async def test_pgvector_search_cosine_similarity(db_pool: asyncpg.Pool, clean_em
     vec2 = [0.0, 1.0] + [0.0] * 1022
     vec3 = [0.9, 0.1] + [0.0] * 1022
 
-    await store.store(node_id="test_doc_1", embedding=vec1, metadata={"test": True, "title": "Doc 1"})
-    await store.store(node_id="test_doc_2", embedding=vec2, metadata={"test": True, "title": "Doc 2"})
-    await store.store(node_id="test_doc_3", embedding=vec3, metadata={"test": True, "title": "Doc 3"})
+    await store.store(
+        node_id="test_doc_1", embedding=vec1, metadata={"test": True, "title": "Doc 1"}
+    )
+    await store.store(
+        node_id="test_doc_2", embedding=vec2, metadata={"test": True, "title": "Doc 2"}
+    )
+    await store.store(
+        node_id="test_doc_3", embedding=vec3, metadata={"test": True, "title": "Doc 3"}
+    )
 
     # Query embedding : [1, 0, 0, ...] (similaire à vec1)
     query_embedding = [1.0] + [0.0] * 1023

@@ -8,12 +8,11 @@ import os
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
-from telegram import CallbackQuery, Message, Update, User
-from telegram.ext import ContextTypes
-
 from bot.action_executor import ActionExecutor
 from bot.handlers.callbacks import CallbacksHandler
 from services.metrics.expire_validations import expire_pending_validations
+from telegram import CallbackQuery, Message, Update, User
+from telegram.ext import ContextTypes
 from tests.conftest import create_mock_pool_with_conn
 
 

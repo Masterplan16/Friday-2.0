@@ -10,10 +10,8 @@ from datetime import UTC, datetime
 from uuid import uuid4
 
 import pytest
-from pydantic import ValidationError
-
 from agents.src.middleware.models import ActionResult, StepDetail
-
+from pydantic import ValidationError
 
 # ==========================================
 # Tests ActionResult validation

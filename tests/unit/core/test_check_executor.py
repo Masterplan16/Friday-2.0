@@ -4,16 +4,16 @@ Tests unitaires pour CheckExecutor (Story 4.1 Task 5)
 RED PHASE : Tests écrits AVANT l'implémentation (TDD)
 """
 
+from unittest.mock import AsyncMock, Mock, patch
+
 import pytest
-from unittest.mock import AsyncMock, patch, Mock
-
 from agents.src.core.check_executor import CheckExecutor
-from agents.src.core.heartbeat_models import CheckResult, Check, CheckPriority
-
+from agents.src.core.heartbeat_models import Check, CheckPriority, CheckResult
 
 # ============================================================================
 # Fixtures
 # ============================================================================
+
 
 @pytest.fixture
 def mock_db_pool():
@@ -43,16 +43,13 @@ def mock_check_registry():
 
     # Check sample
     async def sample_check_fn(*args, **kwargs):
-        return CheckResult(
-            notify=True,
-            message="Test check result"
-        )
+        return CheckResult(notify=True, message="Test check result")
 
     sample_check = Check(
         check_id="test_check",
         priority=CheckPriority.HIGH,
         description="Test check",
-        execute_fn=sample_check_fn
+        execute_fn=sample_check_fn,
     )
 
     registry.get_check.return_value = sample_check
@@ -63,15 +60,14 @@ def mock_check_registry():
 def check_executor(mock_db_pool, mock_redis_client, mock_check_registry):
     """Fixture CheckExecutor avec mocks."""
     return CheckExecutor(
-        db_pool=mock_db_pool,
-        redis_client=mock_redis_client,
-        check_registry=mock_check_registry
+        db_pool=mock_db_pool, redis_client=mock_redis_client, check_registry=mock_check_registry
     )
 
 
 # ============================================================================
 # Tests Task 5.1-5.2: Execute Check
 # ============================================================================
+
 
 @pytest.mark.asyncio
 async def test_check_executor_init(check_executor):
@@ -99,7 +95,7 @@ async def test_execute_check_calls_check_function(check_executor, mock_check_reg
         check_id="test_check_2",
         priority=CheckPriority.MEDIUM,
         description="Test",
-        execute_fn=check_fn
+        execute_fn=check_fn,
     )
     mock_check_registry.get_check.return_value = check
 
@@ -110,7 +106,9 @@ async def test_execute_check_calls_check_function(check_executor, mock_check_reg
 
 
 @pytest.mark.asyncio
-async def test_execute_check_passes_db_pool_to_check(check_executor, mock_check_registry, mock_db_pool):
+async def test_execute_check_passes_db_pool_to_check(
+    check_executor, mock_check_registry, mock_db_pool
+):
     """Test 4: execute_check passe db_pool au check."""
     check_fn = AsyncMock(return_value=CheckResult(notify=False))
 
@@ -118,7 +116,7 @@ async def test_execute_check_passes_db_pool_to_check(check_executor, mock_check_
         check_id="test_check_3",
         priority=CheckPriority.HIGH,
         description="Test",
-        execute_fn=check_fn
+        execute_fn=check_fn,
     )
     mock_check_registry.get_check.return_value = check
 
@@ -132,8 +130,11 @@ async def test_execute_check_passes_db_pool_to_check(check_executor, mock_check_
 # Tests Task 5.3: Isolation Checks
 # ============================================================================
 
+
 @pytest.mark.asyncio
-async def test_check_isolation_returns_error_result_on_exception(check_executor, mock_check_registry):
+async def test_check_isolation_returns_error_result_on_exception(
+    check_executor, mock_check_registry
+):
     """Test 5: Si check crash → retourne CheckResult avec error."""
     check_fn = AsyncMock(side_effect=Exception("Check crashed"))
 
@@ -141,7 +142,7 @@ async def test_check_isolation_returns_error_result_on_exception(check_executor,
         check_id="crash_check",
         priority=CheckPriority.MEDIUM,
         description="Crash test",
-        execute_fn=check_fn
+        execute_fn=check_fn,
     )
     mock_check_registry.get_check.return_value = check
 
@@ -163,7 +164,7 @@ async def test_check_isolation_logs_error(check_executor, mock_check_registry):
         check_id="error_check",
         priority=CheckPriority.LOW,
         description="Error test",
-        execute_fn=check_fn
+        execute_fn=check_fn,
     )
     mock_check_registry.get_check.return_value = check
 
@@ -181,11 +182,10 @@ async def test_check_isolation_logs_error(check_executor, mock_check_registry):
 # Tests Task 5.4: Circuit Breaker
 # ============================================================================
 
+
 @pytest.mark.asyncio
 async def test_circuit_breaker_increments_on_failure(
-    check_executor,
-    mock_check_registry,
-    mock_redis_client
+    check_executor, mock_check_registry, mock_redis_client
 ):
     """Test 7: Échec check → incrémente compteur failures Redis."""
     check_fn = AsyncMock(side_effect=Exception("Failure"))
@@ -194,7 +194,7 @@ async def test_circuit_breaker_increments_on_failure(
         check_id="fail_check",
         priority=CheckPriority.MEDIUM,
         description="Fail test",
-        execute_fn=check_fn
+        execute_fn=check_fn,
     )
     mock_check_registry.get_check.return_value = check
 
@@ -206,9 +206,7 @@ async def test_circuit_breaker_increments_on_failure(
 
 @pytest.mark.asyncio
 async def test_circuit_breaker_disables_after_3_failures(
-    check_executor,
-    mock_check_registry,
-    mock_redis_client
+    check_executor, mock_check_registry, mock_redis_client
 ):
     """Test 8: 3 échecs consécutifs → disable check 1h."""
     # Simuler 3 échecs
@@ -220,7 +218,7 @@ async def test_circuit_breaker_disables_after_3_failures(
         check_id="fail_check_3",
         priority=CheckPriority.HIGH,
         description="Fail test",
-        execute_fn=check_fn
+        execute_fn=check_fn,
     )
     mock_check_registry.get_check.return_value = check
 
@@ -234,9 +232,7 @@ async def test_circuit_breaker_disables_after_3_failures(
 
 @pytest.mark.asyncio
 async def test_circuit_breaker_open_returns_disabled_result(
-    check_executor,
-    mock_check_registry,
-    mock_redis_client
+    check_executor, mock_check_registry, mock_redis_client
 ):
     """Test 9: Circuit breaker ouvert → retourne CheckResult disabled."""
     # Simuler circuit breaker ouvert
@@ -246,7 +242,7 @@ async def test_circuit_breaker_open_returns_disabled_result(
         check_id="disabled_check",
         priority=CheckPriority.MEDIUM,
         description="Disabled",
-        execute_fn=AsyncMock()
+        execute_fn=AsyncMock(),
     )
     mock_check_registry.get_check.return_value = check
 
@@ -260,9 +256,7 @@ async def test_circuit_breaker_open_returns_disabled_result(
 
 @pytest.mark.asyncio
 async def test_circuit_breaker_sends_alert_on_disable(
-    check_executor,
-    mock_check_registry,
-    mock_redis_client
+    check_executor, mock_check_registry, mock_redis_client
 ):
     """Test 10: Disable check → alerte System."""
     # Simuler 3ème échec
@@ -274,7 +268,7 @@ async def test_circuit_breaker_sends_alert_on_disable(
         check_id="alert_check",
         priority=CheckPriority.HIGH,
         description="Alert test",
-        execute_fn=check_fn
+        execute_fn=check_fn,
     )
     mock_check_registry.get_check.return_value = check
 
@@ -289,6 +283,7 @@ async def test_circuit_breaker_sends_alert_on_disable(
 # Tests Task 5.5: Intégration @friday_action
 # ============================================================================
 
+
 @pytest.mark.asyncio
 async def test_execute_check_compatible_with_friday_action(check_executor, mock_check_registry):
     """Test 11: CheckExecutor compatible avec checks utilisant @friday_action."""
@@ -302,7 +297,7 @@ async def test_execute_check_compatible_with_friday_action(check_executor, mock_
         check_id="simple_check",
         priority=CheckPriority.MEDIUM,
         description="Simple check",
-        execute_fn=check_fn
+        execute_fn=check_fn,
     )
     mock_check_registry.get_check.return_value = check
 

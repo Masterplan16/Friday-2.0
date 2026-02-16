@@ -8,10 +8,9 @@ import os
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
+from bot.handlers.callbacks import CallbacksHandler, _cleanup_stale_attempts
 from telegram import CallbackQuery, Chat, Message, Update, User
 from telegram.ext import ContextTypes
-
-from bot.handlers.callbacks import CallbacksHandler, _cleanup_stale_attempts
 from tests.conftest import create_mock_pool_with_conn
 
 
@@ -76,8 +75,7 @@ def _make_callback_update(callback_data: str, user_id: int = 12345):
     update.callback_query.from_user.id = user_id
     update.callback_query.message = Mock(spec=Message)
     update.callback_query.message.text = (
-        "Action en attente de validation\n\n"
-        "Module: email\nAction: classify\nConfidence: 0.92"
+        "Action en attente de validation\n\n" "Module: email\nAction: classify\nConfidence: 0.92"
     )
     update.callback_query.message.chat = Mock(spec=Chat)
     update.callback_query.message.chat_id = -100123456
@@ -133,9 +131,7 @@ async def test_approve_callback_edits_message(handler, mock_db_pool, mock_contex
     await handler.handle_approve_callback(update, mock_context)
 
     # Verifier message edite avec confirmation
-    update.callback_query.edit_message_reply_markup.assert_called_once_with(
-        reply_markup=None
-    )
+    update.callback_query.edit_message_reply_markup.assert_called_once_with(reply_markup=None)
     edit_call = update.callback_query.edit_message_text.call_args
     assert "Approuve" in edit_call[0][0]
 
@@ -229,9 +225,7 @@ async def test_reject_callback_edits_message(handler, mock_db_pool, mock_context
     await handler.handle_reject_callback(update, mock_context)
 
     # Verifier message edite
-    update.callback_query.edit_message_reply_markup.assert_called_once_with(
-        reply_markup=None
-    )
+    update.callback_query.edit_message_reply_markup.assert_called_once_with(reply_markup=None)
     edit_call = update.callback_query.edit_message_text.call_args
     assert "Rejete" in edit_call[0][0]
 
@@ -242,9 +236,7 @@ async def test_reject_callback_edits_message(handler, mock_db_pool, mock_context
 
 
 @pytest.mark.asyncio
-async def test_double_click_prevention_already_approved(
-    handler, mock_db_pool, mock_context
-):
+async def test_double_click_prevention_already_approved(handler, mock_db_pool, mock_context):
     """
     Test BUG-1.10.2: 2e clic sur bouton deja valide -> erreur gracieuse.
     """
@@ -272,9 +264,7 @@ async def test_double_click_prevention_already_approved(
 
 
 @pytest.mark.asyncio
-async def test_double_click_prevention_already_rejected(
-    handler, mock_db_pool, mock_context
-):
+async def test_double_click_prevention_already_rejected(handler, mock_db_pool, mock_context):
     """
     Test: 2e clic reject sur action deja rejetee -> erreur gracieuse.
     """

@@ -4,16 +4,19 @@ Tests unitaires pour cleanup backups VPS.
 Story 1.15 - AC3 : Rotation backups > 30 jours (VPS uniquement)
 """
 
-import pytest
-from datetime import datetime, timedelta
-import asyncpg
 import os
+from datetime import datetime, timedelta
+
+import asyncpg
+import pytest
 
 
 @pytest.fixture
 async def db_pool():
     """Fixture pour connexion PostgreSQL test."""
-    database_url = os.getenv("DATABASE_URL", "postgresql://friday:friday@localhost:5432/friday_test")
+    database_url = os.getenv(
+        "DATABASE_URL", "postgresql://friday:friday@localhost:5432/friday_test"
+    )
     pool = await asyncpg.create_pool(database_url)
     yield pool
     await pool.close()
@@ -39,14 +42,22 @@ async def test_cleanup_backups_respects_retention_policy(db_pool):
     await db_pool.execute(
         "INSERT INTO core.backup_metadata (filename, backup_date, size_bytes, checksum_sha256, retention_policy) "
         "VALUES ($1, $2, $3, $4, $5)",
-        "test-backup-vps-old.dump.age", old_date, 1_000_000, "a" * 64, "keep_7_days"
+        "test-backup-vps-old.dump.age",
+        old_date,
+        1_000_000,
+        "a" * 64,
+        "keep_7_days",
     )
 
     # Insert PC backup (should be preserved)
     await db_pool.execute(
         "INSERT INTO core.backup_metadata (filename, backup_date, size_bytes, checksum_sha256, retention_policy) "
         "VALUES ($1, $2, $3, $4, $5)",
-        "test-backup-pc-old.dump.age", old_date, 1_000_000, "b" * 64, "keep_30_days"
+        "test-backup-pc-old.dump.age",
+        old_date,
+        1_000_000,
+        "b" * 64,
+        "keep_30_days",
     )
 
     # Execute cleanup (simulation SQL from cleanup-disk.sh)
@@ -61,14 +72,14 @@ async def test_cleanup_backups_respects_retention_policy(db_pool):
     # Verify VPS backup marked deleted
     vps_backup = await db_pool.fetchrow(
         "SELECT deleted_at FROM core.backup_metadata WHERE filename = $1",
-        "test-backup-vps-old.dump.age"
+        "test-backup-vps-old.dump.age",
     )
     assert vps_backup["deleted_at"] is not None, "VPS backup should be marked deleted (soft delete)"
 
     # Verify PC backup preserved
     pc_backup = await db_pool.fetchrow(
         "SELECT deleted_at FROM core.backup_metadata WHERE filename = $1",
-        "test-backup-pc-old.dump.age"
+        "test-backup-pc-old.dump.age",
     )
     assert pc_backup["deleted_at"] is None, "PC backup should be preserved (deleted_at = NULL)"
 
@@ -88,13 +99,19 @@ async def test_cleanup_backups_preserves_recent_vps(db_pool):
     recent_date = datetime.utcnow() - timedelta(days=20)
 
     # Cleanup préalable
-    await db_pool.execute("DELETE FROM core.backup_metadata WHERE filename = $1", "test-backup-vps-recent.dump.age")
+    await db_pool.execute(
+        "DELETE FROM core.backup_metadata WHERE filename = $1", "test-backup-vps-recent.dump.age"
+    )
 
     # Insert recent VPS backup
     await db_pool.execute(
         "INSERT INTO core.backup_metadata (filename, backup_date, size_bytes, checksum_sha256, retention_policy) "
         "VALUES ($1, $2, $3, $4, $5)",
-        "test-backup-vps-recent.dump.age", recent_date, 1_000_000, "c" * 64, "keep_7_days"
+        "test-backup-vps-recent.dump.age",
+        recent_date,
+        1_000_000,
+        "c" * 64,
+        "keep_7_days",
     )
 
     # Execute cleanup
@@ -109,12 +126,14 @@ async def test_cleanup_backups_preserves_recent_vps(db_pool):
     # Verify backup preserved
     backup = await db_pool.fetchrow(
         "SELECT deleted_at FROM core.backup_metadata WHERE filename = $1",
-        "test-backup-vps-recent.dump.age"
+        "test-backup-vps-recent.dump.age",
     )
     assert backup["deleted_at"] is None, "Recent VPS backup should NOT be deleted (< 30 days)"
 
     # Cleanup
-    await db_pool.execute("DELETE FROM core.backup_metadata WHERE filename = $1", "test-backup-vps-recent.dump.age")
+    await db_pool.execute(
+        "DELETE FROM core.backup_metadata WHERE filename = $1", "test-backup-vps-recent.dump.age"
+    )
 
 
 @pytest.mark.asyncio
@@ -130,13 +149,21 @@ async def test_cleanup_backups_idempotent(db_pool):
     deleted_date = datetime.utcnow() - timedelta(days=5)
 
     # Cleanup préalable
-    await db_pool.execute("DELETE FROM core.backup_metadata WHERE filename = $1", "test-backup-already-deleted.dump.age")
+    await db_pool.execute(
+        "DELETE FROM core.backup_metadata WHERE filename = $1",
+        "test-backup-already-deleted.dump.age",
+    )
 
     # Insert already deleted backup
     await db_pool.execute(
         "INSERT INTO core.backup_metadata (filename, backup_date, size_bytes, checksum_sha256, retention_policy, deleted_at) "
         "VALUES ($1, $2, $3, $4, $5, $6)",
-        "test-backup-already-deleted.dump.age", old_date, 1_000_000, "d" * 64, "keep_7_days", deleted_date
+        "test-backup-already-deleted.dump.age",
+        old_date,
+        1_000_000,
+        "d" * 64,
+        "keep_7_days",
+        deleted_date,
     )
 
     # Execute cleanup (should NOT update already deleted)
@@ -157,13 +184,18 @@ async def test_cleanup_backups_idempotent(db_pool):
     # Verify deleted_at unchanged
     backup = await db_pool.fetchrow(
         "SELECT deleted_at FROM core.backup_metadata WHERE filename = $1",
-        "test-backup-already-deleted.dump.age"
+        "test-backup-already-deleted.dump.age",
     )
     # Allow 1 second tolerance for timestamp comparison
-    assert abs((backup["deleted_at"] - deleted_date).total_seconds()) < 1, "deleted_at should be unchanged"
+    assert (
+        abs((backup["deleted_at"] - deleted_date).total_seconds()) < 1
+    ), "deleted_at should be unchanged"
 
     # Cleanup
-    await db_pool.execute("DELETE FROM core.backup_metadata WHERE filename = $1", "test-backup-already-deleted.dump.age")
+    await db_pool.execute(
+        "DELETE FROM core.backup_metadata WHERE filename = $1",
+        "test-backup-already-deleted.dump.age",
+    )
 
 
 @pytest.mark.asyncio
@@ -178,14 +210,20 @@ async def test_cleanup_backups_count_accurate(db_pool):
     old_date = datetime.utcnow() - timedelta(days=50)
 
     # Cleanup préalable
-    await db_pool.execute("DELETE FROM core.backup_metadata WHERE filename LIKE 'test-backup-count-%'")
+    await db_pool.execute(
+        "DELETE FROM core.backup_metadata WHERE filename LIKE 'test-backup-count-%'"
+    )
 
     # Insert 3 old VPS backups
     for i in range(3):
         await db_pool.execute(
             "INSERT INTO core.backup_metadata (filename, backup_date, size_bytes, checksum_sha256, retention_policy) "
             "VALUES ($1, $2, $3, $4, $5)",
-            f"test-backup-count-{i}.dump.age", old_date, 1_000_000, f"{i}" * 64, "keep_7_days"
+            f"test-backup-count-{i}.dump.age",
+            old_date,
+            1_000_000,
+            f"{i}" * 64,
+            "keep_7_days",
         )
 
     # Execute cleanup and count
@@ -203,4 +241,6 @@ async def test_cleanup_backups_count_accurate(db_pool):
     assert count == 3, f"Expected 3 deleted backups, got {count}"
 
     # Cleanup
-    await db_pool.execute("DELETE FROM core.backup_metadata WHERE filename LIKE 'test-backup-count-%'")
+    await db_pool.execute(
+        "DELETE FROM core.backup_metadata WHERE filename LIKE 'test-backup-count-%'"
+    )

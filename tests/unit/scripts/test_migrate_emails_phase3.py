@@ -1,4 +1,5 @@
 import pytest
+
 pytestmark = pytest.mark.skip(reason="migrate_emails script refactored, tests need update")
 
 """

@@ -9,13 +9,11 @@ from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock
 
 import pytest
-
 from agents.src.agents.email.urgency_detector import (
     check_urgency_keywords,
     detect_urgency,
     extract_deadline_patterns,
 )
-
 
 # ==========================================
 # Mock Helper Classes
@@ -106,10 +104,12 @@ def test_extract_deadline_patterns_no_match():
 async def test_check_urgency_keywords_match():
     """Test detection keywords urgence."""
     # Mock db_pool avec keywords actifs
-    mock_pool = MockAsyncPoolKeywords([
-        {"keyword": "URGENT", "weight": 0.5},
-        {"keyword": "deadline", "weight": 0.3},
-    ])
+    mock_pool = MockAsyncPoolKeywords(
+        [
+            {"keyword": "URGENT", "weight": 0.5},
+            {"keyword": "deadline", "weight": 0.3},
+        ]
+    )
 
     text = "URGENT: Cette demande a une deadline serree."
     result = await check_urgency_keywords(text, mock_pool)
@@ -123,9 +123,11 @@ async def test_check_urgency_keywords_match():
 async def test_check_urgency_keywords_case_insensitive():
     """Test que la recherche est case-insensitive."""
     # Mock db_pool
-    mock_pool = MockAsyncPoolKeywords([
-        {"keyword": "URGENT", "weight": 0.5},
-    ])
+    mock_pool = MockAsyncPoolKeywords(
+        [
+            {"keyword": "URGENT", "weight": 0.5},
+        ]
+    )
 
     # Texte avec keyword en minuscules
     text = "Ce message est urgent, merci de repondre vite."
@@ -139,10 +141,12 @@ async def test_check_urgency_keywords_case_insensitive():
 async def test_check_urgency_keywords_no_match():
     """Test texte sans keywords urgence."""
     # Mock db_pool
-    mock_pool = MockAsyncPoolKeywords([
-        {"keyword": "URGENT", "weight": 0.5},
-        {"keyword": "deadline", "weight": 0.3},
-    ])
+    mock_pool = MockAsyncPoolKeywords(
+        [
+            {"keyword": "URGENT", "weight": 0.5},
+            {"keyword": "deadline", "weight": 0.3},
+        ]
+    )
 
     text = "Bonjour, j'aimerais avoir des nouvelles du projet."
     result = await check_urgency_keywords(text, mock_pool)
@@ -165,6 +169,7 @@ async def test_check_urgency_keywords_empty_db():
 @pytest.mark.asyncio
 async def test_check_urgency_keywords_db_error():
     """Test gestion erreur DB (mode degrade)."""
+
     # Mock db_pool avec erreur qui raise lors de l'acquire
     class MockPoolError:
         @asynccontextmanager
@@ -210,9 +215,11 @@ async def test_detect_urgency_vip_only():
 async def test_detect_urgency_vip_plus_keyword():
     """Test urgence VIP + keyword (score=0.5+0.3=0.8 -> urgent)."""
     # Mock db_pool avec keyword
-    mock_pool = MockAsyncPoolKeywords([
-        {"keyword": "URGENT", "weight": 0.5},
-    ])
+    mock_pool = MockAsyncPoolKeywords(
+        [
+            {"keyword": "URGENT", "weight": 0.5},
+        ]
+    )
 
     text = "URGENT: j'ai besoin de cette info."
     result = await detect_urgency(
@@ -232,9 +239,11 @@ async def test_detect_urgency_vip_plus_keyword():
 async def test_detect_urgency_keyword_plus_deadline():
     """Test urgence keyword + deadline (score=0.3+0.2=0.5 -> non urgent)."""
     # Mock db_pool avec keyword
-    mock_pool = MockAsyncPoolKeywords([
-        {"keyword": "URGENT", "weight": 0.5},
-    ])
+    mock_pool = MockAsyncPoolKeywords(
+        [
+            {"keyword": "URGENT", "weight": 0.5},
+        ]
+    )
 
     text = "URGENT: merci de repondre avant demain."
     result = await detect_urgency(
@@ -252,9 +261,11 @@ async def test_detect_urgency_keyword_plus_deadline():
 async def test_detect_urgency_all_factors():
     """Test urgence tous facteurs (VIP + keyword + deadline = 1.0 -> urgent)."""
     # Mock db_pool avec keyword
-    mock_pool = MockAsyncPoolKeywords([
-        {"keyword": "URGENT", "weight": 0.5},
-    ])
+    mock_pool = MockAsyncPoolKeywords(
+        [
+            {"keyword": "URGENT", "weight": 0.5},
+        ]
+    )
 
     text = "URGENT: Doyen demande reponse avant demain."
     result = await detect_urgency(
@@ -294,9 +305,11 @@ async def test_detect_urgency_no_factors():
 async def test_detect_urgency_payload_structure():
     """Test structure payload UrgencyResult."""
     # Mock db_pool avec keyword
-    mock_pool = MockAsyncPoolKeywords([
-        {"keyword": "deadline", "weight": 0.3},
-    ])
+    mock_pool = MockAsyncPoolKeywords(
+        [
+            {"keyword": "deadline", "weight": 0.3},
+        ]
+    )
 
     text = "La deadline approche vite."
     result = await detect_urgency(

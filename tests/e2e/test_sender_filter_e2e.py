@@ -11,9 +11,7 @@ Note: Ces tests nécessitent PostgreSQL + Redis en fonctionnement.
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-
 from agents.src.agents.email.sender_filter import check_sender_filter
-
 
 # ==========================================
 # Helper

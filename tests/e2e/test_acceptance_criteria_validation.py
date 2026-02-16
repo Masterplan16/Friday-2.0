@@ -243,7 +243,12 @@ def test_acceptance_criteria_coverage():
     Lit le fichier story 2-4-extraction-pieces-jointes.md
     et vérifie que chaque AC a au moins 1 test associé.
     """
-    story_file = Path(__file__).parent.parent.parent / "_bmad-output" / "implementation-artifacts" / "2-4-extraction-pieces-jointes.md"
+    story_file = (
+        Path(__file__).parent.parent.parent
+        / "_bmad-output"
+        / "implementation-artifacts"
+        / "2-4-extraction-pieces-jointes.md"
+    )
 
     if not story_file.exists():
         pytest.skip(f"Story file not found: {story_file}")

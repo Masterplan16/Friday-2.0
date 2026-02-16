@@ -10,6 +10,7 @@ Tests d'intégration warranty pipeline (Story 3.4).
 
 Environnement : Mocks asyncpg + Redis (pas de DB réelle en CI).
 """
+
 import json
 import sys
 from datetime import date
@@ -30,8 +31,8 @@ class TestWarrantyPipelineIntegration:
     @patch("agents.src.agents.archiviste.warranty_orchestrator.insert_warranty")
     async def test_full_pipeline_redis_to_postgres(self, mock_insert, mock_extract):
         """Pipeline complet : extraction → DB → Redis event."""
-        from agents.src.middleware.models import ActionResult
         from agents.src.agents.archiviste.warranty_orchestrator import WarrantyOrchestrator
+        from agents.src.middleware.models import ActionResult
 
         warranty_id = str(uuid4())
         mock_extract.return_value = ActionResult(
@@ -108,8 +109,8 @@ class TestWarrantyPipelineIntegration:
     @patch("agents.src.agents.archiviste.warranty_orchestrator.insert_warranty")
     async def test_telegram_notification_format(self, mock_insert, mock_extract):
         """Notification Telegram format correct (HTML, topics)."""
-        from agents.src.middleware.models import ActionResult
         from agents.src.agents.archiviste.warranty_orchestrator import WarrantyOrchestrator
+        from agents.src.middleware.models import ActionResult
 
         mock_extract.return_value = ActionResult(
             input_summary="Document test",
@@ -164,10 +165,18 @@ class TestWarrantyPipelineIntegration:
 
         db_pool = AsyncMock()
         # Mock get_expiring_warranties
-        with patch("agents.src.core.heartbeat_checks.warranty_expiry.get_expiring_warranties") as mock_get, \
-             patch("agents.src.core.heartbeat_checks.warranty_expiry.check_alert_sent") as mock_check, \
-             patch("agents.src.core.heartbeat_checks.warranty_expiry.record_alert_sent") as mock_record, \
-             patch("agents.src.core.heartbeat_checks.warranty_expiry.mark_warranty_expired"):
+        with (
+            patch(
+                "agents.src.core.heartbeat_checks.warranty_expiry.get_expiring_warranties"
+            ) as mock_get,
+            patch(
+                "agents.src.core.heartbeat_checks.warranty_expiry.check_alert_sent"
+            ) as mock_check,
+            patch(
+                "agents.src.core.heartbeat_checks.warranty_expiry.record_alert_sent"
+            ) as mock_record,
+            patch("agents.src.core.heartbeat_checks.warranty_expiry.mark_warranty_expired"),
+        ):
 
             mock_get.return_value = [
                 {"id": uuid4(), "item_name": "Printer", "days_remaining": 5},

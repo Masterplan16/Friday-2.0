@@ -137,10 +137,7 @@ def _format_context_hint(current_casquette: Optional["Casquette"]) -> str:
         return ""
 
     # Import local pour éviter circular dependency
-    from agents.src.core.models import (
-        CASQUETTE_LABEL_MAPPING,
-        Casquette,
-    )
+    from agents.src.core.models import CASQUETTE_LABEL_MAPPING, Casquette
 
     label = CASQUETTE_LABEL_MAPPING.get(current_casquette, current_casquette.value)
 

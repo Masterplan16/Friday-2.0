@@ -3,8 +3,10 @@ Tests unitaires commande /arbo (Story 3.2 Task 6.7).
 
 Tests : affichage tree, stats, add, remove, protection finance, owner-only
 """
-import pytest
+
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 
 @pytest.fixture
@@ -29,6 +31,7 @@ def mock_context():
 
 # ==================== Tests Owner Only (Task 6.6) ====================
 
+
 @pytest.mark.asyncio
 @patch.dict("os.environ", {"OWNER_USER_ID": "99999"})
 async def test_arbo_unauthorized_user(mock_update, mock_context):
@@ -42,6 +45,7 @@ async def test_arbo_unauthorized_user(mock_update, mock_context):
 
 # ==================== Tests Affichage (Task 6.2) ====================
 
+
 @pytest.mark.asyncio
 @patch.dict("os.environ", {"OWNER_USER_ID": "12345"})
 @patch("bot.handlers.arborescence_commands.get_arborescence_config")
@@ -53,12 +57,18 @@ async def test_arbo_display_tree(mock_config, mock_update, mock_context):
     config = MagicMock()
     config.root_path = "C:/test/Archives"
     config.categories = {
-        "pro": {"description": "Cabinet", "subcategories": {
-            "patients": {"description": "Patients", "path": "pro/patients"},
-        }},
-        "finance": {"description": "Finance", "subcategories": {
-            "selarl": {"description": "SELARL", "path": "finance/selarl"},
-        }},
+        "pro": {
+            "description": "Cabinet",
+            "subcategories": {
+                "patients": {"description": "Patients", "path": "pro/patients"},
+            },
+        },
+        "finance": {
+            "description": "Finance",
+            "subcategories": {
+                "selarl": {"description": "SELARL", "path": "finance/selarl"},
+            },
+        },
         "universite": {"description": "Université", "subcategories": {}},
         "recherche": {"description": "Recherche", "subcategories": {}},
         "perso": {"description": "Personnel", "subcategories": {}},
@@ -76,6 +86,7 @@ async def test_arbo_display_tree(mock_config, mock_update, mock_context):
 
 
 # ==================== Tests Stats (Task 6.5) ====================
+
 
 @pytest.mark.asyncio
 @patch.dict("os.environ", {"OWNER_USER_ID": "12345"})
@@ -120,6 +131,7 @@ async def test_arbo_stats_with_data(mock_update, mock_context):
 
 
 # ==================== Tests Add (Task 6.3) ====================
+
 
 @pytest.mark.asyncio
 @patch.dict("os.environ", {"OWNER_USER_ID": "12345"})
@@ -171,6 +183,7 @@ async def test_arbo_add_protected_finance_root(mock_update, mock_context):
 
 # ==================== Tests Remove (Task 6.4) ====================
 
+
 @pytest.mark.asyncio
 @patch.dict("os.environ", {"OWNER_USER_ID": "12345"})
 async def test_arbo_remove_protected_finance(mock_update, mock_context):
@@ -215,14 +228,18 @@ async def test_arbo_remove_allowed_subfolder(mock_update, mock_context):
 
 # ==================== Tests ASCII Tree ====================
 
+
 def test_build_ascii_tree():
     """Test construction arbre ASCII."""
     from bot.handlers.arborescence_commands import _build_ascii_tree
 
     categories = {
-        "pro": {"description": "Cabinet", "subcategories": {
-            "patients": {"description": "Patients"},
-        }},
+        "pro": {
+            "description": "Cabinet",
+            "subcategories": {
+                "patients": {"description": "Patients"},
+            },
+        },
         "perso": {"description": "Personnel", "subcategories": {}},
     }
 
@@ -235,6 +252,7 @@ def test_build_ascii_tree():
 
 
 # ==================== Tests Usage ====================
+
 
 @pytest.mark.asyncio
 @patch.dict("os.environ", {"OWNER_USER_ID": "12345"})

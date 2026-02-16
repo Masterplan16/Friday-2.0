@@ -10,26 +10,25 @@ Tests :
 - Agrégation casquettes pair (médecin ⚡ enseignant)
 """
 
-import pytest
 from datetime import datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
-from telegram import Update, Message, User, Chat
-
+import pytest
 from bot.handlers.conflict_commands import (
-    handle_conflits_command,
-    _get_unresolved_conflicts,
-    _get_resolved_week_count,
-    _get_month_stats,
-    _format_dashboard_message,
     _format_conflict_line,
+    _format_dashboard_message,
+    _get_month_stats,
+    _get_resolved_week_count,
+    _get_unresolved_conflicts,
+    handle_conflits_command,
 )
-
+from telegram import Chat, Message, Update, User
 
 # ============================================================================
 # Fixtures
 # ============================================================================
+
 
 @pytest.fixture
 def mock_db_pool():
@@ -66,9 +65,7 @@ def mock_context(mock_db_pool):
     context = MagicMock()
     db_pool, conn = mock_db_pool
 
-    context.bot_data = {
-        "db_pool": db_pool
-    }
+    context.bot_data = {"db_pool": db_pool}
 
     return context
 
@@ -90,7 +87,7 @@ def sample_unresolved_conflicts():
             "event1_start": base_date,
             "event2_start": base_date.replace(hour=14, minute=0),
             "overlap_minutes": 30,
-            "detected_at": base_date
+            "detected_at": base_date,
         },
         {
             "id": str(uuid4()),
@@ -103,8 +100,8 @@ def sample_unresolved_conflicts():
             "event1_start": base_date.replace(day=19, hour=16, minute=0),
             "event2_start": base_date.replace(day=19, hour=15, minute=30),
             "overlap_minutes": 30,
-            "detected_at": base_date
-        }
+            "detected_at": base_date,
+        },
     ]
 
 
@@ -112,8 +109,11 @@ def sample_unresolved_conflicts():
 # Tests Command /conflits (AC7)
 # ============================================================================
 
+
 @pytest.mark.asyncio
-async def test_conflits_command_affichage_non_resolus(mock_telegram_update, mock_context, mock_db_pool, sample_unresolved_conflicts):
+async def test_conflits_command_affichage_non_resolus(
+    mock_telegram_update, mock_context, mock_db_pool, sample_unresolved_conflicts
+):
     """Test AC7: /conflits affiche conflits non résolus détaillés."""
     update = mock_telegram_update
     message = update.message
@@ -122,30 +122,34 @@ async def test_conflits_command_affichage_non_resolus(mock_telegram_update, mock
 
     # Mock DB responses
     # 1. Conflits non résolus
-    conn.fetch = AsyncMock(side_effect=[
-        # _get_unresolved_conflicts
-        [
-            {
-                **conflict,
-                "event1_start": conflict["event1_start"].isoformat(),
-                "event2_start": conflict["event2_start"].isoformat()
-            }
-            for conflict in sample_unresolved_conflicts
-        ],
-        # _get_month_stats - total
-        [{"count": 5}],
-        # _get_month_stats - by_casquettes
-        [
-            {"casquette1": "medecin", "casquette2": "enseignant", "count": 3},
-            {"casquette1": "enseignant", "casquette2": "chercheur", "count": 2}
+    conn.fetch = AsyncMock(
+        side_effect=[
+            # _get_unresolved_conflicts
+            [
+                {
+                    **conflict,
+                    "event1_start": conflict["event1_start"].isoformat(),
+                    "event2_start": conflict["event2_start"].isoformat(),
+                }
+                for conflict in sample_unresolved_conflicts
+            ],
+            # _get_month_stats - total
+            [{"count": 5}],
+            # _get_month_stats - by_casquettes
+            [
+                {"casquette1": "medecin", "casquette2": "enseignant", "count": 3},
+                {"casquette1": "enseignant", "casquette2": "chercheur", "count": 2},
+            ],
         ]
-    ])
+    )
 
     # 2. Résolus semaine
-    conn.fetchrow = AsyncMock(side_effect=[
-        {"count": 8},  # _get_resolved_week_count
-        {"count": 5}   # _get_month_stats total (duplicate)
-    ])
+    conn.fetchrow = AsyncMock(
+        side_effect=[
+            {"count": 8},  # _get_resolved_week_count
+            {"count": 5},  # _get_month_stats total (duplicate)
+        ]
+    )
 
     # Call handler
     await handle_conflits_command(update, mock_context)
@@ -180,16 +184,17 @@ async def test_conflits_command_aucun_conflit(mock_telegram_update, mock_context
     db_pool, conn = mock_db_pool
 
     # Mock DB responses (aucun conflit)
-    conn.fetch = AsyncMock(side_effect=[
-        [],  # Aucun conflit non résolu
-        [{"count": 0}],  # Stats mois total
-        []   # Stats by_casquettes
-    ])
+    conn.fetch = AsyncMock(
+        side_effect=[
+            [],  # Aucun conflit non résolu
+            [{"count": 0}],  # Stats mois total
+            [],  # Stats by_casquettes
+        ]
+    )
 
-    conn.fetchrow = AsyncMock(side_effect=[
-        {"count": 0},  # Résolus semaine
-        {"count": 0}   # Stats total
-    ])
+    conn.fetchrow = AsyncMock(
+        side_effect=[{"count": 0}, {"count": 0}]  # Résolus semaine  # Stats total
+    )
 
     await handle_conflits_command(update, mock_context)
 
@@ -210,11 +215,13 @@ async def test_conflits_stats_mois_agregation_casquettes(mock_db_pool):
     one_month_ago = datetime.now() - timedelta(days=30)
 
     conn.fetchrow = AsyncMock(return_value={"count": 10})
-    conn.fetch = AsyncMock(return_value=[
-        {"casquette1": "medecin", "casquette2": "enseignant", "count": 6},
-        {"casquette1": "enseignant", "casquette2": "chercheur", "count": 3},
-        {"casquette1": "medecin", "casquette2": "chercheur", "count": 1}
-    ])
+    conn.fetch = AsyncMock(
+        return_value=[
+            {"casquette1": "medecin", "casquette2": "enseignant", "count": 6},
+            {"casquette1": "enseignant", "casquette2": "chercheur", "count": 3},
+            {"casquette1": "medecin", "casquette2": "chercheur", "count": 1},
+        ]
+    )
 
     # Call function
     stats = await _get_month_stats(db_pool)
@@ -240,15 +247,11 @@ def test_format_dashboard_message_multiple_conflits(sample_unresolved_conflicts)
         "total": 12,
         "by_casquettes": [
             {"pair": "🩺 Médecin ⚡ 🎓 Enseignant", "count": 7},
-            {"pair": "🎓 Enseignant ⚡ 🔬 Chercheur", "count": 5}
-        ]
+            {"pair": "🎓 Enseignant ⚡ 🔬 Chercheur", "count": 5},
+        ],
     }
 
-    dashboard = _format_dashboard_message(
-        sample_unresolved_conflicts,
-        resolved_week,
-        month_stats
-    )
+    dashboard = _format_dashboard_message(sample_unresolved_conflicts, resolved_week, month_stats)
 
     # Assertions: Structure dashboard
     assert "📊" in dashboard
@@ -278,9 +281,7 @@ def test_format_dashboard_message_multiple_conflits(sample_unresolved_conflicts)
 def test_format_dashboard_message_aucun_conflit():
     """Test AC7: Formatage dashboard sans conflits."""
     dashboard = _format_dashboard_message(
-        unresolved_conflicts=[],
-        resolved_week=3,
-        month_stats={"total": 5, "by_casquettes": []}
+        unresolved_conflicts=[], resolved_week=3, month_stats={"total": 5, "by_casquettes": []}
     )
 
     # Assertions: Message "Aucun conflit"
@@ -303,7 +304,7 @@ def test_format_conflict_line():
         "event1_casquette": "medecin",
         "event2_casquette": "enseignant",
         "event1_start": datetime(2026, 2, 18, 14, 30),
-        "overlap_minutes": 45
+        "overlap_minutes": 45,
     }
 
     line = _format_conflict_line(conflict)
@@ -335,7 +336,7 @@ def test_format_conflict_line_long_overlap():
         "event1_casquette": "medecin",
         "event2_casquette": "chercheur",
         "event1_start": datetime(2026, 2, 19, 10, 0),
-        "overlap_minutes": 90  # 1h30
+        "overlap_minutes": 90,  # 1h30
     }
 
     line = _format_conflict_line(conflict)
@@ -347,6 +348,7 @@ def test_format_conflict_line_long_overlap():
 # ============================================================================
 # Tests Error Handling
 # ============================================================================
+
 
 @pytest.mark.asyncio
 async def test_conflits_command_handles_db_error(mock_telegram_update, mock_context, mock_db_pool):

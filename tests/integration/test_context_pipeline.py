@@ -16,32 +16,28 @@ Tests :
 Requiert PostgreSQL de test avec migrations 007 + 037 appliquées.
 """
 
-import pytest
-import asyncpg
 import json
-from datetime import datetime, timedelta, timezone, date
-from unittest.mock import AsyncMock, patch, MagicMock
+from datetime import date, datetime, timedelta, timezone
+from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
-from agents.src.core.models import (
-    Casquette,
-    ContextSource,
-    UserContext,
-)
-from agents.src.core.context_manager import ContextManager
-from agents.src.agents.calendar.models import Event, CalendarEvent, CalendarConflict
+import asyncpg
+import pytest
 from agents.src.agents.calendar.conflict_detector import (
+    calculate_overlap,
     detect_calendar_conflicts,
     get_conflicts_range,
     save_conflict_to_db,
-    calculate_overlap,
 )
 from agents.src.agents.calendar.event_detector import extract_events_from_email
-
+from agents.src.agents.calendar.models import CalendarConflict, CalendarEvent, Event
+from agents.src.core.context_manager import ContextManager
+from agents.src.core.models import Casquette, ContextSource, UserContext
 
 # ============================================================================
 # Fixtures
 # ============================================================================
+
 
 @pytest.fixture
 async def integration_db():
@@ -60,9 +56,7 @@ async def integration_db():
     # Cleanup avant test
     async with pool.acquire() as conn:
         await conn.execute("DELETE FROM knowledge.calendar_conflicts")
-        await conn.execute(
-            "DELETE FROM knowledge.entities WHERE entity_type = 'EVENT'"
-        )
+        await conn.execute("DELETE FROM knowledge.entities WHERE entity_type = 'EVENT'")
         await conn.execute("DELETE FROM core.user_context")
 
         # Initialiser singleton user_context
@@ -79,9 +73,7 @@ async def integration_db():
     # Cleanup après test
     async with pool.acquire() as conn:
         await conn.execute("DELETE FROM knowledge.calendar_conflicts")
-        await conn.execute(
-            "DELETE FROM knowledge.entities WHERE entity_type = 'EVENT'"
-        )
+        await conn.execute("DELETE FROM knowledge.entities WHERE entity_type = 'EVENT'")
 
     await pool.close()
 
@@ -112,15 +104,17 @@ async def _insert_event_entity(
     if event_id is None:
         event_id = str(uuid4())
 
-    properties = json.dumps({
-        "title": title,
-        "casquette": casquette,
-        "start_datetime": start_datetime.isoformat(),
-        "end_datetime": end_datetime.isoformat(),
-        "status": status,
-        "location": location,
-        "event_type": event_type,
-    })
+    properties = json.dumps(
+        {
+            "title": title,
+            "casquette": casquette,
+            "start_datetime": start_datetime.isoformat(),
+            "end_datetime": end_datetime.isoformat(),
+            "status": status,
+            "location": location,
+            "event_type": event_type,
+        }
+    )
 
     await conn.execute(
         """
@@ -138,6 +132,7 @@ async def _insert_event_entity(
 # ============================================================================
 # Test 1 : Pipeline Context Manager Manual Set
 # ============================================================================
+
 
 @pytest.mark.integration
 @pytest.mark.asyncio
@@ -175,6 +170,7 @@ async def test_pipeline_context_manager_manual_set(integration_db, mock_redis):
 # ============================================================================
 # Test 2 : Pipeline Conflict Detection
 # ============================================================================
+
 
 @pytest.mark.integration
 @pytest.mark.asyncio
@@ -229,6 +225,7 @@ async def test_pipeline_conflict_detection(integration_db):
 # Test 3 : Context Auto-Detect depuis Last Event
 # ============================================================================
 
+
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_context_auto_detect_last_event(integration_db, mock_redis):
@@ -278,6 +275,7 @@ async def test_context_auto_detect_last_event(integration_db, mock_redis):
 # Test 4 : Event Detection avec Contexte Chercheur
 # ============================================================================
 
+
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_event_detection_with_context_chercheur(integration_db, mock_redis):
@@ -303,20 +301,24 @@ async def test_event_detection_with_context_chercheur(integration_db, mock_redis
     mock_response = MagicMock()
     mock_response.content = [
         MagicMock(
-            text=json.dumps({
-                "events_detected": [{
-                    "title": "Colloque cardiologie",
-                    "start_datetime": "2026-03-10T09:00:00",
-                    "end_datetime": "2026-03-12T18:00:00",
-                    "location": "Lyon",
-                    "participants": [],
-                    "event_type": "conference",
-                    "casquette": "chercheur",
-                    "confidence": 0.90,
-                    "context": "Colloque européen"
-                }],
-                "confidence_overall": 0.90
-            })
+            text=json.dumps(
+                {
+                    "events_detected": [
+                        {
+                            "title": "Colloque cardiologie",
+                            "start_datetime": "2026-03-10T09:00:00",
+                            "end_datetime": "2026-03-12T18:00:00",
+                            "location": "Lyon",
+                            "participants": [],
+                            "event_type": "conference",
+                            "casquette": "chercheur",
+                            "confidence": 0.90,
+                            "context": "Colloque européen",
+                        }
+                    ],
+                    "confidence_overall": 0.90,
+                }
+            )
         )
     ]
     mock_client.messages.create.return_value = mock_response
@@ -324,8 +326,7 @@ async def test_event_detection_with_context_chercheur(integration_db, mock_redis
     # Mock anonymize_text
     with patch("agents.src.agents.calendar.event_detector.anonymize_text") as mock_anon:
         mock_anon.return_value = MagicMock(
-            anonymized_text="Colloque européen cardiologie du 10 au 12 mars à Lyon",
-            mapping={}
+            anonymized_text="Colloque européen cardiologie du 10 au 12 mars à Lyon", mapping={}
         )
 
         result = await extract_events_from_email(
@@ -350,6 +351,7 @@ async def test_event_detection_with_context_chercheur(integration_db, mock_redis
 # ============================================================================
 # Test 5 : Email Classification avec Contexte Enseignant
 # ============================================================================
+
 
 @pytest.mark.integration
 @pytest.mark.asyncio
@@ -384,6 +386,7 @@ async def test_email_classification_context_enseignant(integration_db, mock_redi
 # Test 6 : Multiple Context Changes Same Session
 # ============================================================================
 
+
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_multiple_context_changes_same_session(integration_db, mock_redis):
@@ -413,15 +416,14 @@ async def test_multiple_context_changes_same_session(integration_db, mock_redis)
 
     # Vérifier DB cohérente
     async with integration_db.acquire() as conn:
-        row = await conn.fetchrow(
-            "SELECT current_casquette FROM core.user_context WHERE id = 1"
-        )
+        row = await conn.fetchrow("SELECT current_casquette FROM core.user_context WHERE id = 1")
         assert row["current_casquette"] == "chercheur"
 
 
 # ============================================================================
 # Test 7 : Conflict Resolution Pipeline Complet
 # ============================================================================
+
 
 @pytest.mark.integration
 @pytest.mark.asyncio
@@ -493,6 +495,7 @@ async def test_conflict_resolution_pipeline(integration_db):
 # Test 8 : Heartbeat Check Intégration Conflicts
 # ============================================================================
 
+
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_heartbeat_check_integration_conflicts(integration_db):
@@ -504,9 +507,7 @@ async def test_heartbeat_check_integration_conflicts(integration_db):
     2. Appeler heartbeat check calendar_conflicts
     3. Vérifier notification générée
     """
-    from agents.src.core.heartbeat_checks.calendar_conflicts import (
-        check_calendar_conflicts,
-    )
+    from agents.src.core.heartbeat_checks.calendar_conflicts import check_calendar_conflicts
 
     tomorrow = datetime.now(timezone.utc) + timedelta(days=1)
     event1_start = tomorrow.replace(hour=14, minute=30, second=0, microsecond=0)

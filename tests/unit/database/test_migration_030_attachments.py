@@ -10,9 +10,10 @@ Valide :
 - Data integrity
 """
 
-import pytest
-import asyncpg
 from pathlib import Path
+
+import asyncpg
+import pytest
 
 
 @pytest.fixture
@@ -158,20 +159,20 @@ class TestMigration030Execution:
                 """
             )
 
-            column_names = [col['column_name'] for col in columns]
+            column_names = [col["column_name"] for col in columns]
 
             # Vérifier colonnes requises
-            assert 'id' in column_names
-            assert 'email_id' in column_names
-            assert 'filename' in column_names
-            assert 'filepath' in column_names
-            assert 'size_bytes' in column_names
-            assert 'mime_type' in column_names
-            assert 'status' in column_names
-            assert 'extracted_at' in column_names
-            assert 'processed_at' in column_names
-            assert 'created_at' in column_names
-            assert 'updated_at' in column_names
+            assert "id" in column_names
+            assert "email_id" in column_names
+            assert "filename" in column_names
+            assert "filepath" in column_names
+            assert "size_bytes" in column_names
+            assert "mime_type" in column_names
+            assert "status" in column_names
+            assert "extracted_at" in column_names
+            assert "processed_at" in column_names
+            assert "created_at" in column_names
+            assert "updated_at" in column_names
 
     async def test_attachments_indexes_created(self, db_pool_clean):
         """Indexes attachments créés correctement."""
@@ -190,11 +191,11 @@ class TestMigration030Execution:
                 """
             )
 
-            index_names = [idx['indexname'] for idx in indexes]
+            index_names = [idx["indexname"] for idx in indexes]
 
-            assert 'idx_attachments_email_id' in index_names
-            assert 'idx_attachments_status' in index_names
-            assert 'idx_attachments_processed_at' in index_names
+            assert "idx_attachments_email_id" in index_names
+            assert "idx_attachments_status" in index_names
+            assert "idx_attachments_processed_at" in index_names
 
     async def test_has_attachments_column_added(self, db_pool_clean):
         """Colonne has_attachments ajoutée dans ingestion.emails."""
@@ -248,7 +249,7 @@ class TestMigration030DataIntegrity:
                 VALUES ($1, 'test.pdf', '/tmp/test.pdf', 150000, 'application/pdf', 'pending')
                 RETURNING id
                 """,
-                email_id
+                email_id,
             )
 
             assert attachment_id is not None, "INSERT attachment failed"
@@ -296,7 +297,7 @@ class TestMigration030DataIntegrity:
                     (email_id, filename, filepath, size_bytes, mime_type, status)
                     VALUES ($1, 'test.pdf', '/tmp/test.pdf', 0, 'application/pdf', 'pending')
                     """,
-                    email_id
+                    email_id,
                 )
 
             # Test size_bytes > 25 Mo (invalide)
@@ -307,7 +308,7 @@ class TestMigration030DataIntegrity:
                     (email_id, filename, filepath, size_bytes, mime_type, status)
                     VALUES ($1, 'test.pdf', '/tmp/test.pdf', 30000000, 'application/pdf', 'pending')
                     """,
-                    email_id
+                    email_id,
                 )
 
     async def test_check_constraint_status(self, db_pool_clean):
@@ -335,7 +336,7 @@ class TestMigration030DataIntegrity:
                     (email_id, filename, filepath, size_bytes, mime_type, status)
                     VALUES ($1, 'test.pdf', '/tmp/test.pdf', 150000, 'application/pdf', 'invalid_status')
                     """,
-                    email_id
+                    email_id,
                 )
 
     async def test_trigger_updated_at(self, db_pool_clean):
@@ -363,25 +364,24 @@ class TestMigration030DataIntegrity:
                 VALUES ($1, 'test.pdf', '/tmp/test.pdf', 150000, 'application/pdf', 'pending')
                 RETURNING id, updated_at
                 """,
-                email_id
+                email_id,
             )
 
-            original_updated_at = attachment['updated_at']
+            original_updated_at = attachment["updated_at"]
 
             # Wait 1s pour différencier timestamps
             import asyncio
+
             await asyncio.sleep(1)
 
             # UPDATE attachment
             await conn.execute(
-                "UPDATE ingestion.attachments SET status='processed' WHERE id=$1",
-                attachment['id']
+                "UPDATE ingestion.attachments SET status='processed' WHERE id=$1", attachment["id"]
             )
 
             # Vérifier updated_at changé
             new_updated_at = await conn.fetchval(
-                "SELECT updated_at FROM ingestion.attachments WHERE id=$1",
-                attachment['id']
+                "SELECT updated_at FROM ingestion.attachments WHERE id=$1", attachment["id"]
             )
 
             assert new_updated_at > original_updated_at, "Trigger updated_at non déclenché"

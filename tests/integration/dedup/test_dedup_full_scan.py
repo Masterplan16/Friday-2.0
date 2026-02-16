@@ -16,7 +16,6 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-
 from agents.src.agents.dedup.deleter import SafeDeleter
 from agents.src.agents.dedup.models import ScanConfig
 from agents.src.agents.dedup.priority_engine import PriorityEngine
@@ -129,9 +128,9 @@ async def test_priority_selects_best_keeper(tmp_path):
         # Keeper should always have highest priority score
         keeper_score = selection.keeper.priority_score
         for to_del in selection.to_delete:
-            assert keeper_score >= to_del.priority_score, (
-                f"Keeper score {keeper_score} < delete score {to_del.priority_score}"
-            )
+            assert (
+                keeper_score >= to_del.priority_score
+            ), f"Keeper score {keeper_score} < delete score {to_del.priority_score}"
 
 
 @pytest.mark.asyncio

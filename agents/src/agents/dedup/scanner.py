@@ -22,13 +22,7 @@ from pathlib import Path
 from typing import Callable, Optional
 
 import structlog
-from agents.src.agents.dedup.models import (
-    DedupGroup,
-    FileEntry,
-    ScanConfig,
-    ScanResult,
-    ScanStats,
-)
+from agents.src.agents.dedup.models import DedupGroup, FileEntry, ScanConfig, ScanResult, ScanStats
 
 logger = structlog.get_logger(__name__)
 

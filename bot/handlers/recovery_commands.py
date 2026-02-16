@@ -82,7 +82,8 @@ async def recovery_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # Liste événements recovery
     async with pool.acquire() as conn:
-        events = await conn.fetch("""
+        events = await conn.fetch(
+            """
             SELECT
                 event_type,
                 services_affected,
@@ -95,7 +96,8 @@ async def recovery_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             FROM core.recovery_events
             ORDER BY created_at DESC
             LIMIT 10
-            """)
+            """
+        )
 
     if not events:
         await update.message.reply_text("✅ Aucun événement recovery enregistré.")

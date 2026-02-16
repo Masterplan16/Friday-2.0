@@ -12,11 +12,14 @@ import pytest
 from telegram import Update
 from telegram.ext import ContextTypes
 
+
 # Mock friday_action avant import
 def mock_friday_action(module=None, action=None, trust_default=None):
     def decorator(func):
         return func
+
     return decorator
+
 
 # Mock imports
 with patch("agents.src.agents.email.vip_detector.friday_action", mock_friday_action):
@@ -45,10 +48,16 @@ def mock_context():
 def mock_db_pool():
     """Mock asyncpg Pool."""
     pool = AsyncMock()
+
     async def mock_acquire():
         conn = AsyncMock()
         return conn
-    pool.acquire = AsyncMock(return_value=AsyncMock(__aenter__=AsyncMock(return_value=AsyncMock()), __aexit__=AsyncMock()))
+
+    pool.acquire = AsyncMock(
+        return_value=AsyncMock(
+            __aenter__=AsyncMock(return_value=AsyncMock()), __aexit__=AsyncMock()
+        )
+    )
     return pool
 
 
@@ -74,6 +83,7 @@ async def test_vip_add_success(mock_update, mock_context, mock_db_pool):
         class MockAcquire:
             async def __aenter__(self):
                 return conn
+
             async def __aexit__(self, *args):
                 pass
 
@@ -124,6 +134,7 @@ async def test_vip_list_empty(mock_update, mock_context, mock_db_pool):
         class MockAcquire:
             async def __aenter__(self):
                 return conn
+
             async def __aexit__(self, *args):
                 pass
 
@@ -147,19 +158,22 @@ async def test_vip_list_with_vips(mock_update, mock_context, mock_db_pool):
     # Mock acquire avec VIPs
     async def mock_acquire_context():
         conn = AsyncMock()
-        conn.fetch = AsyncMock(return_value=[
-            {
-                "email_anon": "[EMAIL_123]",
-                "label": "Test VIP",
-                "emails_received_count": 5,
-                "last_email_at": None,
-                "designation_source": "manual",
-            }
-        ])
+        conn.fetch = AsyncMock(
+            return_value=[
+                {
+                    "email_anon": "[EMAIL_123]",
+                    "label": "Test VIP",
+                    "emails_received_count": 5,
+                    "last_email_at": None,
+                    "designation_source": "manual",
+                }
+            ]
+        )
 
         class MockAcquire:
             async def __aenter__(self):
                 return conn
+
             async def __aexit__(self, *args):
                 pass
 
@@ -190,17 +204,20 @@ async def test_vip_remove_success(mock_update, mock_context, mock_db_pool):
     # Mock acquire
     async def mock_acquire_context():
         conn = AsyncMock()
-        conn.fetchrow = AsyncMock(return_value={
-            "id": "uuid",
-            "email_anon": "[EMAIL_TEST]",
-            "label": "Test",
-            "active": True,
-        })
+        conn.fetchrow = AsyncMock(
+            return_value={
+                "id": "uuid",
+                "email_anon": "[EMAIL_TEST]",
+                "label": "Test",
+                "active": True,
+            }
+        )
         conn.execute = AsyncMock()
 
         class MockAcquire:
             async def __aenter__(self):
                 return conn
+
             async def __aexit__(self, *args):
                 pass
 
@@ -231,6 +248,7 @@ async def test_vip_remove_not_found(mock_update, mock_context, mock_db_pool):
         class MockAcquire:
             async def __aenter__(self):
                 return conn
+
             async def __aexit__(self, *args):
                 pass
 

@@ -9,7 +9,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
-
 # ==========================================
 # Tests handle_correct_button_email
 # ==========================================

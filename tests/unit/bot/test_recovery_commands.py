@@ -113,14 +113,18 @@ def mock_pool_with_stats():
 
 # Test 1: Liste 10 derniers événements (mode par défaut)
 @pytest.mark.asyncio
-async def test_recovery_command_lists_recent_events(mock_update, mock_context, mock_pool_with_events):
+async def test_recovery_command_lists_recent_events(
+    mock_update, mock_context, mock_pool_with_events
+):
     """Test liste 10 derniers événements recovery (mode résumé)"""
     # Injecter pool dans context
     mock_context.bot_data["db_pool"] = mock_pool_with_events
     mock_context.args = []
 
     # Patcher send_message_with_split
-    with patch("bot.handlers.recovery_commands.send_message_with_split", new_callable=AsyncMock) as mock_send:
+    with patch(
+        "bot.handlers.recovery_commands.send_message_with_split", new_callable=AsyncMock
+    ) as mock_send:
         await recovery_command(mock_update, mock_context)
 
         # Vérifier qu'on a envoyé un message
@@ -138,14 +142,18 @@ async def test_recovery_command_lists_recent_events(mock_update, mock_context, m
 
 # Test 2: Mode verbose affiche détails complets
 @pytest.mark.asyncio
-async def test_recovery_command_verbose_shows_details(mock_update, mock_context, mock_pool_with_events):
+async def test_recovery_command_verbose_shows_details(
+    mock_update, mock_context, mock_pool_with_events
+):
     """Test -v flag ajoute services + RAM metrics + duration"""
     # Injecter pool et args
     mock_context.bot_data["db_pool"] = mock_pool_with_events
     mock_context.args = ["-v"]
 
     # Patcher send_message_with_split
-    with patch("bot.handlers.recovery_commands.send_message_with_split", new_callable=AsyncMock) as mock_send:
+    with patch(
+        "bot.handlers.recovery_commands.send_message_with_split", new_callable=AsyncMock
+    ) as mock_send:
         await recovery_command(mock_update, mock_context)
 
         # Récupérer le texte du message
@@ -172,14 +180,18 @@ async def test_recovery_command_verbose_shows_details(mock_update, mock_context,
 
 # Test 3: Mode stats affiche métriques agrégées
 @pytest.mark.asyncio
-async def test_recovery_command_stats_shows_metrics(mock_update, mock_context, mock_pool_with_stats):
+async def test_recovery_command_stats_shows_metrics(
+    mock_update, mock_context, mock_pool_with_stats
+):
     """Test stats subcommand affiche uptime + MTTR + success rate"""
     # Injecter pool et args
     mock_context.bot_data["db_pool"] = mock_pool_with_stats
     mock_context.args = ["stats"]
 
     # Patcher send_message_with_split
-    with patch("bot.handlers.recovery_commands.send_message_with_split", new_callable=AsyncMock) as mock_send:
+    with patch(
+        "bot.handlers.recovery_commands.send_message_with_split", new_callable=AsyncMock
+    ) as mock_send:
         await recovery_command(mock_update, mock_context)
 
         # Récupérer le texte du message

@@ -8,12 +8,12 @@ Friday détecte automatiquement les événements calendrier depuis les emails vi
 
 ## Fonctionnalités
 
-✅ **Few-shot learning** : 5 exemples français injectés dans prompt  
-✅ **Dates relatives → absolues** : "demain", "jeudi", "dans 2 semaines"  
-✅ **Classification multi-casquettes** : médecin/enseignant/chercheur  
-✅ **Anonymisation RGPD** : Presidio AVANT appel Claude  
-✅ **Confidence threshold** : Filtre événements <0.75  
-✅ **Trust Layer** : Validation Telegram (trust=propose)  
+✅ **Few-shot learning** : 5 exemples français injectés dans prompt
+✅ **Dates relatives → absolues** : "demain", "jeudi", "dans 2 semaines"
+✅ **Classification multi-casquettes** : médecin/enseignant/chercheur
+✅ **Anonymisation RGPD** : Presidio AVANT appel Claude
+✅ **Confidence threshold** : Filtre événements <0.75
+✅ **Trust Layer** : Validation Telegram (trust=propose)
 
 ## Pipeline
 

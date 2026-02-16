@@ -13,12 +13,12 @@ Coverage:
 - Pause/cancel support
 """
 
-import pytest
 import asyncio
+from datetime import datetime, timedelta
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
-from datetime import datetime, timedelta
 
+import pytest
 
 # ============================================================================
 # Test scan_folder_with_filters (AC2)
@@ -31,10 +31,7 @@ def test_scan_folder_recursive(tmp_path):
 
     AC2: scan récursif dossier
     """
-    from agents.src.agents.archiviste.batch_processor import (
-        BatchProcessor,
-        BatchFilters,
-    )
+    from agents.src.agents.archiviste.batch_processor import BatchFilters, BatchProcessor
 
     # Create test files
     (tmp_path / "file1.pdf").write_text("test")
@@ -121,10 +118,7 @@ def test_matches_filters_extensions(tmp_path):
 
     AC5: whitelist extensions
     """
-    from agents.src.agents.archiviste.batch_processor import (
-        BatchProcessor,
-        BatchFilters,
-    )
+    from agents.src.agents.archiviste.batch_processor import BatchFilters, BatchProcessor
 
     # Create test files
     pdf_file = tmp_path / "test.pdf"
@@ -152,10 +146,7 @@ def test_matches_filters_date_after(tmp_path):
 
     AC5: fichiers après date
     """
-    from agents.src.agents.archiviste.batch_processor import (
-        BatchProcessor,
-        BatchFilters,
-    )
+    from agents.src.agents.archiviste.batch_processor import BatchFilters, BatchProcessor
 
     # Create old file
     old_file = tmp_path / "old.pdf"
@@ -192,10 +183,7 @@ def test_matches_filters_max_size(tmp_path):
 
     AC5: taille max
     """
-    from agents.src.agents.archiviste.batch_processor import (
-        BatchProcessor,
-        BatchFilters,
-    )
+    from agents.src.agents.archiviste.batch_processor import BatchFilters, BatchProcessor
 
     # Create small file (1 KB)
     small_file = tmp_path / "small.pdf"
@@ -231,10 +219,7 @@ async def test_deduplicate_files_sha256():
 
     AC2: skip fichiers déjà traités
     """
-    from agents.src.agents.archiviste.batch_processor import (
-        BatchProcessor,
-        BatchFilters,
-    )
+    from agents.src.agents.archiviste.batch_processor import BatchFilters, BatchProcessor
 
     # Mock database
     mock_db = MagicMock()
@@ -280,10 +265,7 @@ async def test_process_single_file_success():
 
     AC2: pipeline Archiviste complet
     """
-    from agents.src.agents.archiviste.batch_processor import (
-        BatchProcessor,
-        BatchFilters,
-    )
+    from agents.src.agents.archiviste.batch_processor import BatchFilters, BatchProcessor
 
     # Mock dependencies
     mock_db = MagicMock()
@@ -332,10 +314,7 @@ async def test_process_single_file_timeout():
 
     AC6: timeout protection
     """
-    from agents.src.agents.archiviste.batch_processor import (
-        BatchProcessor,
-        BatchFilters,
-    )
+    from agents.src.agents.archiviste.batch_processor import BatchFilters, BatchProcessor
 
     # Mock dependencies (never returns completed)
     mock_db = MagicMock()
@@ -387,8 +366,9 @@ async def test_rate_limiting_5_per_minute():
 
     AC2: 5 fichiers/min max
     """
-    from agents.src.agents.archiviste.batch_processor import SimpleRateLimiter
     import time
+
+    from agents.src.agents.archiviste.batch_processor import SimpleRateLimiter
 
     limiter = SimpleRateLimiter(max_requests=5, window_seconds=60)
 
@@ -422,10 +402,7 @@ async def test_fail_safe_continue_on_error():
 
     AC6: fail-safe processing
     """
-    from agents.src.agents.archiviste.batch_processor import (
-        BatchProcessor,
-        BatchFilters,
-    )
+    from agents.src.agents.archiviste.batch_processor import BatchFilters, BatchProcessor
 
     # Mock progress tracker
     mock_progress = MagicMock()
@@ -543,10 +520,7 @@ def test_sha256_cache(tmp_path):
 
     Code review fix: SHA256 was computed twice per file.
     """
-    from agents.src.agents.archiviste.batch_processor import (
-        BatchProcessor,
-        BatchFilters,
-    )
+    from agents.src.agents.archiviste.batch_processor import BatchFilters, BatchProcessor
 
     test_file = tmp_path / "test.pdf"
     test_file.write_bytes(b"test content")
@@ -579,10 +553,7 @@ async def test_file_deleted_during_processing(tmp_path):
 
     AC6: error handling robuste
     """
-    from agents.src.agents.archiviste.batch_processor import (
-        BatchProcessor,
-        BatchFilters,
-    )
+    from agents.src.agents.archiviste.batch_processor import BatchFilters, BatchProcessor
 
     # Create file
     test_file = tmp_path / "test.pdf"
@@ -610,10 +581,7 @@ def test_empty_folder(tmp_path):
 
     AC2: retourne 0 fichiers
     """
-    from agents.src.agents.archiviste.batch_processor import (
-        BatchProcessor,
-        BatchFilters,
-    )
+    from agents.src.agents.archiviste.batch_processor import BatchFilters, BatchProcessor
 
     filters = BatchFilters()
     processor = BatchProcessor(

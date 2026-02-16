@@ -11,13 +11,17 @@ Tests: H2 fix - Tests E2E minimum avant status=done
 """
 
 import asyncio
+from datetime import datetime
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import asyncpg
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
-from datetime import datetime
 
 # Ces tests nécessitent PostgreSQL + Redis réels (pas mocks)
-pytest.skip("E2E tests requièrent infra complète (PostgreSQL + Redis + EmailEngine mock)", allow_module_level=True)
+pytest.skip(
+    "E2E tests requièrent infra complète (PostgreSQL + Redis + EmailEngine mock)",
+    allow_module_level=True,
+)
 
 
 @pytest.fixture
@@ -30,7 +34,7 @@ async def db_pool():
         user="postgres",
         password="postgres",
         min_size=1,
-        max_size=5
+        max_size=5,
     )
     yield pool
     await pool.close()
@@ -69,25 +73,32 @@ async def test_e2e_email_to_draft_notification(db_pool, clean_db):
     - Latence totale <10s (AC4)
     """
     # Setup mocks
-    with patch('agents.src.adapters.llm.get_llm_adapter') as mock_llm, \
-         patch('agents.src.tools.anonymize.anonymize_text') as mock_anonymize, \
-         patch('agents.src.tools.anonymize.deanonymize_text') as mock_deanonymize, \
-         patch('bot.handlers.draft_reply_notifications.send_draft_ready_notification') as mock_telegram:
+    with (
+        patch("agents.src.adapters.llm.get_llm_adapter") as mock_llm,
+        patch("agents.src.tools.anonymize.anonymize_text") as mock_anonymize,
+        patch("agents.src.tools.anonymize.deanonymize_text") as mock_deanonymize,
+        patch(
+            "bot.handlers.draft_reply_notifications.send_draft_ready_notification"
+        ) as mock_telegram,
+    ):
 
         # Mock Claude API
         mock_llm_instance = AsyncMock()
-        mock_llm_instance.complete = AsyncMock(return_value={
-            'content': 'Bonjour,\n\nOui, vous pouvez reprogrammer votre rendez-vous.\n\nCordialement,\nDr. Antonio Lopez'
-        })
+        mock_llm_instance.complete = AsyncMock(
+            return_value={
+                "content": "Bonjour,\n\nOui, vous pouvez reprogrammer votre rendez-vous.\n\nCordialement,\nDr. Antonio Lopez"
+            }
+        )
         mock_llm.return_value = mock_llm_instance
 
         # Mock Presidio (retourne AnonymizationResult)
         from agents.src.tools.anonymize import AnonymizationResult
+
         mock_anonymize.side_effect = lambda text: AnonymizationResult(
             anonymized_text=text.replace("John Doe", "[NAME_1]"),
             entities_found=[],
             mapping={"[NAME_1]": "John Doe"},
-            confidence_min=1.0
+            confidence_min=1.0,
         )
         mock_deanonymize.side_effect = lambda text, mapping: text.replace("[NAME_1]", "John Doe")
 
@@ -115,36 +126,34 @@ async def test_e2e_email_to_draft_notification(db_pool, clean_db):
                 0.95,
                 "normal",
                 datetime.utcnow(),
-                False
+                False,
             )
 
         # 2. Trigger draft_email_reply (simulate consumer.py Phase 7)
         from agents.src.agents.email.draft_reply import draft_email_reply
 
         email_data = {
-            'from': 'john.doe@example.com',
-            'from_anon': '[NAME_1]@example.com',
-            'to': 'antonio.lopez@example.com',
-            'subject': 'Question about appointment',
-            'subject_anon': 'Question about appointment',
-            'body': 'Can I reschedule my appointment?',
-            'body_anon': 'Can I reschedule my appointment?',
-            'category': 'professional',
-            'message_id': '<msg-123@example.com>',
-            'sender_email': 'john.doe@example.com',
-            'recipient_email': 'antonio.lopez@example.com'
+            "from": "john.doe@example.com",
+            "from_anon": "[NAME_1]@example.com",
+            "to": "antonio.lopez@example.com",
+            "subject": "Question about appointment",
+            "subject_anon": "Question about appointment",
+            "body": "Can I reschedule my appointment?",
+            "body_anon": "Can I reschedule my appointment?",
+            "category": "professional",
+            "message_id": "<msg-123@example.com>",
+            "sender_email": "john.doe@example.com",
+            "recipient_email": "antonio.lopez@example.com",
         }
 
         result = await draft_email_reply(
-            email_id=str(email_id),
-            email_data=email_data,
-            db_pool=db_pool
+            email_id=str(email_id), email_data=email_data, db_pool=db_pool
         )
 
         # 3. Validations
         assert result.confidence > 0.5, "Confidence doit être > 0.5"
-        assert 'draft_body' in result.payload, "Payload doit contenir draft_body"
-        assert len(result.payload['draft_body']) > 10, "Draft body ne doit pas être vide"
+        assert "draft_body" in result.payload, "Payload doit contenir draft_body"
+        assert len(result.payload["draft_body"]) > 10, "Draft body ne doit pas être vide"
 
         # Vérifier receipt créé
         async with db_pool.acquire() as conn:
@@ -157,7 +166,7 @@ async def test_e2e_email_to_draft_notification(db_pool, clean_db):
             )
 
         assert receipt is not None, "Receipt doit être créé"
-        assert receipt['status'] == 'pending', "Receipt status doit être pending (trust=propose)"
+        assert receipt["status"] == "pending", "Receipt status doit être pending (trust=propose)"
 
         # Vérifier latence <10s (AC4)
         latency = (datetime.utcnow() - start_time).total_seconds()
@@ -186,12 +195,14 @@ async def test_e2e_approve_send_email_store_example(db_pool, clean_db):
     - Writing example inséré en DB
     - Receipt status='executed' + validated_by
     """
-    with patch('services.email_processor.emailengine_client.EmailEngineClient.send_message') as mock_send:
+    with patch(
+        "services.email_processor.emailengine_client.EmailEngineClient.send_message"
+    ) as mock_send:
         # Mock EmailEngine send_message
         mock_send.return_value = {
-            'messageId': '<sent-msg-456@example.com>',
-            'queueId': 'queue-789',
-            'response': '250 Message accepted'
+            "messageId": "<sent-msg-456@example.com>",
+            "queueId": "queue-789",
+            "response": "250 Message accepted",
         }
 
         # 1. Créer receipt pending avec draft_body
@@ -214,8 +225,8 @@ async def test_e2e_approve_send_email_store_example(db_pool, clean_db):
                 {
                     "draft_body": "Bonjour,\n\nOui, vous pouvez reprogrammer.\n\nCordialement,\nDr. Lopez",
                     "email_original_id": str(await conn.fetchval("SELECT uuid_generate_v4()")),
-                    "email_type": "professional"
-                }
+                    "email_type": "professional",
+                },
             )
 
             # Créer email original pour send_email_via_emailengine
@@ -236,19 +247,19 @@ async def test_e2e_approve_send_email_store_example(db_pool, clean_db):
                 0.95,
                 "normal",
                 datetime.utcnow(),
-                False
+                False,
             )
 
             # Mettre à jour receipt avec bon email_id
             await conn.execute(
                 "UPDATE core.action_receipts SET payload = payload || $1::jsonb WHERE id = $2",
-                {'email_original_id': str(email_id)},
-                receipt_id
+                {"email_original_id": str(email_id)},
+                receipt_id,
             )
 
         # 2. Simuler Approve (via action_executor)
-        from bot.action_executor_draft_reply import send_email_via_emailengine
         import httpx
+        from bot.action_executor_draft_reply import send_email_via_emailengine
 
         async with httpx.AsyncClient() as http_client:
             result = await send_email_via_emailengine(
@@ -256,20 +267,19 @@ async def test_e2e_approve_send_email_store_example(db_pool, clean_db):
                 db_pool=db_pool,
                 http_client=http_client,
                 emailengine_url="http://localhost:3000",
-                emailengine_secret="test_secret"
+                emailengine_secret="test_secret",
             )
 
         # 3. Validations
-        assert result['success'] is True, "Envoi doit réussir"
+        assert result["success"] is True, "Envoi doit réussir"
         assert mock_send.called, "EmailEngine send_message doit être appelé"
 
         # Vérifier receipt status='executed'
         async with db_pool.acquire() as conn:
             receipt = await conn.fetchrow(
-                "SELECT status FROM core.action_receipts WHERE id = $1",
-                receipt_id
+                "SELECT status FROM core.action_receipts WHERE id = $1", receipt_id
             )
-        assert receipt['status'] == 'executed', "Receipt status doit être 'executed'"
+        assert receipt["status"] == "executed", "Receipt status doit être 'executed'"
 
         # Vérifier writing_example stocké
         async with db_pool.acquire() as conn:
@@ -282,7 +292,7 @@ async def test_e2e_approve_send_email_store_example(db_pool, clean_db):
             )
 
         assert example is not None, "Writing example doit être stocké"
-        assert 'reprogrammer' in example['body'], "Body doit contenir le draft envoyé"
+        assert "reprogrammer" in example["body"], "Body doit contenir le draft envoyé"
 
 
 @pytest.mark.e2e
@@ -300,9 +310,11 @@ async def test_e2e_presidio_anonymization_end_to_end(db_pool, clean_db):
 
     CRITIQUE: Vérifier que PII n'est JAMAIS loggée ou exposée
     """
-    with patch('agents.src.tools.anonymize.anonymize_text') as mock_anonymize, \
-         patch('agents.src.tools.anonymize.deanonymize_text') as mock_deanonymize, \
-         patch('agents.src.adapters.llm.get_llm_adapter') as mock_llm:
+    with (
+        patch("agents.src.tools.anonymize.anonymize_text") as mock_anonymize,
+        patch("agents.src.tools.anonymize.deanonymize_text") as mock_deanonymize,
+        patch("agents.src.adapters.llm.get_llm_adapter") as mock_llm,
+    ):
 
         # Setup: Email avec PII
         email_with_pii = """
@@ -328,6 +340,7 @@ async def test_e2e_presidio_anonymization_end_to_end(db_pool, clean_db):
         [NAME_2]
         """
         from agents.src.tools.anonymize import AnonymizationResult
+
         mock_anonymize.return_value = AnonymizationResult(
             anonymized_text=email_anonymized,
             entities_found=[{"entity_type": "PERSON", "start": 0, "end": 10, "score": 0.95}],
@@ -337,9 +350,9 @@ async def test_e2e_presidio_anonymization_end_to_end(db_pool, clean_db):
                 "[EMAIL_1]": "marie.dupont@example.com",
                 "[SSN_1]": "1 85 03 75 123 456 78",
                 "[DATE_1]": "15/02/2026",
-                "[TIME_1]": "14h30"
+                "[TIME_1]": "14h30",
             },
-            confidence_min=0.95
+            confidence_min=0.95,
         )
 
         # Mock Claude response (avec placeholders)
@@ -353,7 +366,7 @@ async def test_e2e_presidio_anonymization_end_to_end(db_pool, clean_db):
         """
 
         mock_llm_instance = AsyncMock()
-        mock_llm_instance.complete = AsyncMock(return_value={'content': claude_response_anon})
+        mock_llm_instance.complete = AsyncMock(return_value={"content": claude_response_anon})
         mock_llm.return_value = mock_llm_instance
 
         # Mock deanonymize: placeholders → PII restaurée (accepte text + mapping)
@@ -371,25 +384,21 @@ async def test_e2e_presidio_anonymization_end_to_end(db_pool, clean_db):
         from agents.src.agents.email.draft_reply import draft_email_reply
 
         email_data = {
-            'from': 'marie.dupont@example.com',
-            'from_anon': '[EMAIL_1]',
-            'to': 'antonio.lopez@example.com',
-            'subject': 'Confirmation RDV',
-            'subject_anon': 'Confirmation [MEDICAL_TERM_1]',
-            'body': email_with_pii,
-            'body_anon': email_anonymized,
-            'category': 'medical',
-            'message_id': '<msg-pii@example.com>',
-            'sender_email': 'marie.dupont@example.com',
-            'recipient_email': 'antonio.lopez@example.com'
+            "from": "marie.dupont@example.com",
+            "from_anon": "[EMAIL_1]",
+            "to": "antonio.lopez@example.com",
+            "subject": "Confirmation RDV",
+            "subject_anon": "Confirmation [MEDICAL_TERM_1]",
+            "body": email_with_pii,
+            "body_anon": email_anonymized,
+            "category": "medical",
+            "message_id": "<msg-pii@example.com>",
+            "sender_email": "marie.dupont@example.com",
+            "recipient_email": "antonio.lopez@example.com",
         }
 
         email_id = "test-uuid-pii-123"
-        result = await draft_email_reply(
-            email_id=email_id,
-            email_data=email_data,
-            db_pool=db_pool
-        )
+        result = await draft_email_reply(email_id=email_id, email_data=email_data, db_pool=db_pool)
 
         # VALIDATIONS CRITIQUES RGPD
         # 1. Presidio anonymize appelé AVANT Claude
@@ -397,27 +406,34 @@ async def test_e2e_presidio_anonymization_end_to_end(db_pool, clean_db):
 
         # 2. Claude reçoit UNIQUEMENT texte anonymisé (vérifier args)
         claude_call_args = mock_llm_instance.complete.call_args
-        prompt_sent_to_claude = claude_call_args[1]['messages'][1]['content']  # User prompt
+        prompt_sent_to_claude = claude_call_args[1]["messages"][1]["content"]  # User prompt
 
         # CRITICAL: Vérifier que PII n'est PAS dans prompt Claude
-        assert 'Marie Dupont' not in prompt_sent_to_claude, "PII nom NE DOIT PAS être envoyée à Claude"
-        assert 'marie.dupont@example.com' not in prompt_sent_to_claude, "PII email NE DOIT PAS être envoyée à Claude"
-        assert '1 85 03 75 123 456 78' not in prompt_sent_to_claude, "PII SSN NE DOIT PAS être envoyée à Claude"
+        assert (
+            "Marie Dupont" not in prompt_sent_to_claude
+        ), "PII nom NE DOIT PAS être envoyée à Claude"
+        assert (
+            "marie.dupont@example.com" not in prompt_sent_to_claude
+        ), "PII email NE DOIT PAS être envoyée à Claude"
+        assert (
+            "1 85 03 75 123 456 78" not in prompt_sent_to_claude
+        ), "PII SSN NE DOIT PAS être envoyée à Claude"
 
         # Vérifier que placeholders SONT présents
-        assert '[NAME_' in prompt_sent_to_claude or '[EMAIL_' in prompt_sent_to_claude, \
-            "Placeholders Presidio DOIVENT être dans prompt Claude"
+        assert (
+            "[NAME_" in prompt_sent_to_claude or "[EMAIL_" in prompt_sent_to_claude
+        ), "Placeholders Presidio DOIVENT être dans prompt Claude"
 
         # 3. Presidio deanonymize appelé APRÈS Claude
         assert mock_deanonymize.called, "Presidio deanonymize DOIT être appelé"
 
         # 4. Draft final contient PII restaurée
-        draft_final = result.payload['draft_body']
-        assert 'Marie' in draft_final, "PII prénom DOIT être restaurée dans draft final"
-        assert '15/02/2026' in draft_final, "PII date DOIT être restaurée"
+        draft_final = result.payload["draft_body"]
+        assert "Marie" in draft_final, "PII prénom DOIT être restaurée dans draft final"
+        assert "15/02/2026" in draft_final, "PII date DOIT être restaurée"
 
         # 5. Pas de placeholders résiduels dans draft final
-        assert '[NAME_' not in draft_final, "Placeholders NE DOIVENT PAS rester dans draft final"
-        assert '[DATE_' not in draft_final, "Placeholders NE DOIVENT PAS rester dans draft final"
+        assert "[NAME_" not in draft_final, "Placeholders NE DOIVENT PAS rester dans draft final"
+        assert "[DATE_" not in draft_final, "Placeholders NE DOIVENT PAS rester dans draft final"
 
         print("✅ RGPD TEST PASS: Anonymisation bout-en-bout validée, PII JAMAIS exposée à Claude")

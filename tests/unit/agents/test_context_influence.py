@@ -10,18 +10,18 @@ Tests :
 - Contexte manuel override auto-detect
 """
 
-import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
 from datetime import datetime
+from unittest.mock import AsyncMock, MagicMock, patch
 
-from agents.src.agents.email.classifier import classify_email
+import pytest
 from agents.src.agents.calendar.event_detector import extract_events_from_email
+from agents.src.agents.email.classifier import classify_email
 from agents.src.core.models import Casquette
-
 
 # ============================================================================
 # Fixtures
 # ============================================================================
+
 
 @pytest.fixture
 def mock_db_pool():
@@ -36,10 +36,7 @@ def mock_db_pool():
 def mock_db_pool_medecin(mock_db_pool):
     """Mock DB pool retournant casquette=medecin."""
     conn = mock_db_pool.acquire.return_value.__aenter__.return_value
-    conn.fetchrow.return_value = {
-        "current_casquette": "medecin",
-        "updated_by": "manual"
-    }
+    conn.fetchrow.return_value = {"current_casquette": "medecin", "updated_by": "manual"}
     return mock_db_pool
 
 
@@ -47,10 +44,7 @@ def mock_db_pool_medecin(mock_db_pool):
 def mock_db_pool_enseignant(mock_db_pool):
     """Mock DB pool retournant casquette=enseignant."""
     conn = mock_db_pool.acquire.return_value.__aenter__.return_value
-    conn.fetchrow.return_value = {
-        "current_casquette": "enseignant",
-        "updated_by": "time"
-    }
+    conn.fetchrow.return_value = {"current_casquette": "enseignant", "updated_by": "time"}
     return mock_db_pool
 
 
@@ -58,10 +52,7 @@ def mock_db_pool_enseignant(mock_db_pool):
 def mock_db_pool_null(mock_db_pool):
     """Mock DB pool retournant casquette=null."""
     conn = mock_db_pool.acquire.return_value.__aenter__.return_value
-    conn.fetchrow.return_value = {
-        "current_casquette": None,
-        "updated_by": None
-    }
+    conn.fetchrow.return_value = {"current_casquette": None, "updated_by": None}
     return mock_db_pool
 
 
@@ -76,8 +67,8 @@ def sample_email_chu():
         "metadata": {
             "sender": "compta@chu-toulouse.fr",
             "subject": "Facture consultation",
-            "date": "2026-02-15T10:30:00Z"
-        }
+            "date": "2026-02-15T10:30:00Z",
+        },
     }
 
 
@@ -92,8 +83,8 @@ def sample_email_reunion_ambigue():
         "metadata": {
             "sender": "chef@universite.fr",
             "subject": "Réunion équipe",
-            "date": "2026-02-15T10:00:00Z"
-        }
+            "date": "2026-02-15T10:00:00Z",
+        },
     }
 
 
@@ -101,11 +92,9 @@ def sample_email_reunion_ambigue():
 # Tests Classification Email avec Contexte (AC1)
 # ============================================================================
 
+
 @pytest.mark.asyncio
-async def test_email_chu_with_context_medecin_biases_pro(
-    sample_email_chu,
-    mock_db_pool_medecin
-):
+async def test_email_chu_with_context_medecin_biases_pro(sample_email_chu, mock_db_pool_medecin):
     """
     Test AC1: Email @chu.fr + contexte=medecin → bias vers pro
 
@@ -125,7 +114,7 @@ async def test_email_chu_with_context_medecin_biases_pro(
             email_text=sample_email_chu["body"],
             email_id=sample_email_chu["id"],
             metadata=sample_email_chu["metadata"],
-            db_pool=mock_db_pool_medecin
+            db_pool=mock_db_pool_medecin,
         )
 
         # Assertions: Classification pro
@@ -139,9 +128,7 @@ async def test_email_chu_with_context_medecin_biases_pro(
 
 
 @pytest.mark.asyncio
-async def test_email_chu_without_context_no_bias(
-    sample_email_chu
-):
+async def test_email_chu_without_context_no_bias(sample_email_chu):
     """
     Test AC1: Email @chu.fr SANS contexte → pas de bias
 
@@ -161,7 +148,7 @@ async def test_email_chu_without_context_no_bias(
             email_text=sample_email_chu["body"],
             email_id=sample_email_chu["id"],
             metadata=sample_email_chu["metadata"],
-            db_pool=None  # Pas de contexte
+            db_pool=None,  # Pas de contexte
         )
 
         # Assertions: Classification finance (objectif)
@@ -176,10 +163,10 @@ async def test_email_chu_without_context_no_bias(
 # Tests Détection Événements avec Contexte (AC1)
 # ============================================================================
 
+
 @pytest.mark.asyncio
 async def test_event_reunion_with_context_enseignant_biases_casquette(
-    sample_email_reunion_ambigue,
-    mock_db_pool_enseignant
+    sample_email_reunion_ambigue, mock_db_pool_enseignant
 ):
     """
     Test AC1: Événement ambigu + contexte=enseignant → casquette=enseignant
@@ -202,8 +189,7 @@ async def test_event_reunion_with_context_enseignant_biases_casquette(
     # Mock anonymize_text
     with patch("agents.src.agents.calendar.event_detector.anonymize_text") as mock_anon:
         mock_anon.return_value = MagicMock(
-            anonymized_text=sample_email_reunion_ambigue["body"],
-            mapping={}
+            anonymized_text=sample_email_reunion_ambigue["body"], mapping={}
         )
 
         # Appeler extract_events_from_email avec db_pool
@@ -213,7 +199,7 @@ async def test_event_reunion_with_context_enseignant_biases_casquette(
             metadata=sample_email_reunion_ambigue["metadata"],
             current_date="2026-02-15",
             anthropic_client=mock_client,
-            db_pool=mock_db_pool_enseignant
+            db_pool=mock_db_pool_enseignant,
         )
 
         # Assertions: Événement avec casquette=enseignant
@@ -227,9 +213,7 @@ async def test_event_reunion_with_context_enseignant_biases_casquette(
 
 
 @pytest.mark.asyncio
-async def test_event_reunion_without_context_no_bias(
-    sample_email_reunion_ambigue
-):
+async def test_event_reunion_without_context_no_bias(sample_email_reunion_ambigue):
     """
     Test AC1: Événement ambigu SANS contexte → pas de bias
 
@@ -251,8 +235,7 @@ async def test_event_reunion_without_context_no_bias(
     # Mock anonymize_text
     with patch("agents.src.agents.calendar.event_detector.anonymize_text") as mock_anon:
         mock_anon.return_value = MagicMock(
-            anonymized_text=sample_email_reunion_ambigue["body"],
-            mapping={}
+            anonymized_text=sample_email_reunion_ambigue["body"], mapping={}
         )
 
         # Appeler extract_events_from_email SANS db_pool
@@ -262,7 +245,7 @@ async def test_event_reunion_without_context_no_bias(
             metadata=sample_email_reunion_ambigue["metadata"],
             current_date="2026-02-15",
             anthropic_client=mock_client,
-            db_pool=None  # Pas de contexte
+            db_pool=None,  # Pas de contexte
         )
 
         # Assertions: Événement avec casquette=chercheur (objectif)
@@ -278,11 +261,9 @@ async def test_event_reunion_without_context_no_bias(
 # Tests Contexte Manuel Override (AC1)
 # ============================================================================
 
+
 @pytest.mark.asyncio
-async def test_email_with_explicit_casquette_overrides_db(
-    sample_email_chu,
-    mock_db_pool_medecin
-):
+async def test_email_with_explicit_casquette_overrides_db(sample_email_chu, mock_db_pool_medecin):
     """
     Test AC1: Contexte manuel explicite override DB
 
@@ -301,7 +282,7 @@ async def test_email_with_explicit_casquette_overrides_db(
             email_id=sample_email_chu["id"],
             metadata=sample_email_chu["metadata"],
             db_pool=mock_db_pool_medecin,
-            current_casquette=Casquette.CHERCHEUR  # Override explicite
+            current_casquette=Casquette.CHERCHEUR,  # Override explicite
         )
 
         # Assertions: DB NE DOIT PAS avoir été appelée
@@ -316,8 +297,7 @@ async def test_email_with_explicit_casquette_overrides_db(
 
 @pytest.mark.asyncio
 async def test_event_with_explicit_casquette_overrides_db(
-    sample_email_reunion_ambigue,
-    mock_db_pool_enseignant
+    sample_email_reunion_ambigue, mock_db_pool_enseignant
 ):
     """
     Test AC1: Contexte manuel explicite override DB (événements)
@@ -337,8 +317,7 @@ async def test_event_with_explicit_casquette_overrides_db(
     # Mock anonymize_text
     with patch("agents.src.agents.calendar.event_detector.anonymize_text") as mock_anon:
         mock_anon.return_value = MagicMock(
-            anonymized_text=sample_email_reunion_ambigue["body"],
-            mapping={}
+            anonymized_text=sample_email_reunion_ambigue["body"], mapping={}
         )
 
         # Appeler avec current_casquette=chercheur explicite (DB a enseignant)
@@ -349,7 +328,7 @@ async def test_event_with_explicit_casquette_overrides_db(
             current_date="2026-02-15",
             anthropic_client=mock_client,
             db_pool=mock_db_pool_enseignant,
-            current_casquette=Casquette.CHERCHEUR  # Override explicite
+            current_casquette=Casquette.CHERCHEUR,  # Override explicite
         )
 
         # Assertions: DB NE DOIT PAS avoir été appelée

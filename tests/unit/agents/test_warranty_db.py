@@ -10,6 +10,7 @@ Tests unitaires warranty_db.py (Story 3.4 AC2).
 - Delete warranty
 - Statistics
 """
+
 import sys
 from datetime import date, timedelta
 from decimal import Decimal
@@ -20,10 +21,7 @@ import pytest
 
 sys.path.insert(0, ".")
 
-from agents.src.agents.archiviste.warranty_models import (
-    WarrantyCategory,
-    WarrantyInfo,
-)
+from agents.src.agents.archiviste.warranty_models import WarrantyCategory, WarrantyInfo
 
 
 def _make_warranty_info(**kwargs) -> WarrantyInfo:
@@ -131,6 +129,7 @@ class TestGetExpiringWarranties:
         pool.fetch = AsyncMock(return_value=mock_rows)
 
         from agents.src.agents.archiviste.warranty_db import get_expiring_warranties
+
         result = await get_expiring_warranties(pool, days_threshold=60)
 
         assert len(result) == 2
@@ -144,6 +143,7 @@ class TestGetExpiringWarranties:
         pool.fetch = AsyncMock(return_value=[])
 
         from agents.src.agents.archiviste.warranty_db import get_expiring_warranties
+
         result = await get_expiring_warranties(pool, days_threshold=60)
 
         assert result == []
@@ -159,6 +159,7 @@ class TestMarkWarrantyExpired:
         pool.execute = AsyncMock()
 
         from agents.src.agents.archiviste.warranty_db import mark_warranty_expired
+
         await mark_warranty_expired(pool, str(uuid4()))
 
         pool.execute.assert_called_once()
@@ -176,6 +177,7 @@ class TestAlertTracking:
         pool.fetchval = AsyncMock(return_value=0)
 
         from agents.src.agents.archiviste.warranty_db import check_alert_sent
+
         result = await check_alert_sent(pool, str(uuid4()), "7_days")
 
         assert result is False
@@ -187,6 +189,7 @@ class TestAlertTracking:
         pool.fetchval = AsyncMock(return_value=1)
 
         from agents.src.agents.archiviste.warranty_db import check_alert_sent
+
         result = await check_alert_sent(pool, str(uuid4()), "30_days")
 
         assert result is True
@@ -198,6 +201,7 @@ class TestAlertTracking:
         pool.execute = AsyncMock()
 
         from agents.src.agents.archiviste.warranty_db import record_alert_sent
+
         await record_alert_sent(pool, str(uuid4()), "60_days")
 
         pool.execute.assert_called_once()
@@ -216,6 +220,7 @@ class TestDeleteWarranty:
         pool.execute = AsyncMock(return_value="DELETE 1")
 
         from agents.src.agents.archiviste.warranty_db import delete_warranty
+
         result = await delete_warranty(pool, str(uuid4()))
 
         assert result is True
@@ -227,6 +232,7 @@ class TestDeleteWarranty:
         pool.execute = AsyncMock(return_value="DELETE 0")
 
         from agents.src.agents.archiviste.warranty_db import delete_warranty
+
         result = await delete_warranty(pool, str(uuid4()))
 
         assert result is False
@@ -240,17 +246,22 @@ class TestWarrantyStats:
         """Statistiques agrégées."""
         pool = AsyncMock()
         pool.fetchval = AsyncMock(side_effect=[5, 2, Decimal("1500.00")])
-        pool.fetchrow = AsyncMock(return_value={
-            "item_name": "Printer",
-            "expiration_date": date(2026, 3, 15),
-            "days_remaining": 27,
-        })
-        pool.fetch = AsyncMock(return_value=[
-            {"item_category": "electronics", "count": 3, "total_amount": Decimal("900")},
-            {"item_category": "appliances", "count": 2, "total_amount": Decimal("600")},
-        ])
+        pool.fetchrow = AsyncMock(
+            return_value={
+                "item_name": "Printer",
+                "expiration_date": date(2026, 3, 15),
+                "days_remaining": 27,
+            }
+        )
+        pool.fetch = AsyncMock(
+            return_value=[
+                {"item_category": "electronics", "count": 3, "total_amount": Decimal("900")},
+                {"item_category": "appliances", "count": 2, "total_amount": Decimal("600")},
+            ]
+        )
 
         from agents.src.agents.archiviste.warranty_db import get_warranty_stats
+
         stats = await get_warranty_stats(pool)
 
         assert stats["total_active"] == 5

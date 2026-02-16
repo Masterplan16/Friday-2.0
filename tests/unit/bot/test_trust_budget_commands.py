@@ -9,9 +9,8 @@ from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from telegram import Update, Message, User
+from telegram import Message, Update, User
 from telegram.ext import ContextTypes
-
 
 # ────────────────────────────────────────────────────────────
 # Fixtures
@@ -99,7 +98,11 @@ class TestAuthorization:
         mock_db_conn.fetch.return_value = []
 
         with patch("bot.handlers.trust_budget_commands._OWNER_USER_ID", 0):
-            with patch("bot.handlers.trust_budget_commands._get_pool", new_callable=AsyncMock, return_value=mock_pool):
+            with patch(
+                "bot.handlers.trust_budget_commands._get_pool",
+                new_callable=AsyncMock,
+                return_value=mock_pool,
+            ):
                 await journal_command(mock_update, mock_context)
 
                 text = mock_update.message.reply_text.call_args[0][0]
@@ -143,9 +146,19 @@ class TestConfianceCommand:
             },
         ]
 
-        with patch("bot.handlers.trust_budget_commands._get_pool", new_callable=AsyncMock, return_value=mock_pool):
-            with patch("bot.handlers.trust_budget_commands._load_trust_levels_config", return_value={"email": {"classify": "auto"}}):
-                with patch("bot.handlers.trust_budget_commands.send_message_with_split", new_callable=AsyncMock) as mock_send:
+        with patch(
+            "bot.handlers.trust_budget_commands._get_pool",
+            new_callable=AsyncMock,
+            return_value=mock_pool,
+        ):
+            with patch(
+                "bot.handlers.trust_budget_commands._load_trust_levels_config",
+                return_value={"email": {"classify": "auto"}},
+            ):
+                with patch(
+                    "bot.handlers.trust_budget_commands.send_message_with_split",
+                    new_callable=AsyncMock,
+                ) as mock_send:
                     await confiance_command(mock_update, mock_context)
 
                     mock_send.assert_called_once()
@@ -161,7 +174,11 @@ class TestConfianceCommand:
 
         mock_db_conn.fetch.return_value = []
 
-        with patch("bot.handlers.trust_budget_commands._get_pool", new_callable=AsyncMock, return_value=mock_pool):
+        with patch(
+            "bot.handlers.trust_budget_commands._get_pool",
+            new_callable=AsyncMock,
+            return_value=mock_pool,
+        ):
             await confiance_command(mock_update, mock_context)
 
             mock_update.message.reply_text.assert_called_once()
@@ -189,16 +206,28 @@ class TestConfianceCommand:
             },
         ]
 
-        with patch("bot.handlers.trust_budget_commands._get_pool", new_callable=AsyncMock, return_value=mock_pool):
-            with patch("bot.handlers.trust_budget_commands._load_trust_levels_config", return_value={"email": {"classify": "auto"}}):
-                with patch("bot.handlers.trust_budget_commands.send_message_with_split", new_callable=AsyncMock) as mock_send:
+        with patch(
+            "bot.handlers.trust_budget_commands._get_pool",
+            new_callable=AsyncMock,
+            return_value=mock_pool,
+        ):
+            with patch(
+                "bot.handlers.trust_budget_commands._load_trust_levels_config",
+                return_value={"email": {"classify": "auto"}},
+            ):
+                with patch(
+                    "bot.handlers.trust_budget_commands.send_message_with_split",
+                    new_callable=AsyncMock,
+                ) as mock_send:
                     await confiance_command(mock_update, mock_context)
 
                     text = mock_send.call_args[0][1]
                     assert "corr=" in text
 
     @pytest.mark.asyncio
-    async def test_confiance_with_retrogradation(self, mock_update, mock_context, mock_pool, mock_db_conn):
+    async def test_confiance_with_retrogradation(
+        self, mock_update, mock_context, mock_pool, mock_db_conn
+    ):
         """AC1: Mention visuelle retrogradation recente."""
         from bot.handlers.trust_budget_commands import confiance_command
 
@@ -215,9 +244,19 @@ class TestConfianceCommand:
             },
         ]
 
-        with patch("bot.handlers.trust_budget_commands._get_pool", new_callable=AsyncMock, return_value=mock_pool):
-            with patch("bot.handlers.trust_budget_commands._load_trust_levels_config", return_value={"email": {"classify": "propose"}}):
-                with patch("bot.handlers.trust_budget_commands.send_message_with_split", new_callable=AsyncMock) as mock_send:
+        with patch(
+            "bot.handlers.trust_budget_commands._get_pool",
+            new_callable=AsyncMock,
+            return_value=mock_pool,
+        ):
+            with patch(
+                "bot.handlers.trust_budget_commands._load_trust_levels_config",
+                return_value={"email": {"classify": "propose"}},
+            ):
+                with patch(
+                    "bot.handlers.trust_budget_commands.send_message_with_split",
+                    new_callable=AsyncMock,
+                ) as mock_send:
                     await confiance_command(mock_update, mock_context)
 
                     text = mock_send.call_args[0][1]
@@ -258,8 +297,14 @@ class TestReceiptCommand:
             "duration_ms": 250,
         }
 
-        with patch("bot.handlers.trust_budget_commands._get_pool", new_callable=AsyncMock, return_value=mock_pool):
-            with patch("bot.handlers.trust_budget_commands.send_message_with_split", new_callable=AsyncMock) as mock_send:
+        with patch(
+            "bot.handlers.trust_budget_commands._get_pool",
+            new_callable=AsyncMock,
+            return_value=mock_pool,
+        ):
+            with patch(
+                "bot.handlers.trust_budget_commands.send_message_with_split", new_callable=AsyncMock
+            ) as mock_send:
                 await receipt_command(mock_update, mock_context)
 
                 text = mock_send.call_args[0][1]
@@ -276,7 +321,11 @@ class TestReceiptCommand:
         mock_db_conn.fetchrow.return_value = None
         mock_db_conn.fetch.return_value = []
 
-        with patch("bot.handlers.trust_budget_commands._get_pool", new_callable=AsyncMock, return_value=mock_pool):
+        with patch(
+            "bot.handlers.trust_budget_commands._get_pool",
+            new_callable=AsyncMock,
+            return_value=mock_pool,
+        ):
             await receipt_command(mock_update, mock_context)
 
             text = mock_update.message.reply_text.call_args[0][0]
@@ -310,8 +359,14 @@ class TestReceiptCommand:
             },
         ]
 
-        with patch("bot.handlers.trust_budget_commands._get_pool", new_callable=AsyncMock, return_value=mock_pool):
-            with patch("bot.handlers.trust_budget_commands.send_message_with_split", new_callable=AsyncMock) as mock_send:
+        with patch(
+            "bot.handlers.trust_budget_commands._get_pool",
+            new_callable=AsyncMock,
+            return_value=mock_pool,
+        ):
+            with patch(
+                "bot.handlers.trust_budget_commands.send_message_with_split", new_callable=AsyncMock
+            ) as mock_send:
                 await receipt_command(mock_update, mock_context)
 
                 text = mock_send.call_args[0][1]
@@ -356,8 +411,14 @@ class TestReceiptCommand:
             "duration_ms": 350,
         }
 
-        with patch("bot.handlers.trust_budget_commands._get_pool", new_callable=AsyncMock, return_value=mock_pool):
-            with patch("bot.handlers.trust_budget_commands.send_message_with_split", new_callable=AsyncMock) as mock_send:
+        with patch(
+            "bot.handlers.trust_budget_commands._get_pool",
+            new_callable=AsyncMock,
+            return_value=mock_pool,
+        ):
+            with patch(
+                "bot.handlers.trust_budget_commands.send_message_with_split", new_callable=AsyncMock
+            ) as mock_send:
                 await receipt_command(mock_update, mock_context)
 
                 text = mock_send.call_args[0][1]
@@ -400,8 +461,14 @@ class TestJournalCommand:
             },
         ]
 
-        with patch("bot.handlers.trust_budget_commands._get_pool", new_callable=AsyncMock, return_value=mock_pool):
-            with patch("bot.handlers.trust_budget_commands.send_message_with_split", new_callable=AsyncMock) as mock_send:
+        with patch(
+            "bot.handlers.trust_budget_commands._get_pool",
+            new_callable=AsyncMock,
+            return_value=mock_pool,
+        ):
+            with patch(
+                "bot.handlers.trust_budget_commands.send_message_with_split", new_callable=AsyncMock
+            ) as mock_send:
                 await journal_command(mock_update, mock_context)
 
                 text = mock_send.call_args[0][1]
@@ -416,14 +483,20 @@ class TestJournalCommand:
 
         mock_db_conn.fetch.return_value = []
 
-        with patch("bot.handlers.trust_budget_commands._get_pool", new_callable=AsyncMock, return_value=mock_pool):
+        with patch(
+            "bot.handlers.trust_budget_commands._get_pool",
+            new_callable=AsyncMock,
+            return_value=mock_pool,
+        ):
             await journal_command(mock_update, mock_context)
 
             text = mock_update.message.reply_text.call_args[0][0]
             assert "Aucune action enregistree" in text
 
     @pytest.mark.asyncio
-    async def test_journal_verbose_shows_input(self, mock_update, mock_context, mock_pool, mock_db_conn):
+    async def test_journal_verbose_shows_input(
+        self, mock_update, mock_context, mock_pool, mock_db_conn
+    ):
         """AC3+AC7: Mode verbose affiche input_summary par entree."""
         from bot.handlers.trust_budget_commands import journal_command
 
@@ -440,8 +513,14 @@ class TestJournalCommand:
             },
         ]
 
-        with patch("bot.handlers.trust_budget_commands._get_pool", new_callable=AsyncMock, return_value=mock_pool):
-            with patch("bot.handlers.trust_budget_commands.send_message_with_split", new_callable=AsyncMock) as mock_send:
+        with patch(
+            "bot.handlers.trust_budget_commands._get_pool",
+            new_callable=AsyncMock,
+            return_value=mock_pool,
+        ):
+            with patch(
+                "bot.handlers.trust_budget_commands.send_message_with_split", new_callable=AsyncMock
+            ) as mock_send:
                 await journal_command(mock_update, mock_context)
 
                 text = mock_send.call_args[0][1]
@@ -477,9 +556,18 @@ class TestStatusCommand:
         mock_redis.ping = AsyncMock(return_value=True)
         mock_redis.close = AsyncMock()
 
-        with patch("bot.handlers.trust_budget_commands._get_pool", new_callable=AsyncMock, return_value=mock_pool):
-            with patch("bot.handlers.trust_budget_commands.aioredis.from_url", return_value=mock_redis):
-                with patch("bot.handlers.trust_budget_commands.send_message_with_split", new_callable=AsyncMock) as mock_send:
+        with patch(
+            "bot.handlers.trust_budget_commands._get_pool",
+            new_callable=AsyncMock,
+            return_value=mock_pool,
+        ):
+            with patch(
+                "bot.handlers.trust_budget_commands.aioredis.from_url", return_value=mock_redis
+            ):
+                with patch(
+                    "bot.handlers.trust_budget_commands.send_message_with_split",
+                    new_callable=AsyncMock,
+                ) as mock_send:
                     await status_command(mock_update, mock_context)
 
                     text = mock_send.call_args[0][1]
@@ -497,9 +585,18 @@ class TestStatusCommand:
         mock_redis.ping = AsyncMock(return_value=True)
         mock_redis.close = AsyncMock()
 
-        with patch("bot.handlers.trust_budget_commands._get_pool", new_callable=AsyncMock, side_effect=ValueError("DB not configured")):
-            with patch("bot.handlers.trust_budget_commands.aioredis.from_url", return_value=mock_redis):
-                with patch("bot.handlers.trust_budget_commands.send_message_with_split", new_callable=AsyncMock) as mock_send:
+        with patch(
+            "bot.handlers.trust_budget_commands._get_pool",
+            new_callable=AsyncMock,
+            side_effect=ValueError("DB not configured"),
+        ):
+            with patch(
+                "bot.handlers.trust_budget_commands.aioredis.from_url", return_value=mock_redis
+            ):
+                with patch(
+                    "bot.handlers.trust_budget_commands.send_message_with_split",
+                    new_callable=AsyncMock,
+                ) as mock_send:
                     await status_command(mock_update, mock_context)
 
                     text = mock_send.call_args[0][1]
@@ -529,8 +626,14 @@ class TestBudgetCommand:
             },
         ]
 
-        with patch("bot.handlers.trust_budget_commands._get_pool", new_callable=AsyncMock, return_value=mock_pool):
-            with patch("bot.handlers.trust_budget_commands.send_message_with_split", new_callable=AsyncMock) as mock_send:
+        with patch(
+            "bot.handlers.trust_budget_commands._get_pool",
+            new_callable=AsyncMock,
+            return_value=mock_pool,
+        ):
+            with patch(
+                "bot.handlers.trust_budget_commands.send_message_with_split", new_callable=AsyncMock
+            ) as mock_send:
                 await budget_command(mock_update, mock_context)
 
                 text = mock_send.call_args[0][1]
@@ -545,7 +648,11 @@ class TestBudgetCommand:
 
         mock_db_conn.fetch.return_value = []
 
-        with patch("bot.handlers.trust_budget_commands._get_pool", new_callable=AsyncMock, return_value=mock_pool):
+        with patch(
+            "bot.handlers.trust_budget_commands._get_pool",
+            new_callable=AsyncMock,
+            return_value=mock_pool,
+        ):
             await budget_command(mock_update, mock_context)
 
             text = mock_update.message.reply_text.call_args[0][0]
@@ -566,8 +673,14 @@ class TestBudgetCommand:
             },
         ]
 
-        with patch("bot.handlers.trust_budget_commands._get_pool", new_callable=AsyncMock, return_value=mock_pool):
-            with patch("bot.handlers.trust_budget_commands.send_message_with_split", new_callable=AsyncMock) as mock_send:
+        with patch(
+            "bot.handlers.trust_budget_commands._get_pool",
+            new_callable=AsyncMock,
+            return_value=mock_pool,
+        ):
+            with patch(
+                "bot.handlers.trust_budget_commands.send_message_with_split", new_callable=AsyncMock
+            ) as mock_send:
                 await budget_command(mock_update, mock_context)
 
                 text = mock_send.call_args[0][1]
@@ -575,7 +688,9 @@ class TestBudgetCommand:
                 assert "80%" in text
 
     @pytest.mark.asyncio
-    async def test_budget_verbose_shows_modules(self, mock_update, mock_context, mock_pool, mock_db_conn):
+    async def test_budget_verbose_shows_modules(
+        self, mock_update, mock_context, mock_pool, mock_db_conn
+    ):
         """AC5+AC7: Mode verbose affiche detail par module."""
         from bot.handlers.trust_budget_commands import budget_command
 
@@ -595,8 +710,14 @@ class TestBudgetCommand:
             },
         ]
 
-        with patch("bot.handlers.trust_budget_commands._get_pool", new_callable=AsyncMock, return_value=mock_pool):
-            with patch("bot.handlers.trust_budget_commands.send_message_with_split", new_callable=AsyncMock) as mock_send:
+        with patch(
+            "bot.handlers.trust_budget_commands._get_pool",
+            new_callable=AsyncMock,
+            return_value=mock_pool,
+        ):
+            with patch(
+                "bot.handlers.trust_budget_commands.send_message_with_split", new_callable=AsyncMock
+            ) as mock_send:
                 await budget_command(mock_update, mock_context)
 
                 text = mock_send.call_args[0][1]
@@ -629,8 +750,14 @@ class TestStatsCommand:
             [{"status": "auto", "cnt": 35}, {"status": "pending", "cnt": 10}],  # status
         ]
 
-        with patch("bot.handlers.trust_budget_commands._get_pool", new_callable=AsyncMock, return_value=mock_pool):
-            with patch("bot.handlers.trust_budget_commands.send_message_with_split", new_callable=AsyncMock) as mock_send:
+        with patch(
+            "bot.handlers.trust_budget_commands._get_pool",
+            new_callable=AsyncMock,
+            return_value=mock_pool,
+        ):
+            with patch(
+                "bot.handlers.trust_budget_commands.send_message_with_split", new_callable=AsyncMock
+            ) as mock_send:
                 await stats_command(mock_update, mock_context)
 
                 text = mock_send.call_args[0][1]
@@ -651,7 +778,11 @@ class TestStatsCommand:
         ]
         mock_db_conn.fetch.side_effect = [[], []]
 
-        with patch("bot.handlers.trust_budget_commands._get_pool", new_callable=AsyncMock, return_value=mock_pool):
+        with patch(
+            "bot.handlers.trust_budget_commands._get_pool",
+            new_callable=AsyncMock,
+            return_value=mock_pool,
+        ):
             await stats_command(mock_update, mock_context)
 
             text = mock_update.message.reply_text.call_args[0][0]
@@ -685,8 +816,14 @@ class TestJournalEmailStory26:
             },
         ]
 
-        with patch("bot.handlers.trust_budget_commands._get_pool", new_callable=AsyncMock, return_value=mock_pool):
-            with patch("bot.handlers.trust_budget_commands.send_message_with_split", new_callable=AsyncMock) as mock_send:
+        with patch(
+            "bot.handlers.trust_budget_commands._get_pool",
+            new_callable=AsyncMock,
+            return_value=mock_pool,
+        ):
+            with patch(
+                "bot.handlers.trust_budget_commands.send_message_with_split", new_callable=AsyncMock
+            ) as mock_send:
                 await journal_command(mock_update, mock_context)
 
                 # Vérifier que fetch a été appelé avec filtre module='email'
@@ -699,7 +836,9 @@ class TestJournalEmailStory26:
                 assert "(filtre: email)" in text
 
     @pytest.mark.asyncio
-    async def test_journal_email_special_format(self, mock_update, mock_context, mock_pool, mock_db_conn):
+    async def test_journal_email_special_format(
+        self, mock_update, mock_context, mock_pool, mock_db_conn
+    ):
         """Story 2.6 AC4: Format spécial pour emails envoyés avec recipient_anon."""
         from bot.handlers.trust_budget_commands import journal_command
 
@@ -726,8 +865,14 @@ class TestJournalEmailStory26:
             },
         ]
 
-        with patch("bot.handlers.trust_budget_commands._get_pool", new_callable=AsyncMock, return_value=mock_pool):
-            with patch("bot.handlers.trust_budget_commands.send_message_with_split", new_callable=AsyncMock) as mock_send:
+        with patch(
+            "bot.handlers.trust_budget_commands._get_pool",
+            new_callable=AsyncMock,
+            return_value=mock_pool,
+        ):
+            with patch(
+                "bot.handlers.trust_budget_commands.send_message_with_split", new_callable=AsyncMock
+            ) as mock_send:
                 await journal_command(mock_update, mock_context)
 
                 text = mock_send.call_args[0][1]
@@ -739,7 +884,9 @@ class TestJournalEmailStory26:
                 assert "archiviste.rename" in text
 
     @pytest.mark.asyncio
-    async def test_receipt_email_details_section(self, mock_update, mock_context, mock_pool, mock_db_conn):
+    async def test_receipt_email_details_section(
+        self, mock_update, mock_context, mock_pool, mock_db_conn
+    ):
         """Story 2.6 AC4: /receipt affiche section Email Details pour emails."""
         from bot.handlers.trust_budget_commands import receipt_command
 
@@ -764,8 +911,14 @@ class TestJournalEmailStory26:
             },
         }
 
-        with patch("bot.handlers.trust_budget_commands._get_pool", new_callable=AsyncMock, return_value=mock_pool):
-            with patch("bot.handlers.trust_budget_commands.send_message_with_split", new_callable=AsyncMock) as mock_send:
+        with patch(
+            "bot.handlers.trust_budget_commands._get_pool",
+            new_callable=AsyncMock,
+            return_value=mock_pool,
+        ):
+            with patch(
+                "bot.handlers.trust_budget_commands.send_message_with_split", new_callable=AsyncMock
+            ) as mock_send:
                 await receipt_command(mock_update, mock_context)
 
                 text = mock_send.call_args[0][1]
@@ -779,7 +932,9 @@ class TestJournalEmailStory26:
                 assert "Bonjour" in text
 
     @pytest.mark.asyncio
-    async def test_receipt_verbose_shows_payload_json(self, mock_update, mock_context, mock_pool, mock_db_conn):
+    async def test_receipt_verbose_shows_payload_json(
+        self, mock_update, mock_context, mock_pool, mock_db_conn
+    ):
         """Story 2.6 AC4: /receipt -v affiche payload JSON complet."""
         from bot.handlers.trust_budget_commands import receipt_command
 
@@ -807,8 +962,14 @@ class TestJournalEmailStory26:
             },
         }
 
-        with patch("bot.handlers.trust_budget_commands._get_pool", new_callable=AsyncMock, return_value=mock_pool):
-            with patch("bot.handlers.trust_budget_commands.send_message_with_split", new_callable=AsyncMock) as mock_send:
+        with patch(
+            "bot.handlers.trust_budget_commands._get_pool",
+            new_callable=AsyncMock,
+            return_value=mock_pool,
+        ):
+            with patch(
+                "bot.handlers.trust_budget_commands.send_message_with_split", new_callable=AsyncMock
+            ) as mock_send:
                 await receipt_command(mock_update, mock_context)
 
                 text = mock_send.call_args[0][1]

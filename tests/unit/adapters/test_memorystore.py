@@ -8,16 +8,12 @@ Test Strategy:
 - Coverage cible: >=90%
 """
 
-import pytest
 from datetime import datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
-from agents.src.adapters.memorystore import (
-    PostgreSQLMemorystore,
-    NodeType,
-    RelationType,
-)
+import pytest
+from agents.src.adapters.memorystore import NodeType, PostgreSQLMemorystore, RelationType
 
 
 @pytest.fixture
@@ -68,7 +64,7 @@ class TestNodeCreation:
             node_type="person",
             name="Antonio Lopez",
             metadata={"email": "antonio@example.com"},
-            source="email"
+            source="email",
         )
 
         # Assert
@@ -91,7 +87,7 @@ class TestNodeCreation:
             node_type="email",
             name="RE: Projet Friday",
             metadata={"message_id": "abc123@example.com"},
-            source="email"
+            source="email",
         )
 
         assert node_id == expected_id
@@ -102,11 +98,7 @@ class TestNodeCreation:
     async def test_create_node_invalid_type(self, memorystore):
         """Test ValidationError si type de nœud inconnu (Task 5.10)."""
         with pytest.raises(ValueError) as exc_info:
-            await memorystore.create_node(
-                node_type="invalid_type",
-                name="Test",
-                metadata={}
-            )
+            await memorystore.create_node(node_type="invalid_type", name="Test", metadata={})
 
         assert "Invalid node_type" in str(exc_info.value)
         assert "invalid_type" in str(exc_info.value)
@@ -125,9 +117,7 @@ class TestNodeDeduplication:
         mock_conn.fetchval = AsyncMock(return_value=existing_id)
 
         node_id = await memorystore.get_or_create_node(
-            node_type="person",
-            name="Antonio Lopez",
-            metadata={"email": "antonio@example.com"}
+            node_type="person", name="Antonio Lopez", metadata={"email": "antonio@example.com"}
         )
 
         # Doit retourner l'ID existant (pas créer nouveau)
@@ -136,7 +126,9 @@ class TestNodeDeduplication:
         assert mock_conn.fetchval.call_count == 1
 
     @pytest.mark.asyncio
-    async def test_get_or_create_document_dedup_by_source_id(self, memorystore, mock_db_pool, mock_conn):
+    async def test_get_or_create_document_dedup_by_source_id(
+        self, memorystore, mock_db_pool, mock_conn
+    ):
         """Test déduplication Document sur metadata.source_id (Task 5.4)."""
         mock_db_pool.acquire.return_value.__aenter__.return_value = mock_conn
         existing_id = str(uuid4())
@@ -145,13 +137,15 @@ class TestNodeDeduplication:
         node_id = await memorystore.get_or_create_node(
             node_type="document",
             name="Facture_2026.pdf",
-            metadata={"source_id": "/docs/facture_2026.pdf"}
+            metadata={"source_id": "/docs/facture_2026.pdf"},
         )
 
         assert node_id == existing_id
 
     @pytest.mark.asyncio
-    async def test_get_or_create_person_fallback_by_name(self, memorystore, mock_db_pool, mock_conn):
+    async def test_get_or_create_person_fallback_by_name(
+        self, memorystore, mock_db_pool, mock_conn
+    ):
         """Test déduplication Person fallback sur nom si pas d'email (Bug M1 fix)."""
         mock_db_pool.acquire.return_value.__aenter__.return_value = mock_conn
         existing_id = str(uuid4())
@@ -159,9 +153,7 @@ class TestNodeDeduplication:
 
         # Person sans email → déduplication par nom
         node_id = await memorystore.get_or_create_node(
-            node_type="person",
-            name="Dr. Martin",
-            metadata={"phone": "+33612345678"}  # Pas d'email
+            node_type="person", name="Dr. Martin", metadata={"phone": "+33612345678"}  # Pas d'email
         )
 
         assert node_id == existing_id
@@ -187,7 +179,7 @@ class TestEdgeCreation:
             from_node_id=from_node,
             to_node_id=to_node,
             relation_type="sent_by",
-            metadata={"confidence": 0.95}
+            metadata={"confidence": 0.95},
         )
 
         assert edge_id == expected_id
@@ -203,9 +195,7 @@ class TestEdgeCreation:
         mock_conn.fetchval = AsyncMock(return_value=expected_id)
 
         edge_id = await memorystore.create_edge(
-            from_node_id=str(uuid4()),
-            to_node_id=str(uuid4()),
-            relation_type="attached_to"
+            from_node_id=str(uuid4()), to_node_id=str(uuid4()), relation_type="attached_to"
         )
 
         assert edge_id == expected_id
@@ -215,9 +205,7 @@ class TestEdgeCreation:
         """Test ValidationError si type de relation inconnu (Task 5.11)."""
         with pytest.raises(ValueError) as exc_info:
             await memorystore.create_edge(
-                from_node_id=str(uuid4()),
-                to_node_id=str(uuid4()),
-                relation_type="invalid_relation"
+                from_node_id=str(uuid4()), to_node_id=str(uuid4()), relation_type="invalid_relation"
             )
 
         assert "Invalid relation_type" in str(exc_info.value)
@@ -231,19 +219,21 @@ class TestGraphQueries:
     async def test_get_related_nodes_direction_out(self, memorystore, mock_db_pool):
         """Test get_related_nodes() direction 'out' (Task 5.7)."""
         # Mock fetch pour retourner nœuds reliés
-        mock_db_pool.fetch = AsyncMock(return_value=[
-            {
-                "id": uuid4(),
-                "type": "person",
-                "name": "John Doe",
-                "metadata": {},
-                "source": "email",
-                "created_at": datetime.utcnow(),
-                "relation_type": "sent_by",
-                "edge_id": uuid4(),
-                "edge_metadata": {}
-            }
-        ])
+        mock_db_pool.fetch = AsyncMock(
+            return_value=[
+                {
+                    "id": uuid4(),
+                    "type": "person",
+                    "name": "John Doe",
+                    "metadata": {},
+                    "source": "email",
+                    "created_at": datetime.utcnow(),
+                    "relation_type": "sent_by",
+                    "edge_id": uuid4(),
+                    "edge_metadata": {},
+                }
+            ]
+        )
 
         node_id = str(uuid4())
         results = await memorystore.get_related_nodes(node_id, direction="out")
@@ -255,19 +245,21 @@ class TestGraphQueries:
     @pytest.mark.asyncio
     async def test_get_related_nodes_direction_in(self, memorystore, mock_db_pool):
         """Test get_related_nodes() direction 'in' (Task 5.8)."""
-        mock_db_pool.fetch = AsyncMock(return_value=[
-            {
-                "id": uuid4(),
-                "type": "email",
-                "name": "Test Email",
-                "metadata": {},
-                "source": "email",
-                "created_at": datetime.utcnow(),
-                "relation_type": "received_by",
-                "edge_id": uuid4(),
-                "edge_metadata": {}
-            }
-        ])
+        mock_db_pool.fetch = AsyncMock(
+            return_value=[
+                {
+                    "id": uuid4(),
+                    "type": "email",
+                    "name": "Test Email",
+                    "metadata": {},
+                    "source": "email",
+                    "created_at": datetime.utcnow(),
+                    "relation_type": "received_by",
+                    "edge_id": uuid4(),
+                    "edge_metadata": {},
+                }
+            ]
+        )
 
         results = await memorystore.get_related_nodes(str(uuid4()), direction="in")
 
@@ -278,17 +270,19 @@ class TestGraphQueries:
     async def test_query_temporal(self, memorystore, mock_db_pool):
         """Test query_temporal() avec plage de dates (Task 5.9)."""
         now = datetime.utcnow()
-        mock_db_pool.fetch = AsyncMock(return_value=[
-            {
-                "id": uuid4(),
-                "type": "email",
-                "name": "Recent Email",
-                "metadata": {},
-                "source": "email",
-                "created_at": now,
-                "updated_at": now
-            }
-        ])
+        mock_db_pool.fetch = AsyncMock(
+            return_value=[
+                {
+                    "id": uuid4(),
+                    "type": "email",
+                    "name": "Recent Email",
+                    "metadata": {},
+                    "source": "email",
+                    "created_at": now,
+                    "updated_at": now,
+                }
+            ]
+        )
 
         start = now - timedelta(days=1)
         end = now + timedelta(days=1)
@@ -304,15 +298,17 @@ class TestGraphQueries:
         node_id = str(uuid4())
 
         # Mock get_node_by_id
-        mock_db_pool.fetchrow = AsyncMock(return_value={
-            "id": node_id,
-            "type": "email",
-            "name": "Test Email",
-            "metadata": {},
-            "source": "email",
-            "created_at": datetime.utcnow(),
-            "updated_at": datetime.utcnow()
-        })
+        mock_db_pool.fetchrow = AsyncMock(
+            return_value={
+                "id": node_id,
+                "type": "email",
+                "name": "Test Email",
+                "metadata": {},
+                "source": "email",
+                "created_at": datetime.utcnow(),
+                "updated_at": datetime.utcnow(),
+            }
+        )
 
         # Mock get_related_nodes (2 calls: out + in)
         mock_db_pool.fetch = AsyncMock(return_value=[])
@@ -332,13 +328,15 @@ class TestGraphQueries:
         edge_id = uuid4()
 
         # Mock connexion directe trouvée
-        mock_db_pool.fetchrow = AsyncMock(return_value={
-            "id": edge_id,
-            "from_node_id": from_id,
-            "to_node_id": to_id,
-            "relation_type": "sent_by",
-            "metadata": {}
-        })
+        mock_db_pool.fetchrow = AsyncMock(
+            return_value={
+                "id": edge_id,
+                "from_node_id": from_id,
+                "to_node_id": to_id,
+                "relation_type": "sent_by",
+                "metadata": {},
+            }
+        )
 
         path = await memorystore.query_path(from_id, to_id)
 
@@ -366,10 +364,7 @@ class TestCircuitBreakers:
         """Test semantic_search retourne [] si pgvector indisponible (Bug 4 fix)."""
         memorystore._pgvector_initialized = False
 
-        results = await memorystore.semantic_search(
-            query_embedding=[0.1] * 1024,
-            limit=10
-        )
+        results = await memorystore.semantic_search(query_embedding=[0.1] * 1024, limit=10)
 
         assert results == []
 
@@ -378,10 +373,7 @@ class TestCircuitBreakers:
         """Test semantic_search retourne [] si exception lors requête."""
         mock_db_pool.fetch = AsyncMock(side_effect=Exception("pgvector error"))
 
-        results = await memorystore.semantic_search(
-            query_embedding=[0.1] * 1024,
-            limit=10
-        )
+        results = await memorystore.semantic_search(query_embedding=[0.1] * 1024, limit=10)
 
         assert results == []
 
@@ -392,8 +384,16 @@ class TestNodeTypeEnumValidation:
     def test_all_10_node_types_valid(self):
         """Vérifier que les 10 types de nœuds sont définis dans l'Enum."""
         expected_types = {
-            "person", "email", "document", "event", "task",
-            "entity", "conversation", "transaction", "file", "reminder"
+            "person",
+            "email",
+            "document",
+            "event",
+            "task",
+            "entity",
+            "conversation",
+            "transaction",
+            "file",
+            "reminder",
         }
 
         actual_types = {t.value for t in NodeType}
@@ -406,9 +406,20 @@ class TestRelationTypeEnumValidation:
     def test_all_14_relation_types_valid(self):
         """Vérifier que les 14 types de relations sont définis dans l'Enum."""
         expected_relations = {
-            "sent_by", "received_by", "attached_to", "mentions", "related_to",
-            "assigned_to", "created_from", "scheduled", "references", "part_of",
-            "paid_with", "belongs_to", "reminds_about", "supersedes"
+            "sent_by",
+            "received_by",
+            "attached_to",
+            "mentions",
+            "related_to",
+            "assigned_to",
+            "created_from",
+            "scheduled",
+            "references",
+            "part_of",
+            "paid_with",
+            "belongs_to",
+            "reminds_about",
+            "supersedes",
         }
 
         actual_relations = {r.value for r in RelationType}

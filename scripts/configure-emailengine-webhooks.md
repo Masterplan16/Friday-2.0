@@ -42,4 +42,3 @@ Devrait afficher :
 1. Envoyer email test → antonio.lopez@umontpellier.fr (account_faculty)
 2. Vérifier réception webhook dans logs gateway
 3. Vérifier événement Redis Streams
-

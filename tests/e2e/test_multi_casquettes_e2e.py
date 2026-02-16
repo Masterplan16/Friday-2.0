@@ -12,26 +12,26 @@ Tests critiques :
 Requiert PostgreSQL de test avec migrations 007 + 037 appliquées.
 """
 
-import pytest
-import asyncpg
 import json
-from datetime import datetime, timedelta, timezone, date
-from unittest.mock import AsyncMock, patch, MagicMock
+from datetime import date, datetime, timedelta, timezone
+from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
-from agents.src.core.models import Casquette, ContextSource
-from agents.src.core.context_manager import ContextManager
-from agents.src.agents.calendar.models import CalendarConflict
+import asyncpg
+import pytest
 from agents.src.agents.calendar.conflict_detector import (
     detect_calendar_conflicts,
     get_conflicts_range,
     save_conflict_to_db,
 )
-
+from agents.src.agents.calendar.models import CalendarConflict
+from agents.src.core.context_manager import ContextManager
+from agents.src.core.models import Casquette, ContextSource
 
 # ============================================================================
 # Fixtures
 # ============================================================================
+
 
 @pytest.fixture
 async def e2e_db():
@@ -50,9 +50,7 @@ async def e2e_db():
     # Cleanup complet
     async with pool.acquire() as conn:
         await conn.execute("DELETE FROM knowledge.calendar_conflicts")
-        await conn.execute(
-            "DELETE FROM knowledge.entities WHERE entity_type = 'EVENT'"
-        )
+        await conn.execute("DELETE FROM knowledge.entities WHERE entity_type = 'EVENT'")
         await conn.execute("DELETE FROM core.user_context")
 
         # Init singleton user_context
@@ -69,9 +67,7 @@ async def e2e_db():
     # Cleanup
     async with pool.acquire() as conn:
         await conn.execute("DELETE FROM knowledge.calendar_conflicts")
-        await conn.execute(
-            "DELETE FROM knowledge.entities WHERE entity_type = 'EVENT'"
-        )
+        await conn.execute("DELETE FROM knowledge.entities WHERE entity_type = 'EVENT'")
 
     await pool.close()
 
@@ -112,15 +108,17 @@ async def _insert_event_entity(
     if event_id is None:
         event_id = str(uuid4())
 
-    properties = json.dumps({
-        "title": title,
-        "casquette": casquette,
-        "start_datetime": start_datetime.isoformat(),
-        "end_datetime": end_datetime.isoformat(),
-        "status": status,
-        "location": location,
-        "event_type": event_type,
-    })
+    properties = json.dumps(
+        {
+            "title": title,
+            "casquette": casquette,
+            "start_datetime": start_datetime.isoformat(),
+            "end_datetime": end_datetime.isoformat(),
+            "status": status,
+            "location": location,
+            "event_type": event_type,
+        }
+    )
 
     await conn.execute(
         """
@@ -138,6 +136,7 @@ async def _insert_event_entity(
 # ============================================================================
 # Test 1 : /casquette Command Telegram
 # ============================================================================
+
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
@@ -190,6 +189,7 @@ async def test_casquette_command_telegram(e2e_db, mock_redis, mock_telegram_bot)
 # Test 2 : Conflict Detection E2E Pipeline
 # ============================================================================
 
+
 @pytest.mark.e2e
 @pytest.mark.asyncio
 async def test_conflict_detection_e2e_pipeline(e2e_db, mock_telegram_bot):
@@ -220,43 +220,42 @@ async def test_conflict_detection_e2e_pipeline(e2e_db, mock_telegram_bot):
     mock_response = MagicMock()
     mock_response.content = [
         MagicMock(
-            text=json.dumps({
-                "events_detected": [
-                    {
-                        "title": "Consultation Dr Dupont",
-                        "start_datetime": "2026-02-21T14:30:00+00:00",
-                        "end_datetime": "2026-02-21T15:00:00+00:00",
-                        "location": "Cabinet",
-                        "participants": ["Dr Dupont"],
-                        "event_type": "medical",
-                        "casquette": "medecin",
-                        "confidence": 0.95,
-                        "context": "Consultation Dr Dupont demain 14h30"
-                    },
-                    {
-                        "title": "Cours L2 Anatomie",
-                        "start_datetime": "2026-02-21T14:00:00+00:00",
-                        "end_datetime": "2026-02-21T16:00:00+00:00",
-                        "location": "Amphi B",
-                        "participants": [],
-                        "event_type": "lecture",
-                        "casquette": "enseignant",
-                        "confidence": 0.92,
-                        "context": "Cours L2 Anatomie demain 14h"
-                    }
-                ],
-                "confidence_overall": 0.92
-            })
+            text=json.dumps(
+                {
+                    "events_detected": [
+                        {
+                            "title": "Consultation Dr Dupont",
+                            "start_datetime": "2026-02-21T14:30:00+00:00",
+                            "end_datetime": "2026-02-21T15:00:00+00:00",
+                            "location": "Cabinet",
+                            "participants": ["Dr Dupont"],
+                            "event_type": "medical",
+                            "casquette": "medecin",
+                            "confidence": 0.95,
+                            "context": "Consultation Dr Dupont demain 14h30",
+                        },
+                        {
+                            "title": "Cours L2 Anatomie",
+                            "start_datetime": "2026-02-21T14:00:00+00:00",
+                            "end_datetime": "2026-02-21T16:00:00+00:00",
+                            "location": "Amphi B",
+                            "participants": [],
+                            "event_type": "lecture",
+                            "casquette": "enseignant",
+                            "confidence": 0.92,
+                            "context": "Cours L2 Anatomie demain 14h",
+                        },
+                    ],
+                    "confidence_overall": 0.92,
+                }
+            )
         )
     ]
     mock_client.messages.create.return_value = mock_response
 
     # Mock anonymize_text
     with patch("agents.src.agents.calendar.event_detector.anonymize_text") as mock_anon:
-        mock_anon.return_value = MagicMock(
-            anonymized_text=email_text,
-            mapping={}
-        )
+        mock_anon.return_value = MagicMock(anonymized_text=email_text, mapping={})
 
         # Étape 1: Extraire événements
         result = await extract_events_from_email(
@@ -311,6 +310,7 @@ async def test_conflict_detection_e2e_pipeline(e2e_db, mock_telegram_bot):
 # Test 3 : Heartbeat Conflicts Periodic Check E2E
 # ============================================================================
 
+
 @pytest.mark.e2e
 @pytest.mark.asyncio
 async def test_heartbeat_conflicts_periodic_check_e2e(e2e_db):
@@ -322,9 +322,7 @@ async def test_heartbeat_conflicts_periodic_check_e2e(e2e_db):
     2. Heartbeat Engine check (9h matin, NOT quiet hours) → notification
     3. Heartbeat Engine check (23h, quiet hours) → SKIP
     """
-    from agents.src.core.heartbeat_checks.calendar_conflicts import (
-        check_calendar_conflicts,
-    )
+    from agents.src.core.heartbeat_checks.calendar_conflicts import check_calendar_conflicts
 
     tomorrow = datetime.now(timezone.utc) + timedelta(days=1)
     event1_start = tomorrow.replace(hour=14, minute=30, second=0, microsecond=0)
@@ -386,6 +384,7 @@ async def test_heartbeat_conflicts_periodic_check_e2e(e2e_db):
 # Test 4 : Full User Journey E2E
 # ============================================================================
 
+
 @pytest.mark.e2e
 @pytest.mark.asyncio
 async def test_full_user_journey_e2e(e2e_db, mock_redis, mock_telegram_bot):
@@ -399,9 +398,9 @@ async def test_full_user_journey_e2e(e2e_db, mock_redis, mock_telegram_bot):
     4. Heartbeat détecte conflit
     5. Résolution conflit via DB
     """
-    from bot.handlers.casquette_commands import handle_casquette_command
     from agents.src.agents.calendar.event_detector import extract_events_from_email
     from agents.src.core.heartbeat_checks.calendar_conflicts import check_calendar_conflicts
+    from bot.handlers.casquette_commands import handle_casquette_command
 
     # Étape 1: User change contexte chercheur via /casquette
     mock_message = MagicMock()
@@ -425,9 +424,7 @@ async def test_full_user_journey_e2e(e2e_db, mock_redis, mock_telegram_bot):
 
     # Vérifier contexte = chercheur
     async with e2e_db.acquire() as conn:
-        row = await conn.fetchrow(
-            "SELECT current_casquette FROM core.user_context WHERE id = 1"
-        )
+        row = await conn.fetchrow("SELECT current_casquette FROM core.user_context WHERE id = 1")
         assert row["current_casquette"] == "chercheur"
 
     # Étape 2: Recevoir email → extraction événement
@@ -435,28 +432,31 @@ async def test_full_user_journey_e2e(e2e_db, mock_redis, mock_telegram_bot):
     mock_response = MagicMock()
     mock_response.content = [
         MagicMock(
-            text=json.dumps({
-                "events_detected": [{
-                    "title": "Séminaire recherche",
-                    "start_datetime": "2026-02-21T16:30:00+00:00",
-                    "end_datetime": "2026-02-21T18:00:00+00:00",
-                    "location": "Labo 301",
-                    "participants": [],
-                    "event_type": "conference",
-                    "casquette": "chercheur",
-                    "confidence": 0.88,
-                    "context": "Séminaire labo"
-                }],
-                "confidence_overall": 0.88
-            })
+            text=json.dumps(
+                {
+                    "events_detected": [
+                        {
+                            "title": "Séminaire recherche",
+                            "start_datetime": "2026-02-21T16:30:00+00:00",
+                            "end_datetime": "2026-02-21T18:00:00+00:00",
+                            "location": "Labo 301",
+                            "participants": [],
+                            "event_type": "conference",
+                            "casquette": "chercheur",
+                            "confidence": 0.88,
+                            "context": "Séminaire labo",
+                        }
+                    ],
+                    "confidence_overall": 0.88,
+                }
+            )
         )
     ]
     mock_client.messages.create.return_value = mock_response
 
     with patch("agents.src.agents.calendar.event_detector.anonymize_text") as mock_anon:
         mock_anon.return_value = MagicMock(
-            anonymized_text="Séminaire recherche vendredi 16h30",
-            mapping={}
+            anonymized_text="Séminaire recherche vendredi 16h30", mapping={}
         )
 
         result = await extract_events_from_email(

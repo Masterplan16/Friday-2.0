@@ -5,12 +5,12 @@ Story 1.8 - Phase 3 Task 3.2 :
 Workflow complet : Seed receipts → nightly metrics → rétrogradation → trust_levels.yaml modifié
 """
 
-import pytest
 from datetime import datetime, timedelta
 from pathlib import Path
-import yaml
-from unittest.mock import AsyncMock, patch, mock_open
+from unittest.mock import AsyncMock, mock_open, patch
 
+import pytest
+import yaml
 from services.metrics.nightly import MetricsAggregator
 
 
@@ -52,9 +52,14 @@ async def test_full_retrogradation_workflow_auto_to_propose(db_pool, clean_table
                     output_summary, reasoning, created_at
                 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
                 """,
-                "email", "classify", "auto", 0.92,
-                f"Email #{i}", f"Classifié OK", "Pattern matching",
-                week_start + timedelta(hours=i)
+                "email",
+                "classify",
+                "auto",
+                0.92,
+                f"Email #{i}",
+                f"Classifié OK",
+                "Pattern matching",
+                week_start + timedelta(hours=i),
             )
 
         # 2 actions corrigées (accuracy 85%)
@@ -66,9 +71,14 @@ async def test_full_retrogradation_workflow_auto_to_propose(db_pool, clean_table
                     output_summary, reasoning, created_at
                 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
                 """,
-                "email", "classify", "corrected", 0.88,
-                f"Email corr #{i}", "Classification erronée", "Correction owner",
-                week_start + timedelta(hours=10 + i)
+                "email",
+                "classify",
+                "corrected",
+                0.88,
+                f"Email corr #{i}",
+                "Classification erronée",
+                "Correction owner",
+                week_start + timedelta(hours=10 + i),
             )
 
     # Step 2 : Run nightly aggregation avec config temporaire
@@ -121,10 +131,7 @@ async def test_full_retrogradation_workflow_auto_to_propose(db_pool, clean_table
     redis_calls = aggregator.redis_client.xadd.call_args_list
 
     # Trouver l'appel trust.level.changed
-    trust_event_calls = [
-        call for call in redis_calls
-        if "trust.level.changed" in str(call)
-    ]
+    trust_event_calls = [call for call in redis_calls if "trust.level.changed" in str(call)]
 
     assert len(trust_event_calls) > 0
 
@@ -162,9 +169,14 @@ async def test_full_retrogradation_workflow_propose_to_blocked(db_pool, clean_ta
                     output_summary, reasoning, created_at
                 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
                 """,
-                "finance", "classify_transaction", "auto", 0.75,
-                f"Transaction #{i}", "Classifié OK", "Rules",
-                week_start + timedelta(hours=i)
+                "finance",
+                "classify_transaction",
+                "auto",
+                0.75,
+                f"Transaction #{i}",
+                "Classifié OK",
+                "Rules",
+                week_start + timedelta(hours=i),
             )
 
         # 3 actions corrigées (accuracy 62.5%)
@@ -176,9 +188,14 @@ async def test_full_retrogradation_workflow_propose_to_blocked(db_pool, clean_ta
                     output_summary, reasoning, created_at
                 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
                 """,
-                "finance", "classify_transaction", "corrected", 0.65,
-                f"Transaction corr #{i}", "Erreur classement", "Correction",
-                week_start + timedelta(hours=5 + i)
+                "finance",
+                "classify_transaction",
+                "corrected",
+                0.65,
+                f"Transaction corr #{i}",
+                "Erreur classement",
+                "Correction",
+                week_start + timedelta(hours=5 + i),
             )
 
     # Step 2 : Run aggregation
@@ -238,9 +255,14 @@ async def test_no_retrogradation_if_sample_too_small(db_pool, clean_tables):
                     output_summary, reasoning, created_at
                 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
                 """,
-                "email", "classify", "auto", 0.9,
-                f"Email #{i}", "OK", "Match",
-                week_start + timedelta(hours=i)
+                "email",
+                "classify",
+                "auto",
+                0.9,
+                f"Email #{i}",
+                "OK",
+                "Match",
+                week_start + timedelta(hours=i),
             )
 
         # 2 corrections (accuracy 77.7%)
@@ -252,9 +274,14 @@ async def test_no_retrogradation_if_sample_too_small(db_pool, clean_tables):
                     output_summary, reasoning, created_at
                 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
                 """,
-                "email", "classify", "corrected", 0.85,
-                f"Email corr #{i}", "Corrigé", "Fix",
-                week_start + timedelta(hours=7 + i)
+                "email",
+                "classify",
+                "corrected",
+                0.85,
+                f"Email corr #{i}",
+                "Corrigé",
+                "Fix",
+                week_start + timedelta(hours=7 + i),
             )
 
     # Run aggregation
@@ -310,9 +337,14 @@ async def test_timestamp_updated_after_retrogradation(db_pool, clean_tables):
                     output_summary, reasoning, created_at
                 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
                 """,
-                "email", "classify", "auto", 0.9,
-                f"Email #{i}", "OK", "Match",
-                week_start + timedelta(hours=i)
+                "email",
+                "classify",
+                "auto",
+                0.9,
+                f"Email #{i}",
+                "OK",
+                "Match",
+                week_start + timedelta(hours=i),
             )
 
         for i in range(2):
@@ -323,9 +355,14 @@ async def test_timestamp_updated_after_retrogradation(db_pool, clean_tables):
                     output_summary, reasoning, created_at
                 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
                 """,
-                "email", "classify", "corrected", 0.85,
-                f"Email corr #{i}", "Corrigé", "Fix",
-                week_start + timedelta(hours=10 + i)
+                "email",
+                "classify",
+                "corrected",
+                0.85,
+                f"Email corr #{i}",
+                "Corrigé",
+                "Fix",
+                week_start + timedelta(hours=10 + i),
             )
 
     # Run aggregation

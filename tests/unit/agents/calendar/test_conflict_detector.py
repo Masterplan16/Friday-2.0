@@ -16,24 +16,24 @@ Tests:
 - Transaction atomique rollback si erreur
 """
 
-import pytest
-from datetime import datetime, date, timedelta
+from datetime import date, datetime, timedelta
 from unittest.mock import AsyncMock
 from uuid import uuid4
 
+import pytest
 from agents.src.agents.calendar.conflict_detector import (
-    detect_calendar_conflicts,
-    calculate_overlap,
-    get_conflicts_range,
     _has_temporal_overlap,
-    save_conflict_to_db
+    calculate_overlap,
+    detect_calendar_conflicts,
+    get_conflicts_range,
+    save_conflict_to_db,
 )
-from agents.src.agents.calendar.models import CalendarEvent, CalendarConflict, Casquette
-
+from agents.src.agents.calendar.models import CalendarConflict, CalendarEvent, Casquette
 
 # ============================================================================
 # Fixtures
 # ============================================================================
+
 
 @pytest.fixture
 def mock_db_pool():
@@ -56,7 +56,7 @@ def sample_events_conflict():
             casquette=Casquette.MEDECIN,
             start_datetime=base_date.replace(hour=14, minute=30),
             end_datetime=base_date.replace(hour=15, minute=30),
-            status="confirmed"
+            status="confirmed",
         ),
         CalendarEvent(
             id=str(uuid4()),
@@ -64,8 +64,8 @@ def sample_events_conflict():
             casquette=Casquette.ENSEIGNANT,
             start_datetime=base_date.replace(hour=14, minute=0),
             end_datetime=base_date.replace(hour=16, minute=0),
-            status="confirmed"
-        )
+            status="confirmed",
+        ),
     ]
 
 
@@ -73,23 +73,26 @@ def sample_events_conflict():
 # Tests Détection Conflits
 # ============================================================================
 
+
 @pytest.mark.asyncio
 async def test_detect_conflict_different_casquettes(mock_db_pool, sample_events_conflict):
     """Test AC4: Conflit détecté si casquettes différentes."""
     pool, conn = mock_db_pool
 
     # Mock: Retourne 2 événements chevauchants
-    conn.fetch = AsyncMock(return_value=[
-        {
-            "id": uuid4(),
-            "title": event.title,
-            "casquette": event.casquette.value,
-            "start_datetime": event.start_datetime,
-            "end_datetime": event.end_datetime,
-            "status": "confirmed"
-        }
-        for event in sample_events_conflict
-    ])
+    conn.fetch = AsyncMock(
+        return_value=[
+            {
+                "id": uuid4(),
+                "title": event.title,
+                "casquette": event.casquette.value,
+                "start_datetime": event.start_datetime,
+                "end_datetime": event.end_datetime,
+                "status": "confirmed",
+            }
+            for event in sample_events_conflict
+        ]
+    )
 
     # Détecter conflits
     target_date = date(2026, 2, 17)
@@ -113,24 +116,26 @@ async def test_no_conflict_same_casquette(mock_db_pool):
     base_date = datetime(2026, 2, 17)
 
     # Mock: 2 événements chevauchants MÊME casquette
-    conn.fetch = AsyncMock(return_value=[
-        {
-            "id": uuid4(),
-            "title": "Consultation 1",
-            "casquette": "medecin",
-            "start_datetime": base_date.replace(hour=14, minute=0),
-            "end_datetime": base_date.replace(hour=15, minute=0),
-            "status": "confirmed"
-        },
-        {
-            "id": uuid4(),
-            "title": "Consultation 2",
-            "casquette": "medecin",  # Même casquette
-            "start_datetime": base_date.replace(hour=14, minute=30),
-            "end_datetime": base_date.replace(hour=15, minute=30),
-            "status": "confirmed"
-        }
-    ])
+    conn.fetch = AsyncMock(
+        return_value=[
+            {
+                "id": uuid4(),
+                "title": "Consultation 1",
+                "casquette": "medecin",
+                "start_datetime": base_date.replace(hour=14, minute=0),
+                "end_datetime": base_date.replace(hour=15, minute=0),
+                "status": "confirmed",
+            },
+            {
+                "id": uuid4(),
+                "title": "Consultation 2",
+                "casquette": "medecin",  # Même casquette
+                "start_datetime": base_date.replace(hour=14, minute=30),
+                "end_datetime": base_date.replace(hour=15, minute=30),
+                "status": "confirmed",
+            },
+        ]
+    )
 
     # Détecter conflits
     conflicts = await detect_calendar_conflicts(date(2026, 2, 17), pool)
@@ -140,32 +145,35 @@ async def test_no_conflict_same_casquette(mock_db_pool):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("start1,end1,start2,end2,expected_overlap", [
-    # Overlap 1h (14h30-15h30)
-    (
-        datetime(2026, 2, 17, 14, 30),
-        datetime(2026, 2, 17, 15, 30),
-        datetime(2026, 2, 17, 14, 0),
-        datetime(2026, 2, 17, 16, 0),
-        60
-    ),
-    # Overlap 30min (14h00-14h30)
-    (
-        datetime(2026, 2, 17, 14, 0),
-        datetime(2026, 2, 17, 15, 0),
-        datetime(2026, 2, 17, 14, 30),
-        datetime(2026, 2, 17, 16, 0),
-        30
-    ),
-    # Overlap 15min (09h45-10h00)
-    (
-        datetime(2026, 2, 17, 9, 30),
-        datetime(2026, 2, 17, 10, 0),
-        datetime(2026, 2, 17, 9, 45),
-        datetime(2026, 2, 17, 10, 30),
-        15
-    ),
-])
+@pytest.mark.parametrize(
+    "start1,end1,start2,end2,expected_overlap",
+    [
+        # Overlap 1h (14h30-15h30)
+        (
+            datetime(2026, 2, 17, 14, 30),
+            datetime(2026, 2, 17, 15, 30),
+            datetime(2026, 2, 17, 14, 0),
+            datetime(2026, 2, 17, 16, 0),
+            60,
+        ),
+        # Overlap 30min (14h00-14h30)
+        (
+            datetime(2026, 2, 17, 14, 0),
+            datetime(2026, 2, 17, 15, 0),
+            datetime(2026, 2, 17, 14, 30),
+            datetime(2026, 2, 17, 16, 0),
+            30,
+        ),
+        # Overlap 15min (09h45-10h00)
+        (
+            datetime(2026, 2, 17, 9, 30),
+            datetime(2026, 2, 17, 10, 0),
+            datetime(2026, 2, 17, 9, 45),
+            datetime(2026, 2, 17, 10, 30),
+            15,
+        ),
+    ],
+)
 def test_overlap_calculation(start1, end1, start2, end2, expected_overlap):
     """Test AC4: Calcul overlap_minutes (1h, 30min, 15min)."""
     event1 = CalendarEvent(
@@ -173,7 +181,7 @@ def test_overlap_calculation(start1, end1, start2, end2, expected_overlap):
         title="Event 1",
         casquette=Casquette.MEDECIN,
         start_datetime=start1,
-        end_datetime=end1
+        end_datetime=end1,
     )
 
     event2 = CalendarEvent(
@@ -181,7 +189,7 @@ def test_overlap_calculation(start1, end1, start2, end2, expected_overlap):
         title="Event 2",
         casquette=Casquette.ENSEIGNANT,
         start_datetime=start2,
-        end_datetime=end2
+        end_datetime=end2,
     )
 
     overlap = calculate_overlap(event1, event2)
@@ -197,24 +205,26 @@ async def test_no_conflict_non_overlapping_events(mock_db_pool):
     base_date = datetime(2026, 2, 17)
 
     # Mock: 2 événements NON chevauchants
-    conn.fetch = AsyncMock(return_value=[
-        {
-            "id": uuid4(),
-            "title": "Consultation matin",
-            "casquette": "medecin",
-            "start_datetime": base_date.replace(hour=9, minute=0),
-            "end_datetime": base_date.replace(hour=10, minute=0),
-            "status": "confirmed"
-        },
-        {
-            "id": uuid4(),
-            "title": "Cours après-midi",
-            "casquette": "enseignant",
-            "start_datetime": base_date.replace(hour=14, minute=0),
-            "end_datetime": base_date.replace(hour=16, minute=0),
-            "status": "confirmed"
-        }
-    ])
+    conn.fetch = AsyncMock(
+        return_value=[
+            {
+                "id": uuid4(),
+                "title": "Consultation matin",
+                "casquette": "medecin",
+                "start_datetime": base_date.replace(hour=9, minute=0),
+                "end_datetime": base_date.replace(hour=10, minute=0),
+                "status": "confirmed",
+            },
+            {
+                "id": uuid4(),
+                "title": "Cours après-midi",
+                "casquette": "enseignant",
+                "start_datetime": base_date.replace(hour=14, minute=0),
+                "end_datetime": base_date.replace(hour=16, minute=0),
+                "status": "confirmed",
+            },
+        ]
+    )
 
     # Détecter conflits
     conflicts = await detect_calendar_conflicts(date(2026, 2, 17), pool)
@@ -231,24 +241,26 @@ async def test_deduplication_same_conflict(mock_db_pool):
     base_date = datetime(2026, 2, 17)
 
     # Mock: 2 événements chevauchants
-    conn.fetch = AsyncMock(return_value=[
-        {
-            "id": uuid4(),
-            "title": "Event 1",
-            "casquette": "medecin",
-            "start_datetime": base_date.replace(hour=14, minute=0),
-            "end_datetime": base_date.replace(hour=15, minute=0),
-            "status": "confirmed"
-        },
-        {
-            "id": uuid4(),
-            "title": "Event 2",
-            "casquette": "enseignant",
-            "start_datetime": base_date.replace(hour=14, minute=30),
-            "end_datetime": base_date.replace(hour=15, minute=30),
-            "status": "confirmed"
-        }
-    ])
+    conn.fetch = AsyncMock(
+        return_value=[
+            {
+                "id": uuid4(),
+                "title": "Event 1",
+                "casquette": "medecin",
+                "start_datetime": base_date.replace(hour=14, minute=0),
+                "end_datetime": base_date.replace(hour=15, minute=0),
+                "status": "confirmed",
+            },
+            {
+                "id": uuid4(),
+                "title": "Event 2",
+                "casquette": "enseignant",
+                "start_datetime": base_date.replace(hour=14, minute=30),
+                "end_datetime": base_date.replace(hour=15, minute=30),
+                "status": "confirmed",
+            },
+        ]
+    )
 
     # Détecter conflits 2 fois
     conflicts1 = await detect_calendar_conflicts(date(2026, 2, 17), pool)
@@ -278,7 +290,7 @@ async def test_conflicts_range_7_days(mock_db_pool):
                     "casquette": "medecin",
                     "start_datetime": datetime(2026, 2, 17, 14, 0),
                     "end_datetime": datetime(2026, 2, 17, 15, 0),
-                    "status": "confirmed"
+                    "status": "confirmed",
                 },
                 {
                     "id": uuid4(),
@@ -286,8 +298,8 @@ async def test_conflicts_range_7_days(mock_db_pool):
                     "casquette": "enseignant",
                     "start_datetime": datetime(2026, 2, 17, 14, 30),
                     "end_datetime": datetime(2026, 2, 17, 15, 30),
-                    "status": "confirmed"
-                }
+                    "status": "confirmed",
+                },
             ]
         else:
             # Autres jours: Pas d'événements
@@ -312,17 +324,19 @@ async def test_cancelled_events_excluded(mock_db_pool):
     pool, conn = mock_db_pool
 
     # Mock: Seulement événements status='confirmed' (query filtre cancelled)
-    conn.fetch = AsyncMock(return_value=[
-        {
-            "id": uuid4(),
-            "title": "Event confirmed",
-            "casquette": "medecin",
-            "start_datetime": datetime(2026, 2, 17, 14, 0),
-            "end_datetime": datetime(2026, 2, 17, 15, 0),
-            "status": "confirmed"
-        }
-        # Event cancelled PAS retourné par query
-    ])
+    conn.fetch = AsyncMock(
+        return_value=[
+            {
+                "id": uuid4(),
+                "title": "Event confirmed",
+                "casquette": "medecin",
+                "start_datetime": datetime(2026, 2, 17, 14, 0),
+                "end_datetime": datetime(2026, 2, 17, 15, 0),
+                "status": "confirmed",
+            }
+            # Event cancelled PAS retourné par query
+        ]
+    )
 
     # Détecter conflits
     conflicts = await detect_calendar_conflicts(date(2026, 2, 17), pool)
@@ -342,7 +356,7 @@ def test_same_start_end_time_edge_case():
         title="Event 1",
         casquette=Casquette.MEDECIN,
         start_datetime=datetime(2026, 2, 17, 14, 0),
-        end_datetime=datetime(2026, 2, 17, 15, 0)
+        end_datetime=datetime(2026, 2, 17, 15, 0),
     )
 
     event2 = CalendarEvent(
@@ -350,7 +364,7 @@ def test_same_start_end_time_edge_case():
         title="Event 2",
         casquette=Casquette.ENSEIGNANT,
         start_datetime=datetime(2026, 2, 17, 15, 0),  # Commence quand event1 finit
-        end_datetime=datetime(2026, 2, 17, 16, 0)
+        end_datetime=datetime(2026, 2, 17, 16, 0),
     )
 
     # Vérifier pas de chevauchement temporel
@@ -368,7 +382,7 @@ def test_event1_englobes_event2():
         title="Event long",
         casquette=Casquette.MEDECIN,
         start_datetime=datetime(2026, 2, 17, 14, 0),
-        end_datetime=datetime(2026, 2, 17, 18, 0)  # 4h
+        end_datetime=datetime(2026, 2, 17, 18, 0),  # 4h
     )
 
     event2 = CalendarEvent(
@@ -376,7 +390,7 @@ def test_event1_englobes_event2():
         title="Event court",
         casquette=Casquette.ENSEIGNANT,
         start_datetime=datetime(2026, 2, 17, 15, 0),
-        end_datetime=datetime(2026, 2, 17, 16, 0)  # 1h (à l'intérieur)
+        end_datetime=datetime(2026, 2, 17, 16, 0),  # 1h (à l'intérieur)
     )
 
     # Vérifier chevauchement complet
@@ -397,7 +411,7 @@ async def test_save_conflict_to_db_deduplication(mock_db_pool):
         title="Event 1",
         casquette=Casquette.MEDECIN,
         start_datetime=datetime(2026, 2, 17, 14, 0),
-        end_datetime=datetime(2026, 2, 17, 15, 0)
+        end_datetime=datetime(2026, 2, 17, 15, 0),
     )
 
     event2 = CalendarEvent(
@@ -405,14 +419,10 @@ async def test_save_conflict_to_db_deduplication(mock_db_pool):
         title="Event 2",
         casquette=Casquette.ENSEIGNANT,
         start_datetime=datetime(2026, 2, 17, 14, 30),
-        end_datetime=datetime(2026, 2, 17, 15, 30)
+        end_datetime=datetime(2026, 2, 17, 15, 30),
     )
 
-    conflict = CalendarConflict(
-        event1=event1,
-        event2=event2,
-        overlap_minutes=30
-    )
+    conflict = CalendarConflict(event1=event1, event2=event2, overlap_minutes=30)
 
     # Mock: 1er INSERT → retourne UUID
     conflict_id1 = str(uuid4())
@@ -432,6 +442,7 @@ async def test_save_conflict_to_db_deduplication(mock_db_pool):
 # Tests Helpers
 # ============================================================================
 
+
 def test_has_temporal_overlap_various_cases():
     """Test: _has_temporal_overlap cas variés."""
     base_date = datetime(2026, 2, 17)
@@ -442,14 +453,14 @@ def test_has_temporal_overlap_various_cases():
         title="E1",
         casquette=Casquette.MEDECIN,
         start_datetime=base_date.replace(hour=14, minute=0),
-        end_datetime=base_date.replace(hour=15, minute=0)
+        end_datetime=base_date.replace(hour=15, minute=0),
     )
     event2 = CalendarEvent(
         id=str(uuid4()),
         title="E2",
         casquette=Casquette.ENSEIGNANT,
         start_datetime=base_date.replace(hour=14, minute=30),
-        end_datetime=base_date.replace(hour=16, minute=0)
+        end_datetime=base_date.replace(hour=16, minute=0),
     )
     assert _has_temporal_overlap(event1, event2) is True
 
@@ -459,13 +470,13 @@ def test_has_temporal_overlap_various_cases():
         title="E3",
         casquette=Casquette.MEDECIN,
         start_datetime=base_date.replace(hour=9, minute=0),
-        end_datetime=base_date.replace(hour=10, minute=0)
+        end_datetime=base_date.replace(hour=10, minute=0),
     )
     event4 = CalendarEvent(
         id=str(uuid4()),
         title="E4",
         casquette=Casquette.ENSEIGNANT,
         start_datetime=base_date.replace(hour=11, minute=0),
-        end_datetime=base_date.replace(hour=12, minute=0)
+        end_datetime=base_date.replace(hour=12, minute=0),
     )
     assert _has_temporal_overlap(event3, event4) is False

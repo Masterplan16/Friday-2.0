@@ -5,25 +5,29 @@ Story 1.9 - Tests configuration bot (chargement variables, validation).
 """
 
 import os
-import pytest
-from unittest.mock import patch, MagicMock, AsyncMock
-from bot.config import load_bot_config, ConfigurationError
+from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
+from bot.config import ConfigurationError, load_bot_config
 
 # ═══════════════════════════════════════════════════════════
 # Tests chargement configuration (4 tests requis)
 # ═══════════════════════════════════════════════════════════
 
 
-@patch.dict(os.environ, {
-    "TELEGRAM_BOT_TOKEN": "123456:ABC-DEF1234567890abcdef",
-    "TELEGRAM_SUPERGROUP_ID": "-1001234567890",
-    "TOPIC_CHAT_PROACTIVE_ID": "100",
-    "TOPIC_EMAIL_ID": "200",
-    "TOPIC_ACTIONS_ID": "300",
-    "TOPIC_SYSTEM_ID": "400",
-    "TOPIC_METRICS_ID": "500",
-}, clear=True)
+@patch.dict(
+    os.environ,
+    {
+        "TELEGRAM_BOT_TOKEN": "123456:ABC-DEF1234567890abcdef",
+        "TELEGRAM_SUPERGROUP_ID": "-1001234567890",
+        "TOPIC_CHAT_PROACTIVE_ID": "100",
+        "TOPIC_EMAIL_ID": "200",
+        "TOPIC_ACTIONS_ID": "300",
+        "TOPIC_SYSTEM_ID": "400",
+        "TOPIC_METRICS_ID": "500",
+    },
+    clear=True,
+)
 def test_config_loading_valid():
     """
     Test 1/4: Configuration valide chargée correctement.
@@ -52,15 +56,19 @@ def test_config_loading_valid():
     assert config.max_message_length == 4096
 
 
-@patch.dict(os.environ, {
-    "TELEGRAM_BOT_TOKEN": "123456:ABC-DEF",
-    "TELEGRAM_SUPERGROUP_ID": "-1001234567890",
-    # MANQUE: TOPIC_CHAT_PROACTIVE_ID
-    "TOPIC_EMAIL_ID": "200",
-    "TOPIC_ACTIONS_ID": "300",
-    "TOPIC_SYSTEM_ID": "400",
-    "TOPIC_METRICS_ID": "500",
-}, clear=True)
+@patch.dict(
+    os.environ,
+    {
+        "TELEGRAM_BOT_TOKEN": "123456:ABC-DEF",
+        "TELEGRAM_SUPERGROUP_ID": "-1001234567890",
+        # MANQUE: TOPIC_CHAT_PROACTIVE_ID
+        "TOPIC_EMAIL_ID": "200",
+        "TOPIC_ACTIONS_ID": "300",
+        "TOPIC_SYSTEM_ID": "400",
+        "TOPIC_METRICS_ID": "500",
+    },
+    clear=True,
+)
 def test_config_loading_missing_var():
     """
     Test 2/4: Erreur claire si variable manquante.
@@ -76,15 +84,19 @@ def test_config_loading_missing_var():
     assert "manquantes" in str(exc_info.value).lower()
 
 
-@patch.dict(os.environ, {
-    "TELEGRAM_BOT_TOKEN": "123456:ABC-DEF",
-    "TELEGRAM_SUPERGROUP_ID": "-1001234567890",
-    "TOPIC_CHAT_PROACTIVE_ID": "0",  # INVALIDE: thread_id doit être >0
-    "TOPIC_EMAIL_ID": "200",
-    "TOPIC_ACTIONS_ID": "300",
-    "TOPIC_SYSTEM_ID": "400",
-    "TOPIC_METRICS_ID": "500",
-}, clear=True)
+@patch.dict(
+    os.environ,
+    {
+        "TELEGRAM_BOT_TOKEN": "123456:ABC-DEF",
+        "TELEGRAM_SUPERGROUP_ID": "-1001234567890",
+        "TOPIC_CHAT_PROACTIVE_ID": "0",  # INVALIDE: thread_id doit être >0
+        "TOPIC_EMAIL_ID": "200",
+        "TOPIC_ACTIONS_ID": "300",
+        "TOPIC_SYSTEM_ID": "400",
+        "TOPIC_METRICS_ID": "500",
+    },
+    clear=True,
+)
 def test_config_validation_invalid_thread_id():
     """
     Test 3/4: Validation thread_id > 0 (BUG-1.9.5 fix).
@@ -101,15 +113,19 @@ def test_config_validation_invalid_thread_id():
     assert ">0" in error_msg or "invalide" in error_msg
 
 
-@patch.dict(os.environ, {
-    "TELEGRAM_BOT_TOKEN": "INVALID_TOKEN_NO_COLON",  # Format invalide
-    "TELEGRAM_SUPERGROUP_ID": "-1001234567890",
-    "TOPIC_CHAT_PROACTIVE_ID": "100",
-    "TOPIC_EMAIL_ID": "200",
-    "TOPIC_ACTIONS_ID": "300",
-    "TOPIC_SYSTEM_ID": "400",
-    "TOPIC_METRICS_ID": "500",
-}, clear=True)
+@patch.dict(
+    os.environ,
+    {
+        "TELEGRAM_BOT_TOKEN": "INVALID_TOKEN_NO_COLON",  # Format invalide
+        "TELEGRAM_SUPERGROUP_ID": "-1001234567890",
+        "TOPIC_CHAT_PROACTIVE_ID": "100",
+        "TOPIC_EMAIL_ID": "200",
+        "TOPIC_ACTIONS_ID": "300",
+        "TOPIC_SYSTEM_ID": "400",
+        "TOPIC_METRICS_ID": "500",
+    },
+    clear=True,
+)
 def test_config_validation_invalid_token():
     """
     Test 4/4: Validation format token Telegram (BUG-1.9.1 fix).

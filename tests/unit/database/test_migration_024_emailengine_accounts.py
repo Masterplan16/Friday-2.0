@@ -3,10 +3,11 @@ Tests unitaires pour migration 024 - Table ingestion.email_accounts
 Story 2.1 - Task 1.2
 """
 
-import pytest
-import asyncpg
 import os
 from pathlib import Path
+
+import asyncpg
+import pytest
 
 
 @pytest.fixture
@@ -14,8 +15,7 @@ async def db_connection():
     """Connexion test database - Skip si PostgreSQL non disponible"""
     # En dev, utiliser connection string de test ou défaut
     database_url = os.getenv(
-        'TEST_DATABASE_URL',
-        'postgresql://friday:friday@localhost:5432/friday_test'
+        "TEST_DATABASE_URL", "postgresql://friday:friday@localhost:5432/friday_test"
     )
 
     conn = None
@@ -48,17 +48,17 @@ async def test_email_accounts_table_exists(db_connection):
 async def test_email_accounts_has_required_columns(db_connection):
     """AC1: Table doit avoir toutes les colonnes requises"""
     required_columns = [
-        'id',  # UUID primary key
-        'account_id',  # Identifiant unique account EmailEngine
-        'email',  # Email address
-        'imap_host',  # IMAP server
-        'imap_port',  # IMAP port
-        'imap_user',  # IMAP username
-        'imap_password_encrypted',  # Encrypted password (pgcrypto)
-        'status',  # connected | disconnected | error
-        'last_sync',  # Last successful sync timestamp
-        'created_at',  # Creation timestamp
-        'updated_at',  # Update timestamp
+        "id",  # UUID primary key
+        "account_id",  # Identifiant unique account EmailEngine
+        "email",  # Email address
+        "imap_host",  # IMAP server
+        "imap_port",  # IMAP port
+        "imap_user",  # IMAP username
+        "imap_password_encrypted",  # Encrypted password (pgcrypto)
+        "status",  # connected | disconnected | error
+        "last_sync",  # Last successful sync timestamp
+        "created_at",  # Creation timestamp
+        "updated_at",  # Update timestamp
     ]
 
     columns = await db_connection.fetch(
@@ -70,7 +70,7 @@ async def test_email_accounts_has_required_columns(db_connection):
         """
     )
 
-    column_names = [row['column_name'] for row in columns]
+    column_names = [row["column_name"] for row in columns]
 
     for col in required_columns:
         assert col in column_names, f"Column '{col}' not found in ingestion.email_accounts"
@@ -135,12 +135,14 @@ async def test_email_accounts_encrypts_password_on_insert(db_connection):
     )
 
     # Password chiffré ne doit PAS être égal au plaintext
-    assert encrypted_pw != 'plaintext_password_123', \
-        "Password was not encrypted by pgcrypto trigger"
+    assert (
+        encrypted_pw != "plaintext_password_123"
+    ), "Password was not encrypted by pgcrypto trigger"
 
     # Password chiffré doit commencer par \\x (format pgcrypto bytea)
-    assert encrypted_pw.startswith('\\x') or isinstance(encrypted_pw, bytes), \
-        "Encrypted password not in pgcrypto bytea format"
+    assert encrypted_pw.startswith("\\x") or isinstance(
+        encrypted_pw, bytes
+    ), "Encrypted password not in pgcrypto bytea format"
 
 
 @pytest.mark.asyncio

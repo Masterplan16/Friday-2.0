@@ -114,17 +114,17 @@ async def send_event_proposal_notification(
     time_range = format_event_time_range(event)
 
     lines = [
-        "Nouvel evenement propose\n",
-        f"Titre : {event.title}",
-        f"Date : {time_range}",
+        "\U0001f4c5 Nouvel evenement propose\n",
+        f"\U0001f4cc Titre : {event.title}",
+        f"\U0001f4c6 Date : {time_range}",
     ]
 
     if event.location:
-        lines.append(f"Lieu : {event.location}")
+        lines.append(f"\U0001f4cd Lieu : {event.location}")
 
     if event.participants:
         participants_str = ", ".join(event.participants)
-        lines.append(f"Participants : {participants_str}")
+        lines.append(f"\U0001f465 Participants : {participants_str}")
 
     lines.append(f"Casquette : {casquette_emoji} {casquette_label}")
     lines.append(f"\nConfiance : {confidence:.0%}")
@@ -136,9 +136,11 @@ async def send_event_proposal_notification(
     event_id_str = event_id or "none"
     keyboard = [
         [
-            InlineKeyboardButton("Creer", callback_data=f"evt_create:{event_id_str}"),
-            InlineKeyboardButton("Modifier", callback_data=f"evt_modify:{event_id_str}"),
-            InlineKeyboardButton("Annuler", callback_data=f"evt_cancel:{event_id_str}"),
+            InlineKeyboardButton("\u2705 Creer", callback_data=f"evt_create:{event_id_str}"),
+            InlineKeyboardButton(
+                "\u270f\ufe0f Modifier", callback_data=f"evt_modify:{event_id_str}"
+            ),
+            InlineKeyboardButton("\u274c Annuler", callback_data=f"evt_cancel:{event_id_str}"),
         ]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)

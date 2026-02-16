@@ -13,7 +13,6 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
-
 from agents.src.agents.dedup.deleter import DeletionResult, SafeDeleter
 from agents.src.agents.dedup.models import DedupAction, DedupGroup, FileEntry
 

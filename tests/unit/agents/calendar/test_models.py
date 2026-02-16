@@ -4,22 +4,22 @@ Tests unitaires Pydantic models Event & EventDetectionResult
 Story 7.1 Task 7.2: Validation models (3 tests)
 """
 
-import pytest
 from datetime import datetime, timezone
-from pydantic import ValidationError
 
+import pytest
 from agents.src.agents.calendar.models import (
+    Casquette,
     Event,
     EventDetectionResult,
+    EventStatus,
     EventType,
-    Casquette,
-    EventStatus
 )
-
+from pydantic import ValidationError
 
 # ============================================================================
 # TESTS EVENT MODEL
 # ============================================================================
+
 
 def test_event_valid_all_fields():
     """
@@ -34,7 +34,7 @@ def test_event_valid_all_fields():
         event_type=EventType.MEDICAL,
         casquette=Casquette.MEDECIN,
         confidence=0.92,
-        context="Email de Jean: RDV cardio"
+        context="Email de Jean: RDV cardio",
     )
 
     assert event.title == "Consultation Dr Dupont"
@@ -57,7 +57,7 @@ def test_event_end_before_start_should_fail():
             start_datetime=datetime(2026, 2, 15, 15, 0, tzinfo=timezone.utc),
             end_datetime=datetime(2026, 2, 15, 14, 0, tzinfo=timezone.utc),  # AVANT start
             casquette=Casquette.MEDECIN,
-            confidence=0.8
+            confidence=0.8,
         )
 
     assert "end_datetime doit etre apres start_datetime" in str(exc_info.value)
@@ -73,7 +73,7 @@ def test_event_confidence_out_of_range_should_fail():
             title="Test",
             start_datetime=datetime(2026, 2, 15, 14, 30, tzinfo=timezone.utc),
             casquette=Casquette.ENSEIGNANT,
-            confidence=1.5  # INVALIDE
+            confidence=1.5,  # INVALIDE
         )
 
     assert "confidence" in str(exc_info.value).lower()
@@ -84,7 +84,7 @@ def test_event_confidence_out_of_range_should_fail():
             title="Test",
             start_datetime=datetime(2026, 2, 15, 14, 30, tzinfo=timezone.utc),
             casquette=Casquette.CHERCHEUR,
-            confidence=-0.1  # INVALIDE
+            confidence=-0.1,  # INVALIDE
         )
 
     assert "confidence" in str(exc_info.value).lower()
@@ -99,7 +99,7 @@ def test_event_title_empty_should_fail():
             title="   ",  # Whitespace uniquement
             start_datetime=datetime(2026, 2, 15, 14, 30, tzinfo=timezone.utc),
             casquette=Casquette.MEDECIN,
-            confidence=0.8
+            confidence=0.8,
         )
 
     assert "title ne peut pas etre vide" in str(exc_info.value)
@@ -114,7 +114,7 @@ def test_event_optional_fields_defaults():
         title="Événement minimal",
         start_datetime=datetime(2026, 2, 15, 14, 30, tzinfo=timezone.utc),
         casquette=Casquette.ENSEIGNANT,
-        confidence=0.85
+        confidence=0.85,
     )
 
     assert event.end_datetime is None
@@ -128,14 +128,13 @@ def test_event_optional_fields_defaults():
 # TESTS EVENT DETECTION RESULT MODEL
 # ============================================================================
 
+
 def test_event_detection_result_empty():
     """
     Test AC1: EventDetectionResult avec 0 événement détecté
     """
     result = EventDetectionResult(
-        events_detected=[],
-        confidence_overall=0.0,
-        email_id="550e8400-e29b-41d4-a716-446655440000"
+        events_detected=[], confidence_overall=0.0, email_id="550e8400-e29b-41d4-a716-446655440000"
     )
 
     assert len(result.events_detected) == 0
@@ -152,20 +151,20 @@ def test_event_detection_result_multiple_events():
         title="Consultation",
         start_datetime=datetime(2026, 2, 15, 14, 30, tzinfo=timezone.utc),
         casquette=Casquette.MEDECIN,
-        confidence=0.95
+        confidence=0.95,
     )
 
     event2 = Event(
         title="Réunion",
         start_datetime=datetime(2026, 2, 16, 10, 0, tzinfo=timezone.utc),
         casquette=Casquette.ENSEIGNANT,
-        confidence=0.82
+        confidence=0.82,
     )
 
     result = EventDetectionResult(
         events_detected=[event1, event2],
         confidence_overall=0.82,  # Min des deux
-        email_id="test-email-id"
+        email_id="test-email-id",
     )
 
     assert len(result.events_detected) == 2
@@ -182,14 +181,14 @@ def test_event_detection_result_confidence_mismatch_should_fail():
         title="Event 1",
         start_datetime=datetime(2026, 2, 15, 14, 30, tzinfo=timezone.utc),
         casquette=Casquette.MEDECIN,
-        confidence=0.90
+        confidence=0.90,
     )
 
     event2 = Event(
         title="Event 2",
         start_datetime=datetime(2026, 2, 16, 10, 0, tzinfo=timezone.utc),
         casquette=Casquette.ENSEIGNANT,
-        confidence=0.75
+        confidence=0.75,
     )
 
     # confidence_overall incorrect (devrait être 0.75, le min)
@@ -197,7 +196,7 @@ def test_event_detection_result_confidence_mismatch_should_fail():
         EventDetectionResult(
             events_detected=[event1, event2],
             confidence_overall=0.90,  # INCORRECT (devrait être 0.75)
-            email_id="test"
+            email_id="test",
         )
 
     assert "confidence_overall" in str(exc_info.value)
@@ -207,6 +206,7 @@ def test_event_detection_result_confidence_mismatch_should_fail():
 # ============================================================================
 # TESTS ENUMS
 # ============================================================================
+
 
 def test_casquette_enum_values():
     """

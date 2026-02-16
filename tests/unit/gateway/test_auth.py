@@ -10,7 +10,6 @@ from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
-
 from services.gateway.config import GatewaySettings, get_settings
 from services.gateway.healthcheck import HealthChecker
 from services.gateway.main import create_app
@@ -19,9 +18,7 @@ from services.gateway.main import create_app
 class TestBearerTokenAuth:
     """Test bearer token authentication (AC #7)."""
 
-    def test_valid_token_returns_200(
-        self, app: TestClient, auth_headers: dict[str, str]
-    ) -> None:
+    def test_valid_token_returns_200(self, app: TestClient, auth_headers: dict[str, str]) -> None:
         """Valid bearer token should return 200 with user info."""
         response = app.get("/api/v1/protected", headers=auth_headers)
         assert response.status_code == 200
@@ -44,15 +41,11 @@ class TestBearerTokenAuth:
 
     def test_empty_bearer_returns_401(self, app: TestClient) -> None:
         """Empty bearer token should return 401."""
-        response = app.get(
-            "/api/v1/protected", headers={"Authorization": "Bearer "}
-        )
+        response = app.get("/api/v1/protected", headers={"Authorization": "Bearer "})
         # FastAPI HTTPBearer will reject empty tokens
         assert response.status_code in (401, 403)
 
-    def test_no_api_token_configured_returns_500(
-        self, test_settings: GatewaySettings
-    ) -> None:
+    def test_no_api_token_configured_returns_500(self, test_settings: GatewaySettings) -> None:
         """If API_TOKEN env var is not set, should return 500."""
         no_token_settings = GatewaySettings(
             api_token="",

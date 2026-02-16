@@ -11,12 +11,16 @@ from uuid import UUID
 
 import pytest
 
+
 # Mock friday_action decorator to bypass TrustManager in unit tests
 def mock_friday_action(module=None, action=None, trust_default=None):
     """Mock decorator that returns function unchanged."""
+
     def decorator(func):
         return func
+
     return decorator
+
 
 # Apply mock before importing detect_vip_sender
 with patch("agents.src.agents.email.vip_detector.friday_action", mock_friday_action):

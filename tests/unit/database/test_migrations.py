@@ -21,14 +21,14 @@ from __future__ import annotations
 import asyncio
 import os
 import re
+
+# Import du script apply_migrations
+import sys
 from pathlib import Path
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-
-# Import du script apply_migrations
-import sys
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
@@ -111,9 +111,7 @@ class TestNoPublicSchema:
         """Aucun CREATE TABLE sans schema prefix (qui irait dans public)."""
         for name, content in migration_contents.items():
             lines = [
-                line.strip()
-                for line in content.split("\n")
-                if not line.strip().startswith("--")
+                line.strip() for line in content.split("\n") if not line.strip().startswith("--")
             ]
             sql = "\n".join(lines)
 
@@ -133,9 +131,7 @@ class TestNoPublicSchema:
         """Aucun CREATE FUNCTION sans schema prefix."""
         for name, content in migration_contents.items():
             lines = [
-                line.strip()
-                for line in content.split("\n")
-                if not line.strip().startswith("--")
+                line.strip() for line in content.split("\n") if not line.strip().startswith("--")
             ]
             sql = "\n".join(lines)
 
@@ -177,9 +173,7 @@ class TestMigrationsTracking:
         assert "version" in script
         assert "checksum" in script
 
-    def test_migrations_would_produce_tracking_records(
-        self, migration_files: list[Path]
-    ) -> None:
+    def test_migrations_would_produce_tracking_records(self, migration_files: list[Path]) -> None:
         """Les 23 fichiers de migration produiraient 23 enregistrements dans schema_migrations."""
         assert len(migration_files) == 23, (
             f"Expected 23 migration files to produce 23 tracking records, "
@@ -263,7 +257,9 @@ class TestIdempotence:
         assert "CREATE SCHEMA IF NOT EXISTS ingestion" in content
         assert "CREATE SCHEMA IF NOT EXISTS knowledge" in content
 
-    def test_modified_migrations_use_if_not_exists(self, migration_contents: dict[str, str]) -> None:
+    def test_modified_migrations_use_if_not_exists(
+        self, migration_contents: dict[str, str]
+    ) -> None:
         """Les migrations modifiees/creees en Story 1.2+ utilisent IF NOT EXISTS."""
         # Migrations modifiees dans Story 1.2 (008, 010, 011, 012)
         # Les migrations legacy (002-009) reposent sur schema_migrations pour l'idempotence
@@ -277,16 +273,12 @@ class TestIdempotence:
             if name not in story_12_migrations:
                 continue
             lines = [
-                line.strip()
-                for line in content.split("\n")
-                if not line.strip().startswith("--")
+                line.strip() for line in content.split("\n") if not line.strip().startswith("--")
             ]
             sql = "\n".join(lines)
 
             # Trouver tous les CREATE TABLE
-            all_creates = re.findall(
-                r"CREATE\s+TABLE\s+(\S+)\s*\(", sql, re.IGNORECASE
-            )
+            all_creates = re.findall(r"CREATE\s+TABLE\s+(\S+)\s*\(", sql, re.IGNORECASE)
             if_creates = re.findall(
                 r"CREATE\s+TABLE\s+IF\s+NOT\s+EXISTS\s+(\S+)\s*\(", sql, re.IGNORECASE
             )
@@ -326,7 +318,9 @@ class TestBackup:
             mock_proc.communicate = mock_communicate
             return mock_proc
 
-        with patch("apply_migrations.asyncio.create_subprocess_exec", side_effect=fake_create_subprocess) as mock_exec:
+        with patch(
+            "apply_migrations.asyncio.create_subprocess_exec", side_effect=fake_create_subprocess
+        ) as mock_exec:
             result = await backup_database(
                 "postgresql://friday:secret@localhost:5432/friday",
                 "001_init_schemas",
@@ -340,9 +334,9 @@ class TestBackup:
             assert "--format=custom" in call_args
             assert "--compress=6" in call_args
             # Securite: le password ne doit PAS etre dans les arguments CLI
-            assert "secret" not in " ".join(str(a) for a in call_args), (
-                "Database password must not appear in pg_dump CLI arguments"
-            )
+            assert "secret" not in " ".join(
+                str(a) for a in call_args
+            ), "Database password must not appear in pg_dump CLI arguments"
             # Le password doit etre passe via PGPASSWORD env var
             call_env = mock_exec.call_args[1].get("env", {})
             assert call_env.get("PGPASSWORD") == "secret"
@@ -362,7 +356,9 @@ class TestBackup:
             mock_proc.communicate = mock_communicate
             return mock_proc
 
-        with patch("apply_migrations.asyncio.create_subprocess_exec", side_effect=fake_failing_subprocess):
+        with patch(
+            "apply_migrations.asyncio.create_subprocess_exec", side_effect=fake_failing_subprocess
+        ):
             with pytest.raises(BackupError, match="pg_dump echoue"):
                 await backup_database(
                     "postgresql://test@localhost/test",
@@ -387,7 +383,9 @@ class TestBackup:
             mock_proc.kill = MagicMock()
             return mock_proc
 
-        with patch("apply_migrations.asyncio.create_subprocess_exec", side_effect=fake_hanging_subprocess):
+        with patch(
+            "apply_migrations.asyncio.create_subprocess_exec", side_effect=fake_hanging_subprocess
+        ):
             with patch("apply_migrations.BACKUP_TIMEOUT_SECONDS", 0.01):
                 with pytest.raises(BackupError, match="timeout"):
                     await backup_database(
@@ -407,12 +405,12 @@ class TestRollback:
     def test_all_migrations_have_transaction(self, migration_contents: dict[str, str]) -> None:
         """Chaque migration doit avoir BEGIN et COMMIT."""
         for name, content in migration_contents.items():
-            assert re.search(r"^\s*BEGIN\s*;", content, re.MULTILINE | re.IGNORECASE), (
-                f"Migration {name} manque BEGIN;"
-            )
-            assert re.search(r"^\s*COMMIT\s*;", content, re.MULTILINE | re.IGNORECASE), (
-                f"Migration {name} manque COMMIT;"
-            )
+            assert re.search(
+                r"^\s*BEGIN\s*;", content, re.MULTILINE | re.IGNORECASE
+            ), f"Migration {name} manque BEGIN;"
+            assert re.search(
+                r"^\s*COMMIT\s*;", content, re.MULTILINE | re.IGNORECASE
+            ), f"Migration {name} manque COMMIT;"
 
     def test_strip_transaction_wrapper(self) -> None:
         """strip_transaction_wrapper retire BEGIN/COMMIT correctement."""
@@ -549,9 +547,7 @@ class TestHelpers:
     def test_no_default_password_in_script(self) -> None:
         """Le script ne doit pas avoir de password en default."""
         script = (PROJECT_ROOT / "scripts" / "apply_migrations.py").read_text()
-        assert 'friday:password' not in script, (
-            "Script must not have default password"
-        )
+        assert "friday:password" not in script, "Script must not have default password"
 
 
 # ============================================================================
@@ -564,9 +560,7 @@ class TestSQLConsistency:
         """Toutes les colonnes timestamp doivent etre TIMESTAMPTZ."""
         for name, content in migration_contents.items():
             lines = [
-                line.strip()
-                for line in content.split("\n")
-                if not line.strip().startswith("--")
+                line.strip() for line in content.split("\n") if not line.strip().startswith("--")
             ]
             for line in lines:
                 # Skip CREATE INDEX lines (column names may contain "timestamp")
@@ -599,15 +593,12 @@ class TestSQLConsistency:
         content = migration_contents["010_knowledge_finance"]
         expected_types = {"selarl", "scm", "sci_ravas", "sci_malbosc", "personal"}
         # Extraire les types du CHECK constraint
-        match = re.search(
-            r"account_type\s+IN\s*\(([^)]+)\)", content, re.IGNORECASE
-        )
+        match = re.search(r"account_type\s+IN\s*\(([^)]+)\)", content, re.IGNORECASE)
         assert match, "account_type CHECK constraint not found in migration 010"
         types_str = match.group(1)
         actual_types = {t.strip().strip("'\"") for t in types_str.split(",")}
         assert actual_types == expected_types, (
-            f"account_type CHECK mismatch. "
-            f"Expected: {expected_types}, Got: {actual_types}"
+            f"account_type CHECK mismatch. " f"Expected: {expected_types}, Got: {actual_types}"
         )
 
     def test_no_emoji_in_migrations(self, migration_contents: dict[str, str]) -> None:
@@ -631,9 +622,9 @@ class TestSQLConsistency:
     def test_no_public_function_in_011(self, migration_contents: dict[str, str]) -> None:
         """Migration 011 ne doit pas creer de fonction dans public."""
         content = migration_contents["011_trust_system"]
-        assert "update_updated_at_column" not in content, (
-            "Migration 011 should use core.update_updated_at() not public.update_updated_at_column()"
-        )
+        assert (
+            "update_updated_at_column" not in content
+        ), "Migration 011 should use core.update_updated_at() not public.update_updated_at_column()"
 
     def test_011_uses_core_trigger_function(self, migration_contents: dict[str, str]) -> None:
         """Migration 011 doit utiliser core.update_updated_at()."""

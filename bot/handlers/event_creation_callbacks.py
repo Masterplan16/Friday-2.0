@@ -14,6 +14,7 @@ import asyncpg
 import structlog
 from agents.src.agents.calendar.models import CalendarEvent, EventStatus
 from agents.src.core.models import CASQUETTE_EMOJI_MAPPING, CASQUETTE_LABEL_MAPPING, Casquette
+from agents.src.middleware.models import ActionResult
 from bot.handlers.event_proposal_notifications import format_date_fr
 from telegram import Update
 from telegram.ext import ContextTypes
@@ -86,8 +87,8 @@ async def handle_event_create_callback(update: Update, context: ContextTypes.DEF
             casquette_label = casquette_str
 
         lines = [
-            "Evenement cree\n",
-            f"Titre : {title}",
+            "\u2705 Evenement cree\n",
+            f"\U0001f4cc Titre : {title}",
         ]
         if start_dt_str:
             try:
@@ -102,12 +103,26 @@ async def handle_event_create_callback(update: Update, context: ContextTypes.DEF
 
         await query.edit_message_text("\n".join(lines))
 
+        # AC3: ActionResult trust='auto' (inline button = approbation utilisateur)
+        action_result = ActionResult(
+            input_summary=f"Confirmation evenement: {title}",
+            output_summary=f"Evenement cree: {title} ({casquette_label})",
+            confidence=1.0,
+            reasoning="Utilisateur a clique [Creer] = approbation explicite",
+            payload={
+                "event_id": event_id,
+                "external_id": external_id,
+                "casquette": casquette_str,
+            },
+        )
+        # Log ActionResult for audit trail
         logger.info(
             "Event confirmed and created",
             extra={
                 "event_id": event_id,
                 "title": title,
                 "external_id": external_id,
+                "action_result_confidence": action_result.confidence,
             },
         )
 
@@ -267,9 +282,7 @@ async def _check_conflicts_immediate(db_pool: asyncpg.Pool, event_data: dict, bo
     try:
         from datetime import date as date_type
 
-        from agents.src.agents.calendar.conflict_detector import (
-            detect_calendar_conflicts,
-        )
+        from agents.src.agents.calendar.conflict_detector import detect_calendar_conflicts
 
         properties = event_data.get("properties", {})
         start_dt_str = properties.get("start_datetime", "")

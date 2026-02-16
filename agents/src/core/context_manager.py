@@ -213,7 +213,8 @@ class ContextManager:
             OngoingEvent si trouvé, sinon None
         """
         async with self.db_pool.acquire() as conn:
-            row = await conn.fetchrow("""
+            row = await conn.fetchrow(
+                """
                 SELECT
                     id,
                     properties->>'casquette' AS casquette,
@@ -228,7 +229,8 @@ class ContextManager:
                   AND properties->>'casquette' IS NOT NULL
                 ORDER BY (properties->>'start_datetime')::timestamptz ASC
                 LIMIT 1
-            """)
+            """
+            )
 
         if not row:
             return None
@@ -272,7 +274,8 @@ class ContextManager:
             Casquette dernier événement, sinon None
         """
         async with self.db_pool.acquire() as conn:
-            row = await conn.fetchrow("""
+            row = await conn.fetchrow(
+                """
                 SELECT properties->>'casquette' AS casquette
                 FROM knowledge.entities
                 WHERE entity_type = 'EVENT'
@@ -281,7 +284,8 @@ class ContextManager:
                   AND properties->>'casquette' IS NOT NULL
                 ORDER BY (properties->>'end_datetime')::timestamptz DESC
                 LIMIT 1
-            """)
+            """
+            )
 
         if not row or not row["casquette"]:
             return None
@@ -347,11 +351,13 @@ class ContextManager:
         Edge case qui ne devrait jamais arriver après migration 037.
         """
         async with self.db_pool.acquire() as conn:
-            await conn.execute("""
+            await conn.execute(
+                """
                 INSERT INTO core.user_context (id, current_casquette, updated_by)
                 VALUES (1, NULL, 'system')
                 ON CONFLICT (id) DO NOTHING
-            """)
+            """
+            )
 
         return UserContext(casquette=None, source=ContextSource.DEFAULT, updated_by="system")
 

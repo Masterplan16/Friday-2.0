@@ -365,13 +365,15 @@ class GoogleCalendarSync:
             result.errors.extend(read_result.errors)
 
             # Step 2: Sync pending local changes to Google (write)
-            pending_events = await self.db_pool.fetch("""
+            pending_events = await self.db_pool.fetch(
+                """
                 SELECT id
                 FROM knowledge.entities
                 WHERE entity_type = 'EVENT'
                   AND source_type != 'google_calendar'
                   AND (properties->>'status') = 'proposed'
-                """)
+                """
+            )
 
             for row in pending_events:
                 try:
@@ -401,13 +403,15 @@ class GoogleCalendarSync:
         """
         modifications = []
 
-        events = await self.db_pool.fetch("""
+        events = await self.db_pool.fetch(
+            """
             SELECT id, name, properties
             FROM knowledge.entities
             WHERE entity_type = 'EVENT'
               AND source_type = 'google_calendar'
               AND (properties->>'external_id') IS NOT NULL
-            """)
+            """
+        )
 
         service = await self._get_service()
 

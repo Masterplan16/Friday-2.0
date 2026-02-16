@@ -25,7 +25,6 @@ from agents.src.agents.calendar.message_event_detector import (
 )
 from agents.src.agents.calendar.models import EventExtractionError
 
-
 # ============================================================================
 # FIXTURES
 # ============================================================================
@@ -422,15 +421,19 @@ class TestCircuitBreaker:
 
     @pytest.mark.asyncio
     async def test_circuit_breaker_opens_after_failures(self):
-        """Circuit breaker s'ouvre apres 3 echecs consecutifs."""
+        """Circuit breaker s'ouvre apres 3 echecs consecutifs (within timeout)."""
+        import time
+
         import agents.src.agents.calendar.message_event_detector as mod
 
         # Sauvegarder etat original
         original_failures = mod._circuit_breaker_failures
+        original_last_failure = mod._circuit_breaker_last_failure
 
         try:
-            # Simuler circuit breaker ouvert
+            # Simuler circuit breaker ouvert avec timestamp recent
             mod._circuit_breaker_failures = 3
+            mod._circuit_breaker_last_failure = time.time()  # Just now
 
             with pytest.raises(EventExtractionError, match="Circuit breaker ouvert"):
                 await extract_event_from_message(
@@ -440,3 +443,4 @@ class TestCircuitBreaker:
         finally:
             # Restaurer etat original
             mod._circuit_breaker_failures = original_failures
+            mod._circuit_breaker_last_failure = original_last_failure

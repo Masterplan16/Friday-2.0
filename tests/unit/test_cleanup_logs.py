@@ -5,6 +5,7 @@ Story 1.15 - AC2 : Rotation logs Docker > 7 jours
 """
 
 import subprocess
+
 import pytest
 
 
@@ -90,13 +91,14 @@ def test_calculate_diff_bytes():
     WHEN calculate_diff est appelé
     THEN retourne 500000 bytes (0.5 MB freed)
     """
+
     # Simuler fonction bash calculate_diff en Python
     def calculate_diff(before: int, after: int) -> int:
         """Calculate freed bytes."""
         return max(0, before - after)
 
     before = 1_000_000  # 1 MB
-    after = 500_000     # 0.5 MB
+    after = 500_000  # 0.5 MB
     freed = calculate_diff(before, after)
 
     assert freed == 500_000, f"Expected 500000 bytes freed, got {freed}"
@@ -109,6 +111,7 @@ def test_format_bytes_conversion():
     WHEN format_bytes est appelé
     THEN retourne format human-readable (MB/GB)
     """
+
     # Simuler fonction bash format_bytes en Python
     def format_bytes(bytes_count: int) -> str:
         """Format bytes to human readable."""

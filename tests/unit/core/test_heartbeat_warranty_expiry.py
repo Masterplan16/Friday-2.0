@@ -11,6 +11,7 @@ Tests unitaires heartbeat warranty_expiry.py (Story 3.4 AC3).
 - Multiple warranties same day
 - DB query timeout
 """
+
 import sys
 from datetime import date, timedelta
 from unittest.mock import AsyncMock, patch
@@ -24,6 +25,7 @@ sys.path.insert(0, ".")
 # ============================================================================
 # FIXTURES
 # ============================================================================
+
 
 def _make_warranty(days_remaining, item_name="Test Product", **kwargs):
     """Create mock warranty dict."""
@@ -47,9 +49,7 @@ class TestWarrantyExpiryCheck:
     @patch("agents.src.core.heartbeat_checks.warranty_expiry.check_alert_sent")
     @patch("agents.src.core.heartbeat_checks.warranty_expiry.record_alert_sent")
     @patch("agents.src.core.heartbeat_checks.warranty_expiry.mark_warranty_expired")
-    async def test_no_expiring_warranties(
-        self, mock_expire, mock_record, mock_check, mock_get
-    ):
+    async def test_no_expiring_warranties(self, mock_expire, mock_record, mock_check, mock_get):
         """Aucune warranty expirant = notify False."""
         mock_get.return_value = []
 
@@ -67,9 +67,7 @@ class TestWarrantyExpiryCheck:
     @patch("agents.src.core.heartbeat_checks.warranty_expiry.check_alert_sent")
     @patch("agents.src.core.heartbeat_checks.warranty_expiry.record_alert_sent")
     @patch("agents.src.core.heartbeat_checks.warranty_expiry.mark_warranty_expired")
-    async def test_7_days_critical_alert(
-        self, mock_expire, mock_record, mock_check, mock_get
-    ):
+    async def test_7_days_critical_alert(self, mock_expire, mock_record, mock_check, mock_get):
         """Warranty <7 jours = alerte CRITICAL envoyée."""
         warranty = _make_warranty(5, "HP Printer")
         mock_get.return_value = [warranty]
@@ -92,9 +90,7 @@ class TestWarrantyExpiryCheck:
     @patch("agents.src.core.heartbeat_checks.warranty_expiry.check_alert_sent")
     @patch("agents.src.core.heartbeat_checks.warranty_expiry.record_alert_sent")
     @patch("agents.src.core.heartbeat_checks.warranty_expiry.mark_warranty_expired")
-    async def test_7_days_ignores_quiet_hours(
-        self, mock_expire, mock_record, mock_check, mock_get
-    ):
+    async def test_7_days_ignores_quiet_hours(self, mock_expire, mock_record, mock_check, mock_get):
         """Warranty <7 jours IGNORE quiet hours (23h)."""
         warranty = _make_warranty(3, "Urgent Item")
         mock_get.return_value = [warranty]
@@ -115,9 +111,7 @@ class TestWarrantyExpiryCheck:
     @patch("agents.src.core.heartbeat_checks.warranty_expiry.check_alert_sent")
     @patch("agents.src.core.heartbeat_checks.warranty_expiry.record_alert_sent")
     @patch("agents.src.core.heartbeat_checks.warranty_expiry.mark_warranty_expired")
-    async def test_30_days_medium_alert(
-        self, mock_expire, mock_record, mock_check, mock_get
-    ):
+    async def test_30_days_medium_alert(self, mock_expire, mock_record, mock_check, mock_get):
         """Warranty 8-30 jours = alerte MEDIUM (respect quiet hours)."""
         warranty = _make_warranty(20, "Lave-linge Bosch")
         mock_get.return_value = [warranty]
@@ -138,9 +132,7 @@ class TestWarrantyExpiryCheck:
     @patch("agents.src.core.heartbeat_checks.warranty_expiry.check_alert_sent")
     @patch("agents.src.core.heartbeat_checks.warranty_expiry.record_alert_sent")
     @patch("agents.src.core.heartbeat_checks.warranty_expiry.mark_warranty_expired")
-    async def test_30_days_quiet_hours_skip(
-        self, mock_expire, mock_record, mock_check, mock_get
-    ):
+    async def test_30_days_quiet_hours_skip(self, mock_expire, mock_record, mock_check, mock_get):
         """Warranty 30 jours en quiet hours = pas d'alerte."""
         warranty = _make_warranty(25, "Non-urgent Item")
         mock_get.return_value = [warranty]
@@ -183,9 +175,7 @@ class TestWarrantyExpiryCheck:
     @patch("agents.src.core.heartbeat_checks.warranty_expiry.check_alert_sent")
     @patch("agents.src.core.heartbeat_checks.warranty_expiry.record_alert_sent")
     @patch("agents.src.core.heartbeat_checks.warranty_expiry.mark_warranty_expired")
-    async def test_expired_today_marked(
-        self, mock_expire, mock_record, mock_check, mock_get
-    ):
+    async def test_expired_today_marked(self, mock_expire, mock_record, mock_check, mock_get):
         """Warranty expirée aujourd'hui = status 'expired'."""
         warranty = _make_warranty(0, "Expired Today")
         mock_get.return_value = [warranty]
@@ -205,9 +195,7 @@ class TestWarrantyExpiryCheck:
     @patch("agents.src.core.heartbeat_checks.warranty_expiry.check_alert_sent")
     @patch("agents.src.core.heartbeat_checks.warranty_expiry.record_alert_sent")
     @patch("agents.src.core.heartbeat_checks.warranty_expiry.mark_warranty_expired")
-    async def test_multiple_warranties(
-        self, mock_expire, mock_record, mock_check, mock_get
-    ):
+    async def test_multiple_warranties(self, mock_expire, mock_record, mock_check, mock_get):
         """Multiple warranties avec différents seuils."""
         warranties = [
             _make_warranty(5, "Critical Item"),
@@ -251,19 +239,23 @@ class TestQuietHours:
     def test_quiet_hours_22h(self):
         """22h = quiet hours."""
         from agents.src.core.heartbeat_checks.warranty_expiry import _is_quiet_hours
+
         assert _is_quiet_hours({"hour": 22}) is True
 
     def test_quiet_hours_3h(self):
         """3h = quiet hours."""
         from agents.src.core.heartbeat_checks.warranty_expiry import _is_quiet_hours
+
         assert _is_quiet_hours({"hour": 3}) is True
 
     def test_not_quiet_hours_10h(self):
         """10h = pas quiet hours."""
         from agents.src.core.heartbeat_checks.warranty_expiry import _is_quiet_hours
+
         assert _is_quiet_hours({"hour": 10}) is False
 
     def test_not_quiet_hours_8h(self):
         """8h = pas quiet hours (boundary)."""
         from agents.src.core.heartbeat_checks.warranty_expiry import _is_quiet_hours
+
         assert _is_quiet_hours({"hour": 8}) is False

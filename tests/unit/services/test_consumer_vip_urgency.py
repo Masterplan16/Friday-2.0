@@ -14,13 +14,14 @@ import pytest
 def mock_friday_action(module=None, action=None, trust_default=None):
     def decorator(func):
         return func
+
     return decorator
 
 
 with patch("agents.src.agents.email.vip_detector.friday_action", mock_friday_action):
     with patch("agents.src.agents.email.urgency_detector.friday_action", mock_friday_action):
-        from agents.src.agents.email.vip_detector import compute_email_hash, detect_vip_sender
         from agents.src.agents.email.urgency_detector import detect_urgency
+        from agents.src.agents.email.vip_detector import compute_email_hash, detect_vip_sender
 
 
 # ==========================================

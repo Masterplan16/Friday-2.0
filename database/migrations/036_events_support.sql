@@ -34,7 +34,7 @@ COMMENT ON CONSTRAINT check_event_properties ON knowledge.entities IS
 -- AC2: Index sur start_datetime pour requêtes temporelles événements
 -- Permet recherche rapide: "événements à venir", "événements du jour", etc.
 CREATE INDEX idx_entities_event_date
-ON knowledge.entities ((properties->>'start_datetime')::timestamptz)
+ON knowledge.entities (CAST((properties->>'start_datetime') AS timestamptz))
 WHERE entity_type = 'EVENT';
 
 COMMENT ON INDEX knowledge.idx_entities_event_date IS
@@ -45,7 +45,7 @@ COMMENT ON INDEX knowledge.idx_entities_event_date IS
 CREATE INDEX idx_entities_event_casquette_date
 ON knowledge.entities (
   (properties->>'casquette'),
-  ((properties->>'start_datetime')::timestamptz)
+  CAST((properties->>'start_datetime') AS timestamptz)
 )
 WHERE entity_type = 'EVENT';
 

@@ -12,9 +12,10 @@ TODO: Fix mock_db_pool fixtures (AttributeError: coroutine has no __aenter__)
 # Fonctionnalité validée par tests notifications (test_failure_notification_sent_to_system_topic PASS)
 # À corriger lors code review ou session suivante
 
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
 from datetime import datetime
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 # Import des modules à tester (PYTHONPATH setup in conftest.py)
 from bot.action_executor_draft_reply import send_email_via_emailengine
@@ -64,8 +65,8 @@ def mock_receipt_approved():
         "payload": {
             "draft_body": "Bonjour,\n\nVoici ma réponse.\n\nCordialement",
             "email_original_id": "email-original-456",
-            "email_type": "professional"
-        }
+            "email_type": "professional",
+        },
     }
 
 
@@ -77,13 +78,14 @@ def mock_email_original():
         "sender_email": "john@example.com",
         "subject": "Question importante",
         "message_id": "<original-789@example.com>",
-        "category": "professional"
+        "category": "professional",
     }
 
 
 # =============================================================================
 # TEST 1 : EmailEngine down → receipt status='failed'
 # =============================================================================
+
 
 @pytest.mark.asyncio
 async def test_emailengine_down_sets_receipt_failed(
@@ -104,7 +106,9 @@ async def test_emailengine_down_sets_receipt_failed(
     with patch("bot.action_executor_draft_reply.EmailEngineClient") as MockClient:
         mock_client_instance = MockClient.return_value
         mock_client_instance.determine_account_id.return_value = "account_professional"
-        mock_client_instance.send_message.side_effect = EmailEngineError("500 - Internal Server Error")
+        mock_client_instance.send_message.side_effect = EmailEngineError(
+            "500 - Internal Server Error"
+        )
 
         # Act & Assert
         with pytest.raises(EmailEngineError):
@@ -114,7 +118,7 @@ async def test_emailengine_down_sets_receipt_failed(
                 http_client=mock_http_client,
                 emailengine_url="http://localhost:3000",
                 emailengine_secret="secret",
-                bot=mock_bot
+                bot=mock_bot,
             )
 
     # Assert : Vérifier UPDATE receipt status='failed'
@@ -129,6 +133,7 @@ async def test_emailengine_down_sets_receipt_failed(
 # =============================================================================
 # TEST 2 : Notification System envoyée après échec
 # =============================================================================
+
 
 @pytest.mark.asyncio
 async def test_failure_notification_sent_to_system_topic(
@@ -157,7 +162,7 @@ async def test_failure_notification_sent_to_system_topic(
                     http_client=mock_http_client,
                     emailengine_url="http://localhost:3000",
                     emailengine_secret="secret",
-                    bot=mock_bot
+                    bot=mock_bot,
                 )
 
             # Assert : Notification échec appelée
@@ -173,6 +178,7 @@ async def test_failure_notification_sent_to_system_topic(
 # TEST 3 : Logs structurés JSON lors d'erreur
 # =============================================================================
 
+
 @pytest.mark.asyncio
 async def test_error_logging_structured(
     mock_db_pool, mock_http_client, mock_bot, mock_receipt_approved, mock_email_original, caplog
@@ -183,6 +189,7 @@ async def test_error_logging_structured(
     AC5 Story 2.6 : Logs JSON avec receipt_id, error, exc_info
     """
     import logging
+
     caplog.set_level(logging.ERROR)
 
     # Arrange
@@ -202,7 +209,7 @@ async def test_error_logging_structured(
                 http_client=mock_http_client,
                 emailengine_url="http://localhost:3000",
                 emailengine_secret="secret",
-                bot=mock_bot
+                bot=mock_bot,
             )
 
     # Assert : Vérifier logs ERROR
@@ -214,6 +221,7 @@ async def test_error_logging_structured(
 # =============================================================================
 # TEST 4 : Retry 3 tentatives effectuées (par EmailEngine client)
 # =============================================================================
+
 
 @pytest.mark.asyncio
 async def test_emailengine_retries_3_attempts(
@@ -246,7 +254,7 @@ async def test_emailengine_retries_3_attempts(
                 http_client=mock_http_client,
                 emailengine_url="http://localhost:3000",
                 emailengine_secret="secret",
-                bot=mock_bot
+                bot=mock_bot,
             )
 
         # Assert : Message erreur mentionne "3 attempts"
@@ -256,6 +264,7 @@ async def test_emailengine_retries_3_attempts(
 # =============================================================================
 # TEST 5 : Compte IMAP invalide → erreur détaillée
 # =============================================================================
+
 
 @pytest.mark.asyncio
 async def test_invalid_imap_account_detailed_error(
@@ -285,17 +294,21 @@ async def test_invalid_imap_account_detailed_error(
                 http_client=mock_http_client,
                 emailengine_url="http://localhost:3000",
                 emailengine_secret="secret",
-                bot=mock_bot
+                bot=mock_bot,
             )
 
         # Assert : Message erreur mentionne account invalide
         assert "account_invalid" in str(exc_info.value).lower()
-        assert "not found" in str(exc_info.value).lower() or "not authenticated" in str(exc_info.value).lower()
+        assert (
+            "not found" in str(exc_info.value).lower()
+            or "not authenticated" in str(exc_info.value).lower()
+        )
 
 
 # =============================================================================
 # TEST 6 : Échec anonymisation Presidio ne bloque pas notification échec
 # =============================================================================
+
 
 @pytest.mark.asyncio
 async def test_presidio_failure_does_not_block_error_notification(
@@ -307,6 +320,7 @@ async def test_presidio_failure_does_not_block_error_notification(
     AC5 Story 2.6 : Si Presidio down lors d'erreur EmailEngine, notification échec quand même
     """
     import logging
+
     caplog.set_level(logging.ERROR)
 
     # Arrange
@@ -330,7 +344,7 @@ async def test_presidio_failure_does_not_block_error_notification(
                     http_client=mock_http_client,
                     emailengine_url="http://localhost:3000",
                     emailengine_secret="secret",
-                    bot=mock_bot
+                    bot=mock_bot,
                 )
 
     # Assert : Erreur EmailEngine propagée (pas bloquée par Presidio failure)
@@ -342,6 +356,7 @@ async def test_presidio_failure_does_not_block_error_notification(
 # =============================================================================
 # TEST 7 : Receipt status='failed' même si notification échoue
 # =============================================================================
+
 
 @pytest.mark.asyncio
 async def test_receipt_failed_even_if_notification_fails(
@@ -373,7 +388,7 @@ async def test_receipt_failed_even_if_notification_fails(
                     http_client=mock_http_client,
                     emailengine_url="http://localhost:3000",
                     emailengine_secret="secret",
-                    bot=mock_bot
+                    bot=mock_bot,
                 )
 
     # Assert : Receipt UPDATE 'failed' appelé quand même
@@ -387,6 +402,7 @@ async def test_receipt_failed_even_if_notification_fails(
 # =============================================================================
 # TEST 8 : Pas de writing_example créé si envoi échoue
 # =============================================================================
+
 
 @pytest.mark.asyncio
 async def test_no_writing_example_if_send_fails(
@@ -414,7 +430,7 @@ async def test_no_writing_example_if_send_fails(
                 http_client=mock_http_client,
                 emailengine_url="http://localhost:3000",
                 emailengine_secret="secret",
-                bot=mock_bot
+                bot=mock_bot,
             )
 
     # Assert : Vérifier qu'INSERT writing_example PAS appelé

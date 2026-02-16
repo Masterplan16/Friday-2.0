@@ -49,7 +49,9 @@ async def test_db_pool():
 @pytest.fixture
 def dataset_emails():
     """Charge le dataset de 100 emails."""
-    dataset_path = Path(__file__).parent.parent.parent / "fixtures" / "emails_classification_dataset.json"
+    dataset_path = (
+        Path(__file__).parent.parent.parent / "fixtures" / "emails_classification_dataset.json"
+    )
     with open(dataset_path, "r", encoding="utf-8") as f:
         return json.load(f)
 
@@ -94,24 +96,28 @@ async def test_classification_accuracy_global(test_db_pool, dataset_emails):
             if is_correct:
                 correct_classifications += 1
 
-            results.append({
-                "email_id": email_data["id"],
-                "predicted": predicted_category,
-                "ground_truth": ground_truth,
-                "confidence": confidence,
-                "correct": is_correct,
-            })
+            results.append(
+                {
+                    "email_id": email_data["id"],
+                    "predicted": predicted_category,
+                    "ground_truth": ground_truth,
+                    "confidence": confidence,
+                    "correct": is_correct,
+                }
+            )
 
         except Exception as e:
             # Log error mais continuer
-            results.append({
-                "email_id": email_data["id"],
-                "predicted": "ERROR",
-                "ground_truth": email_data["ground_truth"],
-                "confidence": 0.0,
-                "correct": False,
-                "error": str(e),
-            })
+            results.append(
+                {
+                    "email_id": email_data["id"],
+                    "predicted": "ERROR",
+                    "ground_truth": email_data["ground_truth"],
+                    "confidence": 0.0,
+                    "correct": False,
+                    "error": str(e),
+                }
+            )
 
     # Calculer accuracy globale
     accuracy_global = correct_classifications / total_emails
@@ -140,12 +146,17 @@ async def test_classification_accuracy_global(test_db_pool, dataset_emails):
     # Sauvegarder résultats complets dans fichier JSON (debug)
     results_path = Path(__file__).parent / "accuracy_results.json"
     with open(results_path, "w", encoding="utf-8") as f:
-        json.dump({
-            "accuracy_global": accuracy_global,
-            "correct": correct_classifications,
-            "total": total_emails,
-            "results": results,
-        }, f, indent=2, ensure_ascii=False)
+        json.dump(
+            {
+                "accuracy_global": accuracy_global,
+                "correct": correct_classifications,
+                "total": total_emails,
+                "results": results,
+            },
+            f,
+            indent=2,
+            ensure_ascii=False,
+        )
     print(f"\nRésultats complets sauvegardés : {results_path}")
 
     # Assertion AC7 : Accuracy >= 85%
@@ -222,15 +233,11 @@ async def test_classification_accuracy_per_category(test_db_pool, dataset_emails
     print("=" * 80)
 
     # Assertion AC7 : Toutes catégories >= 80%
-    failed_categories = [
-        (cat, acc) for cat, acc in category_accuracies.items() if acc < 0.80
-    ]
+    failed_categories = [(cat, acc) for cat, acc in category_accuracies.items() if acc < 0.80]
 
     if failed_categories:
         failed_details = ", ".join([f"{cat}={acc:.2%}" for cat, acc in failed_categories])
-        pytest.fail(
-            f"Certaines catégories < 80% accuracy requis (AC7): {failed_details}"
-        )
+        pytest.fail(f"Certaines catégories < 80% accuracy requis (AC7): {failed_details}")
 
 
 @pytest.mark.asyncio
@@ -248,16 +255,31 @@ async def test_classification_smoke_subset_20(test_db_pool):
 
     # Subset 20 emails (IDs hardcodés pour reproducibilité)
     smoke_email_ids = [
-        "email-001", "email-002", "email-003", "email-004", "email-005",  # 1 par catégorie principale
-        "email-006", "email-007", "email-008",  # urgent, spam, unknown
-        "email-009", "email-017", "email-025",  # medical, finance, personnel (variantes)
-        "email-032", "email-039", "email-044",  # research (variantes)
-        "email-048", "email-056", "email-064",  # unknown, urgent, spam (variantes)
-        "email-071", "email-083",  # medical (edge cases)
+        "email-001",
+        "email-002",
+        "email-003",
+        "email-004",
+        "email-005",  # 1 par catégorie principale
+        "email-006",
+        "email-007",
+        "email-008",  # urgent, spam, unknown
+        "email-009",
+        "email-017",
+        "email-025",  # medical, finance, personnel (variantes)
+        "email-032",
+        "email-039",
+        "email-044",  # research (variantes)
+        "email-048",
+        "email-056",
+        "email-064",  # unknown, urgent, spam (variantes)
+        "email-071",
+        "email-083",  # medical (edge cases)
     ]
 
     # Charger dataset complet
-    dataset_path = Path(__file__).parent.parent.parent / "fixtures" / "emails_classification_dataset.json"
+    dataset_path = (
+        Path(__file__).parent.parent.parent / "fixtures" / "emails_classification_dataset.json"
+    )
     with open(dataset_path, "r", encoding="utf-8") as f:
         all_emails = json.load(f)
 

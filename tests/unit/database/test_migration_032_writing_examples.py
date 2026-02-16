@@ -8,9 +8,10 @@ Story: 2.5 Brouillon Réponse Email
 """
 
 import asyncio
+from datetime import datetime
+
 import asyncpg
 import pytest
-from datetime import datetime
 
 
 @pytest.fixture
@@ -23,7 +24,7 @@ async def db_pool():
         user="postgres",
         password="postgres",
         min_size=1,
-        max_size=5
+        max_size=5,
     )
     yield pool
     await pool.close()
@@ -146,10 +147,10 @@ async def test_writing_examples_index_created(db_pool):
         assert result is not None, "Index idx_writing_examples_email_type_sent_by devrait exister"
 
         # Vérifier que l'index contient les bonnes colonnes
-        indexdef = result['indexdef'].lower()
-        assert 'email_type' in indexdef, "Index devrait contenir email_type"
-        assert 'sent_by' in indexdef, "Index devrait contenir sent_by"
-        assert 'created_at' in indexdef, "Index devrait contenir created_at"
+        indexdef = result["indexdef"].lower()
+        assert "email_type" in indexdef, "Index devrait contenir email_type"
+        assert "sent_by" in indexdef, "Index devrait contenir sent_by"
+        assert "created_at" in indexdef, "Index devrait contenir created_at"
 
 
 @pytest.mark.asyncio
@@ -171,15 +172,15 @@ async def test_writing_examples_updated_at_trigger(db_pool, clean_writing_exampl
 
         # Récupérer created_at et updated_at initial
         row = await conn.fetchrow(
-            "SELECT created_at, updated_at FROM core.writing_examples WHERE id = $1",
-            example_id
+            "SELECT created_at, updated_at FROM core.writing_examples WHERE id = $1", example_id
         )
-        created_at_original = row['created_at']
-        updated_at_original = row['updated_at']
+        created_at_original = row["created_at"]
+        updated_at_original = row["updated_at"]
 
         # Vérifier que created_at == updated_at initialement
-        assert created_at_original == updated_at_original, \
-            "created_at devrait égaler updated_at après INSERT"
+        assert (
+            created_at_original == updated_at_original
+        ), "created_at devrait égaler updated_at après INSERT"
 
         # Attendre 1 seconde pour différencier les timestamps
         await asyncio.sleep(1)
@@ -191,26 +192,26 @@ async def test_writing_examples_updated_at_trigger(db_pool, clean_writing_exampl
             SET subject = 'Modified Subject'
             WHERE id = $1
             """,
-            example_id
+            example_id,
         )
 
         # Récupérer updated_at après UPDATE
         updated_at_new = await conn.fetchval(
-            "SELECT updated_at FROM core.writing_examples WHERE id = $1",
-            example_id
+            "SELECT updated_at FROM core.writing_examples WHERE id = $1", example_id
         )
 
         # Vérifier que updated_at a changé
-        assert updated_at_new > updated_at_original, \
-            "updated_at devrait être mis à jour automatiquement après UPDATE"
+        assert (
+            updated_at_new > updated_at_original
+        ), "updated_at devrait être mis à jour automatiquement après UPDATE"
 
         # Vérifier que created_at n'a PAS changé
         created_at_new = await conn.fetchval(
-            "SELECT created_at FROM core.writing_examples WHERE id = $1",
-            example_id
+            "SELECT created_at FROM core.writing_examples WHERE id = $1", example_id
         )
-        assert created_at_new == created_at_original, \
-            "created_at ne devrait JAMAIS changer après INSERT"
+        assert (
+            created_at_new == created_at_original
+        ), "created_at ne devrait JAMAIS changer après INSERT"
 
 
 @pytest.mark.asyncio
@@ -233,19 +234,16 @@ async def test_writing_examples_insert_succeeds(db_pool, clean_writing_examples)
         assert example_id_1 is not None, "INSERT devrait retourner un UUID"
 
         # Vérifier que l'exemple a été inséré
-        row = await conn.fetchrow(
-            "SELECT * FROM core.writing_examples WHERE id = $1",
-            example_id_1
-        )
+        row = await conn.fetchrow("SELECT * FROM core.writing_examples WHERE id = $1", example_id_1)
 
         assert row is not None, "L'exemple devrait exister dans la table"
-        assert row['email_type'] == 'professional'
-        assert row['subject'] == 'Test Subject 1'
-        assert row['body'] == 'Test Body 1'
-        assert row['sent_by'] == 'Mainteneur'
-        assert row['created_at'] is not None
-        assert row['updated_at'] is not None
-        assert isinstance(row['created_at'], datetime)
+        assert row["email_type"] == "professional"
+        assert row["subject"] == "Test Subject 1"
+        assert row["body"] == "Test Body 1"
+        assert row["sent_by"] == "Mainteneur"
+        assert row["created_at"] is not None
+        assert row["updated_at"] is not None
+        assert isinstance(row["created_at"], datetime)
 
         # Insert avec sent_by par défaut (DEFAULT 'Mainteneur')
         example_id_2 = await conn.fetchval(
@@ -257,12 +255,12 @@ async def test_writing_examples_insert_succeeds(db_pool, clean_writing_examples)
         )
 
         row2 = await conn.fetchrow(
-            "SELECT sent_by FROM core.writing_examples WHERE id = $1",
-            example_id_2
+            "SELECT sent_by FROM core.writing_examples WHERE id = $1", example_id_2
         )
 
-        assert row2['sent_by'] == 'Mainteneur', \
-            "sent_by devrait avoir la valeur par défaut 'Mainteneur'"
+        assert (
+            row2["sent_by"] == "Mainteneur"
+        ), "sent_by devrait avoir la valeur par défaut 'Mainteneur'"
 
 
 @pytest.mark.asyncio

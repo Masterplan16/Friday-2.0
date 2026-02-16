@@ -27,11 +27,7 @@ from agents.src.agents.calendar.message_prompts import (
     build_message_event_prompt,
     sanitize_message_text,
 )
-from agents.src.agents.calendar.models import (
-    Event,
-    EventExtractionError,
-    EventType,
-)
+from agents.src.agents.calendar.models import Event, EventExtractionError, EventType
 from agents.src.middleware.models import ActionResult
 from agents.src.middleware.trust import friday_action
 from agents.src.tools.anonymize import anonymize_text
@@ -50,6 +46,7 @@ LLM_MAX_TOKENS = 1024  # Output JSON evenement unique (plus court que email mult
 # Retry & Circuit Breaker (NFR17)
 MAX_RETRIES = 3
 CIRCUIT_BREAKER_THRESHOLD = 3
+CIRCUIT_BREAKER_RESET_TIMEOUT = 60  # Seconds before half-open (allow retry)
 
 # Confidence threshold (AC1 - plus bas que Story 7.1 car intent utilisateur plus clair)
 CONFIDENCE_THRESHOLD = 0.70
@@ -104,6 +101,7 @@ class MessageEventResult(BaseModel):
 # ============================================================================
 
 _circuit_breaker_failures = 0
+_circuit_breaker_last_failure: float = 0.0
 _circuit_breaker_lock = asyncio.Lock()
 
 
@@ -179,19 +177,33 @@ async def extract_event_from_message(
     Raises:
         EventExtractionError: Si erreur extraction (retry epuise, circuit breaker)
     """
-    global _circuit_breaker_failures
+    global _circuit_breaker_failures, _circuit_breaker_last_failure
 
-    # Verifier circuit breaker
+    # Verifier circuit breaker (half-open apres RESET_TIMEOUT)
     async with _circuit_breaker_lock:
         if _circuit_breaker_failures >= CIRCUIT_BREAKER_THRESHOLD:
-            logger.error(
-                "Circuit breaker OUVERT - %d echecs consecutifs",
-                _circuit_breaker_failures,
-                extra={"circuit_breaker_failures": _circuit_breaker_failures},
+            elapsed = time.time() - _circuit_breaker_last_failure
+            if elapsed < CIRCUIT_BREAKER_RESET_TIMEOUT:
+                logger.error(
+                    "Circuit breaker OUVERT - %d echecs consecutifs (reset dans %ds)",
+                    _circuit_breaker_failures,
+                    int(CIRCUIT_BREAKER_RESET_TIMEOUT - elapsed),
+                    extra={
+                        "circuit_breaker_failures": _circuit_breaker_failures,
+                        "seconds_until_reset": int(CIRCUIT_BREAKER_RESET_TIMEOUT - elapsed),
+                    },
+                )
+                raise EventExtractionError(
+                    f"Circuit breaker ouvert apres {_circuit_breaker_failures} echecs"
+                )
+            # Half-open: reset et laisser passer une tentative
+            logger.info(
+                "Circuit breaker HALF-OPEN - tentative apres %ds",
+                int(elapsed),
+                extra={"elapsed_seconds": int(elapsed)},
             )
-            raise EventExtractionError(
-                f"Circuit breaker ouvert apres {_circuit_breaker_failures} echecs"
-            )
+            _circuit_breaker_failures = 0
+            _circuit_breaker_last_failure = 0.0
 
     # Initialiser client Anthropic si non fourni
     if anthropic_client is None:
@@ -311,6 +323,7 @@ async def extract_event_from_message(
             if attempt == MAX_RETRIES:
                 async with _circuit_breaker_lock:
                     _circuit_breaker_failures += 1
+                    _circuit_breaker_last_failure = time.time()
                 raise EventExtractionError(f"RateLimitError apres {MAX_RETRIES} tentatives")
             await asyncio.sleep(2**attempt)
 
@@ -328,6 +341,7 @@ async def extract_event_from_message(
             if attempt == MAX_RETRIES:
                 async with _circuit_breaker_lock:
                     _circuit_breaker_failures += 1
+                    _circuit_breaker_last_failure = time.time()
                 raise EventExtractionError(f"APIError Claude: {e}")
             await asyncio.sleep(2)
 

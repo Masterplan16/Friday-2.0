@@ -274,10 +274,23 @@ def sanitize_message_text(message_text: str) -> str:
         message_text: Message Telegram brut
 
     Returns:
-        Message sanitize (guillemets echappes, longueur limitee)
+        Message sanitize (injection markers removed, guillemets echappes, longueur limitee)
     """
+    import re
+
+    # Strip common prompt injection patterns
+    sanitized = re.sub(
+        r"(ignore\s+(previous|above|all)\s+instructions|"
+        r"system\s*:\s*|"
+        r"<\s*/?\s*system\s*>|"
+        r"```\s*(system|prompt|instructions))",
+        "[FILTRE]",
+        message_text,
+        flags=re.IGNORECASE,
+    )
+
     # Echapper guillemets pour eviter casser le JSON
-    sanitized = message_text.replace('"', '\\"').replace("'", "\\'")
+    sanitized = sanitized.replace('"', '\\"').replace("'", "\\'")
 
     # Limiter longueur (messages Telegram max 4096 chars, on tronque a 2000)
     if len(sanitized) > 2000:

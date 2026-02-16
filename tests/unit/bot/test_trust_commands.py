@@ -4,19 +4,18 @@ Tests unitaires pour les commandes /trust (promote, set).
 Story 1.8 - AC4, AC5, AC6 : Tests handlers Telegram trust management.
 """
 
-import pytest
 from datetime import datetime, timedelta
-from unittest.mock import AsyncMock, MagicMock, patch, mock_open
+from unittest.mock import AsyncMock, MagicMock, mock_open, patch
+
+import pytest
 import yaml
-
-from telegram import Update, Message, User, Chat
-from telegram.ext import ContextTypes
-
 from bot.handlers.trust_commands import (
     trust_command_router,
     trust_promote_command,
     trust_set_command,
 )
+from telegram import Chat, Message, Update, User
+from telegram.ext import ContextTypes
 
 
 @pytest.fixture
@@ -80,7 +79,9 @@ class TestTrustCommandRouter:
         """
         mock_context.args = ["promote", "email", "classify"]
 
-        with patch("bot.handlers.trust_commands.trust_promote_command", new_callable=AsyncMock) as mock_promote:
+        with patch(
+            "bot.handlers.trust_commands.trust_promote_command", new_callable=AsyncMock
+        ) as mock_promote:
             await trust_command_router(mock_update, mock_context)
 
             # Vérifier que promote a été appelé avec args modifiés
@@ -94,7 +95,9 @@ class TestTrustCommandRouter:
         """
         mock_context.args = ["set", "email", "classify", "auto"]
 
-        with patch("bot.handlers.trust_commands.trust_set_command", new_callable=AsyncMock) as mock_set:
+        with patch(
+            "bot.handlers.trust_commands.trust_set_command", new_callable=AsyncMock
+        ) as mock_set:
             await trust_command_router(mock_update, mock_context)
 
             # Vérifier que set a été appelé avec args modifiés
@@ -136,7 +139,9 @@ class TestTrustPromoteCommand:
         assert "/trust promote <module> <action>" in call_args[0][0]
 
     @pytest.mark.asyncio
-    async def test_promote_propose_to_auto_success(self, mock_update, mock_context, mock_trust_config):
+    async def test_promote_propose_to_auto_success(
+        self, mock_update, mock_context, mock_trust_config
+    ):
         """
         Test AC4 : Promotion propose→auto réussie (accuracy 97%, 24 actions, pas d'anti-oscillation).
         """
@@ -151,7 +156,10 @@ class TestTrustPromoteCommand:
                         {"accuracy": 0.96, "total_actions": 12},
                     ]  # Total 24 actions, avg 96.5%
 
-                    with patch("bot.handlers.trust_commands._apply_trust_level_change", new_callable=AsyncMock):
+                    with patch(
+                        "bot.handlers.trust_commands._apply_trust_level_change",
+                        new_callable=AsyncMock,
+                    ):
                         await trust_promote_command(mock_update, mock_context)
 
                         # Vérifier succès
@@ -178,7 +186,10 @@ class TestTrustPromoteCommand:
                         {"accuracy": 0.91, "total_actions": 3},
                     ]  # Total 12 actions, avg 92.5%
 
-                    with patch("bot.handlers.trust_commands._apply_trust_level_change", new_callable=AsyncMock):
+                    with patch(
+                        "bot.handlers.trust_commands._apply_trust_level_change",
+                        new_callable=AsyncMock,
+                    ):
                         await trust_promote_command(mock_update, mock_context)
 
                         # Vérifier succès
@@ -242,7 +253,9 @@ class TestTrustPromoteCommand:
         last_change = datetime.utcnow() - timedelta(days=5)
 
         with patch("bot.handlers.trust_commands._get_current_trust_level", return_value="propose"):
-            with patch("bot.handlers.trust_commands._get_last_trust_change", return_value=last_change):
+            with patch(
+                "bot.handlers.trust_commands._get_last_trust_change", return_value=last_change
+            ):
                 await trust_promote_command(mock_update, mock_context)
 
                 # Vérifier refus anti-oscillation
@@ -294,7 +307,9 @@ class TestTrustSetCommand:
         mock_context.args = ["email", "classify", "blocked"]
 
         with patch("bot.handlers.trust_commands._get_current_trust_level", return_value="auto"):
-            with patch("bot.handlers.trust_commands._apply_trust_level_change", new_callable=AsyncMock):
+            with patch(
+                "bot.handlers.trust_commands._apply_trust_level_change", new_callable=AsyncMock
+            ):
                 await trust_set_command(mock_update, mock_context)
 
                 # Vérifier succès override
@@ -340,7 +355,10 @@ class TestTrustSetCommand:
         """
         mock_context.args = ["nonexistent", "action", "auto"]
 
-        with patch("bot.handlers.trust_commands._get_current_trust_level", side_effect=ValueError("Module not found")):
+        with patch(
+            "bot.handlers.trust_commands._get_current_trust_level",
+            side_effect=ValueError("Module not found"),
+        ):
             await trust_set_command(mock_update, mock_context)
 
             # Vérifier message d'erreur
@@ -405,7 +423,9 @@ class TestTrustCommandHelpers:
                             with patch("redis.asyncio.from_url") as mock_redis_from_url:
                                 mock_redis_from_url.return_value = MockRedisContext()
 
-                                await _apply_trust_level_change("email", "classify", "auto", "promotion")
+                                await _apply_trust_level_change(
+                                    "email", "classify", "auto", "promotion"
+                                )
 
                                 # Vérifier YAML modifié
                                 mock_yaml_dump.assert_called_once()

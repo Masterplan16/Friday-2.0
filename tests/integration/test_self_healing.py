@@ -113,7 +113,9 @@ def test_ram_spike_triggers_auto_recovery():
 
         # Vérifier que le script a réussi
         # Exit 0 = recovery effectuée OU pas nécessaire
-        assert result_recovery.returncode == 0, f"auto-recover-ram.sh failed: {result_recovery.stderr}"
+        assert (
+            result_recovery.returncode == 0
+        ), f"auto-recover-ram.sh failed: {result_recovery.stderr}"
 
         # Vérifier output mentionne kill service ou recovery
         output = result_recovery.stdout + result_recovery.stderr
@@ -197,7 +199,9 @@ def test_crash_loop_stops_service():
         )
 
         # Exit 1 = crash loop détecté
-        assert result.returncode == 1, f"detect-crash-loop.sh devrait retourner 1 (crash loop detected)"
+        assert (
+            result.returncode == 1
+        ), f"detect-crash-loop.sh devrait retourner 1 (crash loop detected)"
 
         # Vérifier output mentionne crash loop
         output = result.stdout + result.stderr
@@ -216,7 +220,8 @@ def test_crash_loop_stops_service():
 # Test 4.3.6: Workflow n8n complet (E2E)
 @pytest.mark.e2e
 @pytest.mark.skipif(
-    not os.getenv("N8N_API_KEY") or not os.getenv("N8N_URL"), reason="Nécessite n8n instance + API key"
+    not os.getenv("N8N_API_KEY") or not os.getenv("N8N_URL"),
+    reason="Nécessite n8n instance + API key",
 )
 @pytest.mark.asyncio
 async def test_n8n_auto_recover_workflow_e2e():
@@ -268,16 +273,22 @@ async def test_n8n_auto_recover_workflow_e2e():
 
         # Alternative: Vérifier executions récentes
         resp_executions = await client.get(
-            f"{n8n_url}/api/v1/executions", params={"workflowId": workflow_id, "limit": 10}, headers=headers
+            f"{n8n_url}/api/v1/executions",
+            params={"workflowId": workflow_id, "limit": 10},
+            headers=headers,
         )
 
-        assert resp_executions.status_code == 200, f"Failed to get executions: {resp_executions.text}"
+        assert (
+            resp_executions.status_code == 200
+        ), f"Failed to get executions: {resp_executions.text}"
 
         executions = resp_executions.json()["data"]
 
         # Si des exécutions existent, vérifier qu'au moins une a réussi
         if executions:
-            successful_executions = [e for e in executions if e["finished"] and not e.get("stoppedAt")]
+            successful_executions = [
+                e for e in executions if e["finished"] and not e.get("stoppedAt")
+            ]
             # Note: Vérifier le champ exact dépend de la version n8n
             # Pour simplifier, on vérifie juste qu'il y a des exécutions
             assert len(executions) > 0, "Workflow devrait avoir des exécutions historiques"

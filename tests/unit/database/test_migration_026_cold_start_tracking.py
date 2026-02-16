@@ -5,8 +5,8 @@ Vérifie la création de la table core.cold_start_tracking avec seed initial.
 Nécessite DATABASE_URL configurée et migration 026 appliquée.
 """
 
-import pytest
 import asyncpg
+import pytest
 
 
 @pytest.mark.integration
@@ -50,8 +50,7 @@ async def test_migration_026_creates_cold_start_tracking_table(db_pool):
         ]
 
         assert column_names == expected_columns, (
-            f"Colonnes incorrectes. Attendues: {expected_columns}, "
-            f"Obtenues: {column_names}"
+            f"Colonnes incorrectes. Attendues: {expected_columns}, " f"Obtenues: {column_names}"
         )
 
         # Vérifier types

@@ -5,8 +5,8 @@ Story 1.9 - Tests critiques de l'algorithme de routage (AC4).
 """
 
 import pytest
+from bot.models import BotConfig, TelegramEvent, TopicConfig
 from bot.routing import EventRouter
-from bot.models import TelegramEvent, BotConfig, TopicConfig
 
 
 @pytest.fixture

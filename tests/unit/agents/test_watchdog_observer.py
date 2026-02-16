@@ -11,21 +11,19 @@ Tests unitaires pour watchdog_observer.py (Story 3.5 - Task 6.1).
 - is_running property
 - Disabled config
 """
+
 import asyncio
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch, PropertyMock
+from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
 
 import pytest
 import yaml
-
 from agents.src.agents.archiviste.watchdog_config import (
+    PathConfig,
     WatchdogConfigManager,
     WatchdogConfigSchema,
-    PathConfig,
 )
-from agents.src.agents.archiviste.watchdog_observer import (
-    FridayWatchdogObserver,
-)
+from agents.src.agents.archiviste.watchdog_observer import FridayWatchdogObserver
 
 
 @pytest.fixture
@@ -264,14 +262,23 @@ class TestFridayWatchdogObserver:
                 # Modifier config pour ajouter un dossier
                 import os
                 import time as time_mod
+
                 time_mod.sleep(0.1)
                 updated_data = {
                     "watchdog": {
                         "enabled": True,
                         "stabilization_delay_seconds": 0,
                         "paths": [
-                            {"path": str(scans_dir), "extensions": [".pdf"], "source_label": "scanner"},
-                            {"path": str(new_dir), "extensions": [".csv"], "source_label": "csv-import"},
+                            {
+                                "path": str(scans_dir),
+                                "extensions": [".pdf"],
+                                "source_label": "scanner",
+                            },
+                            {
+                                "path": str(new_dir),
+                                "extensions": [".csv"],
+                                "source_label": "csv-import",
+                            },
                         ],
                     }
                 }
@@ -296,7 +303,9 @@ class TestFridayWatchdogObserver:
         with patch("agents.src.agents.archiviste.watchdog_observer.aioredis") as mock_aioredis:
             mock_aioredis.from_url = AsyncMock(return_value=AsyncMock())
 
-            with patch("agents.src.agents.archiviste.watchdog_observer.PollingObserver") as MockPolling:
+            with patch(
+                "agents.src.agents.archiviste.watchdog_observer.PollingObserver"
+            ) as MockPolling:
                 mock_obs = MagicMock()
                 MockPolling.return_value = mock_obs
 

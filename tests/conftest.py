@@ -18,7 +18,6 @@ from unittest.mock import AsyncMock, MagicMock
 
 import asyncpg
 import pytest
-
 from agents.src.middleware.trust import init_trust_manager
 
 # ==========================================

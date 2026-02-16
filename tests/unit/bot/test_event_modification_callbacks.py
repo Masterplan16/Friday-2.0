@@ -18,7 +18,6 @@ import uuid
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-
 from bot.handlers.event_modification_callbacks import (
     STATE_KEY_PREFIX,
     _apply_modifications,
@@ -29,7 +28,6 @@ from bot.handlers.event_modification_callbacks import (
     handle_modify_validate_callback,
     register_event_modification_callbacks,
 )
-
 
 # ============================================================================
 # FIXTURES
@@ -153,12 +151,14 @@ class TestModifyFields:
 
         redis = mock_context.bot_data["redis_client"]
         redis.get = AsyncMock(
-            return_value=json.dumps({
-                "event_id": sample_event_id,
-                "waiting_field": None,
-                "modifications": {},
-                "original": {},
-            })
+            return_value=json.dumps(
+                {
+                    "event_id": sample_event_id,
+                    "waiting_field": None,
+                    "modifications": {},
+                    "original": {},
+                }
+            )
         )
 
         await handle_modify_field_callback(mock_update, mock_context)
@@ -169,25 +169,23 @@ class TestModifyFields:
         assert state["waiting_field"] == "title"
 
         # Prompt affiche
-        mock_update.callback_query.edit_message_text.assert_called_with(
-            "Entrez le nouveau titre :"
-        )
+        mock_update.callback_query.edit_message_text.assert_called_with("Entrez le nouveau titre :")
 
     @pytest.mark.asyncio
-    async def test_modify_date_sets_waiting_field(
-        self, mock_update, mock_context, sample_event_id
-    ):
+    async def test_modify_date_sets_waiting_field(self, mock_update, mock_context, sample_event_id):
         """Click [Date] -> state.waiting_field='date'."""
         mock_update.callback_query.data = f"evt_mod_date:{sample_event_id}"
 
         redis = mock_context.bot_data["redis_client"]
         redis.get = AsyncMock(
-            return_value=json.dumps({
-                "event_id": sample_event_id,
-                "waiting_field": None,
-                "modifications": {},
-                "original": {},
-            })
+            return_value=json.dumps(
+                {
+                    "event_id": sample_event_id,
+                    "waiting_field": None,
+                    "modifications": {},
+                    "original": {},
+                }
+            )
         )
 
         await handle_modify_field_callback(mock_update, mock_context)
@@ -216,12 +214,14 @@ class TestModifyResponse:
 
         redis = mock_context.bot_data["redis_client"]
         redis.get = AsyncMock(
-            return_value=json.dumps({
-                "event_id": sample_event_id,
-                "waiting_field": "title",
-                "modifications": {},
-                "original": {"name": "Ancien titre"},
-            })
+            return_value=json.dumps(
+                {
+                    "event_id": sample_event_id,
+                    "waiting_field": "title",
+                    "modifications": {},
+                    "original": {"name": "Ancien titre"},
+                }
+            )
         )
 
         result = await handle_modify_response(update, mock_context)
@@ -264,12 +264,14 @@ class TestModifyValidate:
 
         redis = mock_context.bot_data["redis_client"]
         redis.get = AsyncMock(
-            return_value=json.dumps({
-                "event_id": sample_event_id,
-                "waiting_field": None,
-                "modifications": {"title": "Nouveau titre"},
-                "original": {},
-            })
+            return_value=json.dumps(
+                {
+                    "event_id": sample_event_id,
+                    "waiting_field": None,
+                    "modifications": {"title": "Nouveau titre"},
+                    "original": {},
+                }
+            )
         )
 
         # Mock db_pool
@@ -302,12 +304,14 @@ class TestModifyValidate:
 
         redis = mock_context.bot_data["redis_client"]
         redis.get = AsyncMock(
-            return_value=json.dumps({
-                "event_id": sample_event_id,
-                "waiting_field": None,
-                "modifications": {},
-                "original": {},
-            })
+            return_value=json.dumps(
+                {
+                    "event_id": sample_event_id,
+                    "waiting_field": None,
+                    "modifications": {},
+                    "original": {},
+                }
+            )
         )
 
         await handle_modify_validate_callback(mock_update, mock_context)

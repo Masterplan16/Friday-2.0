@@ -27,7 +27,6 @@ import asyncpg
 import pytest
 from redis.asyncio import Redis
 
-
 # ============================================================================
 # Fixtures
 # ============================================================================
@@ -98,7 +97,8 @@ async def test_telegram_upload_to_archiviste_pipeline(redis_client, db_pool, tra
     """
     from bot.handlers.file_handlers import handle_document
     from services.archiviste_consumer.consumer import init_consumer_group, process_document_event
-    from telegram import Update, Message, User, Document as TelegramDocument
+    from telegram import Document as TelegramDocument
+    from telegram import Message, Update, User
 
     # 1. Mock Telegram upload
     update = MagicMock(spec=Update)
@@ -123,7 +123,9 @@ async def test_telegram_upload_to_archiviste_pipeline(redis_client, db_pool, tra
     test_file.write_bytes(b"%PDF-1.4\ntest e2e content")
 
     mock_file = MagicMock()
-    mock_file.download_to_drive = AsyncMock(side_effect=lambda path: test_file.write_bytes(b"%PDF-1.4\ntest"))
+    mock_file.download_to_drive = AsyncMock(
+        side_effect=lambda path: test_file.write_bytes(b"%PDF-1.4\ntest")
+    )
     context.bot.get_file.return_value = mock_file
 
     context.bot_data = {"redis_client": redis_client}
@@ -214,7 +216,7 @@ async def test_telegram_request_file_send_complete(transit_dir):
     Vérifie AC#3 : Envoi fichier complet via recherche.
     """
     from bot.handlers.file_send_commands import handle_file_send_request
-    from telegram import Update, Message, User
+    from telegram import Message, Update, User
 
     # 1. Create test file
     test_file = transit_dir / "Facture_Plombier_E2E.pdf"
@@ -305,7 +307,8 @@ async def test_telegram_upload_error_recovery(redis_client, transit_dir):
     Vérifie AC#6 : Gestion erreurs + retry + notifications.
     """
     from bot.handlers.file_handlers import handle_document
-    from telegram import Update, Message, User, Document as TelegramDocument
+    from telegram import Document as TelegramDocument
+    from telegram import Message, Update, User
 
     # 1. Mock Telegram update
     update = MagicMock(spec=Update)

@@ -4,9 +4,10 @@ Tests E2E workflow complet envoi emails approuvés
 Story 2.6 - Task 4 : Tests E2E workflow Approve → Envoi → Confirmation
 """
 
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
 from datetime import datetime
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 # NOTE: Ces tests E2E nécessitent PostgreSQL + Redis réels (fixtures pytest-postgresql)
 # Pour CI/CD, mock EmailEngine API et Telegram Bot
@@ -17,6 +18,7 @@ pytestmark = pytest.mark.e2e
 # =============================================================================
 # TEST E2E 1 : Workflow complet Approve → Envoi → Confirmation (AC1-3)
 # =============================================================================
+
 
 @pytest.mark.asyncio
 async def test_email_send_approved_e2e_full_workflow():
@@ -47,6 +49,7 @@ async def test_email_send_approved_e2e_full_workflow():
 # =============================================================================
 # TEST E2E 2 : Échec EmailEngine (AC5)
 # =============================================================================
+
 
 @pytest.mark.asyncio
 async def test_email_send_emailengine_failure_e2e():
@@ -79,6 +82,7 @@ async def test_email_send_emailengine_failure_e2e():
 # TEST E2E 3 : Threading email correct (AC1)
 # =============================================================================
 
+
 @pytest.mark.asyncio
 async def test_email_threading_correct_e2e():
     """
@@ -103,6 +107,7 @@ async def test_email_threading_correct_e2e():
 # =============================================================================
 # TEST E2E 4 : Zero régression Story 2.5 (AC6)
 # =============================================================================
+
 
 @pytest.mark.asyncio
 async def test_story_25_zero_regression_e2e():

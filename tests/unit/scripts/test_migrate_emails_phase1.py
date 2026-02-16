@@ -1,4 +1,5 @@
 import pytest
+
 pytestmark = pytest.mark.skip(reason="migrate_emails script refactored, tests need update")
 
 """
@@ -29,6 +30,7 @@ os.environ.setdefault("ANTHROPIC_API_KEY", "test-key-12345")
 def mock_migration_state():
     """Mock MigrationState pour tests"""
     from datetime import datetime
+
     from scripts.migrate_emails import MigrationState
 
     return MigrationState(
@@ -318,7 +320,12 @@ class TestClassifyEmail:
             ),
         ]
 
-        email = {"message_id": "<test@example.com>", "subject": "Test", "sender": "t@t.com", "body_text": "C"}
+        email = {
+            "message_id": "<test@example.com>",
+            "subject": "Test",
+            "sender": "t@t.com",
+            "body_text": "C",
+        }
 
         # Doit retry 1 fois et réussir
         with patch("asyncio.sleep", new_callable=AsyncMock):  # Skip sleep delays

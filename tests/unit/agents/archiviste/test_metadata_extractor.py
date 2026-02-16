@@ -7,10 +7,11 @@ Tests avec mocks de Claude et Presidio pour vérifier :
 - Gestion des erreurs fail-explicit
 - Trust Layer intégré (@friday_action)
 """
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
-from datetime import datetime
 
+from datetime import datetime
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 from agents.src.agents.archiviste.metadata_extractor import MetadataExtractor
 from agents.src.agents.archiviste.models import MetadataExtraction, OCRResult
 from agents.src.middleware.models import ActionResult
@@ -36,7 +37,7 @@ def sample_ocr_result():
         """,
         confidence=0.92,
         page_count=1,
-        language="fr"
+        language="fr",
     )
 
 
@@ -82,7 +83,7 @@ async def test_extract_metadata_with_presidio_anonymization(
             "reasoning": "Facture médicale du Laboratoire Cerba avec montant clair"
         }
         """,
-        usage=MagicMock(input_tokens=150, output_tokens=50)
+        usage=MagicMock(input_tokens=150, output_tokens=50),
     )
 
     # Act
@@ -120,7 +121,7 @@ async def test_extract_metadata_facture_success(
         text="FACTURE\nDate: 2026-02-08\nFournisseur: Boulanger\nMontant TTC: 599.00 EUR",
         confidence=0.95,
         page_count=1,
-        language="fr"
+        language="fr",
     )
 
     mock_anonymize.return_value = (ocr_result.text, {})
@@ -130,7 +131,7 @@ async def test_extract_metadata_facture_success(
     mock_get_llm.return_value = mock_llm
     mock_llm.complete.return_value = MagicMock(
         content='{"date": "2026-02-08", "doc_type": "Facture", "emitter": "Boulanger", "amount": 599.0, "confidence": 0.92, "reasoning": "Facture Boulanger avec montant TTC clair"}',
-        usage=MagicMock(input_tokens=100, output_tokens=40)
+        usage=MagicMock(input_tokens=100, output_tokens=40),
     )
 
     # Act
@@ -161,7 +162,7 @@ async def test_extract_metadata_courrier_no_amount(
         text="Courrier\nDate: 15/01/2026\nAgence Régionale de Santé\nObjet: Demande de renseignements",
         confidence=0.88,
         page_count=1,
-        language="fr"
+        language="fr",
     )
 
     mock_anonymize.return_value = (ocr_result.text, {})
@@ -171,7 +172,7 @@ async def test_extract_metadata_courrier_no_amount(
     mock_get_llm.return_value = mock_llm
     mock_llm.complete.return_value = MagicMock(
         content='{"date": "2026-01-15", "doc_type": "Courrier", "emitter": "ARS", "amount": 0.0, "confidence": 0.85, "reasoning": "Courrier administratif ARS sans montant"}',
-        usage=MagicMock(input_tokens=80, output_tokens=35)
+        usage=MagicMock(input_tokens=80, output_tokens=35),
     )
 
     # Act
@@ -199,7 +200,7 @@ async def test_extract_metadata_fallback_date_today(
         text="Document sans date claire\nContenu illisible",
         confidence=0.65,
         page_count=1,
-        language="fr"
+        language="fr",
     )
 
     mock_anonymize.return_value = (ocr_result.text, {})
@@ -212,7 +213,7 @@ async def test_extract_metadata_fallback_date_today(
     today = datetime.now().strftime("%Y-%m-%d")
     mock_llm.complete.return_value = MagicMock(
         content=f'{{"date": "{today}", "doc_type": "Inconnu", "emitter": "Inconnu", "amount": 0.0, "confidence": 0.60, "reasoning": "Document illisible, métadonnées incertaines"}}',
-        usage=MagicMock(input_tokens=50, output_tokens=30)
+        usage=MagicMock(input_tokens=50, output_tokens=30),
     )
 
     # Act
@@ -220,7 +221,9 @@ async def test_extract_metadata_fallback_date_today(
 
     # Assert
     metadata = result.payload["metadata"]
-    assert datetime.fromisoformat(metadata["date"]).date() == datetime.now().date()  # Fallback aujourd'hui
+    assert (
+        datetime.fromisoformat(metadata["date"]).date() == datetime.now().date()
+    )  # Fallback aujourd'hui
     assert metadata["doc_type"] == "Inconnu"
 
 
@@ -285,7 +288,7 @@ async def test_extract_metadata_confidence_calculation(
     mock_get_llm.return_value = mock_llm
     mock_llm.complete.return_value = MagicMock(
         content='{"date": "2026-02-08", "doc_type": "Facture", "emitter": "Test", "amount": 100.0, "confidence": 0.92, "reasoning": "OK"}',
-        usage=MagicMock(input_tokens=50, output_tokens=20)
+        usage=MagicMock(input_tokens=50, output_tokens=20),
     )
 
     # Act
@@ -313,7 +316,7 @@ async def test_extract_metadata_low_confidence_warning(
     mock_get_llm.return_value = mock_llm
     mock_llm.complete.return_value = MagicMock(
         content='{"date": "2026-02-08", "doc_type": "Inconnu", "emitter": "Inconnu", "amount": 0.0, "confidence": 0.60, "reasoning": "OCR quality low, metadata uncertain"}',
-        usage=MagicMock(input_tokens=40, output_tokens=25)
+        usage=MagicMock(input_tokens=40, output_tokens=25),
     )
 
     # Act
@@ -339,10 +342,7 @@ async def test_extract_metadata_preserves_emitter_raw(
     """
     # Arrange
     ocr_result = OCRResult(
-        text="FACTURE Labo / Tests*?",
-        confidence=0.9,
-        page_count=1,
-        language="fr"
+        text="FACTURE Labo / Tests*?", confidence=0.9, page_count=1, language="fr"
     )
 
     mock_anonymize.return_value = (ocr_result.text, {})
@@ -352,7 +352,7 @@ async def test_extract_metadata_preserves_emitter_raw(
     mock_get_llm.return_value = mock_llm
     mock_llm.complete.return_value = MagicMock(
         content='{"date": "2026-02-08", "doc_type": "Facture", "emitter": "Labo / Tests*?", "amount": 50.0, "confidence": 0.88, "reasoning": "OK"}',
-        usage=MagicMock(input_tokens=60, output_tokens=25)
+        usage=MagicMock(input_tokens=60, output_tokens=25),
     )
 
     # Act

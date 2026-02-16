@@ -16,10 +16,8 @@ from pathlib import Path
 from unittest.mock import AsyncMock
 
 import pytest
-
 from agents.src.agents.email.urgency_detector import detect_urgency
 from agents.src.agents.email.vip_detector import compute_email_hash, detect_vip_sender
-
 
 # ==========================================
 # Fixtures
@@ -316,7 +314,9 @@ async def test_edge_cases_handling(dataset, vip_hashes):
 
     # edge_multi_keywords: Multi keywords mais score <0.6
     edge_multi = next(r for r in results if r["id"] == "edge_multi_keywords")
-    assert edge_multi["urgency_score"] < 0.6, f"edge_multi_keywords: score trop eleve {edge_multi['urgency_score']}"
+    assert (
+        edge_multi["urgency_score"] < 0.6
+    ), f"edge_multi_keywords: score trop eleve {edge_multi['urgency_score']}"
 
 
 @pytest.mark.e2e
@@ -334,13 +334,28 @@ def test_dataset_integrity(dataset):
     assert metadata["total_count"] == 31
 
     # Verifier repartition (excluding edges pour eviter double comptage)
-    vip_non_urgent = sum(1 for e in emails if e["expected_vip"] and not e["expected_urgent"] and not e["id"].startswith("edge_"))
-    vip_urgent = sum(1 for e in emails if e["expected_vip"] and e["expected_urgent"] and not e["id"].startswith("edge_"))
-    non_vip_urgent = sum(1 for e in emails if not e["expected_vip"] and e.get("urgency_factors") and not e["id"].startswith("edge_"))
+    vip_non_urgent = sum(
+        1
+        for e in emails
+        if e["expected_vip"] and not e["expected_urgent"] and not e["id"].startswith("edge_")
+    )
+    vip_urgent = sum(
+        1
+        for e in emails
+        if e["expected_vip"] and e["expected_urgent"] and not e["id"].startswith("edge_")
+    )
+    non_vip_urgent = sum(
+        1
+        for e in emails
+        if not e["expected_vip"] and e.get("urgency_factors") and not e["id"].startswith("edge_")
+    )
     normal = sum(
         1
         for e in emails
-        if not e["expected_vip"] and not e["expected_urgent"] and not e.get("urgency_factors") and not e["id"].startswith("edge_")
+        if not e["expected_vip"]
+        and not e["expected_urgent"]
+        and not e.get("urgency_factors")
+        and not e["id"].startswith("edge_")
     )
     edge = sum(1 for e in emails if e["id"].startswith("edge_"))
 

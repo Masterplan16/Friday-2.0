@@ -18,10 +18,8 @@ from uuid import uuid4
 
 import asyncpg
 import pytest
-
 from agents.src.middleware.models import ActionResult, CorrectionRule
 from agents.src.middleware.trust import TrustManager, friday_action
-
 
 # Skip tous les tests si pas de variable d'env INTEGRATION_TESTS
 pytestmark = pytest.mark.skipif(
@@ -170,6 +168,7 @@ async def test_trust_level_auto_executes(
     3. Aucune attente de validation
     """
     with patch("agents.src.middleware.trust.get_trust_manager", return_value=trust_manager_real):
+
         @friday_action(module="email", action="classify", trust_default="auto")
         async def auto_action(**kwargs: Any) -> ActionResult:
             return ActionResult(
@@ -210,6 +209,7 @@ async def test_trust_level_propose_waits(
     3. Attend validation Telegram (inline buttons)
     """
     with patch("agents.src.middleware.trust.get_trust_manager", return_value=trust_manager_real):
+
         @friday_action(module="email", action="draft", trust_default="propose")
         async def propose_action(**kwargs: Any) -> ActionResult:
             return ActionResult(
@@ -250,6 +250,7 @@ async def test_trust_level_blocked_no_action(
     3. Aucune action exécutée (analyse seule pour données sensibles)
     """
     with patch("agents.src.middleware.trust.get_trust_manager", return_value=trust_manager_real):
+
         @friday_action(module="email", action="send", trust_default="blocked")
         async def blocked_action(**kwargs: Any) -> ActionResult:
             return ActionResult(

@@ -9,7 +9,6 @@ from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock
 
 import pytest
-
 from agents.src.middleware.trust import init_trust_manager
 
 

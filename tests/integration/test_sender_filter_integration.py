@@ -13,9 +13,7 @@ from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-
 from agents.src.agents.email.sender_filter import check_sender_filter
-
 
 # ==========================================
 # Helper: Mock DB pool async context manager

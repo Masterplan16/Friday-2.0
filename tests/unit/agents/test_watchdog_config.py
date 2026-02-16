@@ -6,6 +6,7 @@ Tests unitaires pour watchdog_config.py (Story 3.5 - Task 6.3).
 - WatchdogConfigSchema : load valid, missing path, polling range, defaults
 - WatchdogConfigManager : load file, not found, missing root key, hot-reload, callback, get_paths
 """
+
 import os
 import time
 from pathlib import Path
@@ -13,17 +14,16 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 import yaml
-
 from agents.src.agents.archiviste.watchdog_config import (
     PathConfig,
     WatchdogConfigManager,
     WatchdogConfigSchema,
 )
 
-
 # ---------------------------------------------------------------------------
 # PathConfig Model Tests
 # ---------------------------------------------------------------------------
+
 
 class TestPathConfig:
     """Tests validation Pydantic PathConfig."""
@@ -100,6 +100,7 @@ class TestPathConfig:
 # WatchdogConfigSchema Tests
 # ---------------------------------------------------------------------------
 
+
 class TestWatchdogConfigSchema:
     """Tests validation schema complet."""
 
@@ -161,6 +162,7 @@ class TestWatchdogConfigSchema:
 # ---------------------------------------------------------------------------
 # WatchdogConfigManager Tests
 # ---------------------------------------------------------------------------
+
 
 class TestWatchdogConfigManager:
     """Tests gestionnaire configuration."""

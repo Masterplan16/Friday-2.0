@@ -20,11 +20,7 @@ if TYPE_CHECKING:
     from agents.src.core.models import Casquette
 
 import asyncpg
-from agents.src.agents.calendar.models import (
-    Event,
-    EventDetectionResult,
-    EventExtractionError,
-)
+from agents.src.agents.calendar.models import Event, EventDetectionResult, EventExtractionError
 from agents.src.agents.calendar.prompts import (
     EVENT_DETECTION_SYSTEM_PROMPT,
     build_event_detection_prompt,
@@ -451,11 +447,13 @@ async def _fetch_current_casquette(
     """
     try:
         async with db_pool.acquire() as conn:
-            row = await conn.fetchrow("""
+            row = await conn.fetchrow(
+                """
                 SELECT current_casquette, updated_by
                 FROM core.user_context
                 WHERE id = 1
-                """)
+                """
+            )
 
             if not row or row["current_casquette"] is None:
                 return None

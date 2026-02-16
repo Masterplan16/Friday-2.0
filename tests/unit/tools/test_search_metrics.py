@@ -14,9 +14,7 @@ Story: 3.3 - Task 8.5
 """
 
 import pytest
-
 from agents.src.tools.search_metrics import SearchMetrics
-
 
 # ============================================================
 # Fixtures

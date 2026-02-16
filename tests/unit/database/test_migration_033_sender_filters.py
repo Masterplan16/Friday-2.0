@@ -11,9 +11,10 @@ Valide :
 - Data integrity
 """
 
-import pytest
-import asyncpg
 from pathlib import Path
+
+import asyncpg
+import pytest
 
 
 @pytest.fixture
@@ -147,19 +148,19 @@ class TestMigration033Execution:
                 """
             )
 
-            column_names = [col['column_name'] for col in columns]
+            column_names = [col["column_name"] for col in columns]
 
             # Vérifier colonnes requises
-            assert 'id' in column_names
-            assert 'sender_email' in column_names
-            assert 'sender_domain' in column_names
-            assert 'filter_type' in column_names
-            assert 'category' in column_names
-            assert 'confidence' in column_names
-            assert 'created_at' in column_names
-            assert 'updated_at' in column_names
-            assert 'created_by' in column_names
-            assert 'notes' in column_names
+            assert "id" in column_names
+            assert "sender_email" in column_names
+            assert "sender_domain" in column_names
+            assert "filter_type" in column_names
+            assert "category" in column_names
+            assert "confidence" in column_names
+            assert "created_at" in column_names
+            assert "updated_at" in column_names
+            assert "created_by" in column_names
+            assert "notes" in column_names
 
     async def test_sender_filters_indexes_created(self, db_pool_clean):
         """Indexes sender_filters créés correctement."""
@@ -178,11 +179,11 @@ class TestMigration033Execution:
                 """
             )
 
-            index_names = [idx['indexname'] for idx in indexes]
+            index_names = [idx["indexname"] for idx in indexes]
 
-            assert 'idx_sender_filters_email' in index_names
-            assert 'idx_sender_filters_domain' in index_names
-            assert 'idx_sender_filters_type' in index_names
+            assert "idx_sender_filters_email" in index_names
+            assert "idx_sender_filters_domain" in index_names
+            assert "idx_sender_filters_type" in index_names
 
 
 @pytest.mark.asyncio
@@ -305,22 +306,21 @@ class TestMigration033DataIntegrity:
                 """
             )
 
-            original_updated_at = filter_row['updated_at']
+            original_updated_at = filter_row["updated_at"]
 
             # Wait 1s pour différencier timestamps
             import asyncio
+
             await asyncio.sleep(1)
 
             # UPDATE filter
             await conn.execute(
-                "UPDATE core.sender_filters SET notes='Updated note' WHERE id=$1",
-                filter_row['id']
+                "UPDATE core.sender_filters SET notes='Updated note' WHERE id=$1", filter_row["id"]
             )
 
             # Vérifier updated_at changé
             new_updated_at = await conn.fetchval(
-                "SELECT updated_at FROM core.sender_filters WHERE id=$1",
-                filter_row['id']
+                "SELECT updated_at FROM core.sender_filters WHERE id=$1", filter_row["id"]
             )
 
             assert new_updated_at > original_updated_at, "Trigger updated_at non déclenché"
@@ -343,5 +343,9 @@ class TestMigration033DataIntegrity:
                 """
             )
 
-            assert filter_row['created_at'] is not None, "created_at doit avoir une valeur par défaut"
-            assert filter_row['updated_at'] is not None, "updated_at doit avoir une valeur par défaut"
+            assert (
+                filter_row["created_at"] is not None
+            ), "created_at doit avoir une valeur par défaut"
+            assert (
+                filter_row["updated_at"] is not None
+            ), "updated_at doit avoir une valeur par défaut"

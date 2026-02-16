@@ -7,14 +7,11 @@ avec retry logic et threading.
 Story: 2.5 Brouillon Réponse Email - Task 4 Subtask 4.3
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-import httpx
 
-from services.email_processor.emailengine_client import (
-    EmailEngineClient,
-    EmailEngineError
-)
+import httpx
+import pytest
+from services.email_processor.emailengine_client import EmailEngineClient, EmailEngineError
 
 
 @pytest.fixture
@@ -28,9 +25,7 @@ def mock_http_client():
 def emailengine_client(mock_http_client):
     """EmailEngineClient instance avec mock http_client"""
     return EmailEngineClient(
-        http_client=mock_http_client,
-        base_url="http://localhost:3000",
-        secret="test_secret_123"
+        http_client=mock_http_client, base_url="http://localhost:3000", secret="test_secret_123"
     )
 
 
@@ -40,7 +35,7 @@ def sample_send_response():
     return {
         "messageId": "<sent-msg-456@example.com>",
         "queueId": "queue-789",
-        "response": "250 Message accepted"
+        "response": "250 Message accepted",
     }
 
 
@@ -68,12 +63,12 @@ async def test_send_message_success(emailengine_client, mock_http_client, sample
         account_id="account_1",
         recipient_email="john@example.com",
         subject="Re: Your question",
-        body_text="Bonjour,\n\nVoici ma réponse.\n\nCordialement,\nDr. Lopez"
+        body_text="Bonjour,\n\nVoici ma réponse.\n\nCordialement,\nDr. Lopez",
     )
 
     # Assertions
     assert result == sample_send_response
-    assert result['messageId'] == "<sent-msg-456@example.com>"
+    assert result["messageId"] == "<sent-msg-456@example.com>"
 
     # Vérifier appel HTTP
     mock_http_client.post.assert_called_once()
@@ -83,19 +78,21 @@ async def test_send_message_success(emailengine_client, mock_http_client, sample
     assert "/v1/account/account_1/submit" in call_args[0][0]
 
     # Vérifier headers
-    headers = call_args[1]['headers']
-    assert headers['Authorization'] == 'Bearer test_secret_123'
-    assert headers['Content-Type'] == 'application/json'
+    headers = call_args[1]["headers"]
+    assert headers["Authorization"] == "Bearer test_secret_123"
+    assert headers["Content-Type"] == "application/json"
 
     # Vérifier payload
-    payload = call_args[1]['json']
-    assert payload['to'] == [{"address": "john@example.com"}]
-    assert payload['subject'] == "Re: Your question"
-    assert payload['text'] == "Bonjour,\n\nVoici ma réponse.\n\nCordialement,\nDr. Lopez"
+    payload = call_args[1]["json"]
+    assert payload["to"] == [{"address": "john@example.com"}]
+    assert payload["subject"] == "Re: Your question"
+    assert payload["text"] == "Bonjour,\n\nVoici ma réponse.\n\nCordialement,\nDr. Lopez"
 
 
 @pytest.mark.asyncio
-async def test_send_message_retry_after_first_failure(emailengine_client, mock_http_client, sample_send_response):
+async def test_send_message_retry_after_first_failure(
+    emailengine_client, mock_http_client, sample_send_response
+):
     """
     Test 2: Retry après 1er échec
 
@@ -112,7 +109,7 @@ async def test_send_message_retry_after_first_failure(emailengine_client, mock_h
 
     mock_http_client.post.side_effect = [
         mock_response_fail,  # 1ère tentative
-        mock_response_success  # 2ème tentative
+        mock_response_success,  # 2ème tentative
     ]
 
     # Execute
@@ -121,7 +118,7 @@ async def test_send_message_retry_after_first_failure(emailengine_client, mock_h
         recipient_email="john@example.com",
         subject="Test",
         body_text="Test body",
-        max_retries=3
+        max_retries=3,
     )
 
     # Assertions
@@ -152,7 +149,7 @@ async def test_send_message_fail_after_max_retries(emailengine_client, mock_http
             recipient_email="john@example.com",
             subject="Test",
             body_text="Test body",
-            max_retries=3
+            max_retries=3,
         )
 
     # Vérifier message erreur
@@ -164,7 +161,9 @@ async def test_send_message_fail_after_max_retries(emailengine_client, mock_http
 
 
 @pytest.mark.asyncio
-async def test_send_message_threading_correct(emailengine_client, mock_http_client, sample_send_response):
+async def test_send_message_threading_correct(
+    emailengine_client, mock_http_client, sample_send_response
+):
     """
     Test 4: Threading correct (inReplyTo + references)
 
@@ -185,19 +184,21 @@ async def test_send_message_threading_correct(emailengine_client, mock_http_clie
         subject="Re: Your question",
         body_text="Réponse",
         in_reply_to=original_message_id,
-        references=[original_message_id]
+        references=[original_message_id],
     )
 
     # Vérifier payload threading
     call_args = mock_http_client.post.call_args
-    payload = call_args[1]['json']
+    payload = call_args[1]["json"]
 
-    assert payload['inReplyTo'] == original_message_id
-    assert payload['references'] == [original_message_id]
+    assert payload["inReplyTo"] == original_message_id
+    assert payload["references"] == [original_message_id]
 
 
 @pytest.mark.asyncio
-async def test_send_message_with_html_body(emailengine_client, mock_http_client, sample_send_response):
+async def test_send_message_with_html_body(
+    emailengine_client, mock_http_client, sample_send_response
+):
     """
     Test bonus: Envoi avec corps HTML
 
@@ -217,15 +218,15 @@ async def test_send_message_with_html_body(emailengine_client, mock_http_client,
         recipient_email="john@example.com",
         subject="Test",
         body_text="Text version",
-        body_html=html_body
+        body_html=html_body,
     )
 
     # Vérifier payload HTML
     call_args = mock_http_client.post.call_args
-    payload = call_args[1]['json']
+    payload = call_args[1]["json"]
 
-    assert payload['html'] == html_body
-    assert payload['text'] == "Text version"
+    assert payload["html"] == html_body
+    assert payload["text"] == "Text version"
 
 
 # ============================================================================
@@ -240,9 +241,9 @@ def test_determine_account_id_professional(emailengine_client):
     Vérifie le mapping recipient → account_id
     """
     email_original = {
-        'recipient_email': 'antonio.lopez@example.com',
-        'to': 'antonio.lopez@example.com',
-        'from': 'john@example.com'
+        "recipient_email": "antonio.lopez@example.com",
+        "to": "antonio.lopez@example.com",
+        "from": "john@example.com",
     }
 
     account_id = emailengine_client.determine_account_id(email_original)
@@ -254,10 +255,7 @@ def test_determine_account_id_medical(emailengine_client):
     """
     Test 5b: Account ID médical
     """
-    email_original = {
-        'recipient_email': 'dr.lopez@hospital.fr',
-        'to': 'dr.lopez@hospital.fr'
-    }
+    email_original = {"recipient_email": "dr.lopez@hospital.fr", "to": "dr.lopez@hospital.fr"}
 
     account_id = emailengine_client.determine_account_id(email_original)
 
@@ -268,10 +266,7 @@ def test_determine_account_id_academic(emailengine_client):
     """
     Test 5c: Account ID académique
     """
-    email_original = {
-        'recipient_email': 'lopez@university.fr',
-        'to': 'lopez@university.fr'
-    }
+    email_original = {"recipient_email": "lopez@university.fr", "to": "lopez@university.fr"}
 
     account_id = emailengine_client.determine_account_id(email_original)
 
@@ -282,10 +277,7 @@ def test_determine_account_id_fallback(emailengine_client):
     """
     Test 5d: Fallback compte par défaut si indéterminable
     """
-    email_original = {
-        'recipient_email': 'unknown@unknown.com',
-        'to': 'unknown@unknown.com'
-    }
+    email_original = {"recipient_email": "unknown@unknown.com", "to": "unknown@unknown.com"}
 
     account_id = emailengine_client.determine_account_id(email_original)
 
@@ -315,7 +307,7 @@ async def test_send_message_timeout_error(emailengine_client, mock_http_client):
             recipient_email="john@example.com",
             subject="Test",
             body_text="Test body",
-            max_retries=2
+            max_retries=2,
         )
 
     # Vérifier message erreur
@@ -339,7 +331,7 @@ async def test_send_message_http_error(emailengine_client, mock_http_client):
             recipient_email="john@example.com",
             subject="Test",
             body_text="Test body",
-            max_retries=2
+            max_retries=2,
         )
 
     # Vérifier message erreur

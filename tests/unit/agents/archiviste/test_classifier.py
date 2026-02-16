@@ -4,10 +4,12 @@ Tests unitaires pour le module de classification de documents.
 Story 3.2 - Task 1.7
 Tests : Mock Claude, 20+ cas (5 catégories + 5 périmètres finance + edge cases + JSON parsing)
 """
+
 import json
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
-from agents.src.agents.archiviste.classifier import DocumentClassifier, ClassificationResult
+from agents.src.agents.archiviste.classifier import ClassificationResult, DocumentClassifier
 from agents.src.middleware.models import ActionResult
 
 
@@ -36,6 +38,7 @@ def classifier(mock_llm_adapter, mock_presidio):
 
 # ==================== Tests Catégories Principales ====================
 
+
 @pytest.mark.asyncio
 async def test_classify_document_pro_medical(classifier, mock_llm_adapter):
     """Test classification document professionnel médical."""
@@ -43,12 +46,12 @@ async def test_classify_document_pro_medical(classifier, mock_llm_adapter):
         "category": "pro",
         "subcategory": None,
         "confidence": 0.95,
-        "reasoning": "Courrier ARS, contexte professionnel médical"
+        "reasoning": "Courrier ARS, contexte professionnel médical",
     }
 
     metadata = {
         "ocr_text": "Courrier de l'ARS concernant votre activité médicale",
-        "document_id": "doc-123"
+        "document_id": "doc-123",
     }
 
     result = await classifier.classify(metadata)
@@ -68,12 +71,12 @@ async def test_classify_document_universite_these(classifier, mock_llm_adapter):
         "category": "universite",
         "subcategory": "theses",
         "confidence": 0.92,
-        "reasoning": "Document de thèse, contexte encadrement doctoral"
+        "reasoning": "Document de thèse, contexte encadrement doctoral",
     }
 
     metadata = {
         "ocr_text": "Thèse de doctorat - Julie Dupont - Version 3",
-        "document_id": "doc-124"
+        "document_id": "doc-124",
     }
 
     result = await classifier.classify(metadata)
@@ -91,13 +94,10 @@ async def test_classify_document_recherche_publication(classifier, mock_llm_adap
         "category": "recherche",
         "subcategory": "publications",
         "confidence": 0.90,
-        "reasoning": "Article scientifique, contexte recherche"
+        "reasoning": "Article scientifique, contexte recherche",
     }
 
-    metadata = {
-        "ocr_text": "Article Nature - SGLT2 inhibitors efficacy",
-        "document_id": "doc-125"
-    }
+    metadata = {"ocr_text": "Article Nature - SGLT2 inhibitors efficacy", "document_id": "doc-125"}
 
     result = await classifier.classify(metadata)
 
@@ -113,13 +113,10 @@ async def test_classify_document_perso(classifier, mock_llm_adapter):
         "category": "perso",
         "subcategory": None,
         "confidence": 0.88,
-        "reasoning": "Facture plombier, contexte personnel"
+        "reasoning": "Facture plombier, contexte personnel",
     }
 
-    metadata = {
-        "ocr_text": "Facture plombier réparation salle de bain",
-        "document_id": "doc-126"
-    }
+    metadata = {"ocr_text": "Facture plombier réparation salle de bain", "document_id": "doc-126"}
 
     result = await classifier.classify(metadata)
 
@@ -130,6 +127,7 @@ async def test_classify_document_perso(classifier, mock_llm_adapter):
 
 # ==================== Tests Périmètres Finance ====================
 
+
 @pytest.mark.asyncio
 async def test_classify_finance_selarl(classifier, mock_llm_adapter):
     """Test classification finance SELARL."""
@@ -137,12 +135,12 @@ async def test_classify_finance_selarl(classifier, mock_llm_adapter):
         "category": "finance",
         "subcategory": "selarl",
         "confidence": 0.94,
-        "reasoning": "Facture laboratoire Cerba, contexte cabinet SELARL"
+        "reasoning": "Facture laboratoire Cerba, contexte cabinet SELARL",
     }
 
     metadata = {
         "ocr_text": "Facture Laboratoire Cerba - Cabinet médical SELARL",
-        "document_id": "doc-127"
+        "document_id": "doc-127",
     }
 
     result = await classifier.classify(metadata)
@@ -160,12 +158,12 @@ async def test_classify_finance_scm(classifier, mock_llm_adapter):
         "category": "finance",
         "subcategory": "scm",
         "confidence": 0.91,
-        "reasoning": "Charges SCM, société civile de moyens"
+        "reasoning": "Charges SCM, société civile de moyens",
     }
 
     metadata = {
         "ocr_text": "Charges mensuelles SCM - Société Civile de Moyens",
-        "document_id": "doc-128"
+        "document_id": "doc-128",
     }
 
     result = await classifier.classify(metadata)
@@ -182,13 +180,10 @@ async def test_classify_finance_sci_ravas(classifier, mock_llm_adapter):
         "category": "finance",
         "subcategory": "sci_ravas",
         "confidence": 0.89,
-        "reasoning": "Document SCI Ravas, immobilier"
+        "reasoning": "Document SCI Ravas, immobilier",
     }
 
-    metadata = {
-        "ocr_text": "SCI Ravas - Charges copropriété",
-        "document_id": "doc-129"
-    }
+    metadata = {"ocr_text": "SCI Ravas - Charges copropriété", "document_id": "doc-129"}
 
     result = await classifier.classify(metadata)
 
@@ -204,13 +199,10 @@ async def test_classify_finance_sci_malbosc(classifier, mock_llm_adapter):
         "category": "finance",
         "subcategory": "sci_malbosc",
         "confidence": 0.87,
-        "reasoning": "Document SCI Malbosc, immobilier"
+        "reasoning": "Document SCI Malbosc, immobilier",
     }
 
-    metadata = {
-        "ocr_text": "SCI Malbosc - Taxe foncière",
-        "document_id": "doc-130"
-    }
+    metadata = {"ocr_text": "SCI Malbosc - Taxe foncière", "document_id": "doc-130"}
 
     result = await classifier.classify(metadata)
 
@@ -226,13 +218,10 @@ async def test_classify_finance_personal(classifier, mock_llm_adapter):
         "category": "finance",
         "subcategory": "personal",
         "confidence": 0.93,
-        "reasoning": "Relevé bancaire personnel"
+        "reasoning": "Relevé bancaire personnel",
     }
 
-    metadata = {
-        "ocr_text": "Relevé bancaire Compte Courant Personnel",
-        "document_id": "doc-131"
-    }
+    metadata = {"ocr_text": "Relevé bancaire Compte Courant Personnel", "document_id": "doc-131"}
 
     result = await classifier.classify(metadata)
 
@@ -243,6 +232,7 @@ async def test_classify_finance_personal(classifier, mock_llm_adapter):
 
 # ==================== Tests Validation Périmètres Finance ====================
 
+
 @pytest.mark.asyncio
 async def test_validate_finance_perimeter_valid(classifier, mock_llm_adapter):
     """Test validation périmètre finance valide."""
@@ -250,7 +240,7 @@ async def test_validate_finance_perimeter_valid(classifier, mock_llm_adapter):
         "category": "finance",
         "subcategory": "selarl",
         "confidence": 0.94,
-        "reasoning": "Facture cabinet SELARL"
+        "reasoning": "Facture cabinet SELARL",
     }
 
     metadata = {"ocr_text": "Facture SELARL", "document_id": "doc-132"}
@@ -270,7 +260,7 @@ async def test_validate_finance_perimeter_invalid_raises_error(classifier, mock_
         "category": "finance",
         "subcategory": "invalid_perimeter",  # Périmètre invalide
         "confidence": 0.80,
-        "reasoning": "Document financier"
+        "reasoning": "Document financier",
     }
 
     metadata = {"ocr_text": "Document finance", "document_id": "doc-133"}
@@ -286,7 +276,7 @@ async def test_finance_must_have_subcategory(classifier, mock_llm_adapter):
         "category": "finance",
         "subcategory": None,  # Manquant !
         "confidence": 0.85,
-        "reasoning": "Document financier"
+        "reasoning": "Document financier",
     }
 
     metadata = {"ocr_text": "Facture", "document_id": "doc-134"}
@@ -297,6 +287,7 @@ async def test_finance_must_have_subcategory(classifier, mock_llm_adapter):
 
 # ==================== Tests Edge Cases ====================
 
+
 @pytest.mark.asyncio
 async def test_low_confidence_below_threshold(classifier, mock_llm_adapter):
     """Test confidence <0.7 retourne status pending."""
@@ -304,7 +295,7 @@ async def test_low_confidence_below_threshold(classifier, mock_llm_adapter):
         "category": "perso",
         "subcategory": None,
         "confidence": 0.65,  # Sous seuil
-        "reasoning": "Document ambigu difficile à classifier avec certitude"
+        "reasoning": "Document ambigu difficile à classifier avec certitude",
     }
 
     metadata = {"ocr_text": "Document peu clair", "document_id": "doc-135"}
@@ -322,13 +313,10 @@ async def test_presidio_anonymization_called(classifier, mock_presidio, mock_llm
         "category": "pro",
         "subcategory": None,
         "confidence": 0.90,
-        "reasoning": "Document professionnel"
+        "reasoning": "Document professionnel",
     }
 
-    metadata = {
-        "ocr_text": "Document avec PII: Dr Lopez 0612345678",
-        "document_id": "doc-136"
-    }
+    metadata = {"ocr_text": "Document avec PII: Dr Lopez 0612345678", "document_id": "doc-136"}
 
     await classifier.classify(metadata)
 
@@ -345,7 +333,7 @@ async def test_action_result_structure(classifier, mock_llm_adapter):
         "category": "pro",
         "subcategory": None,
         "confidence": 0.92,
-        "reasoning": "Document professionnel cabinet"
+        "reasoning": "Document professionnel cabinet",
     }
 
     metadata = {"ocr_text": "Document pro", "document_id": "doc-137"}
@@ -382,15 +370,18 @@ async def test_missing_ocr_text_raises_error(classifier):
 
 # ==================== Tests JSON Parsing LLM (H1 fix) ====================
 
+
 @pytest.mark.asyncio
 async def test_parse_llm_response_string_json(classifier, mock_llm_adapter):
     """Test parsing réponse LLM string JSON."""
-    mock_llm_adapter.complete.return_value = json.dumps({
-        "category": "pro",
-        "subcategory": None,
-        "confidence": 0.90,
-        "reasoning": "Document professionnel"
-    })
+    mock_llm_adapter.complete.return_value = json.dumps(
+        {
+            "category": "pro",
+            "subcategory": None,
+            "confidence": 0.90,
+            "reasoning": "Document professionnel",
+        }
+    )
 
     metadata = {"ocr_text": "Doc pro", "document_id": "doc-139"}
     result = await classifier.classify(metadata)
@@ -424,6 +415,7 @@ async def test_parse_llm_response_invalid_json_raises(classifier, mock_llm_adapt
 
 # ==================== Tests Correction Rules (H4 fix) ====================
 
+
 @pytest.mark.asyncio
 async def test_correction_rules_injected_in_prompt(mock_llm_adapter, mock_presidio):
     """Test que les correction_rules sont utilisées dans le prompt."""
@@ -433,7 +425,7 @@ async def test_correction_rules_injected_in_prompt(mock_llm_adapter, mock_presid
         "category": "finance",
         "subcategory": "selarl",
         "confidence": 0.95,
-        "reasoning": "Facture Cerba -> SELARL (règle correction)"
+        "reasoning": "Facture Cerba -> SELARL (règle correction)",
     }
 
     metadata = {"ocr_text": "Facture Cerba", "document_id": "doc-142"}
@@ -443,7 +435,7 @@ async def test_correction_rules_injected_in_prompt(mock_llm_adapter, mock_presid
         metadata,
         _correction_rules=[
             {"conditions": "Cerba dans émetteur", "output": "category=finance, subcategory=selarl"}
-        ]
+        ],
     )
 
     # Vérifier que le prompt contient les règles

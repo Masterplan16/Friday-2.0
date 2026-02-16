@@ -15,15 +15,14 @@ Acceptance Criteria (AC6):
 - semantic_search() pgvector sur 10k embeddings <50ms
 """
 
-import pytest
-import asyncpg
-import time
 import random
-from pathlib import Path
+import time
 from datetime import datetime
+from pathlib import Path
 
+import asyncpg
+import pytest
 from agents.src.adapters.memorystore import PostgreSQLMemorystore
-
 
 # Configuration BDD test
 TEST_DB_CONFIG = {
@@ -49,12 +48,13 @@ async def perf_db_pool():
 
     # Setup schemas + migrations
     async with pool.acquire() as conn:
-        await conn.execute("CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\"")
+        await conn.execute('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"')
         await conn.execute("CREATE EXTENSION IF NOT EXISTS vector")
         await conn.execute("CREATE SCHEMA IF NOT EXISTS knowledge")
         await conn.execute("CREATE SCHEMA IF NOT EXISTS core")
 
-        await conn.execute("""
+        await conn.execute(
+            """
             CREATE OR REPLACE FUNCTION core.update_updated_at()
             RETURNS TRIGGER AS $$
             BEGIN
@@ -62,7 +62,8 @@ async def perf_db_pool():
                 RETURN NEW;
             END;
             $$ LANGUAGE plpgsql;
-        """)
+        """
+        )
 
     migrations_dir = Path(__file__).parent.parent.parent / "database" / "migrations"
 
@@ -93,7 +94,7 @@ async def memorystore_perf(perf_db_pool):
 @pytest.mark.performance
 @pytest.mark.skipif(
     True,  # Skip par défaut (trop lent pour CI)
-    reason="Performance tests skip by default - run manually with: pytest -m performance tests/performance/"
+    reason="Performance tests skip by default - run manually with: pytest -m performance tests/performance/",
 )
 class TestInsertionPerformance:
     """Tests performance insertion masse (AC6)."""
@@ -116,7 +117,7 @@ class TestInsertionPerformance:
                 node_type="person",
                 name=f"Person {i}",
                 metadata={"email": f"person{i}@example.com", "index": i},
-                source="benchmark"
+                source="benchmark",
             )
 
         elapsed = time.time() - start
@@ -141,7 +142,7 @@ class TestInsertionPerformance:
             node_id = await memorystore_perf.create_node(
                 node_type="email",
                 name=f"Email {i}",
-                metadata={"message_id": f"email{i}@example.com"}
+                metadata={"message_id": f"email{i}@example.com"},
             )
             node_ids.append(node_id)
 
@@ -160,7 +161,7 @@ class TestInsertionPerformance:
                 from_node_id=node_ids[from_idx],
                 to_node_id=node_ids[to_idx],
                 relation_type="related_to",
-                metadata={"index": i}
+                metadata={"index": i},
             )
 
         elapsed = time.time() - start
@@ -187,9 +188,7 @@ class TestQueryPerformance:
             await conn.execute("TRUNCATE knowledge.nodes, knowledge.edges CASCADE")
 
         hub_id = await memorystore_perf.create_node(
-            node_type="person",
-            name="Hub Person",
-            metadata={"email": "hub@example.com"}
+            node_type="person", name="Hub Person", metadata={"email": "hub@example.com"}
         )
 
         # Créer 999 autres nodes + 500 relations vers hub
@@ -198,16 +197,14 @@ class TestQueryPerformance:
             node_id = await memorystore_perf.create_node(
                 node_type="email",
                 name=f"Email {i}",
-                metadata={"message_id": f"email{i}@example.com"}
+                metadata={"message_id": f"email{i}@example.com"},
             )
             node_ids.append(node_id)
 
         # 500 emails reliés au hub
         for i in range(500):
             await memorystore_perf.create_edge(
-                from_node_id=node_ids[i+1],
-                to_node_id=hub_id,
-                relation_type="sent_by"
+                from_node_id=node_ids[i + 1], to_node_id=hub_id, relation_type="sent_by"
             )
 
         # Benchmark query
@@ -234,18 +231,14 @@ class TestQueryPerformance:
         chain_ids = []
         for i in range(10):
             node_id = await memorystore_perf.create_node(
-                node_type="person",
-                name=f"Person {i}",
-                metadata={"email": f"person{i}@example.com"}
+                node_type="person", name=f"Person {i}", metadata={"email": f"person{i}@example.com"}
             )
             chain_ids.append(node_id)
 
         # Créer chaîne : 0 → 1 → 2 → ... → 9
         for i in range(9):
             await memorystore_perf.create_edge(
-                from_node_id=chain_ids[i],
-                to_node_id=chain_ids[i+1],
-                relation_type="related_to"
+                from_node_id=chain_ids[i], to_node_id=chain_ids[i + 1], relation_type="related_to"
             )
 
         # Benchmark pathfinding (direct path seulement)
@@ -288,7 +281,7 @@ class TestSemanticSearchPerformance:
                     """,
                     "document",
                     f"doc-{i}",
-                    vector_str
+                    vector_str,
                 )
 
             # Forcer construction index HNSW (peut prendre du temps)
@@ -301,7 +294,7 @@ class TestSemanticSearchPerformance:
         results = await memorystore_perf.semantic_search(
             query_embedding=query_embedding,
             limit=10,
-            score_threshold=0.0  # Retourner top 10 même si faible similarité
+            score_threshold=0.0,  # Retourner top 10 même si faible similarité
         )
         elapsed = time.time() - start
 
@@ -310,7 +303,9 @@ class TestSemanticSearchPerformance:
         assert len(results) <= 10
         # Note: <50ms peut être difficile à atteindre sans tuning HNSW
         # Baseline réaliste: <200ms
-        assert elapsed < 0.2, f"Semantic search took {elapsed*1000:.2f}ms (expected <200ms baseline)"
+        assert (
+            elapsed < 0.2
+        ), f"Semantic search took {elapsed*1000:.2f}ms (expected <200ms baseline)"
 
 
 @pytest.mark.performance
@@ -337,7 +332,7 @@ class TestMixedWorkloadPerformance:
                 node_id = await memorystore_perf.create_node(
                     node_type="email",
                     name=f"Email {i}",
-                    metadata={"message_id": f"email{i}@example.com"}
+                    metadata={"message_id": f"email{i}@example.com"},
                 )
                 node_ids.append(node_id)
 
@@ -354,4 +349,6 @@ class TestMixedWorkloadPerformance:
 
         # Baseline: >50 ops/s
         ops_per_second = 100 / elapsed
-        assert ops_per_second > 50, f"Mixed workload: {ops_per_second:.1f} ops/s (expected >50 ops/s)"
+        assert (
+            ops_per_second > 50
+        ), f"Mixed workload: {ops_per_second:.1f} ops/s (expected >50 ops/s)"

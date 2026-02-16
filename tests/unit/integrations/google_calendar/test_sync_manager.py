@@ -7,10 +7,7 @@ from uuid import uuid4
 
 import pytest
 from agents.src.integrations.google_calendar.config import CalendarConfig
-from agents.src.integrations.google_calendar.models import (
-    GoogleCalendarEvent,
-    SyncResult,
-)
+from agents.src.integrations.google_calendar.models import GoogleCalendarEvent, SyncResult
 from agents.src.integrations.google_calendar.sync_manager import GoogleCalendarSync
 from googleapiclient.errors import HttpError
 

@@ -66,7 +66,8 @@ def transit_dir():
 @pytest.fixture
 def mock_telegram_update():
     """Fixture Update Telegram mocké avec document PDF."""
-    from telegram import Update, Message, User, Document as TelegramDocument
+    from telegram import Document as TelegramDocument
+    from telegram import Message, Update, User
 
     update = MagicMock(spec=Update)
     update.effective_user = MagicMock(spec=User)
@@ -121,7 +122,9 @@ async def test_upload_pdf_to_redis_streams(
     test_file.write_bytes(b"%PDF-1.4\ntest content")
 
     mock_file = MagicMock()
-    mock_file.download_to_drive = AsyncMock(side_effect=lambda path: test_file.write_bytes(b"%PDF-1.4\ntest"))
+    mock_file.download_to_drive = AsyncMock(
+        side_effect=lambda path: test_file.write_bytes(b"%PDF-1.4\ntest")
+    )
     mock_telegram_context.bot.get_file.return_value = mock_file
 
     # Ajouter Redis client au context
@@ -170,7 +173,7 @@ async def test_upload_photo_jpg_to_redis_streams(redis_client, transit_dir):
     - Event publié avec mime_type=image/jpeg
     """
     from bot.handlers.file_handlers import handle_photo
-    from telegram import Update, Message, User, PhotoSize
+    from telegram import Message, PhotoSize, Update, User
 
     # Mock Update avec photo
     update = MagicMock(spec=Update)
@@ -195,7 +198,9 @@ async def test_upload_photo_jpg_to_redis_streams(redis_client, transit_dir):
     test_file.write_bytes(b"\xff\xd8\xff\xe0")  # JPEG magic number
 
     mock_file = MagicMock()
-    mock_file.download_to_drive = AsyncMock(side_effect=lambda path: test_file.write_bytes(b"\xff\xd8\xff\xe0"))
+    mock_file.download_to_drive = AsyncMock(
+        side_effect=lambda path: test_file.write_bytes(b"\xff\xd8\xff\xe0")
+    )
     context.bot.get_file.return_value = mock_file
 
     context.bot_data = {"redis_client": redis_client}
@@ -227,8 +232,9 @@ async def test_upload_batch_5_files(redis_client, transit_dir, mock_telegram_con
     - 5 events Redis publiés avec IDs uniques
     - Aucun event perdu
     """
-    from bot.handlers.file_handlers import handle_document, file_upload_limiter
-    from telegram import Update, Message, User, Document as TelegramDocument
+    from bot.handlers.file_handlers import file_upload_limiter, handle_document
+    from telegram import Document as TelegramDocument
+    from telegram import Message, Update, User
 
     # Reset rate limiter via API publique
     file_upload_limiter.reset_user(123456)

@@ -8,7 +8,6 @@ import json
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-
 from bot.action_executor import ALLOWED_MODULES, ActionExecutor
 from tests.conftest import create_mock_pool_with_conn
 
@@ -143,7 +142,7 @@ async def test_execute_whitelist_not_bypassed_by_registry(executor, mock_db_pool
         "status": "approved",
         "module": "malicious",
         "action_type": "inject",
-        "payload": '{}',
+        "payload": "{}",
     }
 
     result = await executor.execute("abc123")

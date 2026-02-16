@@ -31,8 +31,8 @@ async def test_e2e_email_with_task_full_workflow(db_pool, redis_client):
     9. Clic Approve → Receipt status=approved
     10. Vérifier tâche consultable /task (Story 4.7)
     """
-    from agents.src.agents.email.task_extractor import extract_tasks_from_email
     from agents.src.agents.email.task_creator import create_tasks_with_validation
+    from agents.src.agents.email.task_extractor import extract_tasks_from_email
 
     # Mock Claude pour classification + extraction
     with patch("agents.src.agents.email.task_extractor.anthropic_client") as mock_claude:
@@ -47,10 +47,12 @@ async def test_e2e_email_with_task_full_workflow(db_pool, redis_client):
 
         # Mock Presidio
         with patch("agents.src.agents.email.task_extractor.anonymize_text") as mock_presidio:
+
             async def mock_anon(text, **kwargs):
                 result = MagicMock()
                 result.anonymized_text = text.replace("Dr. Dupont", "[PERSON_1]")
                 return result
+
             mock_presidio.side_effect = mock_anon
 
             # Créer email en DB
@@ -64,7 +66,7 @@ async def test_e2e_email_with_task_full_workflow(db_pool, redis_client):
                         'Urgent: Rapport médical', 'Peux-tu envoyer le rapport médical de Dr. Dupont avant vendredi ? ASAP', '{}'::jsonb
                     ) RETURNING id
                     """,
-                    f"e2e-test-{uuid4()}"
+                    f"e2e-test-{uuid4()}",
                 )
 
             # Étape 4: Extraction tâche
@@ -73,9 +75,9 @@ async def test_e2e_email_with_task_full_workflow(db_pool, redis_client):
                 email_metadata={
                     "email_id": str(email_id),
                     "sender": "patient@example.com",
-                    "subject": "Urgent: Rapport médical"
+                    "subject": "Urgent: Rapport médical",
                 },
-                current_date="2026-02-11"
+                current_date="2026-02-11",
             )
 
             # Vérifications extraction
@@ -93,7 +95,7 @@ async def test_e2e_email_with_task_full_workflow(db_pool, redis_client):
                     tasks=[task],
                     email_id=str(email_id),
                     email_subject="Urgent: Rapport médical",
-                    db_pool=db_pool
+                    db_pool=db_pool,
                 )
 
             # Vérifier tâche créée
@@ -102,10 +104,7 @@ async def test_e2e_email_with_task_full_workflow(db_pool, redis_client):
 
             # Vérifier en DB
             async with db_pool.acquire() as conn:
-                task_row = await conn.fetchrow(
-                    "SELECT * FROM core.tasks WHERE id = $1",
-                    task_id
-                )
+                task_row = await conn.fetchrow("SELECT * FROM core.tasks WHERE id = $1", task_id)
 
             assert task_row is not None
             assert task_row["type"] == "email_task"
@@ -132,10 +131,12 @@ async def test_e2e_email_without_task(db_pool):
 
         # Mock Presidio
         with patch("agents.src.agents.email.task_extractor.anonymize_text") as mock_presidio:
+
             async def mock_anon(text, **kwargs):
                 result = MagicMock()
                 result.anonymized_text = text
                 return result
+
             mock_presidio.side_effect = mock_anon
 
             # Extraction
@@ -144,8 +145,8 @@ async def test_e2e_email_without_task(db_pool):
                 email_metadata={
                     "email_id": str(uuid4()),
                     "sender": "colleague@example.com",
-                    "subject": "Re: Document received"
-                }
+                    "subject": "Re: Document received",
+                },
             )
 
     # Vérifications
@@ -159,8 +160,8 @@ async def test_e2e_multiple_tasks_one_email(db_pool):
     """
     E2E 3 : Email avec 2-3 tâches → Toutes détectées + créées
     """
-    from agents.src.agents.email.task_extractor import extract_tasks_from_email
     from agents.src.agents.email.task_creator import create_tasks_with_validation
+    from agents.src.agents.email.task_extractor import extract_tasks_from_email
 
     # Mock Claude: 2 tâches détectées
     with patch("agents.src.agents.email.task_extractor.anthropic_client") as mock_claude:
@@ -174,10 +175,12 @@ async def test_e2e_multiple_tasks_one_email(db_pool):
 
         # Mock Presidio
         with patch("agents.src.agents.email.task_extractor.anonymize_text") as mock_presidio:
+
             async def mock_anon(text, **kwargs):
                 result = MagicMock()
                 result.anonymized_text = text
                 return result
+
             mock_presidio.side_effect = mock_anon
 
             # Créer email
@@ -191,7 +194,7 @@ async def test_e2e_multiple_tasks_one_email(db_pool):
                         'URGENT', 'Peux-tu envoyer le planning ASAP et rappeler le patient ?', '{}'::jsonb
                     ) RETURNING id
                     """,
-                    f"e2e-multi-{uuid4()}"
+                    f"e2e-multi-{uuid4()}",
                 )
 
             # Extraction
@@ -200,9 +203,9 @@ async def test_e2e_multiple_tasks_one_email(db_pool):
                 email_metadata={
                     "email_id": str(email_id),
                     "sender": "urgent@example.com",
-                    "subject": "URGENT"
+                    "subject": "URGENT",
                 },
-                current_date="2026-02-11"
+                current_date="2026-02-11",
             )
 
             # Vérifications
@@ -218,7 +221,7 @@ async def test_e2e_multiple_tasks_one_email(db_pool):
                     tasks=result.tasks_detected,
                     email_id=str(email_id),
                     email_subject="URGENT",
-                    db_pool=db_pool
+                    db_pool=db_pool,
                 )
 
             # Vérifier 2 tâches créées
@@ -245,10 +248,12 @@ async def test_e2e_relative_dates_conversion(db_pool):
 
         # Mock Presidio
         with patch("agents.src.agents.email.task_extractor.anonymize_text") as mock_presidio:
+
             async def mock_anon(text, **kwargs):
                 result = MagicMock()
                 result.anonymized_text = text
                 return result
+
             mock_presidio.side_effect = mock_anon
 
             # Extraction avec date actuelle = 2026-02-11
@@ -257,9 +262,9 @@ async def test_e2e_relative_dates_conversion(db_pool):
                 email_metadata={
                     "email_id": str(uuid4()),
                     "sender": "test@example.com",
-                    "subject": "Document"
+                    "subject": "Document",
                 },
-                current_date="2026-02-11"  # Mardi
+                current_date="2026-02-11",  # Mardi
             )
 
     # Vérifications

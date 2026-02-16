@@ -14,10 +14,11 @@ Usage:
     pytest tests/integration/test_anonymization_pipeline.py -v --presidio-live
 """
 
-import json
-import pytest
 import asyncio
+import json
 from pathlib import Path
+
+import pytest
 
 # Skip tous les tests si Presidio pas disponible (sauf si --presidio-live)
 pytest_plugins = []
@@ -28,7 +29,7 @@ def pytest_addoption(parser):
         "--presidio-live",
         action="store_true",
         default=False,
-        help="Run tests against live Presidio services (requires Docker up)"
+        help="Run tests against live Presidio services (requires Docker up)",
     )
 
 
@@ -74,10 +75,10 @@ class TestAnonymizationPipelineSmoke:
     def test_anonymize_module_imports(self):
         """Vérifier que le module anonymize.py est importable"""
         from agents.src.tools.anonymize import (
+            FRENCH_ENTITIES,
+            AnonymizationError,
             anonymize_text,
             deanonymize_text,
-            AnonymizationError,
-            FRENCH_ENTITIES,
         )
 
         # Si on arrive ici, les imports sont OK
@@ -187,12 +188,14 @@ class TestAnonymizationPipelineIntegration:
             missing_entities = set(expected_entities) - detected_entity_types
 
             if missing_entities:
-                failures.append({
-                    "sample_id": sample_id,
-                    "issue": "missing_entities",
-                    "missing": list(missing_entities),
-                    "detected": list(detected_entity_types),
-                })
+                failures.append(
+                    {
+                        "sample_id": sample_id,
+                        "issue": "missing_entities",
+                        "missing": list(missing_entities),
+                        "detected": list(detected_entity_types),
+                    }
+                )
 
             # CRITIQUE : Vérifier ZÉRO fuite PII dans le texte anonymisé
             # Utiliser word boundaries pour éviter faux positifs (ex: "Jean" vs "je")
@@ -205,12 +208,14 @@ class TestAnonymizationPipelineIntegration:
                 pattern = r"\b" + escaped_value + r"\b"
 
                 if re.search(pattern, result.anonymized_text, re.IGNORECASE):
-                    failures.append({
-                        "sample_id": sample_id,
-                        "issue": "pii_leak",
-                        "leaked_value": sensitive_value,
-                        "anonymized_text": result.anonymized_text,
-                    })
+                    failures.append(
+                        {
+                            "sample_id": sample_id,
+                            "issue": "pii_leak",
+                            "leaked_value": sensitive_value,
+                            "anonymized_text": result.anonymized_text,
+                        }
+                    )
 
         # Échec si une seule PII a fuité ou n'a pas été détectée
         if failures:
@@ -257,9 +262,13 @@ class TestAnonymizationLatency:
     async def test_latency_500_chars(self, presidio_available):
         """AC4 : Email 500 chars < 500ms"""
         import time
+
         from agents.src.tools.anonymize import anonymize_text
 
-        text = "Jean Dupont (jean.dupont@email.fr, 06 12 34 56 78) habite au 123 rue de la Paix 75001 Paris. " * 5
+        text = (
+            "Jean Dupont (jean.dupont@email.fr, 06 12 34 56 78) habite au 123 rue de la Paix 75001 Paris. "
+            * 5
+        )
         assert len(text) <= 500
 
         start = time.monotonic()
@@ -271,27 +280,39 @@ class TestAnonymizationLatency:
     async def test_latency_2000_chars(self, presidio_available):
         """AC4 : Email 2000 chars < 1s"""
         import time
+
         from agents.src.tools.anonymize import anonymize_text
 
-        text = "Jean Dupont (jean.dupont@email.fr, 06 12 34 56 78) habite au 123 rue de la Paix 75001 Paris. " * 20
+        text = (
+            "Jean Dupont (jean.dupont@email.fr, 06 12 34 56 78) habite au 123 rue de la Paix 75001 Paris. "
+            * 20
+        )
         assert len(text) <= 2000
 
         start = time.monotonic()
         await anonymize_text(text)
         latency_ms = (time.monotonic() - start) * 1000
 
-        assert latency_ms < 1000, f"Latency {latency_ms:.0f}ms exceeds 1000ms threshold for 2000 chars"
+        assert (
+            latency_ms < 1000
+        ), f"Latency {latency_ms:.0f}ms exceeds 1000ms threshold for 2000 chars"
 
     async def test_latency_5000_chars(self, presidio_available):
         """AC4 : Document 5000 chars < 2s"""
         import time
+
         from agents.src.tools.anonymize import anonymize_text
 
-        text = "Jean Dupont (jean.dupont@email.fr, 06 12 34 56 78) habite au 123 rue de la Paix 75001 Paris. " * 50
+        text = (
+            "Jean Dupont (jean.dupont@email.fr, 06 12 34 56 78) habite au 123 rue de la Paix 75001 Paris. "
+            * 50
+        )
         assert len(text) <= 5000
 
         start = time.monotonic()
         await anonymize_text(text)
         latency_ms = (time.monotonic() - start) * 1000
 
-        assert latency_ms < 2000, f"Latency {latency_ms:.0f}ms exceeds 2000ms threshold for 5000 chars"
+        assert (
+            latency_ms < 2000
+        ), f"Latency {latency_ms:.0f}ms exceeds 2000ms threshold for 5000 chars"

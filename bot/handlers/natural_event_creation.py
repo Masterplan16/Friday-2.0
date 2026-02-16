@@ -100,7 +100,7 @@ async def handle_natural_event_message(update: Update, context: ContextTypes.DEF
             event_id = await _create_event_entity(db_pool, event, message_text)
 
         # Envoyer notification proposition avec inline buttons (AC2)
-        await send_event_proposal_notification(
+        message_id = await send_event_proposal_notification(
             bot=context.bot,
             event=event,
             event_id=event_id,
@@ -109,6 +109,15 @@ async def handle_natural_event_message(update: Update, context: ContextTypes.DEF
             supergroup_id=TELEGRAM_SUPERGROUP_ID,
             topic_id=TOPIC_ACTIONS_ID,
         )
+
+        # Rollback entity if notification failed
+        if message_id is None and event_id and db_pool:
+            await _rollback_event_entity(db_pool, event_id)
+            logger.warning(
+                "Event entity rolled back after notification failure",
+                extra={"event_id": event_id},
+            )
+            return False
 
         logger.info(
             "Event proposal sent",
@@ -218,3 +227,18 @@ async def _create_event_entity(
             extra={"error": str(e), "event_title": event.title},
         )
         return None
+
+
+async def _rollback_event_entity(db_pool, event_id: str) -> None:
+    """Delete orphan EVENT entity if notification failed."""
+    try:
+        async with db_pool.acquire() as conn:
+            await conn.execute(
+                "DELETE FROM knowledge.entities WHERE id = $1 AND entity_type = 'EVENT'",
+                uuid.UUID(event_id),
+            )
+    except Exception as e:
+        logger.error(
+            "Failed to rollback event entity",
+            extra={"event_id": event_id, "error": str(e)},
+        )

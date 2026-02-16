@@ -5,21 +5,20 @@ Test dataset : 20 documents variés (5 catégories × 4 documents)
 Pipeline complet : document.processed → classify → move → PG update → document.classified
 Validation latence < 10s
 """
+
 import asyncio
 import json
 import time
 import uuid
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Any, Dict, List
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
-
-from agents.src.agents.archiviste.classifier import DocumentClassifier, ClassificationResult
-from agents.src.agents.archiviste.file_mover import FileMover
 from agents.src.agents.archiviste.classification_pipeline import ClassificationPipeline
+from agents.src.agents.archiviste.classifier import ClassificationResult, DocumentClassifier
+from agents.src.agents.archiviste.file_mover import FileMover
 from agents.src.middleware.models import ActionResult
-
 
 # ============================================================================
 # TEST DATASET : 20 documents variés (Task 8.1)
@@ -178,6 +177,7 @@ TEST_DOCUMENTS: List[Dict[str, Any]] = [
 # FIXTURES
 # ============================================================================
 
+
 @pytest.fixture
 def mock_llm_adapter():
     """Mock adaptateur LLM qui retourne des classifications correctes."""
@@ -205,6 +205,7 @@ def classifier(mock_llm_adapter, mock_presidio):
 # TEST E2E : Classification pipeline complète (Task 8.2)
 # ============================================================================
 
+
 @pytest.mark.asyncio
 async def test_e2e_classify_all_20_documents(classifier, mock_llm_adapter):
     """
@@ -219,19 +220,18 @@ async def test_e2e_classify_all_20_documents(classifier, mock_llm_adapter):
             "category": doc["expected_category"],
             "subcategory": doc["expected_subcategory"],
             "confidence": 0.92,
-            "reasoning": f"Test document {doc['document_id']}"
+            "reasoning": f"Test document {doc['document_id']}",
         }
 
-        metadata = {
-            "ocr_text": doc["ocr_text"],
-            "document_id": doc["document_id"]
-        }
+        metadata = {"ocr_text": doc["ocr_text"], "document_id": doc["document_id"]}
 
         result = await classifier.classify(metadata)
 
         # Vérifier structure ActionResult
         assert isinstance(result, ActionResult), f"Expected ActionResult for {doc['document_id']}"
-        assert result.confidence >= 0.7, f"Low confidence for {doc['document_id']}: {result.confidence}"
+        assert (
+            result.confidence >= 0.7
+        ), f"Low confidence for {doc['document_id']}: {result.confidence}"
 
         # Vérifier classification
         classification = ClassificationResult(**result.payload)
@@ -262,13 +262,10 @@ async def test_e2e_finance_anti_contamination(classifier, mock_llm_adapter):
             "category": "finance",
             "subcategory": doc["expected_subcategory"],
             "confidence": 0.94,
-            "reasoning": f"Finance {doc['expected_subcategory']}"
+            "reasoning": f"Finance {doc['expected_subcategory']}",
         }
 
-        metadata = {
-            "ocr_text": doc["ocr_text"],
-            "document_id": doc["document_id"]
-        }
+        metadata = {"ocr_text": doc["ocr_text"], "document_id": doc["document_id"]}
 
         result = await classifier.classify(metadata)
         classification = ClassificationResult(**result.payload)
@@ -281,19 +278,17 @@ async def test_e2e_finance_anti_contamination(classifier, mock_llm_adapter):
         "category": "finance",
         "subcategory": "invalid_perimeter",
         "confidence": 0.90,
-        "reasoning": "Test"
+        "reasoning": "Test",
     }
 
     with pytest.raises(ValueError, match="Invalid financial perimeter"):
-        await classifier.classify({
-            "ocr_text": "Facture test",
-            "document_id": "doc-invalid"
-        })
+        await classifier.classify({"ocr_text": "Facture test", "document_id": "doc-invalid"})
 
 
 # ============================================================================
 # TEST LATENCE < 10s (Task 8.5)
 # ============================================================================
+
 
 @pytest.mark.asyncio
 async def test_classification_latency_under_10s(classifier, mock_llm_adapter):
@@ -310,13 +305,10 @@ async def test_classification_latency_under_10s(classifier, mock_llm_adapter):
             "category": doc["expected_category"],
             "subcategory": doc["expected_subcategory"],
             "confidence": 0.90,
-            "reasoning": f"Test {doc['document_id']}"
+            "reasoning": f"Test {doc['document_id']}",
         }
 
-        metadata = {
-            "ocr_text": doc["ocr_text"],
-            "document_id": doc["document_id"]
-        }
+        metadata = {"ocr_text": doc["ocr_text"], "document_id": doc["document_id"]}
 
         start = time.monotonic()
         await classifier.classify(metadata)
@@ -325,9 +317,9 @@ async def test_classification_latency_under_10s(classifier, mock_llm_adapter):
         latencies.append(elapsed_ms)
 
         # Chaque classification < 10s
-        assert elapsed_ms < 10_000, (
-            f"Classification too slow for {doc['document_id']}: {elapsed_ms:.0f}ms"
-        )
+        assert (
+            elapsed_ms < 10_000
+        ), f"Classification too slow for {doc['document_id']}: {elapsed_ms:.0f}ms"
 
     # Médiane < 8s (Task 9.3)
     sorted_latencies = sorted(latencies)
@@ -340,6 +332,7 @@ async def test_classification_latency_under_10s(classifier, mock_llm_adapter):
 # ============================================================================
 # TEST FILE MOVER INTEGRATION (Task 8.2)
 # ============================================================================
+
 
 @pytest.mark.asyncio
 async def test_e2e_file_mover_atomic(tmp_path):
@@ -364,7 +357,7 @@ async def test_e2e_file_mover_atomic(tmp_path):
         subcategory="selarl",
         path="finance/selarl",
         confidence=0.94,
-        reasoning="Facture Cerba SELARL"
+        reasoning="Facture Cerba SELARL",
     )
 
     # Mock config pour utiliser tmp_path
@@ -410,7 +403,7 @@ async def test_e2e_file_mover_naming_conflict(tmp_path):
         subcategory="selarl",
         path="finance/selarl",
         confidence=0.94,
-        reasoning="Test"
+        reasoning="Test",
     )
 
     with patch("agents.src.agents.archiviste.file_mover.get_arborescence_config") as mock_config:
@@ -432,6 +425,7 @@ async def test_e2e_file_mover_naming_conflict(tmp_path):
 # TEST PIPELINE REDIS STREAMS (Task 8.2)
 # ============================================================================
 
+
 @pytest.mark.asyncio
 async def test_e2e_pipeline_process_document():
     """
@@ -443,9 +437,11 @@ async def test_e2e_pipeline_process_document():
     mock_redis.xadd = AsyncMock()
     mock_db_pool = AsyncMock()
 
-    with patch("agents.src.agents.archiviste.classifier.get_llm_adapter") as mock_llm, \
-         patch("agents.src.agents.archiviste.classifier.anonymize_text") as mock_presidio, \
-         patch("agents.src.agents.archiviste.file_mover.get_arborescence_config") as mock_config:
+    with (
+        patch("agents.src.agents.archiviste.classifier.get_llm_adapter") as mock_llm,
+        patch("agents.src.agents.archiviste.classifier.anonymize_text") as mock_presidio,
+        patch("agents.src.agents.archiviste.file_mover.get_arborescence_config") as mock_config,
+    ):
 
         # Setup mocks
         llm = AsyncMock()
@@ -453,7 +449,7 @@ async def test_e2e_pipeline_process_document():
             "category": "pro",
             "subcategory": None,
             "confidence": 0.92,
-            "reasoning": "Document professionnel"
+            "reasoning": "Document professionnel",
         }
         mock_llm.return_value = llm
         mock_presidio.return_value = "ANONYMIZED"
@@ -469,7 +465,7 @@ async def test_e2e_pipeline_process_document():
         data = {
             b"document_id": b"doc-e2e-001",
             b"file_path": b"/tmp/nonexistent.pdf",
-            b"metadata": json.dumps({"ocr_text": "Courrier ARS"}).encode()
+            b"metadata": json.dumps({"ocr_text": "Courrier ARS"}).encode(),
         }
 
         # Le file_mover va échouer car fichier n'existe pas, mais la classification devrait fonctionner

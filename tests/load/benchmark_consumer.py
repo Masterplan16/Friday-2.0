@@ -174,8 +174,7 @@ async def wait_and_measure(injection_start: float, timeout_minutes: int = 20) ->
 
     while time.time() < deadline:
         count = await db.fetchval(
-            "SELECT COUNT(*) FROM ingestion.emails "
-            "WHERE metadata->>'is_benchmark' = 'true'"
+            "SELECT COUNT(*) FROM ingestion.emails " "WHERE metadata->>'is_benchmark' = 'true'"
         )
         if count >= NUM_EMAILS:
             elapsed = time.time() - injection_start
@@ -189,8 +188,7 @@ async def wait_and_measure(injection_start: float, timeout_minutes: int = 20) ->
 
             # Cout tokens
             cost = await db.fetchval(
-                "SELECT SUM(cost_usd) FROM core.llm_usage "
-                "WHERE context = 'benchmark'"
+                "SELECT SUM(cost_usd) FROM core.llm_usage " "WHERE context = 'benchmark'"
             )
             print(f"Cout tokens      : ${cost or 0:.2f}")
             if cost:
@@ -198,7 +196,9 @@ async def wait_and_measure(injection_start: float, timeout_minutes: int = 20) ->
 
             # Facteur correctif
             print(f"\nFacteur correctif recommande : x0.6-0.8")
-            print(f"Throughput reel estime : {throughput * 0.6:.1f}-{throughput * 0.8:.1f} emails/min")
+            print(
+                f"Throughput reel estime : {throughput * 0.6:.1f}-{throughput * 0.8:.1f} emails/min"
+            )
 
             await db.close()
             return True

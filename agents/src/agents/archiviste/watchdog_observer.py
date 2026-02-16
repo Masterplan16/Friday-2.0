@@ -20,10 +20,7 @@ from pathlib import Path
 from typing import List, Optional
 
 import structlog
-from agents.src.agents.archiviste.watchdog_config import (
-    WatchdogConfigManager,
-    WatchdogConfigSchema,
-)
+from agents.src.agents.archiviste.watchdog_config import WatchdogConfigManager, WatchdogConfigSchema
 from agents.src.agents.archiviste.watchdog_handler import FridayWatchdogHandler
 from redis import asyncio as aioredis
 from watchdog.observers import Observer

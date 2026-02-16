@@ -8,15 +8,14 @@ Test Strategy:
 - Base de données test réelle (PostgreSQL + pgvector)
 """
 
-import pytest
-import asyncpg
-from pathlib import Path
-from datetime import datetime, timedelta
-from uuid import uuid4
 import os
+from datetime import datetime, timedelta
+from pathlib import Path
+from uuid import uuid4
 
-from agents.src.adapters.memorystore import PostgreSQLMemorystore, NodeType, RelationType
-
+import asyncpg
+import pytest
+from agents.src.adapters.memorystore import NodeType, PostgreSQLMemorystore, RelationType
 
 # Configuration BDD test (override avec env vars)
 TEST_DB_CONFIG = {
@@ -49,13 +48,14 @@ async def test_db_pool():
 
     # Setup: Créer extensions et schemas
     async with pool.acquire() as conn:
-        await conn.execute("CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\"")
+        await conn.execute('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"')
         await conn.execute("CREATE EXTENSION IF NOT EXISTS vector")
         await conn.execute("CREATE SCHEMA IF NOT EXISTS knowledge")
         await conn.execute("CREATE SCHEMA IF NOT EXISTS core")
 
         # Fonction trigger
-        await conn.execute("""
+        await conn.execute(
+            """
             CREATE OR REPLACE FUNCTION core.update_updated_at()
             RETURNS TRIGGER AS $$
             BEGIN
@@ -63,7 +63,8 @@ async def test_db_pool():
                 RETURN NEW;
             END;
             $$ LANGUAGE plpgsql;
-        """)
+        """
+        )
 
     # Appliquer migrations 007 et 008
     migrations_dir = Path(__file__).parent.parent.parent / "database" / "migrations"
@@ -100,7 +101,9 @@ async def memorystore(test_db_pool):
 async def clean_db(test_db_pool):
     """Nettoyer la BDD entre chaque test."""
     async with test_db_pool.acquire() as conn:
-        await conn.execute("TRUNCATE knowledge.nodes, knowledge.edges, knowledge.embeddings CASCADE")
+        await conn.execute(
+            "TRUNCATE knowledge.nodes, knowledge.edges, knowledge.embeddings CASCADE"
+        )
     yield
 
 
@@ -128,9 +131,9 @@ class TestCrossSourceGraph:
                 "message_id": "email-123@example.com",
                 "subject": "Facture intervention plomberie",
                 "date": "2026-02-11",
-                "category": "finance"
+                "category": "finance",
             },
-            source="email"
+            source="email",
         )
 
         assert email_id is not None
@@ -139,11 +142,8 @@ class TestCrossSourceGraph:
         person_id = await memorystore.get_or_create_node(
             node_type="person",
             name="Plombier Martin",
-            metadata={
-                "email": "plombier@example.com",
-                "company": "Martin Plomberie"
-            },
-            source="email"
+            metadata={"email": "plombier@example.com", "company": "Martin Plomberie"},
+            source="email",
         )
 
         # Task 6.4 : Créer edge SENT_BY
@@ -151,7 +151,7 @@ class TestCrossSourceGraph:
             from_node_id=email_id,
             to_node_id=person_id,
             relation_type="sent_by",
-            metadata={"confidence": 1.0}
+            metadata={"confidence": 1.0},
         )
 
         assert edge_sent_by_id is not None
@@ -163,16 +163,14 @@ class TestCrossSourceGraph:
             metadata={
                 "source_id": "/attachments/facture_plombier_250.pdf",
                 "mime_type": "application/pdf",
-                "size_bytes": 125000
+                "size_bytes": 125000,
             },
-            source="archiviste"
+            source="archiviste",
         )
 
         # Task 6.6 : Créer edge ATTACHED_TO
         edge_attached_id = await memorystore.create_edge(
-            from_node_id=document_id,
-            to_node_id=email_id,
-            relation_type="attached_to"
+            from_node_id=document_id, to_node_id=email_id, relation_type="attached_to"
         )
 
         assert edge_attached_id is not None
@@ -181,18 +179,13 @@ class TestCrossSourceGraph:
         entity_id = await memorystore.create_node(
             node_type="entity",
             name="Plombier Martin",
-            metadata={
-                "entity_type": "ORG",
-                "confidence": 0.92
-            },
-            source="email"
+            metadata={"entity_type": "ORG", "confidence": 0.92},
+            source="email",
         )
 
         # Task 6.8 : Créer edge MENTIONS
         edge_mentions_id = await memorystore.create_edge(
-            from_node_id=document_id,
-            to_node_id=entity_id,
-            relation_type="mentions"
+            from_node_id=document_id, to_node_id=entity_id, relation_type="mentions"
         )
 
         assert edge_mentions_id is not None
@@ -207,16 +200,14 @@ class TestCrossSourceGraph:
                 "currency": "EUR",
                 "date": "2026-02-11",
                 "category": "travaux",
-                "account": "SELARL"
+                "account": "SELARL",
             },
-            source="finance"
+            source="finance",
         )
 
         # Task 6.10 : Créer edge PAID_WITH
         edge_paid_id = await memorystore.create_edge(
-            from_node_id=transaction_id,
-            to_node_id=document_id,
-            relation_type="paid_with"
+            from_node_id=transaction_id, to_node_id=document_id, relation_type="paid_with"
         )
 
         assert edge_paid_id is not None
@@ -247,16 +238,12 @@ class TestCrossSourceGraph:
         """Test que la déduplication empêche les doublons (Bug 3 fix)."""
         # Créer Person avec email
         person_id_1 = await memorystore.get_or_create_node(
-            node_type="person",
-            name="John Doe",
-            metadata={"email": "john@example.com"}
+            node_type="person", name="John Doe", metadata={"email": "john@example.com"}
         )
 
         # Tenter de créer à nouveau (même email → doit retourner même ID)
         person_id_2 = await memorystore.get_or_create_node(
-            node_type="person",
-            name="John Doe (duplicate)",
-            metadata={"email": "john@example.com"}
+            node_type="person", name="John Doe (duplicate)", metadata={"email": "john@example.com"}
         )
 
         assert person_id_1 == person_id_2
@@ -275,14 +262,14 @@ class TestCrossSourceGraph:
             node_type="email",
             name="Email ancien",
             metadata={"message_id": "old@example.com"},
-            source="email"
+            source="email",
         )
 
         email2_id = await memorystore.create_node(
             node_type="email",
             name="Email récent",
             metadata={"message_id": "recent@example.com"},
-            source="email"
+            source="email",
         )
 
         # Query temporelle : emails créés dans les dernières 24h
@@ -299,21 +286,19 @@ class TestCrossSourceGraph:
         """Test get_node_with_relations retourne nœud + relations entrantes/sortantes."""
         # Créer mini-graphe : Person --[sent_by]--> Email --[attached_to]--> Document
         person_id = await memorystore.create_node(
-            node_type="person",
-            name="Alice",
-            metadata={"email": "alice@example.com"}
+            node_type="person", name="Alice", metadata={"email": "alice@example.com"}
         )
 
         email_id = await memorystore.create_node(
             node_type="email",
             name="Email from Alice",
-            metadata={"message_id": "alice-email@example.com"}
+            metadata={"message_id": "alice-email@example.com"},
         )
 
         document_id = await memorystore.create_node(
             node_type="document",
             name="Attachment.pdf",
-            metadata={"source_id": "/docs/attachment.pdf"}
+            metadata={"source_id": "/docs/attachment.pdf"},
         )
 
         # Relations
@@ -325,7 +310,7 @@ class TestCrossSourceGraph:
 
         assert result["node"]["id"] == email_id
         assert len(result["edges_out"]) == 1  # sent_by vers Person
-        assert len(result["edges_in"]) == 1   # attached_to depuis Document
+        assert len(result["edges_in"]) == 1  # attached_to depuis Document
 
         assert result["edges_out"][0]["relation_type"] == "sent_by"
         assert result["edges_in"][0]["relation_type"] == "attached_to"
@@ -344,9 +329,7 @@ class TestPerformanceBaseline:
 
         for i in range(100):
             await memorystore.create_node(
-                node_type="person",
-                name=f"Person {i}",
-                metadata={"email": f"person{i}@example.com"}
+                node_type="person", name=f"Person {i}", metadata={"email": f"person{i}@example.com"}
             )
 
         elapsed = time.time() - start
@@ -361,16 +344,14 @@ class TestPerformanceBaseline:
 
         # Créer hub node avec 20 relations
         hub_id = await memorystore.create_node(
-            node_type="person",
-            name="Hub Person",
-            metadata={"email": "hub@example.com"}
+            node_type="person", name="Hub Person", metadata={"email": "hub@example.com"}
         )
 
         for i in range(20):
             email_id = await memorystore.create_node(
                 node_type="email",
                 name=f"Email {i}",
-                metadata={"message_id": f"email{i}@example.com"}
+                metadata={"message_id": f"email{i}@example.com"},
             )
             await memorystore.create_edge(email_id, hub_id, "sent_by")
 

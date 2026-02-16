@@ -5,12 +5,7 @@ Ce package fournit les outils d'observabilité et de contrôle pour toutes les a
 des modules Friday. Chaque action doit utiliser le décorateur @friday_action.
 """
 
-from agents.src.middleware.models import (
-    ActionResult,
-    CorrectionRule,
-    StepDetail,
-    TrustMetric,
-)
+from agents.src.middleware.models import ActionResult, CorrectionRule, StepDetail, TrustMetric
 from agents.src.middleware.trust import (
     TrustManager,
     friday_action,

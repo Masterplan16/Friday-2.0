@@ -1,10 +1,11 @@
 """Tests unitaires pour /pending command (Story 1.18)."""
 
-import pytest
 from datetime import datetime, timezone
 from decimal import Decimal
 from unittest.mock import AsyncMock, MagicMock, patch
-from telegram import Update, Message, User, Chat
+
+import pytest
+from telegram import Chat, Message, Update, User
 from telegram.ext import ContextTypes
 
 
@@ -46,9 +47,7 @@ def mock_pool():
 
 
 @pytest.mark.asyncio
-async def test_pending_command_shows_only_pending_actions(
-    mock_update, mock_context, mock_pool
-):
+async def test_pending_command_shows_only_pending_actions(mock_update, mock_context, mock_pool):
     """AC1: Liste uniquement les actions status=pending."""
     from bot.handlers.trust_budget_commands import pending_command
 
@@ -78,9 +77,7 @@ async def test_pending_command_shows_only_pending_actions(
 
     with patch("bot.handlers.trust_budget_commands._get_pool", return_value=mock_pool):
         with patch("bot.handlers.trust_budget_commands._OWNER_USER_ID", 12345):
-            with patch(
-                "bot.handlers.trust_budget_commands.send_message_with_split"
-            ) as mock_send:
+            with patch("bot.handlers.trust_budget_commands.send_message_with_split") as mock_send:
                 await pending_command(mock_update, mock_context)
 
     # Vérifier que seules les actions pending sont listées
@@ -122,9 +119,7 @@ async def test_pending_command_chronological_desc(mock_update, mock_context, moc
 
     with patch("bot.handlers.trust_budget_commands._get_pool", return_value=mock_pool):
         with patch("bot.handlers.trust_budget_commands._OWNER_USER_ID", 12345):
-            with patch(
-                "bot.handlers.trust_budget_commands.send_message_with_split"
-            ) as mock_send:
+            with patch("bot.handlers.trust_budget_commands.send_message_with_split") as mock_send:
                 await pending_command(mock_update, mock_context)
 
     text = mock_send.call_args[0][1]
@@ -155,9 +150,7 @@ async def test_pending_command_format_output(mock_update, mock_context, mock_poo
 
     with patch("bot.handlers.trust_budget_commands._get_pool", return_value=mock_pool):
         with patch("bot.handlers.trust_budget_commands._OWNER_USER_ID", 12345):
-            with patch(
-                "bot.handlers.trust_budget_commands.send_message_with_split"
-            ) as mock_send:
+            with patch("bot.handlers.trust_budget_commands.send_message_with_split") as mock_send:
                 await pending_command(mock_update, mock_context)
 
     text = mock_send.call_args[0][1]
@@ -169,7 +162,10 @@ async def test_pending_command_format_output(mock_update, mock_context, mock_poo
     assert "/receipt abc12345" in text  # Lien receipt
     assert "💡 Utilisez /receipt <id>" in text  # Footer
     # M1 fix: pas de parse_mode Markdown (contenu utilisateur non echappe)
-    assert mock_send.call_args[1].get("parse_mode") is None or "parse_mode" not in mock_send.call_args[1]
+    assert (
+        mock_send.call_args[1].get("parse_mode") is None
+        or "parse_mode" not in mock_send.call_args[1]
+    )
 
 
 # ────────────────────────────────────────────────────────────
@@ -200,15 +196,11 @@ async def test_pending_command_filter_by_module(mock_update, mock_context, mock_
 
     with patch("bot.handlers.trust_budget_commands._get_pool", return_value=mock_pool):
         with patch("bot.handlers.trust_budget_commands._OWNER_USER_ID", 12345):
-            with patch(
-                "bot.handlers.trust_budget_commands.send_message_with_split"
-            ) as mock_send:
+            with patch("bot.handlers.trust_budget_commands.send_message_with_split") as mock_send:
                 await pending_command(mock_update, mock_context)
 
     # Vérifier que la query a été appelée avec le filtre module
-    fetch_call = (
-        mock_pool.acquire.return_value.__aenter__.return_value.fetch.call_args
-    )
+    fetch_call = mock_pool.acquire.return_value.__aenter__.return_value.fetch.call_args
     query = fetch_call[0][0]
     assert "module = $1" in query
 
@@ -244,9 +236,7 @@ async def test_pending_command_verbose_shows_input(mock_update, mock_context, mo
 
     with patch("bot.handlers.trust_budget_commands._get_pool", return_value=mock_pool):
         with patch("bot.handlers.trust_budget_commands._OWNER_USER_ID", 12345):
-            with patch(
-                "bot.handlers.trust_budget_commands.send_message_with_split"
-            ) as mock_send:
+            with patch("bot.handlers.trust_budget_commands.send_message_with_split") as mock_send:
                 await pending_command(mock_update, mock_context)
 
     text = mock_send.call_args[0][1]
@@ -264,9 +254,7 @@ async def test_pending_command_no_pending_actions(mock_update, mock_context, moc
     """AC4: Message si aucune action pending."""
     from bot.handlers.trust_budget_commands import pending_command
 
-    mock_pool.acquire.return_value.__aenter__.return_value.fetch = AsyncMock(
-        return_value=[]
-    )
+    mock_pool.acquire.return_value.__aenter__.return_value.fetch = AsyncMock(return_value=[])
 
     with patch("bot.handlers.trust_budget_commands._get_pool", return_value=mock_pool):
         with patch("bot.handlers.trust_budget_commands._OWNER_USER_ID", 12345):
@@ -308,9 +296,7 @@ async def test_pending_command_pagination_limit_20(mock_update, mock_context, mo
 
     with patch("bot.handlers.trust_budget_commands._get_pool", return_value=mock_pool):
         with patch("bot.handlers.trust_budget_commands._OWNER_USER_ID", 12345):
-            with patch(
-                "bot.handlers.trust_budget_commands.send_message_with_split"
-            ) as mock_send:
+            with patch("bot.handlers.trust_budget_commands.send_message_with_split") as mock_send:
                 await pending_command(mock_update, mock_context)
 
     text = mock_send.call_args[0][1]
@@ -363,9 +349,7 @@ async def test_pending_command_db_error(mock_update, mock_context, mock_pool):
 
 
 @pytest.mark.asyncio
-async def test_pending_command_combined_module_verbose(
-    mock_update, mock_context, mock_pool
-):
+async def test_pending_command_combined_module_verbose(mock_update, mock_context, mock_pool):
     """Test combinaison filtrage module + verbose."""
     from bot.handlers.trust_budget_commands import pending_command
 
@@ -387,9 +371,7 @@ async def test_pending_command_combined_module_verbose(
 
     with patch("bot.handlers.trust_budget_commands._get_pool", return_value=mock_pool):
         with patch("bot.handlers.trust_budget_commands._OWNER_USER_ID", 12345):
-            with patch(
-                "bot.handlers.trust_budget_commands.send_message_with_split"
-            ) as mock_send:
+            with patch("bot.handlers.trust_budget_commands.send_message_with_split") as mock_send:
                 await pending_command(mock_update, mock_context)
 
     text = mock_send.call_args[0][1]
@@ -406,9 +388,7 @@ async def test_pending_command_combined_module_verbose(
 
 
 @pytest.mark.asyncio
-async def test_pending_command_pagination_with_module_filter(
-    mock_update, mock_context, mock_pool
-):
+async def test_pending_command_pagination_with_module_filter(mock_update, mock_context, mock_pool):
     """H1 fix: Le total count respecte le filtre module dans la pagination."""
     from bot.handlers.trust_budget_commands import pending_command
 
@@ -434,9 +414,7 @@ async def test_pending_command_pagination_with_module_filter(
 
     with patch("bot.handlers.trust_budget_commands._get_pool", return_value=mock_pool):
         with patch("bot.handlers.trust_budget_commands._OWNER_USER_ID", 12345):
-            with patch(
-                "bot.handlers.trust_budget_commands.send_message_with_split"
-            ) as mock_send:
+            with patch("bot.handlers.trust_budget_commands.send_message_with_split") as mock_send:
                 await pending_command(mock_update, mock_context)
 
     # Vérifier que le count query inclut le filtre module
@@ -479,15 +457,11 @@ async def test_pending_command_long_verbose_flag_not_parsed_as_module(
 
     with patch("bot.handlers.trust_budget_commands._get_pool", return_value=mock_pool):
         with patch("bot.handlers.trust_budget_commands._OWNER_USER_ID", 12345):
-            with patch(
-                "bot.handlers.trust_budget_commands.send_message_with_split"
-            ) as mock_send:
+            with patch("bot.handlers.trust_budget_commands.send_message_with_split") as mock_send:
                 await pending_command(mock_update, mock_context)
 
     # Vérifier que le module filtre est "email" (pas "--verbose")
-    fetch_call = conn_mock = (
-        mock_pool.acquire.return_value.__aenter__.return_value.fetch.call_args
-    )
+    fetch_call = conn_mock = mock_pool.acquire.return_value.__aenter__.return_value.fetch.call_args
     query = fetch_call[0][0]
     assert "module = $1" in query, "Doit filtrer par module email"
 
@@ -523,9 +497,7 @@ async def test_pending_command_confidence_none(mock_update, mock_context, mock_p
 
     with patch("bot.handlers.trust_budget_commands._get_pool", return_value=mock_pool):
         with patch("bot.handlers.trust_budget_commands._OWNER_USER_ID", 12345):
-            with patch(
-                "bot.handlers.trust_budget_commands.send_message_with_split"
-            ) as mock_send:
+            with patch("bot.handlers.trust_budget_commands.send_message_with_split") as mock_send:
                 await pending_command(mock_update, mock_context)
 
     text = mock_send.call_args[0][1]

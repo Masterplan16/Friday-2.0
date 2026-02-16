@@ -7,11 +7,12 @@ Verifie :
 - Trigger updated_at automatique
 - Structure colonnes et contraintes
 """
-import pytest
+
 from pathlib import Path
 
+import pytest
 
-MIGRATION_PATH = Path("database/migrations/030_ocr_metadata.sql")
+MIGRATION_PATH = Path("database/migrations/030a_ocr_metadata.sql")
 
 
 def test_migration_file_exists():

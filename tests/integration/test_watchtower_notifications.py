@@ -6,12 +6,13 @@ NOTE: These tests require Docker to be running and may require
 actual Telegram credentials to test notifications.
 """
 
-import pytest
-import subprocess
 import asyncio
 import os
+import subprocess
 import time
 from pathlib import Path
+
+import pytest
 
 
 @pytest.fixture
@@ -29,17 +30,13 @@ def cleanup_test_containers():
 
     # Cleanup
     for container_name in containers_to_cleanup:
-        subprocess.run(
-            ["docker", "rm", "-f", container_name],
-            capture_output=True,
-            check=False
-        )
+        subprocess.run(["docker", "rm", "-f", container_name], capture_output=True, check=False)
 
 
 @pytest.mark.integration
 @pytest.mark.skipif(
     subprocess.run(["docker", "info"], capture_output=True).returncode != 0,
-    reason="Docker not available"
+    reason="Docker not available",
 )
 def test_watchtower_new_image_scenario_setup(test_image_tag, cleanup_test_containers):
     """
@@ -58,10 +55,12 @@ def test_watchtower_new_image_scenario_setup(test_image_tag, cleanup_test_contai
     test_dockerfile = Path(__file__).parent.parent / "fixtures" / "Dockerfile.test"
     test_dockerfile.parent.mkdir(parents=True, exist_ok=True)
 
-    test_dockerfile.write_text("""
+    test_dockerfile.write_text(
+        """
 FROM alpine:3.19
 CMD ["echo", "Friday test image"]
-""")
+"""
+    )
 
     container_name = "friday-test-watchtower-detection"
     cleanup_test_containers.append(container_name)
@@ -73,14 +72,14 @@ CMD ["echo", "Friday test image"]
             ["docker", "build", "-t", v1_tag, "-f", str(test_dockerfile), "."],
             cwd=test_dockerfile.parent,
             check=True,
-            capture_output=True
+            capture_output=True,
         )
 
         # Start container with v1
         subprocess.run(
             ["docker", "run", "-d", "--name", container_name, v1_tag],
             check=True,
-            capture_output=True
+            capture_output=True,
         )
 
         # Build v2 (simulate new version)
@@ -89,7 +88,7 @@ CMD ["echo", "Friday test image"]
             ["docker", "build", "-t", v2_tag, "-f", str(test_dockerfile), "."],
             cwd=test_dockerfile.parent,
             check=True,
-            capture_output=True
+            capture_output=True,
         )
 
         # Trigger Watchtower manual check (if watchtower is running)
@@ -107,20 +106,15 @@ CMD ["echo", "Friday test image"]
             ["docker", "inspect", container_name, "--format", "{{.Config.Image}}"],
             capture_output=True,
             text=True,
-            check=True
+            check=True,
         )
 
         current_image = inspect_result.stdout.strip()
-        assert "v1" in current_image, \
-            f"Container should still be on v1, found: {current_image}"
+        assert "v1" in current_image, f"Container should still be on v1, found: {current_image}"
 
     finally:
         # Cleanup images
-        subprocess.run(
-            ["docker", "rmi", "-f", v1_tag, v2_tag],
-            capture_output=True,
-            check=False
-        )
+        subprocess.run(["docker", "rmi", "-f", v1_tag, v2_tag], capture_output=True, check=False)
         if test_dockerfile.exists():
             test_dockerfile.unlink()
 
@@ -128,7 +122,7 @@ CMD ["echo", "Friday test image"]
 @pytest.mark.integration
 @pytest.mark.skipif(
     subprocess.run(["docker", "info"], capture_output=True).returncode != 0,
-    reason="Docker not available"
+    reason="Docker not available",
 )
 def test_watchtower_monitor_only_does_not_update(test_image_tag, cleanup_test_containers):
     """
@@ -143,10 +137,12 @@ def test_watchtower_monitor_only_does_not_update(test_image_tag, cleanup_test_co
     test_dockerfile = Path(__file__).parent.parent / "fixtures" / "Dockerfile.test"
     test_dockerfile.parent.mkdir(parents=True, exist_ok=True)
 
-    test_dockerfile.write_text("""
+    test_dockerfile.write_text(
+        """
 FROM alpine:3.19
 CMD ["echo", "Friday test - no auto-update"]
-""")
+"""
+    )
 
     container_name = "friday-test-no-autoupdate"
     cleanup_test_containers.append(container_name)
@@ -158,13 +154,13 @@ CMD ["echo", "Friday test - no auto-update"]
             ["docker", "build", "-t", v1_tag, "-f", str(test_dockerfile), "."],
             cwd=test_dockerfile.parent,
             check=True,
-            capture_output=True
+            capture_output=True,
         )
 
         subprocess.run(
             ["docker", "run", "-d", "--name", container_name, v1_tag],
             check=True,
-            capture_output=True
+            capture_output=True,
         )
 
         # Get initial container ID
@@ -172,7 +168,7 @@ CMD ["echo", "Friday test - no auto-update"]
             ["docker", "inspect", container_name, "--format", "{{.Id}}"],
             capture_output=True,
             text=True,
-            check=True
+            check=True,
         )
         initial_container_id = initial_id_result.stdout.strip()
 
@@ -182,7 +178,7 @@ CMD ["echo", "Friday test - no auto-update"]
             ["docker", "build", "-t", v2_tag, "-f", str(test_dockerfile), "."],
             cwd=test_dockerfile.parent,
             check=True,
-            capture_output=True
+            capture_output=True,
         )
 
         # Wait a bit (simulate Watchtower detection window)
@@ -193,30 +189,28 @@ CMD ["echo", "Friday test - no auto-update"]
             ["docker", "inspect", container_name, "--format", "{{.Id}}"],
             capture_output=True,
             text=True,
-            check=True
+            check=True,
         )
         current_container_id = current_id_result.stdout.strip()
 
-        assert initial_container_id == current_container_id, \
-            "Container was recreated - WATCHTOWER_MONITOR_ONLY may not be working!"
+        assert (
+            initial_container_id == current_container_id
+        ), "Container was recreated - WATCHTOWER_MONITOR_ONLY may not be working!"
 
         # Verify still using v1 image
         image_result = subprocess.run(
             ["docker", "inspect", container_name, "--format", "{{.Config.Image}}"],
             capture_output=True,
             text=True,
-            check=True
+            check=True,
         )
 
-        assert "v1" in image_result.stdout, \
-            "Container updated to v2 - CRITICAL FAILURE: auto-update occurred!"
+        assert (
+            "v1" in image_result.stdout
+        ), "Container updated to v2 - CRITICAL FAILURE: auto-update occurred!"
 
     finally:
-        subprocess.run(
-            ["docker", "rmi", "-f", v1_tag, v2_tag],
-            capture_output=True,
-            check=False
-        )
+        subprocess.run(["docker", "rmi", "-f", v1_tag, v2_tag], capture_output=True, check=False)
         if test_dockerfile.exists():
             test_dockerfile.unlink()
 
@@ -232,17 +226,16 @@ async def test_watchtower_sends_telegram_notification_mock():
 
     NOTE: Ce test peut tourner en CI (pas besoin de vraies credentials Telegram)
     """
-    from unittest.mock import patch, MagicMock
     import subprocess
+    from unittest.mock import MagicMock, patch
 
     # Mock environment vars
     mock_token = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
     mock_topic_id = "12345"
 
-    with patch.dict(os.environ, {
-        "TELEGRAM_BOT_TOKEN": mock_token,
-        "TOPIC_SYSTEM_ID": mock_topic_id
-    }):
+    with patch.dict(
+        os.environ, {"TELEGRAM_BOT_TOKEN": mock_token, "TOPIC_SYSTEM_ID": mock_topic_id}
+    ):
         # Build expected notification URL
         expected_url = f"telegram://{mock_token}@telegram?channels={mock_topic_id}"
 
@@ -263,7 +256,7 @@ async def test_watchtower_sends_telegram_notification_mock():
 @pytest.mark.integration
 @pytest.mark.skipif(
     not os.getenv("TELEGRAM_BOT_TOKEN"),
-    reason="Telegram credentials not configured (OK in CI, runs on VPS)"
+    reason="Telegram credentials not configured (OK in CI, runs on VPS)",
 )
 @pytest.mark.asyncio
 async def test_watchtower_sends_telegram_notification_real():
@@ -312,24 +305,25 @@ def test_watchtower_config_validation():
         env_dict = env
 
     # AC4: Monitor-only MUST be true
-    assert env_dict.get("WATCHTOWER_MONITOR_ONLY") == "true", \
-        "CRITICAL: WATCHTOWER_MONITOR_ONLY must be true (AC4)"
+    assert (
+        env_dict.get("WATCHTOWER_MONITOR_ONLY") == "true"
+    ), "CRITICAL: WATCHTOWER_MONITOR_ONLY must be true (AC4)"
 
     # AC3: Schedule or poll interval must be set
     has_schedule = "WATCHTOWER_SCHEDULE" in env_dict
     has_interval = "WATCHTOWER_POLL_INTERVAL" in env_dict
-    assert has_schedule or has_interval, \
-        "Either WATCHTOWER_SCHEDULE or WATCHTOWER_POLL_INTERVAL must be set (AC3)"
+    assert (
+        has_schedule or has_interval
+    ), "Either WATCHTOWER_SCHEDULE or WATCHTOWER_POLL_INTERVAL must be set (AC3)"
 
     # AC2: Notifications must be configured
-    assert "WATCHTOWER_NOTIFICATIONS" in env_dict, \
-        "WATCHTOWER_NOTIFICATIONS must be set (AC2)"
-    assert "WATCHTOWER_NOTIFICATION_URL" in env_dict, \
-        "WATCHTOWER_NOTIFICATION_URL must be set (AC2)"
+    assert "WATCHTOWER_NOTIFICATIONS" in env_dict, "WATCHTOWER_NOTIFICATIONS must be set (AC2)"
+    assert (
+        "WATCHTOWER_NOTIFICATION_URL" in env_dict
+    ), "WATCHTOWER_NOTIFICATION_URL must be set (AC2)"
 
     # Verify docker socket is read-only
     volumes = watchtower["volumes"]
     docker_sock = [v for v in volumes if "docker.sock" in v]
     assert len(docker_sock) > 0, "Docker socket must be mounted"
-    assert any(":ro" in v for v in docker_sock), \
-        "Docker socket must be read-only"
+    assert any(":ro" in v for v in docker_sock), "Docker socket must be read-only"

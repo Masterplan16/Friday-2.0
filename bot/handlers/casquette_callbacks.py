@@ -14,11 +14,7 @@ import os
 
 import structlog
 from agents.src.core.context_manager import ContextManager
-from agents.src.core.models import (
-    CASQUETTE_EMOJI_MAPPING,
-    CASQUETTE_LABEL_MAPPING,
-    Casquette,
-)
+from agents.src.core.models import CASQUETTE_EMOJI_MAPPING, CASQUETTE_LABEL_MAPPING, Casquette
 from telegram import Update
 from telegram.ext import ContextTypes
 

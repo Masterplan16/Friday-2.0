@@ -12,11 +12,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from redis.asyncio import Redis
-
-from services.document_processor.consumer_stub import (
-    init_consumer_group,
-    process_document_event,
-)
+from services.document_processor.consumer_stub import init_consumer_group, process_document_event
 
 
 @pytest.fixture
@@ -63,9 +59,7 @@ async def test_init_consumer_group_creates_group(redis_client):
         pass  # Group n'existait pas
 
     # Créer group avec nom unique pour ce test
-    with patch(
-        "services.document_processor.consumer_stub.CONSUMER_GROUP", group_name
-    ):
+    with patch("services.document_processor.consumer_stub.CONSUMER_GROUP", group_name):
         await init_consumer_group(redis_client)
 
     # Vérifier group existe
@@ -94,9 +88,7 @@ async def test_init_consumer_group_idempotent(redis_client):
     except Exception:
         pass
 
-    with patch(
-        "services.document_processor.consumer_stub.CONSUMER_GROUP", group_name
-    ):
+    with patch("services.document_processor.consumer_stub.CONSUMER_GROUP", group_name):
         # Créer 1ère fois
         await init_consumer_group(redis_client)
 
@@ -126,9 +118,7 @@ async def test_process_document_event_updates_status(db_pool_mock):
         b"source": b"email",
     }
 
-    await process_document_event(
-        event_id=event_id, event_data=event_data, db_pool=db_pool_mock
-    )
+    await process_document_event(event_id=event_id, event_data=event_data, db_pool=db_pool_mock)
 
     # Vérifier UPDATE appelé
     db_pool_mock.execute.assert_awaited_once()
@@ -164,9 +154,7 @@ async def test_process_document_event_handles_string_keys(db_pool_mock):
         "source": "email",
     }
 
-    await process_document_event(
-        event_id=event_id, event_data=event_data, db_pool=db_pool_mock
-    )
+    await process_document_event(event_id=event_id, event_data=event_data, db_pool=db_pool_mock)
 
     # Vérifier UPDATE appelé (pas d'erreur sur clés string)
     db_pool_mock.execute.assert_awaited_once()
@@ -194,9 +182,7 @@ async def test_process_document_event_reraises_db_error(db_pool_mock):
     }
 
     with pytest.raises(Exception, match="DB connection failed"):
-        await process_document_event(
-            event_id=event_id, event_data=event_data, db_pool=db_pool_mock
-        )
+        await process_document_event(event_id=event_id, event_data=event_data, db_pool=db_pool_mock)
 
 
 @pytest.mark.asyncio
@@ -229,9 +215,7 @@ async def test_process_document_event_logs_structured_output(db_pool_mock, caplo
     }
 
     with caplog.at_level("INFO"):
-        await process_document_event(
-            event_id=event_id, event_data=event_data, db_pool=db_pool_mock
-        )
+        await process_document_event(event_id=event_id, event_data=event_data, db_pool=db_pool_mock)
 
     # Vérifier logs présents
     log_messages = [rec.message for rec in caplog.records]

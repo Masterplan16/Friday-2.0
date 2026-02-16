@@ -1,20 +1,22 @@
 """Tests d'intégration Google Calendar Sync (Story 7.2 Task 8).
 
 Ces tests nécessitent INTEGRATION_TESTS=1 et utilisent une DB PostgreSQL réelle.
-Les appels Google Calendar API sont mock
-
-és pour éviter rate limits et dépendance externe.
+Les appels Google Calendar API sont mockés pour éviter rate limits et dépendance externe.
 """
 
 import json
 from datetime import datetime
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import AsyncMock, Mock, patch
 from uuid import uuid4
 
 import pytest
-
-from agents.src.integrations.google_calendar.sync_manager import GoogleCalendarSync
 from agents.src.integrations.google_calendar.config import CalendarConfig
+from agents.src.integrations.google_calendar.sync_manager import GoogleCalendarSync
+
+
+# Helper: patch asyncio.to_thread for sync mock calls
+async def _fake_to_thread(fn, *args, **kwargs):
+    return fn(*args, **kwargs)
 
 
 pytestmark = pytest.mark.integration
@@ -45,7 +47,7 @@ google_calendar:
     past_days: 7
     future_days: 90
 """
-    config_file.write_text(config_content, encoding='utf-8')
+    config_file.write_text(config_content, encoding="utf-8")
     return CalendarConfig.from_yaml(str(config_file))
 
 
@@ -66,9 +68,7 @@ class TestGoogleCalendarIntegration:
     """Test suite for Google Calendar sync integration."""
 
     @pytest.mark.asyncio
-    async def test_pipeline_complet_round_trip(
-        self, db_conn, sync_manager, calendar_config
-    ):
+    async def test_pipeline_complet_round_trip(self, db_conn, sync_manager, calendar_config):
         """Test pipeline complet : PostgreSQL → Google Calendar → PostgreSQL (round-trip)."""
         # Arrange - Insert event in knowledge.entities
         event_id = uuid4()
@@ -79,13 +79,15 @@ class TestGoogleCalendarIntegration:
             """,
             event_id,
             "Consultation test",
-            json.dumps({
-                "start_datetime": "2026-02-20T14:00:00+01:00",
-                "end_datetime": "2026-02-20T15:00:00+01:00",
-                "casquette": "medecin",
-                "status": "proposed",
-                "location": "Cabinet",
-            }),
+            json.dumps(
+                {
+                    "start_datetime": "2026-02-20T14:00:00+01:00",
+                    "end_datetime": "2026-02-20T15:00:00+01:00",
+                    "casquette": "medecin",
+                    "status": "proposed",
+                    "location": "Cabinet",
+                }
+            ),
         )
 
         # Mock Google Calendar API insert
@@ -126,8 +128,7 @@ class TestGoogleCalendarIntegration:
 
         # Assert 2 - Event updated with external_id
         event_row = await db_conn.fetchrow(
-            "SELECT properties FROM knowledge.entities WHERE id = $1",
-            event_id
+            "SELECT properties FROM knowledge.entities WHERE id = $1", event_id
         )
         properties = json.loads(event_row["properties"])
         assert properties.get("external_id") == "google_event_123"
@@ -135,10 +136,9 @@ class TestGoogleCalendarIntegration:
         assert result.events_updated == 1
 
     @pytest.mark.asyncio
-    async def test_multi_calendriers_sync(
-        self, db_conn, sync_manager, calendar_config
-    ):
+    async def test_multi_calendriers_sync(self, db_conn, sync_manager, calendar_config):
         """Test multi-calendriers (3 calendriers, 5 événements chacun)."""
+
         # Arrange - Mock 5 events per calendar (15 total)
         def mock_list_events(calendarId, **kwargs):
             events_by_calendar = {
@@ -205,9 +205,7 @@ class TestGoogleCalendarIntegration:
         assert chercheur_count == 5
 
     @pytest.mark.asyncio
-    async def test_deduplication_external_id(
-        self, db_conn, sync_manager
-    ):
+    async def test_deduplication_external_id(self, db_conn, sync_manager):
         """Test déduplication external_id (UPDATE au lieu INSERT)."""
         # Arrange - Insert event with external_id
         event_id = uuid4()
@@ -218,13 +216,15 @@ class TestGoogleCalendarIntegration:
             """,
             event_id,
             "Consultation initiale",
-            json.dumps({
-                "start_datetime": "2026-02-20T14:00:00+01:00",
-                "end_datetime": "2026-02-20T15:00:00+01:00",
-                "casquette": "medecin",
-                "external_id": "google_event_456",
-                "location": "Cabinet A",
-            }),
+            json.dumps(
+                {
+                    "start_datetime": "2026-02-20T14:00:00+01:00",
+                    "end_datetime": "2026-02-20T15:00:00+01:00",
+                    "casquette": "medecin",
+                    "external_id": "google_event_456",
+                    "location": "Cabinet A",
+                }
+            ),
         )
 
         # Mock Google Calendar returns updated version of same event
@@ -259,17 +259,14 @@ class TestGoogleCalendarIntegration:
 
         # Verify updated fields
         event_row = await db_conn.fetchrow(
-            "SELECT name, properties FROM knowledge.entities WHERE id = $1",
-            event_id
+            "SELECT name, properties FROM knowledge.entities WHERE id = $1", event_id
         )
         assert event_row["name"] == "Consultation modifiée"
         properties = json.loads(event_row["properties"])
         assert properties["location"] == "Cabinet B"
 
     @pytest.mark.asyncio
-    async def test_sync_bidirectionnelle_google_to_pg(
-        self, db_conn, sync_manager
-    ):
+    async def test_sync_bidirectionnelle_google_to_pg(self, db_conn, sync_manager):
         """Test sync bidirectionnelle (modification Google → PostgreSQL)."""
         # Arrange - Insert event in DB with old google_updated_at
         event_id = uuid4()
@@ -280,13 +277,15 @@ class TestGoogleCalendarIntegration:
             """,
             event_id,
             "Réunion ancienne",
-            json.dumps({
-                "start_datetime": "2026-02-20T10:00:00+01:00",
-                "end_datetime": "2026-02-20T11:00:00+01:00",
-                "casquette": "enseignant",
-                "external_id": "google_event_789",
-                "google_updated_at": "2026-02-15T10:00:00Z",  # Old timestamp
-            }),
+            json.dumps(
+                {
+                    "start_datetime": "2026-02-20T10:00:00+01:00",
+                    "end_datetime": "2026-02-20T11:00:00+01:00",
+                    "casquette": "enseignant",
+                    "external_id": "google_event_789",
+                    "google_updated_at": "2026-02-15T10:00:00Z",  # Old timestamp
+                }
+            ),
         )
 
         # Mock Google Calendar returns newer version
@@ -311,8 +310,7 @@ class TestGoogleCalendarIntegration:
 
         # Assert - DB updated with newer Google data (last-write-wins)
         event_row = await db_conn.fetchrow(
-            "SELECT name, properties FROM knowledge.entities WHERE id = $1",
-            event_id
+            "SELECT name, properties FROM knowledge.entities WHERE id = $1", event_id
         )
         assert event_row["name"] == "Réunion mise à jour"
 
@@ -324,9 +322,7 @@ class TestGoogleCalendarIntegration:
         assert result.events_updated >= 1
 
     @pytest.mark.asyncio
-    async def test_sync_inverse_pg_to_google(
-        self, db_conn, sync_manager
-    ):
+    async def test_sync_inverse_pg_to_google(self, db_conn, sync_manager):
         """Test sync inverse (modification PostgreSQL → Google)."""
         # Arrange - Insert event with status='proposed' (not yet in Google)
         event_id = uuid4()
@@ -337,12 +333,14 @@ class TestGoogleCalendarIntegration:
             """,
             event_id,
             "Nouvel événement local",
-            json.dumps({
-                "start_datetime": "2026-02-22T09:00:00+01:00",
-                "end_datetime": "2026-02-22T10:00:00+01:00",
-                "casquette": "chercheur",
-                "status": "proposed",  # Not yet synced
-            }),
+            json.dumps(
+                {
+                    "start_datetime": "2026-02-22T09:00:00+01:00",
+                    "end_datetime": "2026-02-22T10:00:00+01:00",
+                    "casquette": "chercheur",
+                    "status": "proposed",  # Not yet synced
+                }
+            ),
         )
 
         # Mock Google Calendar API insert
@@ -367,8 +365,7 @@ class TestGoogleCalendarIntegration:
 
         # Verify status changed to 'confirmed' and external_id added
         event_row = await db_conn.fetchrow(
-            "SELECT properties FROM knowledge.entities WHERE id = $1",
-            event_id
+            "SELECT properties FROM knowledge.entities WHERE id = $1", event_id
         )
         properties = json.loads(event_row["properties"])
         assert properties["status"] == "confirmed"
@@ -376,9 +373,7 @@ class TestGoogleCalendarIntegration:
         assert properties.get("html_link") == "https://calendar.google.com/event?eid=new"
 
     @pytest.mark.asyncio
-    async def test_transaction_atomique_rollback(
-        self, db_conn, sync_manager
-    ):
+    async def test_transaction_atomique_rollback(self, db_conn, sync_manager):
         """Test transaction atomique rollback."""
         # Arrange - Count events before
         count_before = await db_conn.fetchval(
@@ -415,19 +410,18 @@ class TestGoogleCalendarIntegration:
         except Exception:
             pass  # Expected error from invalid datetime
 
-        # Assert - Rollback happened (no new events in DB)
+        # Assert - M4 fix: C4 transaction atomicity ensures full rollback on error.
+        # With transaction wrapping, either ALL events are inserted or NONE.
         count_after = await db_conn.fetchval(
             "SELECT COUNT(*) FROM knowledge.entities WHERE entity_type = 'EVENT'"
         )
-        # Transaction should rollback, count unchanged
-        # Note: Implementation may vary - might process valid events before error
-        # So we just verify no partial state (either 0 new or all failed)
-        assert count_after == count_before or count_after == count_before + 0
+        # Transaction should rollback entirely — no partial inserts
+        assert (
+            count_after == count_before
+        ), "Transaction rollback failed: expected %d events, got %d" % (count_before, count_after)
 
     @pytest.mark.asyncio
-    async def test_gestion_conflits_last_write_wins(
-        self, db_conn, sync_manager
-    ):
+    async def test_gestion_conflits_last_write_wins(self, db_conn, sync_manager):
         """Test gestion conflits last-write-wins."""
         # Arrange - Insert event with local modification timestamp
         event_id = uuid4()
@@ -439,14 +433,16 @@ class TestGoogleCalendarIntegration:
             """,
             event_id,
             "Conflit local",
-            json.dumps({
-                "start_datetime": "2026-02-25T10:00:00+01:00",
-                "end_datetime": "2026-02-25T11:00:00+01:00",
-                "casquette": "medecin",
-                "external_id": "event_conflict",
-                "location": "Local A",
-                "google_updated_at": "2026-02-16T09:00:00Z",  # Older
-            }),
+            json.dumps(
+                {
+                    "start_datetime": "2026-02-25T10:00:00+01:00",
+                    "end_datetime": "2026-02-25T11:00:00+01:00",
+                    "casquette": "medecin",
+                    "external_id": "event_conflict",
+                    "location": "Local A",
+                    "google_updated_at": "2026-02-16T09:00:00Z",  # Older
+                }
+            ),
             local_updated,
         )
 
@@ -473,8 +469,7 @@ class TestGoogleCalendarIntegration:
 
         # Assert - Google version wins (last-write-wins)
         event_row = await db_conn.fetchrow(
-            "SELECT name, properties FROM knowledge.entities WHERE id = $1",
-            event_id
+            "SELECT name, properties FROM knowledge.entities WHERE id = $1", event_id
         )
         assert event_row["name"] == "Conflit Google gagne"
 
@@ -486,11 +481,10 @@ class TestGoogleCalendarIntegration:
         assert result.events_updated >= 1
 
     @pytest.mark.asyncio
-    async def test_rgpd_no_pii_in_google_calendar_logs(
-        self, db_conn, sync_manager, caplog
-    ):
+    async def test_rgpd_no_pii_in_google_calendar_logs(self, db_conn, sync_manager, caplog):
         """Test RGPD : Pas de PII dans logs Google Calendar API."""
         import logging
+
         caplog.set_level(logging.INFO)
 
         # Arrange - Insert event with PII
@@ -506,13 +500,15 @@ class TestGoogleCalendarIntegration:
             """,
             event_id,
             f"Consultation avec {pii_name}",
-            json.dumps({
-                "start_datetime": "2026-02-26T14:00:00+01:00",
-                "end_datetime": "2026-02-26T15:00:00+01:00",
-                "casquette": "medecin",
-                "status": "proposed",
-                "description": f"Email: {pii_email}, Phone: {pii_phone}",
-            }),
+            json.dumps(
+                {
+                    "start_datetime": "2026-02-26T14:00:00+01:00",
+                    "end_datetime": "2026-02-26T15:00:00+01:00",
+                    "casquette": "medecin",
+                    "status": "proposed",
+                    "description": f"Email: {pii_email}, Phone: {pii_phone}",
+                }
+            ),
         )
 
         # Mock Google Calendar API

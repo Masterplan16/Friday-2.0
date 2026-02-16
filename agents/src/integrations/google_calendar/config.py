@@ -19,16 +19,14 @@ class CalendarSettings(BaseModel):
 
     id: str = Field(..., description="Google Calendar ID")
     name: str = Field(..., description="Calendar display name")
-    casquette: str = Field(
-        ..., description="Casquette (medecin, enseignant, chercheur)"
-    )
+    casquette: str = Field(..., description="Casquette (medecin, enseignant, chercheur)")
     color: str = Field(default="#000000", description="Calendar color (hex)")
 
     @field_validator("casquette")
     @classmethod
     def validate_casquette(cls, v: str) -> str:
         """Validate casquette is one of the allowed values."""
-        allowed = {"medecin", "enseignant", "chercheur"}
+        allowed = {"medecin", "enseignant", "chercheur", "personnel"}
         if v not in allowed:
             raise ValueError(f"casquette must be one of {allowed}, got '{v}'")
         return v
@@ -51,9 +49,7 @@ class SyncRange(BaseModel):
     """
 
     past_days: int = Field(default=7, ge=0, description="Days in the past to sync")
-    future_days: int = Field(
-        default=90, ge=1, description="Days in the future to sync"
-    )
+    future_days: int = Field(default=90, ge=1, description="Days in the future to sync")
 
 
 class DefaultReminder(BaseModel):
@@ -89,24 +85,18 @@ class GoogleCalendarConfig(BaseModel):
     """
 
     enabled: bool = Field(default=True, description="Enable Google Calendar sync")
-    sync_interval_minutes: int = Field(
-        default=30, ge=1, description="Sync interval in minutes"
-    )
+    sync_interval_minutes: int = Field(default=30, ge=1, description="Sync interval in minutes")
     calendars: List[CalendarSettings] = Field(
         ..., min_length=1, description="List of calendars to sync"
     )
-    sync_range: SyncRange = Field(
-        default_factory=SyncRange, description="Sync time range"
-    )
+    sync_range: SyncRange = Field(default_factory=SyncRange, description="Sync time range")
     default_reminders: List[DefaultReminder] = Field(
         default_factory=lambda: [DefaultReminder()], description="Default reminders"
     )
 
     @field_validator("calendars")
     @classmethod
-    def validate_at_least_one_calendar(
-        cls, v: List[CalendarSettings]
-    ) -> List[CalendarSettings]:
+    def validate_at_least_one_calendar(cls, v: List[CalendarSettings]) -> List[CalendarSettings]:
         """Validate at least one calendar is configured."""
         if not v:
             raise ValueError("At least one calendar must be configured")
@@ -120,9 +110,7 @@ class CalendarConfig(BaseModel):
         google_calendar: Google Calendar settings
     """
 
-    google_calendar: GoogleCalendarConfig = Field(
-        ..., description="Google Calendar settings"
-    )
+    google_calendar: GoogleCalendarConfig = Field(..., description="Google Calendar settings")
 
     @classmethod
     def from_yaml(cls, path: str) -> "CalendarConfig":

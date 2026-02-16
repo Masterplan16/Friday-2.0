@@ -41,9 +41,7 @@ class CalendarSyncDaemon:
         logger.info("Starting Calendar Sync Daemon...")
 
         # 1. Load configuration
-        config_path = os.getenv(
-            "CALENDAR_CONFIG_PATH", "config/calendar_config.yaml"
-        )
+        config_path = os.getenv("CALENDAR_CONFIG_PATH", "config/calendar_config.yaml")
         if not Path(config_path).exists():
             raise FileNotFoundError(
                 f"Configuration file not found: {config_path}\n"
@@ -80,9 +78,7 @@ class CalendarSyncDaemon:
         logger.info("Redis connection established")
 
         # 4. Initialize Google Calendar auth manager
-        credentials_path = os.getenv(
-            "GOOGLE_CALENDAR_TOKEN_PATH", "config/google_token.json"
-        )
+        credentials_path = os.getenv("GOOGLE_CALENDAR_TOKEN_PATH", "config/google_token.json")
         encrypted_credentials_path = os.getenv(
             "GOOGLE_CALENDAR_TOKEN_ENC_PATH", "config/google_token.json.enc"
         )
@@ -103,11 +99,12 @@ class CalendarSyncDaemon:
             auth_manager=auth_manager,
         )
 
-        # 6. Initialize worker
+        # 6. Initialize worker — M2 fix: pass shutdown_event to worker
         self.worker = CalendarSyncWorker(
             sync_manager=sync_manager,
             redis_client=self.redis,
             config=calendar_config.model_dump(),  # Convert Pydantic model to dict
+            shutdown_event=self.shutdown_event,
         )
 
         logger.info("Calendar Sync Worker initialized successfully")
@@ -116,10 +113,11 @@ class CalendarSyncDaemon:
         """Lance le daemon et attend le signal d'arrêt."""
         await self.setup()
 
-        # Setup signal handlers
+        # Setup signal handlers (Unix only — Docker runs Linux)
         loop = asyncio.get_event_loop()
-        for sig in (signal.SIGTERM, signal.SIGINT):
-            loop.add_signal_handler(sig, lambda: asyncio.create_task(self.shutdown()))
+        if sys.platform != "win32":
+            for sig in (signal.SIGTERM, signal.SIGINT):
+                loop.add_signal_handler(sig, lambda: asyncio.create_task(self.shutdown()))
 
         try:
             # Run worker

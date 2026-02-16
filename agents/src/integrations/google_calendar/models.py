@@ -1,6 +1,6 @@
 """Pydantic models for Google Calendar sync."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional
 
 from pydantic import BaseModel, Field
@@ -28,14 +28,10 @@ class GoogleCalendarEvent(BaseModel):
     description: Optional[str] = Field(default=None, description="Event description")
     start: str = Field(..., description="Start datetime (ISO 8601)")
     end: str = Field(..., description="End datetime (ISO 8601)")
-    attendees: List[str] = Field(
-        default_factory=list, description="List of attendee emails"
-    )
+    attendees: List[str] = Field(default_factory=list, description="List of attendee emails")
     calendar_id: str = Field(..., description="Calendar ID")
     updated: Optional[str] = Field(default=None, description="Last update timestamp")
-    html_link: Optional[str] = Field(
-        default=None, description="Link to event in Google Calendar"
-    )
+    html_link: Optional[str] = Field(default=None, description="Link to event in Google Calendar")
 
     @classmethod
     def from_google_api(cls, event: dict, calendar_id: str) -> "GoogleCalendarEvent":
@@ -54,9 +50,7 @@ class GoogleCalendarEvent(BaseModel):
             attendees = [a.get("email", "") for a in event["attendees"] if "email" in a]
 
         # Extract start/end datetime
-        start = event.get("start", {}).get("dateTime") or event.get("start", {}).get(
-            "date"
-        )
+        start = event.get("start", {}).get("dateTime") or event.get("start", {}).get("date")
         end = event.get("end", {}).get("dateTime") or event.get("end", {}).get("date")
 
         return cls(
@@ -118,7 +112,8 @@ class SyncResult(BaseModel):
     events_deleted: int = Field(default=0, description="Events deleted count")
     errors: List[str] = Field(default_factory=list, description="Error messages")
     sync_timestamp: datetime = Field(
-        default_factory=datetime.now, description="Sync completion timestamp"
+        default_factory=lambda: datetime.now(timezone.utc),
+        description="Sync completion timestamp (UTC)",
     )
 
     @property

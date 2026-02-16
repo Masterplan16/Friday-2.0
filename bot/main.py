@@ -18,6 +18,7 @@ import asyncpg
 import structlog
 from bot.config import ConfigurationError, load_bot_config, validate_bot_permissions
 from bot.handlers import (
+    arborescence_commands,
     backup_commands,
     commands,
     draft_commands,
@@ -177,6 +178,9 @@ class FridayBot:
         # Commande Email Pipeline Status Monitoring
         self.application.add_handler(CommandHandler("email_status", email_status_commands.email_status_command))
 
+        # Story 3.2 - Commande /arbo (gestion arborescence)
+        self.application.add_handler(CommandHandler("arbo", arborescence_commands.arbo_command))
+
         # Story 1.10 - Inline buttons callbacks (Approve/Reject/Correct)
         from bot.action_executor import ActionExecutor
         from bot.handlers.callbacks import register_callbacks_handlers
@@ -217,6 +221,11 @@ class FridayBot:
             from bot.handlers.event_callbacks_register import register_event_callbacks_handlers
             register_event_callbacks_handlers(self.application, db_pool)
             logger.info("Story 7.1 event callback handlers registered")
+
+            # Story 3.2 - Classification callbacks (Approve/Correct/Reject)
+            from bot.handlers.classification_callbacks_register import register_classification_callbacks_handlers
+            register_classification_callbacks_handlers(self.application, db_pool)
+            logger.info("Story 3.2 classification callback handlers registered")
         else:
             logger.warning("db_pool not available, callback handlers not registered")
 

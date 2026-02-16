@@ -114,7 +114,7 @@ development_status:
   # Epic 3: Archiviste & Recherche Documentaire (8 stories | 11+ FRs)
   epic-3: in-progress
   3-1-ocr-renommage-intelligent: done  # 2026-02-15: CODE REVIEW ADVERSARIAL COMPLETE ✅ - 14 issues fixés (4C+4H+3M+3L). C1 PG INSERT, C2 3 fichiers tests, C4 datetime crash, H1 rename fail-explicit, H4 double sanitization, M1 dot notation Redis. 55 tests (9+9+11+6+11+7+2), 20 fichiers (16 créés + 4 modifiés). 7/7 AC validés.
-  3-2-classement-arborescence: backlog
+  3-2-classement-arborescence: done  # 2026-02-16: CODE REVIEW ADVERSARIAL (Opus 4.6) — 16 issues fixés (4C+5H+4M+3L) + tasks restantes complétées. Notifications Telegram (proposal/success/error), inline buttons classification (approve/correct/reject/reclassify/finance), /arbo command (display/stats/add/remove), E2E tests (20 docs dataset, anti-contamination AC6, latence <10s), docs archiviste-classification-spec.md, monitoring latence médiane. 7/7 AC validés. 10 fichiers créés, 5 modifiés.
   3-3-recherche-semantique-documents: backlog
   3-4-suivi-garanties: backlog
   3-5-detection-nouveaux-fichiers: backlog
@@ -152,8 +152,8 @@ development_status:
 
   # Epic 7: Agenda & Calendrier Multi-casquettes (3 stories | 4 FRs)
   epic-7: in-progress
-  7-1-detection-evenements: review  # 2026-02-15: IMPLEMENTATION COMPLETE ✅ - Détection événements emails via Claude Sonnet 4.5 + knowledge.entities EVENT + Trust=propose + notifications Telegram Topic Actions. 7/7 AC VALIDÉS, 21 tests PASS (11 models + 7 detector + 3 integration), 680+ lignes docs. Few-shot 5 exemples, dates relatives→absolues, multi-casquettes (médecin/enseignant/chercheur), RGPD Presidio anonymisation, confidence ≥0.75, inline buttons [Ajouter/Modifier/Ignorer]. 24 fichiers (16 créés + 4 modifiés). READY FOR CODE REVIEW (Opus 4.6 recommandé). M (12-18h).
-  7-2-sync-google-calendar: backlog
+  7-1-detection-evenements: done  # 2026-02-15: CODE REVIEW ADVERSARIAL COMPLETE - 19 issues fixes (6C+5H+5M+3L). C1 AnonymizationResult, C2 AsyncAnthropic, C3 @friday_action, C4/C5/C6 docs, H1 UUID, H2 Redis after commit, H3 anonymize order, H4 4 casquettes, H5 circuit breaker Lock, M1-M5, L1-L3. 7/7 AC, 4 casquettes. IMPLEMENTATION COMPLETE ✅ - Détection événements emails via Claude Sonnet 4.5 + knowledge.entities EVENT + Trust=propose + notifications Telegram Topic Actions. 7/7 AC VALIDÉS, 21 tests PASS (11 models + 7 detector + 3 integration), 680+ lignes docs. Few-shot 5 exemples, dates relatives→absolues, multi-casquettes (médecin/enseignant/chercheur), RGPD Presidio anonymisation, confidence ≥0.75, inline buttons [Ajouter/Modifier/Ignorer]. 24 fichiers (16 créés + 4 modifiés). READY FOR CODE REVIEW (Opus 4.6 recommandé). M (12-18h).
+  7-2-sync-google-calendar: in-progress
   7-3-multi-casquettes-conflits: backlog
   epic-7-retrospective: optional
 

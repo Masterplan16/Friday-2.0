@@ -1,0 +1,152 @@
+# Configuration de l'arborescence Friday
+# Story 3.2 - Task 2
+#
+# Structure hiérarchique pour le classement automatique des documents.
+# 5 catégories racines : pro, finance, universite, recherche, perso
+#
+# RÈGLE CRITIQUE : Les périmètres financiers sont OFFICIELS et IMMUABLES.
+# JAMAIS inventer, renommer ou modifier : selarl, scm, sci_ravas, sci_malbosc, personal
+
+# Chemin racine sur PC Mainteneur
+root_path: "C:/Users/lopez/BeeStation/Friday/Archives"
+
+# Zone de transit (éphémère, <24h cleanup)
+transit_paths:
+  vps: "/var/friday/transit/attachments/"
+  pc: "C:/Users/lopez/BeeStation/Friday/Transit/"
+
+# Catégories racines
+categories:
+  # ==================== PRO : Cabinet médical ====================
+  pro:
+    description: "Documents professionnels cabinet médical"
+    subcategories:
+      patients:
+        description: "Dossiers patients (anonymisés)"
+        path: "pro/patients"
+      administratif:
+        description: "Documents administratifs cabinet"
+        path: "pro/administratif"
+
+  # ==================== FINANCE : 5 périmètres ====================
+  finance:
+    description: "Documents financiers (5 périmètres OFFICIELS)"
+    # CRITIQUE: Ces labels sont OFFICIELS donnés par Antonio (D24)
+    # JAMAIS inventer, renommer ou modifier
+    subcategories:
+      selarl:
+        description: "Cabinet médical SELARL"
+        path: "finance/selarl/{year}/{month}-{month_name}"
+        year_based: true
+        month_based: true
+      scm:
+        description: "SCM (Société Civile de Moyens)"
+        path: "finance/scm/{year}/{month}-{month_name}"
+        year_based: true
+        month_based: true
+      sci_ravas:
+        description: "SCI Ravas (anciennement sci_1)"
+        path: "finance/sci_ravas/{year}/{month}-{month_name}"
+        year_based: true
+        month_based: true
+      sci_malbosc:
+        description: "SCI Malbosc (anciennement sci_2)"
+        path: "finance/sci_malbosc/{year}/{month}-{month_name}"
+        year_based: true
+        month_based: true
+      personal:
+        description: "Finances personnelles"
+        path: "finance/personal/{year}/{month}-{month_name}"
+        year_based: true
+        month_based: true
+
+  # ==================== UNIVERSITE : Enseignement ====================
+  universite:
+    description: "Documents universitaires enseignement"
+    subcategories:
+      theses:
+        description: "Encadrement thèses doctorales"
+        path: "universite/theses/{student_name}"
+        dynamic_folders: true  # Un dossier par thésard (format: Prenom_Nom)
+      cours:
+        description: "Supports de cours"
+        path: "universite/cours"
+
+  # ==================== RECHERCHE : Activité recherche ====================
+  recherche:
+    description: "Documents recherche scientifique"
+    subcategories:
+      publications:
+        description: "Articles, communications scientifiques"
+        path: "recherche/publications"
+      projets:
+        description: "Dossiers projets de recherche"
+        path: "recherche/projets"
+
+  # ==================== PERSO : Personnel ====================
+  perso:
+    description: "Documents personnels (hors pro/finance/université)"
+    subcategories:
+      famille:
+        description: "Documents famille"
+        path: "perso/famille"
+      voyages:
+        description: "Documents voyages"
+        path: "perso/voyages"
+      divers:
+        description: "Documents personnels divers"
+        path: "perso/divers"
+
+# Règles de validation
+validation:
+  max_depth: 6  # Profondeur maximale de l'arborescence
+  forbidden_names:
+    - "CON"
+    - "PRN"
+    - "AUX"
+    - "NUL"
+    - "COM1"
+    - "LPT1"
+  forbidden_chars:
+    - "<"
+    - ">"
+    - ":"
+    - '"'
+    - "|"
+    - "?"
+    - "*"
+    - "\\"
+    - "/"
+
+# Anti-contamination finance (AC6 / FR37)
+anti_contamination:
+  enabled: true
+  rule: "Document finance JAMAIS classé dans un autre périmètre finance"
+  validation: "STRICT - raise ValueError si périmètre invalide"
+
+# Exemples de classement
+examples:
+  - document: "Facture Laboratoire Cerba 145 EUR"
+    category: "finance"
+    subcategory: "selarl"
+    path: "finance/selarl/2026/02-Fevrier/2026-02-08_Facture_Labo-Cerba_145EUR.pdf"
+
+  - document: "Courrier ARS professionnel"
+    category: "pro"
+    subcategory: "administratif"
+    path: "pro/administratif/2026-01-15_Courrier_ARS_0EUR.pdf"
+
+  - document: "Thèse Julie Dupont v3"
+    category: "universite"
+    subcategory: "theses"
+    path: "universite/theses/Julie_Dupont/2026-02-01_These_Julie-Dupont_v3.pdf"
+
+  - document: "Article Nature SGLT2 inhibitors"
+    category: "recherche"
+    subcategory: "publications"
+    path: "recherche/publications/2025-12-20_Article_SGLT2-inhibitors_Nature.pdf"
+
+  - document: "Facture plombier personnel"
+    category: "perso"
+    subcategory: "divers"
+    path: "perso/divers/2026-02-10_Facture_Plombier_350EUR.pdf"

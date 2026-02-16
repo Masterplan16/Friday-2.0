@@ -527,8 +527,8 @@ services:
   # ============================================
   calendar-sync:
     build:
-      context: ./services/calendar_sync
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: services/calendar_sync/Dockerfile
     container_name: friday-calendar-sync
     restart: unless-stopped
     environment:

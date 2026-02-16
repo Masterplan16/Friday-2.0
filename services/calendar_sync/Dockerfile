@@ -7,15 +7,15 @@ RUN apt-get update && apt-get install -y \
     gcc \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements
-COPY requirements.txt .
+# Copy requirements (context = project root)
+COPY services/calendar_sync/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy calendar sync module
-COPY . /app/services/calendar_sync/
+COPY services/calendar_sync/ /app/services/calendar_sync/
 
 # Copy agents integration module (needed for GoogleCalendarSync)
-COPY ../../agents/src/integrations/google_calendar /app/agents/src/integrations/google_calendar/
+COPY agents/src/integrations/google_calendar /app/agents/src/integrations/google_calendar/
 
 # Set Python path
 ENV PYTHONPATH=/app

@@ -23,7 +23,7 @@ import asyncpg
 import structlog
 from agents.src.adapters.llm import ClaudeAdapter
 from agents.src.adapters.vectorstore import get_vectorstore_adapter
-from agents.src.tools.anonymize import presidio_anonymize
+from agents.src.tools.anonymize import anonymize_text
 from pydantic import BaseModel, Field
 from telegram import Update
 from telegram.ext import ContextTypes
@@ -150,7 +150,7 @@ Réponds en JSON avec ce format :
 
     try:
         # Anonymiser texte utilisateur avant appel LLM cloud (RGPD CLAUDE.md)
-        anonymized_prompt = await presidio_anonymize(prompt)
+        anonymized_prompt = await anonymize_text(prompt)
 
         response = await llm.complete_raw(
             prompt=anonymized_prompt,

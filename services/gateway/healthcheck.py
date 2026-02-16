@@ -16,8 +16,7 @@ import asyncpg
 import httpx
 import structlog
 from redis.asyncio import Redis
-
-from .schemas import HealthResponse, ServiceHealth, ServiceStatusType, SystemStatusType
+from schemas import HealthResponse, ServiceHealth, ServiceStatusType, SystemStatusType
 
 logger = structlog.get_logger()
 

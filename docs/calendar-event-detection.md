@@ -61,8 +61,7 @@ agents/src/agents/calendar/
 ├── __init__.py                     # Exports publics
 ├── event_detector.py               # Extraction événements (AC1, AC4, AC5)
 ├── models.py                       # Pydantic Event, EventDetectionResult
-├── prompts.py                      # Few-shot examples (AC7)
-└── date_parser.py                  # Helper dates relatives (AC4)
+└── prompts.py                      # Few-shot examples (AC7)
 
 bot/handlers/
 ├── event_notifications.py          # Envoi notifications Topic Actions (AC3)

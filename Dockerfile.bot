@@ -25,8 +25,11 @@ COPY bot/requirements.txt ./bot/
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r bot/requirements.txt
 
-# Copier code bot (agents imports sont lazy/optionnels)
+# Copier code bot
 COPY bot/ ./bot/
+
+# Copier agents (requis par handlers: batch, casquette, conflict, search, etc.)
+COPY agents/ ./agents/
 
 # Copier services nécessaires (email_healthcheck pour monitoring)
 COPY services/email_healthcheck/ ./services/email_healthcheck/

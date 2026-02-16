@@ -208,6 +208,43 @@ services:
   # ============================================
 
   # ============================================
+  # Heartbeat Engine - Proactive Intelligence (Story 4.1)
+  # RAM: ~500 Mo
+  # Daemon mode (recommended) ou Cron mode via n8n
+  # ============================================
+  friday-heartbeat:
+    build:
+      context: ./agents
+      dockerfile: Dockerfile
+    container_name: friday-heartbeat
+    command: python -m agents.src.core.heartbeat_daemon
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - HEARTBEAT_ENABLED=${HEARTBEAT_ENABLED:-true}
+      - HEARTBEAT_MODE=${HEARTBEAT_MODE:-daemon}
+      - HEARTBEAT_INTERVAL_MINUTES=${HEARTBEAT_INTERVAL_MINUTES:-30}
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      friday-network:
+        ipv4_address: 172.20.0.38
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f heartbeat_daemon || exit 1"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # ============================================
   # Watchtower - Docker Image Monitoring
   # RAM: ~100 Mo
   # Story 1.14 - Monitor-only mode (NO auto-updates)

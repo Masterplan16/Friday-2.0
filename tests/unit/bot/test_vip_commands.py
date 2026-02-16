@@ -65,7 +65,8 @@ async def test_vip_add_success(mock_update, mock_context, mock_db_pool):
     mock_context.args = ["test@example.com", "Test", "User"]
     mock_context.bot_data["db_pool"] = mock_db_pool
 
-    # Mock acquisitionasync def mock_acquire_context():
+    # Mock acquisition
+    async def mock_acquire_context():
         conn = AsyncMock()
         conn.fetchrow = AsyncMock(return_value=None)  # Pas de VIP existant
         conn.execute = AsyncMock()

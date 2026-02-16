@@ -281,6 +281,29 @@ class FridayBot:
         else:
             logger.warning("db_pool not available, callback handlers not registered")
 
+        # Story 3.6 - File Upload Handlers (Document + Photo)
+        from bot.handlers import file_handlers
+
+        self.application.add_handler(
+            MessageHandler(filters.Document.ALL, file_handlers.handle_document)
+        )
+        self.application.add_handler(
+            MessageHandler(filters.PHOTO, file_handlers.handle_photo)
+        )
+        logger.info("Story 3.6 file upload handlers registered (Document + Photo)")
+
+        # Story 3.6 - File Send Command (Intent Detection)
+        from bot.handlers import file_send_commands
+
+        self.application.add_handler(
+            MessageHandler(
+                filters.TEXT & ~filters.COMMAND,
+                file_send_commands.handle_file_send_request,
+                block=False,  # Ne bloque pas les handlers suivants si intention non détectée
+            )
+        )
+        logger.info("Story 3.6 file send intent handler registered")
+
         # Messages texte libres (Chat & Proactive uniquement)
         self.application.add_handler(
             MessageHandler(filters.TEXT & ~filters.COMMAND, messages.handle_text_message)

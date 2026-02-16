@@ -20,7 +20,6 @@ Workflow :
 
 import asyncio
 import os
-import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
@@ -29,19 +28,7 @@ import asyncpg
 import structlog
 from redis.asyncio import Redis
 
-# Add agents/src to Python path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent.parent / "agents" / "src"))
-
 from agents.src.agents.archiviste.pipeline import OCRPipeline
-
-# Configuration logging structuré
-structlog.configure(
-    processors=[
-        structlog.processors.TimeStamper(fmt="iso"),
-        structlog.processors.add_log_level,
-        structlog.processors.JSONRenderer(),
-    ]
-)
 
 logger = structlog.get_logger(__name__)
 

@@ -143,8 +143,10 @@ async def test_pipeline_success_publishes_processed_event(
 
     mock_extractor = mock_extractor_cls.return_value
     mock_extractor.extract_metadata = AsyncMock(return_value=ActionResult(
-        input_summary="test", output_summary="test", confidence=0.88,
-        reasoning="test",
+        input_summary="test document input",
+        output_summary="test document output",
+        confidence=0.88,
+        reasoning="test reasoning for metadata extraction",
         payload={"metadata": sample_metadata, "ocr_result": sample_ocr_result,
                  "filename": "test.pdf", "anonymized_text": "anon"}
     ))
@@ -152,12 +154,15 @@ async def test_pipeline_success_publishes_processed_event(
     rename_result = RenameResult(
         original_filename="test.pdf",
         new_filename="2026-02-08_Facture_Laboratoire-Cerba_145EUR.pdf",
-        metadata=sample_metadata, confidence=0.88, reasoning="test"
+        metadata=sample_metadata, confidence=0.88,
+        reasoning="test reasoning for rename"
     )
     mock_ren = mock_renamer_cls.return_value
     mock_ren.rename_document = AsyncMock(return_value=ActionResult(
-        input_summary="test", output_summary="test", confidence=0.88,
-        reasoning="test",
+        input_summary="test rename input",
+        output_summary="test rename output",
+        confidence=0.88,
+        reasoning="test reasoning for document rename action",
         payload={"rename_result": rename_result, "original_filename": "test.pdf",
                  "new_filename": "2026-02-08_Facture_Laboratoire-Cerba_145EUR.pdf"}
     ))

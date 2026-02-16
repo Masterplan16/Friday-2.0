@@ -648,9 +648,68 @@ Gestion des 3 rôles professionnels (médecin/enseignant/chercheur) et détectio
 
 | Story | Titre | Status | Fichiers clés |
 |-------|-------|--------|---------------|
-| **7.1** | Détection Événements Calendrier | **in-progress** | `agents/src/agents/calendar/event_detector.py`, `prompts.py`, `models.py` |
-| **7.2** | Sync Google Calendar (dépend Story 4.1 Heartbeat) | backlog | — |
+| **7.1** | Détection Événements Calendrier | **TERMINÉE** ✅ | `agents/src/agents/calendar/event_detector.py`, `prompts.py`, `models.py` |
+| **7.2** | Sync Google Calendar Bidirectionnelle | **TERMINÉE** ✅ | Voir ci-dessous |
 | **7.3** | Multi-casquettes & Conflits Calendrier | **TERMINÉE** ✅ | Voir ci-dessous |
+
+#### Story 7.2 : Sync Google Calendar Bidirectionnelle (TERMINÉE ✅ 2026-02-16)
+
+**Composants implémentés** (~3,500 lignes, 40+ tests) :
+
+**Google Calendar Integration** (6 fichiers, ~1,014 lignes) :
+- `agents/src/integrations/google_calendar/auth.py` (260 lignes) : OAuth2 + SOPS encryption + async subprocess
+- `agents/src/integrations/google_calendar/sync_manager.py` (454 lignes) : Sync bidirectionnelle + transaction atomique
+- `agents/src/integrations/google_calendar/config.py` (139 lignes) : Pydantic config multi-calendriers
+- `agents/src/integrations/google_calendar/models.py` (132 lignes) : GoogleCalendarEvent, SyncResult
+
+**Calendar Sync Daemon** (5 fichiers, ~386 lignes) :
+- `services/calendar_sync/worker.py` (170 lignes) : Worker daemon sync 30 min + healthcheck Redis
+- `services/calendar_sync/main.py` (167 lignes) : Entrypoint + signal handling gracieux
+- `services/calendar_sync/Dockerfile` (28 lignes) : Container definition
+
+**ContextProvider** (2 fichiers modifiés) :
+- `agents/src/core/context_provider.py` : Merge `get_todays_events()` (Story 4.1 unified)
+- `agents/src/core/context.py` : Re-export backward-compatible
+
+**Configuration** (4 fichiers, ~318 lignes) :
+- `config/calendar_config.yaml` : 3 calendriers (medecin/enseignant/chercheur)
+- `config/n8n/workflows/calendar-sync.json` : Backup cron quotidien 06:00
+
+**Tests** (6 fichiers, ~1,954 lignes) :
+- `tests/unit/integrations/google_calendar/test_auth.py` (5 tests)
+- `tests/unit/integrations/google_calendar/test_config.py` (3+ tests)
+- `tests/unit/integrations/google_calendar/test_sync_manager.py` (12+ tests)
+- `tests/unit/bot/test_event_notifications_calendar_sync.py` (3 tests)
+- `tests/integration/calendar/test_google_calendar_sync.py` (8 tests)
+- `tests/integration/calendar/test_sync_daemon.py` (3+ tests)
+
+**Documentation** (2 fichiers, ~519 lignes) :
+- `docs/google-calendar-sync.md` (419 lignes) : Architecture sync complète
+- `docs/google-calendar-env-vars.md` (100 lignes) : Variables d'environnement
+
+**Fonctionnalités** :
+- Sync bidirectionnelle Google Calendar <-> PostgreSQL (knowledge.entities EVENT)
+- OAuth2 InstalledAppFlow + token refresh + SOPS encryption
+- Multi-calendriers (3 calendriers, 4 casquettes)
+- Transaction atomique (`async with conn.transaction()`)
+- Bounded retry rate limit (MAX_RETRIES=3, exponential backoff)
+- Tous appels Google API non-bloquants (`asyncio.to_thread()`)
+- Worker daemon sync 30 min + healthcheck Redis (TTL 1h)
+- Alerte Telegram System apres 3 echecs consecutifs
+- Deduplication `external_id` (upsert)
+- Conflits last-write-wins (timestamp `updated_at`)
+- Code review adversariale (Opus 4.6) : 17 issues fixees (7C+5H+5M)
+
+**Deferred (optionnel Day 1)** :
+- Webhook Google Calendar push notifications (polling 30 min suffit)
+- Tests E2E (necessitent compte Google test reel)
+
+**Dependances** :
+- Story 7.1 Event Detection (entites EVENT, migration 036)
+- Story 4.1 Heartbeat Engine (ContextProvider unified)
+- Epic 1 (PostgreSQL, Redis, Bot Telegram)
+
+**Voir** : [docs/google-calendar-sync.md](docs/google-calendar-sync.md) pour guide complet
 
 #### Story 7.3 : Multi-casquettes & Conflits (TERMINÉE ✅ 2026-02-16)
 

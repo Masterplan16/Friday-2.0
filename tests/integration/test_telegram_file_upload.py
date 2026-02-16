@@ -230,8 +230,8 @@ async def test_upload_batch_5_files(redis_client, transit_dir, mock_telegram_con
     from bot.handlers.file_handlers import handle_document, file_upload_limiter
     from telegram import Update, Message, User, Document as TelegramDocument
 
-    # Reset rate limiter
-    file_upload_limiter.call_history.clear()
+    # Reset rate limiter via API publique
+    file_upload_limiter.reset_user(123456)
 
     mock_telegram_context.bot_data = {"redis_client": redis_client}
 

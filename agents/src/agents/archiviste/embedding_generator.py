@@ -379,3 +379,85 @@ class EmbeddingGenerator:
                 "metadata": result.metadata,
             },
         )
+
+
+# ============================================================
+# Utility Functions (for tests compatibility)
+# ============================================================
+
+
+def chunk_text(text: str, chunk_size: int = 2000, overlap: int = 200) -> list[str]:
+    """
+    Split text into overlapping chunks.
+
+    Args:
+        text: Text to chunk
+        chunk_size: Maximum size of each chunk (chars)
+        overlap: Overlap between chunks (chars)
+
+    Returns:
+        List of text chunks
+    """
+    if len(text) <= chunk_size:
+        return [text]
+
+    chunks = []
+    start = 0
+
+    while start < len(text):
+        end = start + chunk_size
+        chunk = text[start:end]
+        chunks.append(chunk)
+
+        # Move start forward by (chunk_size - overlap)
+        start += chunk_size - overlap
+
+        # Stop if we've reached the end
+        if end >= len(text):
+            break
+
+    return chunks
+
+
+async def generate_document_embeddings(
+    document_node_id: str,
+    text: str,
+    vectorstore,
+    chunk_size: int = 2000,
+    overlap: int = 200,
+) -> int:
+    """
+    Generate embeddings for document with chunking support.
+
+    Args:
+        document_node_id: Document node ID
+        text: Text content to embed
+        vectorstore: Vectorstore adapter (mock in tests)
+        chunk_size: Maximum chunk size
+        overlap: Overlap between chunks
+
+    Returns:
+        Number of embeddings generated
+    """
+    # Chunk text
+    chunks = chunk_text(text, chunk_size=chunk_size, overlap=overlap)
+
+    count = 0
+    for i, chunk in enumerate(chunks):
+        # Anonymize chunk
+        anon_result = await anonymize_text(chunk)
+        anonymized = anon_result.anonymized_text
+
+        # Generate embedding
+        response = await vectorstore.embed([anonymized])
+
+        # Store embedding
+        await vectorstore.store(
+            node_id=f"{document_node_id}_chunk_{i}",
+            embedding=response.embeddings[0],
+            metadata={"chunk_index": i, "total_chunks": len(chunks)},
+        )
+
+        count += 1
+
+    return count

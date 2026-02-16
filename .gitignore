@@ -42,6 +42,9 @@ ENV/
 *~
 .DS_Store
 
+# Windows artifacts
+nul
+
 # Environment variables
 .env
 .env.local

@@ -15,7 +15,7 @@ Ces tests vérifient AC#3 : Envoi fichier via recherche sémantique.
 
 import tempfile
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
 
 import pytest
 
@@ -89,7 +89,7 @@ async def test_search_and_send_file_found(
     from bot.handlers.file_send_commands import handle_file_send_request
 
     # Mock intent detection
-    with patch("bot.handlers.file_send_commands.detect_file_request_intent") as MockIntent:
+    with patch("bot.handlers.file_send_commands.detect_file_request_intent", new_callable=AsyncMock) as MockIntent:
         mock_intent = MagicMock()
         mock_intent.query = "facture plombier"
         mock_intent.doc_type = "facture"
@@ -97,7 +97,7 @@ async def test_search_and_send_file_found(
         MockIntent.return_value = mock_intent
 
         # Mock semantic search
-        with patch("bot.handlers.file_send_commands.search_documents_semantic") as MockSearch:
+        with patch("bot.handlers.file_send_commands.search_documents_semantic", new_callable=AsyncMock) as MockSearch:
             mock_result = MagicMock()
             mock_result.filename = "Facture_Plombier_2025.pdf"
             mock_result.file_path = str(test_file_small)
@@ -154,14 +154,14 @@ async def test_search_file_not_found_alternatives(mock_telegram_update, mock_tel
     from bot.handlers.file_send_commands import handle_file_send_request
 
     # Mock intent detection
-    with patch("bot.handlers.file_send_commands.detect_file_request_intent") as MockIntent:
+    with patch("bot.handlers.file_send_commands.detect_file_request_intent", new_callable=AsyncMock) as MockIntent:
         mock_intent = MagicMock()
         mock_intent.query = "contrat inexistant"
         mock_intent.confidence = 0.85
         MockIntent.return_value = mock_intent
 
         # Mock semantic search : 3 résultats faible similarité
-        with patch("bot.handlers.file_send_commands.search_documents_semantic") as MockSearch:
+        with patch("bot.handlers.file_send_commands.search_documents_semantic", new_callable=AsyncMock) as MockSearch:
             mock_results = [
                 MagicMock(
                     filename="Document_A.pdf",
@@ -233,14 +233,14 @@ async def test_send_file_too_large_notification(
     from bot.handlers.file_send_commands import handle_file_send_request
 
     # Mock intent detection
-    with patch("bot.handlers.file_send_commands.detect_file_request_intent") as MockIntent:
+    with patch("bot.handlers.file_send_commands.detect_file_request_intent", new_callable=AsyncMock) as MockIntent:
         mock_intent = MagicMock()
         mock_intent.query = "gros fichier"
         mock_intent.confidence = 0.90
         MockIntent.return_value = mock_intent
 
         # Mock semantic search
-        with patch("bot.handlers.file_send_commands.search_documents_semantic") as MockSearch:
+        with patch("bot.handlers.file_send_commands.search_documents_semantic", new_callable=AsyncMock) as MockSearch:
             mock_result = MagicMock()
             mock_result.filename = "Gros_Fichier.pdf"
             mock_result.file_path = str(test_file_large)

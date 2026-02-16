@@ -1,33 +1,20 @@
 # Friday 2.0 - Google Calendar Configuration
 # Story 7.2: Sync Google Calendar Bidirectionnelle
-# AC5: Configuration Multi-Calendriers
+# Configuration Calendrier Unique (centralise tous les événements)
 
 google_calendar:
   # Enable/disable Google Calendar synchronization
   enabled: true
 
-  # Sync interval in minutes (30 min = 48 requests/day per calendar)
+  # Sync interval in minutes (30 min = 48 requests/day)
   sync_interval_minutes: 30
 
-  # Calendars to synchronize (3 multi-casquettes)
+  # Calendrier unique centralisant tous les événements (médical, enseignement, recherche, personnel)
   calendars:
-    # Calendrier 1: Médecin (consultations, gardes, réunions service)
-    - id: "primary"  # Replace with actual calendar ID from Google Calendar settings
-      name: "Calendrier Médecin"
-      casquette: "medecin"
-      color: "#ff0000"  # Rouge pour médical
-
-    # Calendrier 2: Enseignant (cours, examens, réunions pédagogiques)
-    - id: "CALENDAR_ID_ENSEIGNANT_PLACEHOLDER"  # Replace with actual calendar ID
-      name: "Calendrier Enseignant"
-      casquette: "enseignant"
-      color: "#00ff00"  # Vert pour enseignement
-
-    # Calendrier 3: Chercheur (conférences, séminaires, deadlines)
-    - id: "CALENDAR_ID_CHERCHEUR_PLACEHOLDER"  # Replace with actual calendar ID
-      name: "Calendrier Chercheur"
-      casquette: "chercheur"
-      color: "#0000ff"  # Bleu pour recherche
+    - id: "primary"  # Calendrier principal Google (pas besoin de le remplacer)
+      name: "Calendrier Friday"
+      casquette: "personnel"  # Casquette par défaut (peut être changée dynamiquement par Friday)
+      color: "#4285F4"  # Bleu Google Calendar
 
   # Sync time range
   sync_range:

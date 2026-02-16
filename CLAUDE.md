@@ -672,8 +672,9 @@ Gestion des 3 rôles professionnels (médecin/enseignant/chercheur) et détectio
 - `agents/src/core/context.py` : Re-export backward-compatible
 
 **Configuration** (4 fichiers, ~318 lignes) :
-- `config/calendar_config.yaml` : 3 calendriers (medecin/enseignant/chercheur)
+- `config/calendar_config.yaml` : Support 1-N calendriers (défaut : 1 calendrier unique "primary" qui centralise tout)
 - `config/n8n/workflows/calendar-sync.json` : Backup cron quotidien 06:00
+- **Note configuration Mainteneur** : Calendrier unique préféré au lieu de multi-calendriers (plus simple)
 
 **Tests** (6 fichiers, ~1,954 lignes) :
 - `tests/unit/integrations/google_calendar/test_auth.py` (5 tests)
@@ -690,7 +691,7 @@ Gestion des 3 rôles professionnels (médecin/enseignant/chercheur) et détectio
 **Fonctionnalités** :
 - Sync bidirectionnelle Google Calendar <-> PostgreSQL (knowledge.entities EVENT)
 - OAuth2 InstalledAppFlow + token refresh + SOPS encryption
-- Multi-calendriers (3 calendriers, 4 casquettes)
+- Support 1-N calendriers (configuration flexible, défaut : 1 calendrier unique)
 - Transaction atomique (`async with conn.transaction()`)
 - Bounded retry rate limit (MAX_RETRIES=3, exponential backoff)
 - Tous appels Google API non-bloquants (`asyncio.to_thread()`)

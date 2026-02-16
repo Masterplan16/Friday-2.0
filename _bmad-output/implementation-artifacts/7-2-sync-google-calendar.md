@@ -262,9 +262,7 @@ async def test_bidirectional_sync():
         name: "Recherche"
         casquette: "chercheur"
         color: "#0000ff"
-    sync_range:
-      past_days: 7
-      future_days: 90
+    sync_range: null  # PAS DE LIMITE
     default_reminders:
       - method: "popup"
         minutes: 30

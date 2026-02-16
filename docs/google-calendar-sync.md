@@ -130,14 +130,9 @@ google_calendar:
       name: "Calendrier Chercheur"
       casquette: "chercheur"
       color: "#0000ff"
-  # Sync time range - OPTIONNEL (Google Calendar API: timeMin/timeMax sont optionnels)
-  # Si null ou omis: récupère TOUT l'historique sans limite (recommandé pour historique complet)
-  sync_range: null    # null = pas de limite (récupère tous événements depuis 2006, lancement Google Calendar)
-
-  # Alternative: limiter explicitement la plage de synchronisation
-  # sync_range:
-  #   past_days: 7300     # ~20 ans historique (jusqu'à 2006, création Google Calendar)
-  #   future_days: 18250  # 50 ans futur (planification jusqu'en 2076)
+  # Sync time range - OPTIONNEL
+  # null = PAS DE LIMITE (récupère tous événements depuis 2006, lancement Google Calendar)
+  sync_range: null
   default_reminders:
     - method: "popup"
       minutes: 30     # Rappel 30 min avant
@@ -185,17 +180,6 @@ Selon la [documentation officielle Google Calendar API](https://developers.googl
 | **Friday sync** | 48 syncs/jour (toutes les 30 min) × 1 calendrier = 48 requests/jour | ✅ 0.0048% du quota |
 | **Budget restant** | 999,952 requests/jour | ✅ Aucun risque de rate limit |
 
-#### Configuration Limitée (Optionnelle)
-
-Si besoin de limiter explicitement (par exemple, pour réduire la charge première sync) :
-
-```yaml
-sync_range:
-  past_days: 7300     # ~20 ans historique (jusqu'à 2006, création Google Calendar)
-  future_days: 18250  # 50 ans futur (planification jusqu'en 2076)
-```
-
-**Note** : Les limites artificielles ne sont généralement PAS nécessaires. L'API Google gère efficacement les grandes plages temporelles.
 
 ---
 

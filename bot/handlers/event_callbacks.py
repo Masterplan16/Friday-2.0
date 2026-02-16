@@ -151,6 +151,49 @@ async def handle_event_approve(
             disable_web_page_preview=True
         )
 
+        # 5. Story 7.3: Trigger détection conflits après ajout événement (AC5)
+        try:
+            from agents.src.agents.calendar.conflict_detector import detect_calendar_conflicts
+            from bot.handlers.conflict_notifications import send_conflict_alert
+
+            # Récupérer date événement
+            start_datetime_parsed = datetime.fromisoformat(event_props["start_datetime"])
+            event_date = start_datetime_parsed.date()
+
+            # Détecter conflits pour cette date
+            conflicts = await detect_calendar_conflicts(
+                target_date=event_date,
+                db_pool=db_pool
+            )
+
+            # Notifier immédiatement si conflits trouvés
+            if conflicts:
+                bot = context.bot
+                for conflict in conflicts:
+                    # Envoyer alerte conflit Topic Actions
+                    conflict_sent = await send_conflict_alert(
+                        bot=bot,
+                        conflict=conflict,
+                        conflict_id=None  # Pas encore enregistré en DB
+                    )
+
+                    if conflict_sent:
+                        logger.info(
+                            "conflict_alert_sent_after_event_approve",
+                            event_id=event_id,
+                            event_date=event_date.isoformat(),
+                            conflicts_detected=len(conflicts)
+                        )
+
+        except Exception as conflict_e:
+            # Ne pas bloquer l'approbation si détection conflits échoue
+            logger.error(
+                "conflict_detection_after_event_failed",
+                event_id=event_id,
+                error=str(conflict_e),
+                exc_info=True
+            )
+
     except Exception as e:
         logger.error(
             "event_approve_failed",

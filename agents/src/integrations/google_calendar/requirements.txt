@@ -1,0 +1,13 @@
+# Google Calendar API dependencies
+# Story 7.2 - Sync Google Calendar Bidirectionnelle
+
+# Google Calendar API v3
+google-api-python-client==2.150.0
+
+# OAuth2 authentication
+google-auth-oauthlib==1.2.1
+google-auth-httplib2==0.2.0
+google-auth==2.35.0
+
+# Additional dependencies
+requests==2.32.3

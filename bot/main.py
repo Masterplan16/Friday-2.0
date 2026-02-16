@@ -20,7 +20,9 @@ from bot.config import ConfigurationError, load_bot_config, validate_bot_permiss
 from bot.handlers import (
     arborescence_commands,
     backup_commands,
+    casquette_commands,
     commands,
+    conflict_commands,
     draft_commands,
     email_status_commands,
     messages,
@@ -181,6 +183,12 @@ class FridayBot:
         # Story 3.2 - Commande /arbo (gestion arborescence)
         self.application.add_handler(CommandHandler("arbo", arborescence_commands.arbo_command))
 
+        # Story 7.3 - Commande /casquette (gestion contexte multi-casquettes)
+        self.application.add_handler(CommandHandler("casquette", casquette_commands.handle_casquette_command))
+
+        # Story 7.3 - Commande /conflits (dashboard conflits calendrier)
+        self.application.add_handler(CommandHandler("conflits", conflict_commands.handle_conflits_command))
+
         # Story 1.10 - Inline buttons callbacks (Approve/Reject/Correct)
         from bot.action_executor import ActionExecutor
         from bot.handlers.callbacks import register_callbacks_handlers
@@ -226,6 +234,23 @@ class FridayBot:
             from bot.handlers.classification_callbacks_register import register_classification_callbacks_handlers
             register_classification_callbacks_handlers(self.application, db_pool)
             logger.info("Story 3.2 classification callback handlers registered")
+
+            # Story 7.3 - Casquette callbacks (Médecin/Enseignant/Chercheur/Auto)
+            from bot.handlers.casquette_callbacks_register import register_casquette_callbacks_handlers
+            redis_client = getattr(self, "redis_client", None)
+            if redis_client:
+                register_casquette_callbacks_handlers(self.application, db_pool, redis_client)
+                logger.info("Story 7.3 casquette callback handlers registered")
+            else:
+                logger.warning("redis_client not available, casquette callback handlers not registered")
+
+            # Story 7.3 - Conflict callbacks (Cancel/Move/Ignore conflits calendrier)
+            from bot.handlers.conflict_callbacks_register import register_conflict_callbacks_handlers
+            if redis_client:
+                register_conflict_callbacks_handlers(self.application, db_pool, redis_client)
+                logger.info("Story 7.3 conflict callback handlers registered")
+            else:
+                logger.warning("redis_client not available, conflict callback handlers not registered")
         else:
             logger.warning("db_pool not available, callback handlers not registered")
 

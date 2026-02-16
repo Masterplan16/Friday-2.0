@@ -1,0 +1,20 @@
+# Calendar Sync Worker dependencies
+# Story 7.2 - Google Calendar Sync Daemon
+
+# Google Calendar API
+google-api-python-client==2.150.0
+google-auth-oauthlib==1.2.1
+google-auth-httplib2==0.2.0
+google-auth==2.35.0
+
+# Database & Cache
+asyncpg==0.30.0
+redis[hiredis]==5.2.1
+
+# Config & Validation
+pydantic==2.10.5
+pydantic-settings==2.7.1
+PyYAML==6.0.2
+
+# HTTP
+requests==2.32.3

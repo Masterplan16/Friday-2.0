@@ -200,7 +200,8 @@ def build_event_detection_prompt(
     email_text: str,
     current_date: str,
     current_time: str = "12:00:00",
-    timezone: str = "Europe/Paris"
+    timezone: str = "Europe/Paris",
+    current_casquette = None
 ) -> str:
     """
     Construit le prompt complet pour detection evenements
@@ -210,11 +211,13 @@ def build_event_detection_prompt(
         current_date: Date actuelle ISO 8601 (ex: "2026-02-10")
         current_time: Heure actuelle (ex: "14:30:00")
         timezone: Fuseau horaire (ex: "Europe/Paris")
+        current_casquette: Casquette actuelle du Mainteneur (Story 7.3 AC1)
 
     Returns:
         Prompt complet avec few-shot examples + user message
 
     Story 7.1 AC7: Injection 5 exemples few-shot
+    Story 7.3 Task 9.2: Injection contexte casquette (bias subtil)
     """
     # Construire section exemples few-shot
     examples_text = "Voici 5 exemples d'extraction d'evenements :\n\n"
@@ -225,13 +228,29 @@ def build_event_detection_prompt(
         examples_text += f"Email: \"{example['input']}\"\n"
         examples_text += f"JSON:\n```json\n{_format_json_example(example['output'])}\n```\n\n"
 
+    # Story 7.3 AC1: Hint contexte casquette actuel (bias subtil)
+    context_hint = ""
+    if current_casquette is not None:
+        from agents.src.core.models import (
+            Casquette,
+            CASQUETTE_LABEL_MAPPING,
+        )
+
+        label = CASQUETTE_LABEL_MAPPING.get(current_casquette, current_casquette.value)
+
+        context_hint = f"""
+**CONTEXTE ACTUEL**: Le Mainteneur est actuellement en casquette {label} (selon son planning).
+Si l'evenement semble lie a cette casquette, privilegie LEGEREMENT cette classification (mais reste objectif).
+
+"""
+
     # Construire user message
     user_message = f"""Contexte temporel:
 - Date actuelle: {current_date}
 - Heure actuelle: {current_time}
 - Fuseau horaire: {timezone}
 
-Email a analyser:
+{context_hint}Email a analyser:
 \"\"\"
 {email_text}
 \"\"\"

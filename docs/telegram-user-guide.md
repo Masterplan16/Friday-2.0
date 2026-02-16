@@ -626,7 +626,7 @@ Oui, vous pouvez reprogrammer votre rendez-vous pour la semaine prochaine.
 Merci de me confirmer vos disponibilités.
 
 Cordialement,
-Dr. Antonio Lopez
+Dr. [NOM]
 ---
 
 Voulez-vous envoyer ce brouillon ?
@@ -679,13 +679,13 @@ Voulez-vous envoyer ce brouillon ?
 **Scénario 1 : Email professionnel standard**
 
 ```
-Email reçu: "Bonjour Dr. Lopez, pouvez-vous me confirmer mon RDV du 15 février ?"
+Email reçu: "Bonjour Dr. [NOM], pouvez-vous me confirmer mon RDV du 15 février ?"
 
 Brouillon Friday:
 "Bonjour,
 Je confirme votre rendez-vous du 15 février à 14h30.
 Cordialement,
-Dr. Antonio Lopez"
+Dr. [NOM]"
 
 [✅ Approve] → Email envoyé en 2 secondes
 ```
@@ -693,13 +693,13 @@ Dr. Antonio Lopez"
 **Scénario 2 : Email académique**
 
 ```
-Email reçu: "Dear Professor Lopez, I would like to discuss my thesis progress..."
+Email reçu: "Dear Professor [NOM], I would like to discuss my thesis progress..."
 
 Brouillon Friday:
 "Dear [Student Name],
 I am available this Thursday at 3pm in my office.
 Best regards,
-Prof. Antonio Lopez"
+Prof. [NOM]"
 
 [✅ Approve] → Email envoyé
 ```
@@ -911,7 +911,7 @@ Bonjour,
 Voici ma réponse à votre question...
 
 Cordialement,
-Dr. Lopez
+Dr. [NOM]
 ---
 ```
 
@@ -1089,6 +1089,193 @@ Confiance : 94%
 - **Approuver** : Classification acceptee, document deplace
 - **Corriger** : Affiche liste categories, si finance alors sous-menu perimetres
 - **Rejeter** : Classification rejetee, document reste en transit
+
+---
+
+## Archiviste - Recherche Semantique (Story 3.3)
+
+### Commande `/search`
+
+Recherche semantique dans tous vos documents indexes via pgvector (embeddings Voyage AI voyage-4-large, 1024 dimensions).
+
+**Commandes disponibles :**
+
+```
+/search <query>                          Recherche semantique (top-5)
+/search <query> --category=finance       Filtrer par categorie
+/search <query> --after=2026-01-01       Documents apres date
+/search <query> --before=2026-12-31      Documents avant date
+```
+
+**Filtres combinables :**
+```
+/search facture plombier --category=finance --after=2026-01-01
+/search diabete SGLT2 --category=recherche
+/search contrat assurance --category=perso --before=2026-06-30
+```
+
+### Exemple `/search` :
+
+```
+/search facture plombier 2026
+
+Resultats pour: facture plombier 2026
+
+3 documents trouves
+
+1. 2026-01-15_Facture_Plombier_350EUR.pdf
+   Score: 95%
+   Categorie: finance
+   Facture plombier intervention urgente fuite tuyau cabinet...
+
+2. 2025-12-01_Facture_Plombier_Maison.pdf
+   Score: 87%
+   Categorie: perso
+   Facture plombier intervention maison personnelle fuite...
+
+3. 2026-02-05_Facture_Materiel_Medical.pdf
+   Score: 72%
+   Categorie: pro
+   Facture equipement medical tensiometre stethoscope...
+
+[Ouvrir] [Details]
+```
+
+### Boutons inline
+
+| Bouton | Action |
+|--------|--------|
+| **Ouvrir** | Ouvre le fichier (lien `file:///` vers chemin local) |
+| **Details** | Affiche metadonnees completes (nom, chemin, categorie, sous-categorie, confiance, date creation) |
+
+### Categories disponibles pour filtre `--category`
+
+| Categorie | Description |
+|-----------|-------------|
+| `pro` | Documents professionnels cabinet medical |
+| `finance` | Documents financiers (5 perimetres) |
+| `universite` | Documents universitaires enseignement |
+| `recherche` | Documents recherche scientifique |
+| `perso` | Documents personnels |
+
+### Desktop Search (D23)
+
+En complement de la recherche pgvector, Friday peut aussi chercher dans vos fichiers locaux via Claude Code CLI sur votre PC :
+
+- **Phase 1** : Claude CLI sur PC Mainteneur (disponibilite quand PC allume)
+- **Phase 2** : Migration vers NAS Synology DS725+ (disponibilite 24/7)
+
+Le Desktop Search est automatiquement utilise quand le PC est disponible. Si le PC est eteint, la recherche pgvector seule est utilisee (fallback transparent).
+
+### Performance
+
+- Latence recherche : < 2s pour top-5 sur 100k documents (AC6)
+- Latence embedding : < 1s par document
+- Index HNSW pgvector 0.8.0 (m=16, ef_construction=64)
+
+### Securite
+
+- Anonymisation Presidio AVANT envoi query a Voyage AI (RGPD)
+- Trust level : `auto` (recherche = lecture seule, pas de modification)
+- Resultats filtres par permissions utilisateur
+
+---
+
+## 📅 Google Calendar Sync (Story 7.2)
+
+### Qu'est-ce que c'est ?
+
+Friday synchronise automatiquement les événements entre votre base de connaissances PostgreSQL et **3 calendriers Google Calendar** correspondant à vos casquettes professionnelles :
+
+| Casquette | Calendrier | Couleur |
+|-----------|-----------|---------|
+| 🩺 Médecin | Calendrier principal (primary) | Rouge |
+| 👨‍🏫 Enseignant | Calendrier Enseignant | Vert |
+| 🔬 Chercheur | Calendrier Chercheur | Bleu |
+
+**Synchronisation bidirectionnelle** : Modifications dans Friday → Google Calendar et vice-versa (last-write-wins en cas de conflit).
+
+**Sync automatique** : Toutes les 30 minutes via daemon + backup quotidien 06:00 via n8n.
+
+---
+
+### Commandes disponibles
+
+#### `/calendar sync` — Forcer synchronisation manuelle
+
+**Usage** :
+```
+/calendar sync
+```
+
+**Réponse** :
+```
+⏳ Synchronisation Google Calendar en cours...
+
+✅ Synchronisation terminée
+Événements créés : 2
+Événements mis à jour : 1
+Prochaine sync automatique : 14:30
+```
+
+**Utilité** : Forcer la synchronisation avant une consultation urgente de votre calendrier Google.
+
+---
+
+### Notifications Telegram
+
+#### ✅ Événement ajouté à Google Calendar (Topic Actions)
+
+Après ajout d'un événement dans Friday, notification dans **Topic 🤖 Actions & Validations** :
+
+```
+✅ Événement ajouté à Google Calendar
+
+Titre : Consultation cardio
+📆 Date : Mardi 17 février 2026, 14h00-15h00
+📍 Lieu : Cabinet médical
+🎭 Casquette : Médecin
+
+🔗 Voir dans Google Calendar
+```
+
+#### 🔄 Modification détectée (Topic Email)
+
+Quand vous modifiez un événement dans Google Calendar web, notification dans **Topic 📬 Email & Communications** :
+
+```
+🔄 Événement modifié dans Google Calendar
+
+Modifications détectées :
+
+Heure :
+❌ Mardi 18 février 2026, 14h00-15h00
+✅ Mardi 18 février 2026, 15h00-16h00
+
+Lieu :
+❌ Salle A
+✅ Salle B
+
+🔗 Voir dans Google Calendar
+```
+
+---
+
+### Troubleshooting
+
+**❌ Sync échoue après 3 tentatives**
+
+Alerte dans **Topic 🚨 System & Alerts** :
+```
+🚨 Google Calendar sync: 3 échecs consécutifs
+Dernière erreur: 429 Rate Limit Exceeded
+Vérifiez les credentials OAuth2 et la config.
+```
+
+**Solutions** :
+1. Vérifier OAuth2 token valide : `docker logs friday-calendar-sync`
+2. Vérifier quota Google Calendar API : [Google Cloud Console](https://console.cloud.google.com/)
+3. Réduire fréquence sync : Modifier `sync_interval_minutes` dans `config/calendar_config.yaml`
 
 ---
 

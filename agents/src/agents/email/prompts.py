@@ -3,14 +3,17 @@ Prompt engineering pour classification d'emails (Story 2.2).
 
 Construction des prompts système et utilisateur pour Claude Sonnet 4.5,
 avec injection des correction_rules et contexte utilisateur.
+
+Story 7.3 Task 9.1: Injection contexte casquette actuel (bias subtil)
 """
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Sequence  # H4 fix: Add Sequence for immutability
+from typing import TYPE_CHECKING, Sequence, Optional  # H4 fix: Add Sequence for immutability
 
 if TYPE_CHECKING:
     from agents.src.middleware.models import CorrectionRule
+    from agents.src.core.models import Casquette
 
 
 # M3 fix: Configuration centralisée (éviter magic numbers)
@@ -39,6 +42,7 @@ CATEGORY_DESCRIPTIONS = {
 def build_classification_prompt(
     email_text: str,
     correction_rules: list[CorrectionRule] | None = None,
+    current_casquette: Optional["Casquette"] = None,
 ) -> tuple[str, str]:
     """
     Construit les prompts système et utilisateur pour classification email.
@@ -46,6 +50,7 @@ def build_classification_prompt(
     Args:
         email_text: Texte de l'email anonymisé (corps + métadonnées)
         correction_rules: Règles de correction à injecter (triées par priority ASC)
+        current_casquette: Casquette actuelle du Mainteneur (optionnel, Story 7.3 AC1)
 
     Returns:
         Tuple (system_prompt, user_prompt)
@@ -55,6 +60,9 @@ def build_classification_prompt(
         - User prompt : email à classifier
         - Température recommandée : 0.1 (classification déterministe)
         - Max tokens : 300 (catégorie + confidence + reasoning)
+        - Story 7.3 AC1: Si current_casquette fourni, hint subtil ajouté au prompt
+
+    Story 7.3 Task 9.1: Injection contexte casquette
     """
     # ===== SYSTEM PROMPT =====
 
@@ -65,6 +73,8 @@ def build_classification_prompt(
         "- Enseignant universitaire (faculté de médecine)\n"
         "- Directeur de thèses (doctorants)\n"
         "- Investisseur immobilier (SCIs)\n",
+        # Story 7.3 AC1: Injection contexte casquette actuel (bias subtil)
+        _format_context_hint(current_casquette),
         # Injection règles de correction (PRIORITAIRES)
         _format_correction_rules(correction_rules or []),
         # Catégories disponibles
@@ -107,6 +117,54 @@ def build_classification_prompt(
     )
 
     return (system_prompt, user_prompt)
+
+
+def _format_context_hint(current_casquette: Optional["Casquette"]) -> str:
+    """
+    Formate hint contexte casquette actuel pour injection dans prompt (Story 7.3 AC1).
+
+    Args:
+        current_casquette: Casquette actuelle du Mainteneur (optionnel)
+
+    Returns:
+        Bloc texte formaté avec hint contextuel (vide si None)
+
+    Notes:
+        - Hint SUBTIL : pas de biais systématique, juste une indication légère
+        - Exemple : Email @chu.fr + contexte=medecin → légère préférence "pro"
+        - Pas d'impact si email clairement d'une autre catégorie
+
+    Story 7.3 Task 9.1: Injection contexte casquette
+    """
+    if current_casquette is None:
+        return ""
+
+    # Import local pour éviter circular dependency
+    from agents.src.core.models import (
+        Casquette,
+        CASQUETTE_LABEL_MAPPING,
+    )
+
+    label = CASQUETTE_LABEL_MAPPING.get(current_casquette, current_casquette.value)
+
+    # Mapping casquette → catégorie email privilégiée
+    casquette_to_category_hint = {
+        Casquette.MEDECIN: "pro (professionnel médical)",
+        Casquette.ENSEIGNANT: "universite (enseignement)",
+        Casquette.CHERCHEUR: "recherche (académique)",
+    }
+
+    category_hint = casquette_to_category_hint.get(current_casquette, "")
+
+    if not category_hint:
+        return ""
+
+    return (
+        f"\n**CONTEXTE ACTUEL** : Le Mainteneur est actuellement en casquette {label} "
+        f"(selon son planning).\n"
+        f"Si l'email pourrait être lié à la catégorie {category_hint}, privilégie "
+        f"LÉGÈREMENT cette interprétation (mais pas systématiquement - reste objectif).\n\n"
+    )
 
 
 def _format_correction_rules(rules: Sequence[CorrectionRule]) -> str:  # H4 fix: Sequence for immutability

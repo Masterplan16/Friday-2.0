@@ -519,3 +519,54 @@ services:
       timeout: 10s
       start_period: 30s
       retries: 3
+
+  # ============================================
+  # Calendar Sync Worker - Google Calendar Bidirectionnel
+  # Story 7.2 - Sync automatique toutes les 30 min
+  # RAM: ~300 Mo
+  # ============================================
+  calendar-sync:
+    build:
+      context: ./services/calendar_sync
+      dockerfile: Dockerfile
+    container_name: friday-calendar-sync
+    restart: unless-stopped
+    environment:
+      # Database
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-friday}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-friday}
+
+      # Redis (partagé avec email processor pour simplifier ACL Day 1)
+      - REDIS_URL=redis://friday_email:${REDIS_EMAIL_PASSWORD}@redis:6379/0
+
+      # Calendar configuration
+      - CALENDAR_CONFIG_PATH=/app/config/calendar_config.yaml
+
+      # Google OAuth2 credentials
+      - GOOGLE_CALENDAR_TOKEN_PATH=/app/config/google_token.json
+      - GOOGLE_CALENDAR_TOKEN_ENC_PATH=/app/config/google_token.json.enc
+      - GOOGLE_CLIENT_SECRET_PATH=/app/config/google_client_secret.json
+
+      # Logging
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    volumes:
+      - ./config:/app/config:ro  # Read-only access to config files
+    networks:
+      friday-network:
+        ipv4_address: 172.20.0.27
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 500M
+        reservations:
+          memory: 300M
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import redis, os; r = redis.from_url(os.getenv('REDIS_URL')); assert r.get('calendar:last_sync')\""]
+      interval: 5m
+      timeout: 10s
+      start_period: 2m
+      retries: 3

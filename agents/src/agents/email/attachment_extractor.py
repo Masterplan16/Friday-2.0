@@ -81,16 +81,16 @@ def sanitize_filename(filename: str, max_length: int = MAX_FILENAME_LENGTH) -> s
         return "unnamed_file"
 
     # 1. Normalisation Unicode (NFD → supprimer accents)
-    filename = unicodedata.normalize('NFKD', filename).encode('ASCII', 'ignore').decode('ASCII')
+    filename = unicodedata.normalize("NFKD", filename).encode("ASCII", "ignore").decode("ASCII")
 
     # 2. Suppression caractères dangereux (garde alphanum + _ - . espaces)
-    filename = re.sub(r'[^\w\s\-\.]', '_', filename)
+    filename = re.sub(r"[^\w\s\-\.]", "_", filename)
 
     # 3. Normalisation espaces multiples → underscore unique
-    filename = re.sub(r'\s+', '_', filename)
+    filename = re.sub(r"\s+", "_", filename)
 
     # 4. Suppression underscores multiples consécutifs
-    filename = re.sub(r'_+', '_', filename)
+    filename = re.sub(r"_+", "_", filename)
 
     # 5. Extensions lowercase
     name, ext = os.path.splitext(filename)
@@ -100,11 +100,11 @@ def sanitize_filename(filename: str, max_length: int = MAX_FILENAME_LENGTH) -> s
     # 6. Limite longueur (conserver extension)
     if len(filename) > max_length:
         name, ext = os.path.splitext(filename)
-        name = name[:max_length - len(ext)]
+        name = name[: max_length - len(ext)]
         filename = f"{name}{ext}"
 
     # 7. Suppression . _ - en début/fin
-    filename = filename.strip('._- ')
+    filename = filename.strip("._- ")
 
     # 8. Fallback si vide après sanitization
     if not filename:
@@ -115,11 +115,7 @@ def sanitize_filename(filename: str, max_length: int = MAX_FILENAME_LENGTH) -> s
 
 @friday_action(module="email", action="extract_attachments", trust_default="auto")
 async def extract_attachments(
-    email_id: str,
-    db_pool: asyncpg.Pool,
-    emailengine_client: Any,
-    redis_client: Any,
-    **kwargs
+    email_id: str, db_pool: asyncpg.Pool, emailengine_client: Any, redis_client: Any, **kwargs
 ) -> AttachmentExtractResult:
     """
     Extrait pièces jointes d'un email via adapter IMAP (D25).
@@ -160,16 +156,13 @@ async def extract_attachments(
         log.error("email_adapter_get_message_failed", error=str(e))
         raise
 
-    attachments = email_data.get('attachments', [])
+    attachments = email_data.get("attachments", [])
     attachments_total = len(attachments)
 
     if attachments_total == 0:
         log.info("no_attachments_found")
         result = AttachmentExtractResult(
-            extracted_count=0,
-            failed_count=0,
-            total_size_mb=0.0,
-            filepaths=[]
+            extracted_count=0, failed_count=0, total_size_mb=0.0, filepaths=[]
         )
         result.generate_summaries(email_id=email_id, attachments_total=0)
         return result
@@ -182,33 +175,26 @@ async def extract_attachments(
     filepaths = []
 
     # Créer répertoire zone transit (date du jour)
-    date_dir = datetime.now().strftime('%Y-%m-%d')
+    date_dir = datetime.now().strftime("%Y-%m-%d")
     transit_dir = Path(TRANSIT_BASE_DIR) / date_dir
     transit_dir.mkdir(parents=True, exist_ok=True)
 
     # 2. Pour chaque attachment
     for idx, attachment in enumerate(attachments):
-        attachment_id = attachment.get('id')
-        mime_type = attachment.get('content_type', '').lower()
-        size = attachment.get('size', 0)
-        original_filename = attachment.get('filename', f'attachment_{idx}')
+        attachment_id = attachment.get("id")
+        mime_type = attachment.get("content_type", "").lower()
+        size = attachment.get("size", 0)
+        original_filename = attachment.get("filename", f"attachment_{idx}")
 
         log_ctx = log.bind(
-            attachment_id=attachment_id,
-            mime_type=mime_type,
-            size=size,
-            filename=original_filename
+            attachment_id=attachment_id, mime_type=mime_type, size=size, filename=original_filename
         )
 
         # Validation MIME type
         is_valid, reason = validate_mime_type(mime_type)
 
         if not is_valid:
-            log_ctx.warning(
-                "attachment_mime_rejected",
-                reason=reason,
-                mime_type=mime_type
-            )
+            log_ctx.warning("attachment_mime_rejected", reason=reason, mime_type=mime_type)
             failed_count += 1
             continue
 
@@ -242,10 +228,7 @@ async def extract_attachments(
 
         # Téléchargement via email adapter (D25: IMAP FETCH)
         try:
-            file_content = await emailengine_client.download_attachment(
-                email_id,
-                attachment_id
-            )
+            file_content = await emailengine_client.download_attachment(email_id, attachment_id)
         except Exception as e:
             log_ctx.error("attachment_download_failed", error=str(e))
             failed_count += 1
@@ -257,14 +240,10 @@ async def extract_attachments(
 
         # Stockage fichier zone transit
         try:
-            async with aiofiles.open(filepath, 'wb') as f:
+            async with aiofiles.open(filepath, "wb") as f:
                 await f.write(file_content)
 
-            log_ctx.info(
-                "attachment_saved_transit",
-                filepath=filepath.as_posix(),
-                size_bytes=size
-            )
+            log_ctx.info("attachment_saved_transit", filepath=filepath.as_posix(), size_bytes=size)
         except Exception as e:
             log_ctx.error("attachment_save_failed", error=str(e), filepath=filepath.as_posix())
             failed_count += 1
@@ -285,13 +264,10 @@ async def extract_attachments(
                 original_filename,  # Nom original (pas sanitisé) pour traçabilité
                 filepath.as_posix(),
                 size,
-                mime_type
+                mime_type,
             )
 
-            log_ctx.info(
-                "attachment_metadata_inserted",
-                attachment_uuid=str(attachment_uuid)
-            )
+            log_ctx.info("attachment_metadata_inserted", attachment_uuid=str(attachment_uuid))
         except Exception as e:
             log_ctx.error("attachment_db_insert_failed", error=str(e))
             # Supprimer fichier si INSERT échoue (cleanup)
@@ -311,7 +287,7 @@ async def extract_attachments(
                 filepath=filepath.as_posix(),
                 mime_type=mime_type,
                 size_bytes=size,
-                redis_client=redis_client
+                redis_client=redis_client,
             )
 
             log_ctx.info("document_received_event_published")
@@ -328,8 +304,7 @@ async def extract_attachments(
     if extracted_count > 0:
         try:
             await db_pool.execute(
-                "UPDATE ingestion.emails SET has_attachments=TRUE WHERE id=$1",
-                uuid.UUID(email_id)
+                "UPDATE ingestion.emails SET has_attachments=TRUE WHERE id=$1", uuid.UUID(email_id)
             )
 
             log.info("email_has_attachments_updated", extracted_count=extracted_count)
@@ -343,19 +318,16 @@ async def extract_attachments(
         extracted_count=extracted_count,
         failed_count=failed_count,
         total_size_mb=total_size_mb,
-        filepaths=filepaths
+        filepaths=filepaths,
     )
 
-    result.generate_summaries(
-        email_id=email_id,
-        attachments_total=attachments_total
-    )
+    result.generate_summaries(email_id=email_id, attachments_total=attachments_total)
 
     log.info(
         "attachment_extraction_complete",
         extracted=extracted_count,
         failed=failed_count,
-        total_size_mb=total_size_mb
+        total_size_mb=total_size_mb,
     )
 
     return result
@@ -365,7 +337,7 @@ async def extract_attachments(
     stop=stop_after_attempt(3),  # 1 original + 2 retries
     wait=wait_exponential(multiplier=1, min=1, max=2),  # Backoff: 1s, 2s
     retry=retry_if_exception_type(Exception),
-    reraise=True
+    reraise=True,
 )
 async def _publish_document_received(
     attachment_id: str,
@@ -374,7 +346,7 @@ async def _publish_document_received(
     filepath: str,
     mime_type: str,
     size_bytes: int,
-    redis_client: Any
+    redis_client: Any,
 ) -> None:
     """
     Publie événement document.received dans Redis Streams avec retry logic.
@@ -401,24 +373,18 @@ async def _publish_document_received(
         Exception si publication échoue après 3 tentatives
     """
     event_payload = {
-        'attachment_id': attachment_id,
-        'email_id': email_id,
-        'filename': filename,
-        'filepath': filepath,
-        'mime_type': mime_type,
-        'size_bytes': str(size_bytes),  # Redis Streams stocke strings
-        'source': 'email'
+        "attachment_id": attachment_id,
+        "email_id": email_id,
+        "filename": filename,
+        "filepath": filepath,
+        "mime_type": mime_type,
+        "size_bytes": str(size_bytes),  # Redis Streams stocke strings
+        "source": "email",
     }
 
     # Publier dans Redis Streams avec maxlen (rétention 10k events)
-    await redis_client.xadd(
-        'document.received',
-        event_payload,
-        maxlen=10000
-    )
+    await redis_client.xadd("document.received", event_payload, maxlen=10000)
 
     logger.info(
-        "document_received_published",
-        attachment_id=attachment_id,
-        stream='document.received'
+        "document_received_published", attachment_id=attachment_id, stream="document.received"
     )

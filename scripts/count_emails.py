@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Count emails per account for a date range."""
+
 import asyncio, os, ssl, aioimaplib
+
 
 async def main():
     accounts = []
@@ -13,13 +15,15 @@ async def main():
                 continue
             seen.add(account_id)
             prefix = "IMAP_ACCOUNT_" + raw_id
-            accounts.append({
-                "account_id": account_id,
-                "imap_host": os.getenv(prefix + "_IMAP_HOST", ""),
-                "imap_port": int(os.getenv(prefix + "_IMAP_PORT", "993")),
-                "imap_user": os.getenv(prefix + "_IMAP_USER", value),
-                "imap_password": os.getenv(prefix + "_IMAP_PASSWORD", ""),
-            })
+            accounts.append(
+                {
+                    "account_id": account_id,
+                    "imap_host": os.getenv(prefix + "_IMAP_HOST", ""),
+                    "imap_port": int(os.getenv(prefix + "_IMAP_PORT", "993")),
+                    "imap_user": os.getenv(prefix + "_IMAP_USER", value),
+                    "imap_password": os.getenv(prefix + "_IMAP_PASSWORD", ""),
+                }
+            )
 
     total = 0
     for acc in accounts:
@@ -49,5 +53,6 @@ async def main():
         except Exception as e:
             print(f"{acc['account_id']}: ERROR {e}")
     print(f"TOTAL: {total}")
+
 
 asyncio.run(main())

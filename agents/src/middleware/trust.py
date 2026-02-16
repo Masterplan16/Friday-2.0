@@ -214,7 +214,9 @@ class TrustManager:
                 receipt_data["output_summary"],
                 receipt_data["confidence"],
                 receipt_data["reasoning"],
-                json.dumps(receipt_data["payload"]),  # Serialize dict to JSON string for JSONB column
+                json.dumps(
+                    receipt_data["payload"]
+                ),  # Serialize dict to JSON string for JSONB column
                 receipt_data["duration_ms"],
                 receipt_data["trust_level"],
                 receipt_data["status"],

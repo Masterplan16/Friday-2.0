@@ -121,8 +121,6 @@ if __name__ == "__main__":
         print("ALL ACCOUNTS VALID - Ready for Phase B")
         sys.exit(0)
     else:
-        failed = [
-            ACCOUNTS[i]["name"] for i, ok in enumerate(results) if not ok
-        ]
+        failed = [ACCOUNTS[i]["name"] for i, ok in enumerate(results) if not ok]
         print(f"FAILED: {', '.join(failed)} - Fix before continuing")
         sys.exit(1)

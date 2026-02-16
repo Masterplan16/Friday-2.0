@@ -21,7 +21,7 @@ async def send_draft_ready_notification(
     subject_anon: str,
     draft_body: str,
     supergroup_id: int,
-    topic_actions_id: int
+    topic_actions_id: int,
 ) -> None:
     """
     Notifier brouillon email prêt avec inline buttons validation
@@ -73,13 +73,15 @@ Voulez-vous envoyer ce brouillon ?
 """
 
     # Inline keyboard avec 3 boutons
-    keyboard = InlineKeyboardMarkup([
+    keyboard = InlineKeyboardMarkup(
         [
-            InlineKeyboardButton("✅ Approve", callback_data=f"approve_{receipt_id}"),
-            InlineKeyboardButton("❌ Reject", callback_data=f"reject_{receipt_id}"),
-            InlineKeyboardButton("✏️ Edit", callback_data=f"edit_{receipt_id}")
+            [
+                InlineKeyboardButton("✅ Approve", callback_data=f"approve_{receipt_id}"),
+                InlineKeyboardButton("❌ Reject", callback_data=f"reject_{receipt_id}"),
+                InlineKeyboardButton("✏️ Edit", callback_data=f"edit_{receipt_id}"),
+            ]
         ]
-    ])
+    )
 
     try:
         # Envoyer dans topic Actions & Validations
@@ -88,31 +90,22 @@ Voulez-vous envoyer ce brouillon ?
             message_thread_id=topic_actions_id,
             text=message_text,
             parse_mode="Markdown",
-            reply_markup=keyboard
+            reply_markup=keyboard,
         )
 
         logger.info(
-            "draft_ready_notification_sent",
-            receipt_id=receipt_id,
-            topic_id=topic_actions_id
+            "draft_ready_notification_sent", receipt_id=receipt_id, topic_id=topic_actions_id
         )
 
     except Exception as e:
         logger.error(
-            "draft_ready_notification_failed",
-            receipt_id=receipt_id,
-            error=str(e),
-            exc_info=True
+            "draft_ready_notification_failed", receipt_id=receipt_id, error=str(e), exc_info=True
         )
         raise
 
 
 async def send_draft_sent_confirmation(
-    bot: Bot,
-    receipt_id: str,
-    subject_anon: str,
-    supergroup_id: int,
-    topic_email_id: int
+    bot: Bot, receipt_id: str, subject_anon: str, supergroup_id: int, topic_email_id: int
 ) -> None:
     """
     Notifier email envoyé après validation Approve
@@ -149,21 +142,14 @@ Le brouillon a été approuvé et envoyé avec succès.
             chat_id=supergroup_id,
             message_thread_id=topic_email_id,
             text=message_text,
-            parse_mode="Markdown"
+            parse_mode="Markdown",
         )
 
-        logger.info(
-            "draft_sent_confirmation_sent",
-            receipt_id=receipt_id,
-            topic_id=topic_email_id
-        )
+        logger.info("draft_sent_confirmation_sent", receipt_id=receipt_id, topic_id=topic_email_id)
 
     except Exception as e:
         logger.error(
-            "draft_sent_confirmation_failed",
-            receipt_id=receipt_id,
-            error=str(e),
-            exc_info=True
+            "draft_sent_confirmation_failed", receipt_id=receipt_id, error=str(e), exc_info=True
         )
         # Ne pas raise - notification confirmation n'est pas critique
 
@@ -172,13 +158,9 @@ Le brouillon a été approuvé et envoyé avec succès.
 # Story 2.6 - Nouvelles fonctions de notification
 # =============================================================================
 
+
 async def send_email_confirmation_notification(
-    bot: Bot,
-    receipt_id: str,
-    recipient_anon: str,
-    subject_anon: str,
-    account_name: str,
-    sent_at
+    bot: Bot, receipt_id: str, recipient_anon: str, subject_anon: str, account_name: str, sent_at
 ) -> None:
     """
     Notifier envoi email réussi dans topic Email & Communications
@@ -212,7 +194,7 @@ async def send_email_confirmation_notification(
     topic_email_id = int(os.getenv("TOPIC_EMAIL_ID", "12346"))
 
     # Format timestamp
-    timestamp_str = sent_at.strftime('%Y-%m-%d %H:%M:%S')
+    timestamp_str = sent_at.strftime("%Y-%m-%d %H:%M:%S")
 
     # Format message conforme AC3
     message_text = f"""✅ Email envoyé avec succès
@@ -225,12 +207,9 @@ Sujet: Re: {subject_anon}
 """
 
     # Inline button optionnel [Voir dans /journal]
-    keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton(
-            "📋 Voir dans /journal",
-            callback_data=f"receipt_{receipt_id}"
-        )]
-    ])
+    keyboard = InlineKeyboardMarkup(
+        [[InlineKeyboardButton("📋 Voir dans /journal", callback_data=f"receipt_{receipt_id}")]]
+    )
 
     try:
         await bot.send_message(
@@ -238,31 +217,22 @@ Sujet: Re: {subject_anon}
             message_thread_id=topic_email_id,
             text=message_text,
             parse_mode="Markdown",
-            reply_markup=keyboard
+            reply_markup=keyboard,
         )
 
-        logger.info(
-            "email_confirmation_notification_sent",
-            receipt_id=receipt_id,
-            topic="Email"
-        )
+        logger.info("email_confirmation_notification_sent", receipt_id=receipt_id, topic="Email")
 
     except Exception as e:
         # Échec notification ne bloque pas workflow (AC3)
         logger.warning(
-            "email_confirmation_notification_failed",
-            receipt_id=receipt_id,
-            error=str(e)
+            "email_confirmation_notification_failed", receipt_id=receipt_id, error=str(e)
         )
         # Ne PAS raise - notification = best effort
         pass  # Explicite: ne rien faire, continuer
 
 
 async def send_email_failure_notification(
-    bot: Bot,
-    receipt_id: str,
-    error_message: str,
-    recipient_anon: str
+    bot: Bot, receipt_id: str, error_message: str, recipient_anon: str
 ) -> None:
     """
     Notifier échec envoi email dans topic System & Alerts
@@ -308,20 +278,12 @@ Receipt ID: {receipt_id}
             chat_id=supergroup_id,
             message_thread_id=topic_system_id,
             text=message_text,
-            parse_mode="Markdown"
+            parse_mode="Markdown",
         )
 
-        logger.error(
-            "email_failure_notification_sent",
-            receipt_id=receipt_id,
-            topic="System"
-        )
+        logger.error("email_failure_notification_sent", receipt_id=receipt_id, topic="System")
 
     except Exception as e:
         # Log error mais ne raise pas (notification = best effort)
-        logger.error(
-            "email_failure_notification_failed",
-            receipt_id=receipt_id,
-            error=str(e)
-        )
+        logger.error("email_failure_notification_failed", receipt_id=receipt_id, error=str(e))
         pass  # Explicite: ne rien faire, continuer

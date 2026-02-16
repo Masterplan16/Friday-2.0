@@ -6,6 +6,7 @@ Définit les structures de données pour :
 - MetadataExtraction : Métadonnées extraites par Claude
 - RenameResult : Résultat du renommage intelligent
 """
+
 from datetime import datetime
 from typing import Optional
 from pydantic import BaseModel, Field, field_validator
@@ -22,19 +23,13 @@ class OCRResult(BaseModel):
         language: Langue détectée (ex: 'fr', 'en')
         processing_time: Durée du traitement OCR en secondes
     """
+
     text: str = Field(..., description="Texte OCR extrait")
-    confidence: float = Field(
-        ...,
-        ge=0.0,
-        le=1.0,
-        description="Score de confiance moyen de l'OCR"
-    )
+    confidence: float = Field(..., ge=0.0, le=1.0, description="Score de confiance moyen de l'OCR")
     page_count: int = Field(..., ge=1, description="Nombre de pages OCR")
     language: str = Field(default="fr", description="Langue détectée")
     processing_time: float = Field(
-        default=0.0,
-        ge=0.0,
-        description="Durée traitement OCR (secondes)"
+        default=0.0, ge=0.0, description="Durée traitement OCR (secondes)"
     )
 
     @field_validator("text")
@@ -60,10 +55,10 @@ class MetadataExtraction(BaseModel):
         confidence: Score de confiance de l'extraction (0.0-1.0)
         reasoning: Explication de la décision d'extraction
     """
+
     date: datetime = Field(..., description="Date du document")
     doc_type: str = Field(
-        ...,
-        description="Type: Facture, Courrier, Garantie, Contrat, Releve, Attestation, Inconnu"
+        ..., description="Type: Facture, Courrier, Garantie, Contrat, Releve, Attestation, Inconnu"
     )
     emitter: str = Field(..., description="Émetteur du document")
     amount: float = Field(default=0.0, ge=0.0, description="Montant en EUR")
@@ -75,8 +70,13 @@ class MetadataExtraction(BaseModel):
     def validate_doc_type(cls, v):
         """Valider que le type de document est dans la liste autorisée."""
         allowed_types = {
-            "Facture", "Courrier", "Garantie", "Contrat",
-            "Releve", "Attestation", "Inconnu"
+            "Facture",
+            "Courrier",
+            "Garantie",
+            "Contrat",
+            "Releve",
+            "Attestation",
+            "Inconnu",
         }
         if v not in allowed_types:
             # Fallback vers "Inconnu" si type non reconnu
@@ -103,6 +103,7 @@ class RenameResult(BaseModel):
         confidence: Confiance globale du renommage (min des confidences OCR + extraction)
         reasoning: Explication de la décision de renommage
     """
+
     original_filename: str = Field(..., description="Nom fichier original")
     new_filename: str = Field(..., description="Nouveau nom standardisé")
     metadata: MetadataExtraction = Field(..., description="Métadonnées utilisées")
@@ -121,7 +122,7 @@ class RenameResult(BaseModel):
             raise ValueError("New filename cannot be empty")
 
         # Vérifier présence d'une extension
-        if '.' not in v:
+        if "." not in v:
             raise ValueError("New filename must have an extension")
 
         return v
@@ -139,28 +140,15 @@ class ClassificationResult(BaseModel):
         reasoning: Explication de la classification
     """
 
-    category: str = Field(
-        ...,
-        description="Catégorie principale du document"
-    )
+    category: str = Field(..., description="Catégorie principale du document")
     subcategory: Optional[str] = Field(
-        None,
-        description="Sous-catégorie (obligatoire si category=finance)"
+        None, description="Sous-catégorie (obligatoire si category=finance)"
     )
-    path: str = Field(
-        ...,
-        description="Chemin relatif dans l'arborescence finale"
-    )
+    path: str = Field(..., description="Chemin relatif dans l'arborescence finale")
     confidence: float = Field(
-        ...,
-        ge=0.0,
-        le=1.0,
-        description="Score de confiance de la classification"
+        ..., ge=0.0, le=1.0, description="Score de confiance de la classification"
     )
-    reasoning: str = Field(
-        ...,
-        description="Explication textuelle de la décision"
-    )
+    reasoning: str = Field(..., description="Explication textuelle de la décision")
 
     @field_validator("category")
     @classmethod
@@ -168,9 +156,7 @@ class ClassificationResult(BaseModel):
         """Valide que la catégorie est dans la liste autorisée."""
         valid_categories = {"pro", "finance", "universite", "recherche", "perso"}
         if v not in valid_categories:
-            raise ValueError(
-                f"Invalid category '{v}'. Must be one of: {valid_categories}"
-            )
+            raise ValueError(f"Invalid category '{v}'. Must be one of: {valid_categories}")
         return v
 
     @field_validator("subcategory")
@@ -182,13 +168,7 @@ class ClassificationResult(BaseModel):
             if v is None:
                 raise ValueError("Finance category requires subcategory")
 
-            valid_finance_perimeters = {
-                "selarl",
-                "scm",
-                "sci_ravas",
-                "sci_malbosc",
-                "personal"
-            }
+            valid_finance_perimeters = {"selarl", "scm", "sci_ravas", "sci_malbosc", "personal"}
 
             if v not in valid_finance_perimeters:
                 raise ValueError(

@@ -50,13 +50,7 @@ class CheckRegistry:
             logger.info("CheckRegistry singleton initialized")
         return cls._instance
 
-    def register_check(
-        self,
-        check_id: str,
-        priority: str,
-        description: str,
-        execute_fn
-    ) -> None:
+    def register_check(self, check_id: str, priority: str, description: str, execute_fn) -> None:
         """
         Enregistre un check dans le registry (Task 2.2).
 
@@ -73,19 +67,13 @@ class CheckRegistry:
             raise ValueError(f"Check '{check_id}' is already registered")
 
         check = Check(
-            check_id=check_id,
-            priority=priority,
-            description=description,
-            execute_fn=execute_fn
+            check_id=check_id, priority=priority, description=description, execute_fn=execute_fn
         )
 
         self._checks[check_id] = check
 
         logger.info(
-            "Check registered",
-            check_id=check_id,
-            priority=priority,
-            total_checks=len(self._checks)
+            "Check registered", check_id=check_id, priority=priority, total_checks=len(self._checks)
         )
 
     def get_check(self, check_id: str) -> Optional[Check]:
@@ -110,10 +98,7 @@ class CheckRegistry:
         Returns:
             Liste checks de cette priorité
         """
-        return [
-            check for check in self._checks.values()
-            if check.priority == priority
-        ]
+        return [check for check in self._checks.values() if check.priority == priority]
 
     def get_all_checks(self) -> List[Check]:
         """
@@ -137,6 +122,7 @@ class CheckRegistry:
 # ============================================================================
 # Helper Functions
 # ============================================================================
+
 
 def get_check_registry() -> CheckRegistry:
     """

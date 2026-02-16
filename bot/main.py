@@ -188,29 +188,47 @@ class FridayBot:
         self.application.add_handler(CommandHandler("vip", vip_commands.vip_command_router))
 
         # Commandes Story 2.8 - Sender Filter Management
-        self.application.add_handler(CommandHandler("blacklist", sender_filter_commands.blacklist_command))
-        self.application.add_handler(CommandHandler("whitelist", sender_filter_commands.whitelist_command))
-        self.application.add_handler(CommandHandler("filters", sender_filter_commands.filters_command))
+        self.application.add_handler(
+            CommandHandler("blacklist", sender_filter_commands.blacklist_command)
+        )
+        self.application.add_handler(
+            CommandHandler("whitelist", sender_filter_commands.whitelist_command)
+        )
+        self.application.add_handler(
+            CommandHandler("filters", sender_filter_commands.filters_command)
+        )
 
         # Commandes Phase A.0 - Pipeline Control & Kill Switch
         self.application.add_handler(CommandHandler("pipeline", pipeline_control.pipeline_command))
 
         # Commande Email Pipeline Status Monitoring
-        self.application.add_handler(CommandHandler("email_status", email_status_commands.email_status_command))
+        self.application.add_handler(
+            CommandHandler("email_status", email_status_commands.email_status_command)
+        )
 
         # Story 3.2 - Commande /arbo (gestion arborescence)
         self.application.add_handler(CommandHandler("arbo", arborescence_commands.arbo_command))
 
         # Story 7.3 - Commande /casquette (gestion contexte multi-casquettes)
-        self.application.add_handler(CommandHandler("casquette", casquette_commands.handle_casquette_command))
+        self.application.add_handler(
+            CommandHandler("casquette", casquette_commands.handle_casquette_command)
+        )
 
         # Story 7.3 - Commande /conflits (dashboard conflits calendrier)
-        self.application.add_handler(CommandHandler("conflits", conflict_commands.handle_conflits_command))
+        self.application.add_handler(
+            CommandHandler("conflits", conflict_commands.handle_conflits_command)
+        )
 
         # Story 3.4 - Commandes /warranties, /warranty_expiring, /warranty_stats
-        self.application.add_handler(CommandHandler("warranties", warranty_commands.warranties_command))
-        self.application.add_handler(CommandHandler("warranty_expiring", warranty_commands.warranty_expiring_command))
-        self.application.add_handler(CommandHandler("warranty_stats", warranty_commands.warranty_stats_command))
+        self.application.add_handler(
+            CommandHandler("warranties", warranty_commands.warranties_command)
+        )
+        self.application.add_handler(
+            CommandHandler("warranty_expiring", warranty_commands.warranty_expiring_command)
+        )
+        self.application.add_handler(
+            CommandHandler("warranty_stats", warranty_commands.warranty_stats_command)
+        )
 
         # Story 1.10 - Inline buttons callbacks (Approve/Reject/Correct)
         from bot.action_executor import ActionExecutor
@@ -230,19 +248,21 @@ class FridayBot:
 
             async def draft_reply_action(**kwargs):
                 """Wrapper pour send_email_via_emailengine (Story 2.5 AC5 + Story 2.6 notifications)"""
-                receipt_id = kwargs.get('receipt_id')
+                receipt_id = kwargs.get("receipt_id")
                 if not receipt_id:
                     raise ValueError("receipt_id manquant dans payload")
 
                 result = await send_email_via_emailengine(
                     receipt_id=receipt_id,
                     db_pool=db_pool,
-                    bot=self.application.bot  # Story 2.6: Passer bot pour notifications
+                    bot=self.application.bot,  # Story 2.6: Passer bot pour notifications
                 )
                 return result
 
             action_executor.register_action("email.draft_reply", draft_reply_action)
-            logger.info("Action email.draft_reply registered in ActionExecutor (with notifications support)")
+            logger.info(
+                "Action email.draft_reply registered in ActionExecutor (with notifications support)"
+            )
 
             register_callbacks_handlers(self.application, db_pool, action_executor=action_executor)
             register_corrections_handlers(self.application, db_pool)
@@ -250,34 +270,49 @@ class FridayBot:
 
             # Story 7.1 - Event callbacks (AC3)
             from bot.handlers.event_callbacks_register import register_event_callbacks_handlers
+
             register_event_callbacks_handlers(self.application, db_pool)
             logger.info("Story 7.1 event callback handlers registered")
 
             # Story 3.2 - Classification callbacks (Approve/Correct/Reject)
-            from bot.handlers.classification_callbacks_register import register_classification_callbacks_handlers
+            from bot.handlers.classification_callbacks_register import (
+                register_classification_callbacks_handlers,
+            )
+
             register_classification_callbacks_handlers(self.application, db_pool)
             logger.info("Story 3.2 classification callback handlers registered")
 
             # Story 3.4 - Warranty callbacks (Confirm/Edit/Delete)
             from bot.handlers.warranty_callbacks import register_warranty_callbacks_handlers
+
             register_warranty_callbacks_handlers(self.application, db_pool)
             logger.info("Story 3.4 warranty callback handlers registered")
 
             # Story 7.3 - Casquette callbacks (Médecin/Enseignant/Chercheur/Auto)
-            from bot.handlers.casquette_callbacks_register import register_casquette_callbacks_handlers
+            from bot.handlers.casquette_callbacks_register import (
+                register_casquette_callbacks_handlers,
+            )
+
             if self.redis_client:
                 register_casquette_callbacks_handlers(self.application, db_pool, self.redis_client)
                 logger.info("Story 7.3 casquette callback handlers registered")
             else:
-                logger.warning("redis_client not available, casquette callback handlers not registered")
+                logger.warning(
+                    "redis_client not available, casquette callback handlers not registered"
+                )
 
             # Story 7.3 - Conflict callbacks (Cancel/Move/Ignore conflits calendrier)
-            from bot.handlers.conflict_callbacks_register import register_conflict_callbacks_handlers
+            from bot.handlers.conflict_callbacks_register import (
+                register_conflict_callbacks_handlers,
+            )
+
             if self.redis_client:
                 register_conflict_callbacks_handlers(self.application, db_pool, self.redis_client)
                 logger.info("Story 7.3 conflict callback handlers registered")
             else:
-                logger.warning("redis_client not available, conflict callback handlers not registered")
+                logger.warning(
+                    "redis_client not available, conflict callback handlers not registered"
+                )
         else:
             logger.warning("db_pool not available, callback handlers not registered")
 
@@ -287,9 +322,7 @@ class FridayBot:
         self.application.add_handler(
             MessageHandler(filters.Document.ALL, file_handlers.handle_document)
         )
-        self.application.add_handler(
-            MessageHandler(filters.PHOTO, file_handlers.handle_photo)
-        )
+        self.application.add_handler(MessageHandler(filters.PHOTO, file_handlers.handle_photo))
         logger.info("Story 3.6 file upload handlers registered (Document + Photo)")
 
         # Story 3.6 - File Send Command (Intent Detection)
@@ -369,7 +402,10 @@ class FridayBot:
 
         Vérifie l'état de tous les services et envoie des alertes si problème.
         """
-        from services.email_healthcheck.monitor import check_email_pipeline_health, format_status_message
+        from services.email_healthcheck.monitor import (
+            check_email_pipeline_health,
+            format_status_message,
+        )
 
         # Attendre 30s avant le premier check (laisser le temps aux services de démarrer)
         await asyncio.sleep(30)
@@ -386,7 +422,9 @@ class FridayBot:
                 )
 
                 # Envoyer alerte si problème ou changement de statut
-                if health.overall_status != "healthy" or (status_changed and health.overall_status == "healthy"):
+                if health.overall_status != "healthy" or (
+                    status_changed and health.overall_status == "healthy"
+                ):
                     # Format message
                     message = format_status_message(health)
 
@@ -400,17 +438,17 @@ class FridayBot:
                                 chat_id=supergroup_id,
                                 message_thread_id=system_topic_id,
                                 text=message,
-                                parse_mode="Markdown"
+                                parse_mode="Markdown",
                             )
                             logger.info(
                                 "Email pipeline status sent to Telegram",
                                 status=health.overall_status,
-                                alerts_count=len(health.alerts)
+                                alerts_count=len(health.alerts),
                             )
                         except Exception as send_err:
                             logger.error(
                                 "Failed to send email pipeline alert to Telegram",
-                                error=str(send_err)
+                                error=str(send_err),
                             )
 
                 # Mettre à jour last status
@@ -420,11 +458,13 @@ class FridayBot:
                 logger.debug(
                     "Email pipeline monitoring check",
                     status=health.overall_status,
-                    alerts=len(health.alerts)
+                    alerts=len(health.alerts),
                 )
 
             except Exception as e:
-                logger.error("Email monitoring loop error", error=str(e), error_type=type(e).__name__)
+                logger.error(
+                    "Email monitoring loop error", error=str(e), error_type=type(e).__name__
+                )
 
             # Attendre 5 minutes avant prochain check
             await asyncio.sleep(300)  # 5 minutes

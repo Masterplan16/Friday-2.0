@@ -81,13 +81,15 @@ async def create_tasks_with_validation(
                 task.description[:255],  # Max 255 chars
                 priority_int,
                 task.due_date,
-                json.dumps({
-                    "email_id": email_id,
-                    "email_subject": subject_anon,
-                    "confidence": task.confidence,
-                    "context": task.context,
-                    "priority_keywords": task.priority_keywords or []
-                })
+                json.dumps(
+                    {
+                        "email_id": email_id,
+                        "email_subject": subject_anon,
+                        "confidence": task.confidence,
+                        "context": task.context,
+                        "priority_keywords": task.priority_keywords or [],
+                    }
+                ),
             )
 
             task_ids_created.append(str(task_id))
@@ -98,7 +100,7 @@ async def create_tasks_with_validation(
                 email_id=email_id,
                 description=task.description,
                 priority=task.priority,
-                confidence=task.confidence
+                confidence=task.confidence,
             )
 
         # =========================================================================
@@ -107,15 +109,12 @@ async def create_tasks_with_validation(
 
         # H1 fix: Vérifier que email existe avant UPDATE
         email_exists = await conn.fetchval(
-            "SELECT EXISTS(SELECT 1 FROM ingestion.emails_raw WHERE id = $1)",
-            UUID(email_id)
+            "SELECT EXISTS(SELECT 1 FROM ingestion.emails_raw WHERE id = $1)", UUID(email_id)
         )
 
         if not email_exists:
             logger.error(
-                "email_not_found_for_task_reference",
-                email_id=email_id,
-                task_ids=task_ids_created
+                "email_not_found_for_task_reference", email_id=email_id, task_ids=task_ids_created
             )
             raise ValueError(f"Email {email_id} not found in ingestion.emails_raw")
 
@@ -131,7 +130,7 @@ async def create_tasks_with_validation(
             WHERE id = $2
             """,
             json.dumps(task_ids_created),
-            UUID(email_id)
+            UUID(email_id),
         )
 
     # =========================================================================
@@ -161,11 +160,11 @@ async def create_tasks_with_validation(
                     "priority": t.priority,
                     "due_date": t.due_date.isoformat() if t.due_date else None,
                     "confidence": t.confidence,
-                    "context": t.context
+                    "context": t.context,
                 }
                 for t in tasks
-            ]
-        }
+            ],
+        },
     )
 
     # =========================================================================
@@ -179,14 +178,12 @@ async def create_tasks_with_validation(
             # Récupérer le receipt_id du dernier receipt créé pour cette action
             # (le middleware @friday_action l'a créé juste avant de retourner)
             async with db_pool.acquire() as conn:
-                receipt_id = await conn.fetchval(
-                    """
+                receipt_id = await conn.fetchval("""
                     SELECT id FROM core.action_receipts
                     WHERE module = 'email' AND action_type = 'extract_task'
                     ORDER BY created_at DESC
                     LIMIT 1
-                    """
-                )
+                    """)
 
             if receipt_id:
                 from bot.handlers.email_task_notifications import (
@@ -200,7 +197,7 @@ async def create_tasks_with_validation(
                     receipt_id=str(receipt_id),
                     tasks=tasks,
                     sender_anon="[SENDER_ANON]",  # Déjà anonymisé upstream
-                    subject_anon=subject_anon
+                    subject_anon=subject_anon,
                 )
 
                 # Notification topic Email (AC4)
@@ -209,26 +206,18 @@ async def create_tasks_with_validation(
                     receipt_id=str(receipt_id),
                     tasks_count=len(tasks),
                     sender_anon="[SENDER_ANON]",
-                    subject_anon=subject_anon
+                    subject_anon=subject_anon,
                 )
 
                 logger.info(
-                    "task_notifications_sent",
-                    receipt_id=str(receipt_id),
-                    tasks_count=len(tasks)
+                    "task_notifications_sent", receipt_id=str(receipt_id), tasks_count=len(tasks)
                 )
             else:
-                logger.warning(
-                    "receipt_not_found_for_notifications",
-                    email_id=email_id
-                )
+                logger.warning("receipt_not_found_for_notifications", email_id=email_id)
 
         except Exception as e:
             logger.error(
-                "task_notifications_failed",
-                email_id=email_id,
-                error=str(e),
-                exc_info=True
+                "task_notifications_failed", email_id=email_id, error=str(e), exc_info=True
             )
             # Ne pas bloquer la création des tâches si notifications échouent
 

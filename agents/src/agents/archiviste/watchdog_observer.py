@@ -12,6 +12,7 @@ Features:
 - Graceful shutdown
 - Performance: <500ms latency, <100Mo RAM
 """
+
 import asyncio
 import json
 from datetime import datetime, timezone
@@ -94,11 +95,7 @@ class FridayWatchdogObserver:
         self._running = True
         self._reload_task = asyncio.create_task(self._config_reload_loop())
 
-        logger.info(
-            "watchdog.started",
-            paths_count=len(config.paths),
-            polling=self.use_polling
-        )
+        logger.info("watchdog.started", paths_count=len(config.paths), polling=self.use_polling)
 
     async def stop(self) -> None:
         """
@@ -128,10 +125,7 @@ class FridayWatchdogObserver:
         """Connecter a Redis."""
         if self.redis is None:
             self.redis = await aioredis.from_url(self.redis_url)
-            logger.info(
-                "watchdog.redis_connected",
-                redis_url=self.redis_url
-            )
+            logger.info("watchdog.redis_connected", redis_url=self.redis_url)
 
     async def _disconnect_redis(self) -> None:
         """Deconnecter Redis."""
@@ -158,7 +152,7 @@ class FridayWatchdogObserver:
                 logger.warning(
                     "watchdog.path_not_found",
                     path=str(watch_path),
-                    source_label=path_config.source_label
+                    source_label=path_config.source_label,
                 )
                 continue
 
@@ -166,7 +160,7 @@ class FridayWatchdogObserver:
                 logger.warning(
                     "watchdog.path_not_directory",
                     path=str(watch_path),
-                    source_label=path_config.source_label
+                    source_label=path_config.source_label,
                 )
                 continue
 
@@ -185,17 +179,11 @@ class FridayWatchdogObserver:
 
             # Creer observer (polling ou natif)
             if self.use_polling:
-                observer = PollingObserver(
-                    timeout=config.polling_interval_seconds
-                )
+                observer = PollingObserver(timeout=config.polling_interval_seconds)
             else:
                 observer = Observer()
 
-            observer.schedule(
-                handler,
-                path=str(watch_path),
-                recursive=path_config.recursive
-            )
+            observer.schedule(handler, path=str(watch_path), recursive=path_config.recursive)
             observer.daemon = True
             observer.start()
             self._observers.append(observer)
@@ -205,7 +193,7 @@ class FridayWatchdogObserver:
                 path=str(watch_path),
                 source_label=path_config.source_label,
                 recursive=path_config.recursive,
-                extensions=path_config.extensions
+                extensions=path_config.extensions,
             )
 
     def _stop_observers(self) -> None:
@@ -214,19 +202,13 @@ class FridayWatchdogObserver:
             try:
                 observer.stop()
             except Exception as e:
-                logger.warning(
-                    "watchdog.observer_stop_error",
-                    error=str(e)
-                )
+                logger.warning("watchdog.observer_stop_error", error=str(e))
 
         for observer in self._observers:
             try:
                 observer.join(timeout=5)
             except Exception as e:
-                logger.warning(
-                    "watchdog.observer_join_error",
-                    error=str(e)
-                )
+                logger.warning("watchdog.observer_join_error", error=str(e))
 
         self._observers.clear()
         self._handlers.clear()
@@ -250,7 +232,7 @@ class FridayWatchdogObserver:
                 logger.info(
                     "watchdog.config_reload_triggered",
                     new_paths_count=len(new_config.paths),
-                    enabled=new_config.enabled
+                    enabled=new_config.enabled,
                 )
 
                 # Arreter les observers actuels
@@ -265,10 +247,7 @@ class FridayWatchdogObserver:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(
-                    "watchdog.config_reload_loop_error",
-                    error=str(e)
-                )
+                logger.error("watchdog.config_reload_loop_error", error=str(e))
 
     async def _publish_config_reload_event(
         self,
@@ -284,24 +263,20 @@ class FridayWatchdogObserver:
             return
 
         try:
-            payload = json.dumps({
-                "type": "config_reloaded",
-                "service": "watchdog",
-                "paths_count": len(config.paths),
-                "enabled": config.enabled,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-            })
+            payload = json.dumps(
+                {
+                    "type": "config_reloaded",
+                    "service": "watchdog",
+                    "paths_count": len(config.paths),
+                    "enabled": config.enabled,
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                }
+            )
             await self.redis.publish("system.notification", payload)
 
-            logger.info(
-                "watchdog.config_reload_notified",
-                paths_count=len(config.paths)
-            )
+            logger.info("watchdog.config_reload_notified", paths_count=len(config.paths))
         except Exception as e:
-            logger.warning(
-                "watchdog.config_reload_notify_failed",
-                error=str(e)
-            )
+            logger.warning("watchdog.config_reload_notify_failed", error=str(e))
 
     @property
     def is_running(self) -> bool:

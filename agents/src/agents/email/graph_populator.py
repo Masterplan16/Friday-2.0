@@ -100,7 +100,9 @@ async def populate_email_graph(
 
         # 3. Générer embedding via Voyage AI
         vectorstore = await get_vectorstore_adapter()
-        embedding_response = await vectorstore.embed([anonymized_text], anonymize=False)  # Déjà anonymisé
+        embedding_response = await vectorstore.embed(
+            [anonymized_text], anonymize=False
+        )  # Déjà anonymisé
 
         # 4. Stocker embedding dans knowledge.embeddings
         embedding = embedding_response.embeddings[0]

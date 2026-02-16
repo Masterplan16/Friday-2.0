@@ -223,11 +223,13 @@ def _build_mime_message(
 
         # Pieces jointes
         for filename, data, content_type in attachments:
-            maintype, subtype = content_type.split("/", 1) if "/" in content_type else ("application", "octet-stream")
-            attachment = MIMEApplication(data, _subtype=subtype)
-            attachment.add_header(
-                "Content-Disposition", "attachment", filename=filename
+            maintype, subtype = (
+                content_type.split("/", 1)
+                if "/" in content_type
+                else ("application", "octet-stream")
             )
+            attachment = MIMEApplication(data, _subtype=subtype)
+            attachment.add_header("Content-Disposition", "attachment", filename=filename)
             msg.attach(attachment)
 
     elif body_html:
@@ -245,7 +247,9 @@ def _build_mime_message(
     msg["To"] = to_addr
     msg["Subject"] = subject
     msg["Date"] = formatdate(localtime=True)
-    msg["Message-ID"] = make_msgid(domain=from_addr.split("@")[-1] if "@" in from_addr else "friday.local")
+    msg["Message-ID"] = make_msgid(
+        domain=from_addr.split("@")[-1] if "@" in from_addr else "friday.local"
+    )
 
     # Threading headers (faille #7)
     if in_reply_to:

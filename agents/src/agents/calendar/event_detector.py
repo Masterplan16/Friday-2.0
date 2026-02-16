@@ -26,17 +26,16 @@ from agents.src.agents.calendar.models import (
     Event,
     EventDetectionResult,
     EventExtractionError,
-    EventValidationError
+    EventValidationError,
 )
 from agents.src.agents.calendar.prompts import (
     EVENT_DETECTION_SYSTEM_PROMPT,
     build_event_detection_prompt,
-    sanitize_email_text
+    sanitize_email_text,
 )
 from agents.src.tools.anonymize import anonymize_text
 from agents.src.middleware.trust import friday_action
 from agents.src.middleware.models import ActionResult
-
 
 # ============================================================================
 # CONFIGURATION
@@ -70,6 +69,7 @@ _circuit_breaker_lock = asyncio.Lock()
 # FONCTION PRINCIPALE EXTRACTION (AC1, AC4, AC5, AC7)
 # ============================================================================
 
+
 async def extract_events_from_email(
     email_text: str,
     email_id: Optional[str] = None,
@@ -77,7 +77,7 @@ async def extract_events_from_email(
     current_date: Optional[str] = None,
     anthropic_client: Optional[AsyncAnthropic] = None,
     db_pool: Optional[asyncpg.Pool] = None,
-    current_casquette: Optional["Casquette"] = None
+    current_casquette: Optional["Casquette"] = None,
 ) -> EventDetectionResult:
     """
     Extrait evenements depuis email via Claude Sonnet 4.5
@@ -119,7 +119,7 @@ async def extract_events_from_email(
             logger.error(
                 "Circuit breaker OUVERT - %d echecs consecutifs",
                 _circuit_breaker_failures,
-                extra={"circuit_breaker_failures": _circuit_breaker_failures}
+                extra={"circuit_breaker_failures": _circuit_breaker_failures},
             )
             raise EventExtractionError(
                 f"Circuit breaker ouvert apres {_circuit_breaker_failures} echecs"
@@ -128,6 +128,7 @@ async def extract_events_from_email(
     # Initialiser client Anthropic si non fourni
     if anthropic_client is None:
         import os
+
         api_key = os.getenv("ANTHROPIC_API_KEY")
         if not api_key:
             raise EventExtractionError("ANTHROPIC_API_KEY manquante")
@@ -146,16 +147,13 @@ async def extract_events_from_email(
         if current_casquette:
             logger.debug(
                 "Context casquette fetched",
-                extra={
-                    "email_id": email_id,
-                    "casquette": current_casquette.value
-                }
+                extra={"email_id": email_id, "casquette": current_casquette.value},
             )
 
     # AC1: Anonymisation Presidio AVANT sanitize (NER sur texte brut)
     logger.debug(
         "Anonymisation email via Presidio",
-        extra={"email_id": email_id, "text_length": len(email_text)}
+        extra={"email_id": email_id, "text_length": len(email_text)},
     )
 
     try:
@@ -163,10 +161,7 @@ async def extract_events_from_email(
         email_anonymized = anonymization_result.anonymized_text
         presidio_mapping = anonymization_result.mapping
     except Exception as e:
-        logger.error(
-            "Echec anonymisation Presidio",
-            extra={"email_id": email_id, "error": str(e)}
-        )
+        logger.error("Echec anonymisation Presidio", extra={"email_id": email_id, "error": str(e)})
         raise EventExtractionError(f"Erreur anonymisation Presidio: {e}")
 
     # Sanitize APRES anonymisation (protection prompt injection)
@@ -178,7 +173,7 @@ async def extract_events_from_email(
         current_date=current_date,
         current_time=current_time,
         timezone="Europe/Paris",
-        current_casquette=current_casquette
+        current_casquette=current_casquette,
     )
 
     # Appeler Claude avec retry (NFR17)
@@ -191,11 +186,7 @@ async def extract_events_from_email(
                 "Appel Claude Sonnet 4.5 (tentative %d/%d)",
                 attempt,
                 MAX_RETRIES,
-                extra={
-                    "email_id": email_id,
-                    "model": LLM_MODEL,
-                    "attempt": attempt
-                }
+                extra={"email_id": email_id, "model": LLM_MODEL, "attempt": attempt},
             )
 
             response = await anthropic_client.messages.create(
@@ -203,9 +194,7 @@ async def extract_events_from_email(
                 max_tokens=LLM_MAX_TOKENS,
                 temperature=LLM_TEMPERATURE,
                 system=EVENT_DETECTION_SYSTEM_PROMPT,
-                messages=[
-                    {"role": "user", "content": prompt}
-                ]
+                messages=[{"role": "user", "content": prompt}],
             )
 
             # Extraire texte reponse
@@ -224,19 +213,17 @@ async def extract_events_from_email(
                 extra={
                     "email_id": email_id,
                     "error": str(e),
-                    "retry_after": getattr(e, "retry_after", None)
-                }
+                    "retry_after": getattr(e, "retry_after", None),
+                },
             )
 
             if attempt == MAX_RETRIES:
                 async with _circuit_breaker_lock:
                     _circuit_breaker_failures += 1
-                raise EventExtractionError(
-                    f"RateLimitError apres {MAX_RETRIES} tentatives"
-                )
+                raise EventExtractionError(f"RateLimitError apres {MAX_RETRIES} tentatives")
 
             # Backoff exponentiel
-            wait_time = 2 ** attempt
+            wait_time = 2**attempt
             await _async_sleep(wait_time)
 
         except APIError as e:
@@ -247,8 +234,8 @@ async def extract_events_from_email(
                 extra={
                     "email_id": email_id,
                     "error": str(e),
-                    "status_code": getattr(e, "status_code", None)
-                }
+                    "status_code": getattr(e, "status_code", None),
+                },
             )
 
             if attempt == MAX_RETRIES:
@@ -269,24 +256,16 @@ async def extract_events_from_email(
     except json.JSONDecodeError as e:
         logger.error(
             "Erreur parsing JSON Claude",
-            extra={
-                "email_id": email_id,
-                "response_text": response_text[:500],
-                "error": str(e)
-            }
+            extra={"email_id": email_id, "response_text": response_text[:500], "error": str(e)},
         )
         raise EventExtractionError(f"JSON invalide Claude: {e}")
 
     # Valider structure JSON
     if "events_detected" not in response_json:
-        raise EventExtractionError(
-            "JSON Claude manque champ 'events_detected'"
-        )
+        raise EventExtractionError("JSON Claude manque champ 'events_detected'")
 
     if "confidence_overall" not in response_json:
-        raise EventExtractionError(
-            "JSON Claude manque champ 'confidence_overall'"
-        )
+        raise EventExtractionError("JSON Claude manque champ 'confidence_overall'")
 
     # Parser events avec Pydantic
     events_parsed = []
@@ -304,16 +283,15 @@ async def extract_events_from_email(
                     extra={
                         "email_id": email_id,
                         "event_title": event.title,
-                        "confidence": event.confidence
-                    }
+                        "confidence": event.confidence,
+                    },
                 )
                 continue
 
             # Deanonymiser participants si Presidio mapping existe
             if presidio_mapping and event.participants:
                 event.participants = await _deanonymize_participants(
-                    event.participants,
-                    presidio_mapping
+                    event.participants, presidio_mapping
                 )
 
             events_parsed.append(event)
@@ -321,11 +299,7 @@ async def extract_events_from_email(
         except ValidationError as e:
             logger.warning(
                 "Validation Pydantic Event echouee",
-                extra={
-                    "email_id": email_id,
-                    "event_data": event_data,
-                    "error": str(e)
-                }
+                extra={"email_id": email_id, "event_data": event_data, "error": str(e)},
             )
             # Continuer avec autres events (ne pas fail tout)
             continue
@@ -342,7 +316,7 @@ async def extract_events_from_email(
         confidence_overall=confidence_overall,
         email_id=email_id,
         processing_time_ms=processing_time_ms,
-        model_used=LLM_MODEL
+        model_used=LLM_MODEL,
     )
 
     logger.info(
@@ -352,8 +326,8 @@ async def extract_events_from_email(
             "email_id": email_id,
             "events_count": len(events_parsed),
             "confidence_overall": confidence_overall,
-            "processing_time_ms": processing_time_ms
-        }
+            "processing_time_ms": processing_time_ms,
+        },
     )
 
     return result
@@ -362,6 +336,7 @@ async def extract_events_from_email(
 # ============================================================================
 # WRAPPER @friday_action (Story 1.6 - Trust Layer)
 # ============================================================================
+
 
 @friday_action(module="calendar", action="detect_event", trust_default="propose")
 async def detect_events_action(
@@ -398,7 +373,7 @@ async def detect_events_action(
         metadata=metadata,
         current_date=current_date,
         anthropic_client=anthropic_client,
-        db_pool=db_pool
+        db_pool=db_pool,
     )
 
     subject = ""
@@ -415,7 +390,11 @@ async def detect_events_action(
 
     return ActionResult(
         input_summary=f"Email {email_short}: {subject}",
-        output_summary=f"{len(result.events_detected)} evenement(s) detecte(s): {events_summary}" if result.events_detected else "Aucun evenement detecte",
+        output_summary=(
+            f"{len(result.events_detected)} evenement(s) detecte(s): {events_summary}"
+            if result.events_detected
+            else "Aucun evenement detecte"
+        ),
         confidence=result.confidence_overall,
         reasoning=f"Detection via Claude Sonnet 4.5 - {result.processing_time_ms}ms - {len(result.events_detected)} events",
         payload={
@@ -425,13 +404,14 @@ async def detect_events_action(
         },
     )
 
+
 # ============================================================================
 # HELPERS
 # ============================================================================
 
+
 async def _deanonymize_participants(
-    participants: list[str],
-    presidio_mapping: Dict[str, str]
+    participants: list[str], presidio_mapping: Dict[str, str]
 ) -> list[str]:
     """
     Deanonymise participants via mapping Presidio
@@ -472,13 +452,11 @@ async def _fetch_current_casquette(
     """
     try:
         async with db_pool.acquire() as conn:
-            row = await conn.fetchrow(
-                """
+            row = await conn.fetchrow("""
                 SELECT current_casquette, updated_by
                 FROM core.user_context
                 WHERE id = 1
-                """
-            )
+                """)
 
             if not row or row["current_casquette"] is None:
                 return None
@@ -493,14 +471,13 @@ async def _fetch_current_casquette(
             except ValueError:
                 logger.warning(
                     "Casquette value invalide dans user_context",
-                    extra={"casquette_value": casquette_value}
+                    extra={"casquette_value": casquette_value},
                 )
                 return None
 
     except Exception as e:
         logger.warning(
-            "Echec fetch contexte casquette",
-            extra={"error": str(e), "fallback": "no_context_bias"}
+            "Echec fetch contexte casquette", extra={"error": str(e), "fallback": "no_context_bias"}
         )
         return None
 

@@ -23,30 +23,21 @@ class CheckResult(BaseModel):
 
     Story 7.3 Task 7: Utilisé par check calendar_conflicts
     """
-    notify: bool = Field(
-        ...,
-        description="Si True, Heartbeat envoie notification Telegram"
-    )
 
-    message: str = Field(
-        default="",
-        description="Message formaté pour Telegram (HTML autorisé)"
-    )
+    notify: bool = Field(..., description="Si True, Heartbeat envoie notification Telegram")
+
+    message: str = Field(default="", description="Message formaté pour Telegram (HTML autorisé)")
 
     action: Optional[str] = Field(
-        None,
-        description="Action suggérée (ex: 'view_conflicts', 'open_agenda')"
+        None, description="Action suggérée (ex: 'view_conflicts', 'open_agenda')"
     )
 
     payload: Dict[str, Any] = Field(
         default_factory=dict,
-        description="Données additionnelles (ex: liste conflits, IDs événements)"
+        description="Données additionnelles (ex: liste conflits, IDs événements)",
     )
 
-    error: Optional[str] = Field(
-        None,
-        description="Message d'erreur si check échoué"
-    )
+    error: Optional[str] = Field(None, description="Message d'erreur si check échoué")
 
     class Config:
         json_schema_extra = {
@@ -54,10 +45,7 @@ class CheckResult(BaseModel):
                 "notify": True,
                 "message": "⚠️ 2 conflits calendrier détectés demain",
                 "action": "view_conflicts",
-                "payload": {
-                    "conflict_ids": ["uuid1", "uuid2"],
-                    "date": "2026-02-18"
-                }
+                "payload": {"conflict_ids": ["uuid1", "uuid2"], "date": "2026-02-18"},
             }
         }
 
@@ -74,6 +62,7 @@ class CheckPriority:
     Story 7.3: calendar_conflicts = MEDIUM priority
     Story 3.4: warranty_expiry CRITICAL for <7 days
     """
+
     CRITICAL = "critical"
     HIGH = "high"
     MEDIUM = "medium"
@@ -83,6 +72,7 @@ class CheckPriority:
 # ============================================================================
 # Story 4.1: Heartbeat Context Model (AC2, Task 3.3)
 # ============================================================================
+
 
 class HeartbeatContext(BaseModel):
     """
@@ -100,39 +90,25 @@ class HeartbeatContext(BaseModel):
         next_calendar_event: Prochain événement calendrier (si <24h)
         last_activity_mainteneur: Timestamp dernière activité Mainteneur
     """
-    current_time: datetime = Field(
-        ...,
-        description="Timestamp UTC actuel"
-    )
 
-    day_of_week: str = Field(
-        ...,
-        description="Jour semaine (Monday, Tuesday, Wednesday, ...)"
-    )
+    current_time: datetime = Field(..., description="Timestamp UTC actuel")
 
-    is_weekend: bool = Field(
-        ...,
-        description="True si samedi/dimanche"
-    )
+    day_of_week: str = Field(..., description="Jour semaine (Monday, Tuesday, Wednesday, ...)")
 
-    is_quiet_hours: bool = Field(
-        ...,
-        description="True si 22h-8h (skip checks non-CRITICAL)"
-    )
+    is_weekend: bool = Field(..., description="True si samedi/dimanche")
+
+    is_quiet_hours: bool = Field(..., description="True si 22h-8h (skip checks non-CRITICAL)")
 
     current_casquette: Optional[str] = Field(
-        None,
-        description="Casquette active (medecin/enseignant/chercheur/personnel) via Story 7.3"
+        None, description="Casquette active (medecin/enseignant/chercheur/personnel) via Story 7.3"
     )
 
     next_calendar_event: Optional[Dict[str, Any]] = Field(
-        None,
-        description="Prochain événement calendrier dans <24h (title, start_time, casquette)"
+        None, description="Prochain événement calendrier dans <24h (title, start_time, casquette)"
     )
 
     last_activity_mainteneur: Optional[datetime] = Field(
-        None,
-        description="Timestamp dernière activité Mainteneur (email lu, commande Telegram)"
+        None, description="Timestamp dernière activité Mainteneur (email lu, commande Telegram)"
     )
 
     class Config:
@@ -146,9 +122,9 @@ class HeartbeatContext(BaseModel):
                 "next_calendar_event": {
                     "title": "Consultation M. Dupont",
                     "start_time": "2026-02-17T15:00:00Z",
-                    "casquette": "medecin"
+                    "casquette": "medecin",
                 },
-                "last_activity_mainteneur": "2026-02-17T14:15:00Z"
+                "last_activity_mainteneur": "2026-02-17T14:15:00Z",
             }
         }
 
@@ -156,6 +132,7 @@ class HeartbeatContext(BaseModel):
 # ============================================================================
 # Story 4.1: Check Model (AC3, Task 2)
 # ============================================================================
+
 
 class Check(BaseModel):
     """
@@ -167,20 +144,12 @@ class Check(BaseModel):
         description: Description check pour LLM décideur
         execute_fn: Fonction async à exécuter (retourne CheckResult)
     """
-    check_id: str = Field(
-        ...,
-        description="Identifiant unique check"
-    )
 
-    priority: str = Field(
-        ...,
-        description="Priorité check (critical/high/medium/low)"
-    )
+    check_id: str = Field(..., description="Identifiant unique check")
 
-    description: str = Field(
-        ...,
-        description="Description check pour LLM décideur"
-    )
+    priority: str = Field(..., description="Priorité check (critical/high/medium/low)")
+
+    description: str = Field(..., description="Description check pour LLM décideur")
 
     # Note: execute_fn ne peut pas être sérialisé JSON (fonction)
     # On le stocke comme attribut Python mais pas dans model Pydantic
@@ -209,9 +178,6 @@ class Check(BaseModel):
             CheckResult avec notify/message/action/payload
         """
         if not self._execute_fn:
-            return CheckResult(
-                notify=False,
-                error=f"Check {self.check_id} has no execute_fn"
-            )
+            return CheckResult(notify=False, error=f"Check {self.check_id} has no execute_fn")
 
         return await self._execute_fn(*args, **kwargs)

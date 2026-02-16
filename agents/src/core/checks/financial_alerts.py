@@ -31,8 +31,7 @@ async def check_financial_alerts(db_pool: asyncpg.Pool) -> CheckResult:
     try:
         async with db_pool.acquire() as conn:
             # Query cotisations échéance <7j
-            alerts = await conn.fetch(
-                """
+            alerts = await conn.fetch("""
                 SELECT
                     entity_id,
                     name,
@@ -44,8 +43,7 @@ async def check_financial_alerts(db_pool: asyncpg.Pool) -> CheckResult:
                   AND (metadata->>'due_date')::date < NOW() + INTERVAL '7 days'
                   AND (metadata->>'due_date')::date >= NOW()
                 ORDER BY (metadata->>'due_date')::date ASC
-                """
-            )
+                """)
 
         if not alerts:
             # Silence = bon comportement (AC4)
@@ -65,10 +63,7 @@ async def check_financial_alerts(db_pool: asyncpg.Pool) -> CheckResult:
         if len(alerts) > 3:
             message += f"\n... et {len(alerts) - 3} autre(s)"
 
-        logger.info(
-            "Financial alerts detected",
-            count=len(alerts)
-        )
+        logger.info("Financial alerts detected", count=len(alerts))
 
         return CheckResult(
             notify=True,
@@ -77,13 +72,10 @@ async def check_financial_alerts(db_pool: asyncpg.Pool) -> CheckResult:
             payload={
                 "check_id": "check_financial_alerts",
                 "count": len(alerts),
-                "alert_ids": [a["entity_id"] for a in alerts]
-            }
+                "alert_ids": [a["entity_id"] for a in alerts],
+            },
         )
 
     except Exception as e:
         logger.error("check_financial_alerts failed", error=str(e))
-        return CheckResult(
-            notify=False,
-            error=f"Failed to check financial alerts: {str(e)}"
-        )
+        return CheckResult(notify=False, error=f"Failed to check financial alerts: {str(e)}")

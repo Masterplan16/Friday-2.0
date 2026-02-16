@@ -4,6 +4,7 @@ Gestionnaire de déplacement de fichiers pour l'agent Archiviste.
 Story 3.2 - Task 3
 Déplacement atomique documents de zone transit vers arborescence finale.
 """
+
 import asyncio
 import hashlib
 import shutil
@@ -52,7 +53,7 @@ class FileMover:
         self,
         source_path: str,
         classification: ClassificationResult,
-        document_id: Optional[str] = None
+        document_id: Optional[str] = None,
     ) -> MovedFile:
         """
         Déplace un document vers l'arborescence finale.
@@ -77,7 +78,7 @@ class FileMover:
                 source_path=str(source),
                 destination_path="",
                 success=False,
-                error=f"Source file not found: {source}"
+                error=f"Source file not found: {source}",
             )
 
         try:
@@ -90,7 +91,7 @@ class FileMover:
                 source=str(source),
                 destination=str(dest),
                 category=classification.category,
-                subcategory=classification.subcategory
+                subcategory=classification.subcategory,
             )
 
             # Créer dossiers parents si manquants
@@ -107,42 +108,29 @@ class FileMover:
                 await self._update_database(
                     document_id=document_id,
                     final_path=str(final_dest),
-                    classification=classification
+                    classification=classification,
                 )
 
             logger.info(
                 "move_completed",
                 source=str(source),
                 destination=str(final_dest),
-                category=classification.category
+                category=classification.category,
             )
 
             return MovedFile(
-                source_path=str(source),
-                destination_path=str(final_dest),
-                success=True,
-                error=None
+                source_path=str(source), destination_path=str(final_dest), success=True, error=None
             )
 
         except Exception as e:
             logger.error(
-                "move_failed",
-                source=str(source),
-                error=str(e),
-                category=classification.category
+                "move_failed", source=str(source), error=str(e), category=classification.category
             )
             return MovedFile(
-                source_path=str(source),
-                destination_path="",
-                success=False,
-                error=str(e)
+                source_path=str(source), destination_path="", success=False, error=str(e)
             )
 
-    def _resolve_destination_path(
-        self,
-        source: Path,
-        classification: ClassificationResult
-    ) -> str:
+    def _resolve_destination_path(self, source: Path, classification: ClassificationResult) -> str:
         """
         Résout le chemin destination complet.
 
@@ -195,7 +183,7 @@ class FileMover:
                     "naming_conflict_resolved",
                     original=str(dest),
                     renamed=str(new_dest),
-                    version=version
+                    version=version,
                 )
                 return new_dest
             version += 1
@@ -240,9 +228,7 @@ class FileMover:
             tmp_hash = await self._file_hash(tmp_dest)
 
             if source_hash != tmp_hash:
-                raise IOError(
-                    f"File checksum mismatch after copy: {source} -> {tmp_dest}"
-                )
+                raise IOError(f"File checksum mismatch after copy: {source} -> {tmp_dest}")
 
             # Phase 3 : Rename temp → destination (atomique sur même FS)
             await asyncio.to_thread(tmp_dest.rename, dest)
@@ -268,6 +254,7 @@ class FileMover:
         Returns:
             Hash hexadécimal du fichier
         """
+
         def _compute():
             h = hashlib.new(algorithm)
             with open(path, "rb") as f:
@@ -278,10 +265,7 @@ class FileMover:
         return await asyncio.to_thread(_compute)
 
     async def _update_database(
-        self,
-        document_id: str,
-        final_path: str,
-        classification: ClassificationResult
+        self, document_id: str, final_path: str, classification: ClassificationResult
     ) -> None:
         """
         Met à jour PostgreSQL avec chemin final et classification.
@@ -308,5 +292,5 @@ class FileMover:
                 classification.category,
                 classification.subcategory,
                 classification.confidence,
-                document_id
+                document_id,
             )

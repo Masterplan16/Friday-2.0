@@ -505,8 +505,7 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         if destination_path.exists():
             _move_to_errors_dir(destination_path, "download_error")
         await update.message.reply_text(
-            "❌ Erreur lors du téléchargement du fichier.\n"
-            "Veuillez réessayer plus tard."
+            "❌ Erreur lors du téléchargement du fichier.\n" "Veuillez réessayer plus tard."
         )
         logger.error(
             "file_upload.download_error",
@@ -663,8 +662,7 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         if destination_path.exists():
             _move_to_errors_dir(destination_path, "download_error")
         await update.message.reply_text(
-            "❌ Erreur lors du téléchargement de la photo.\n"
-            "Veuillez réessayer plus tard."
+            "❌ Erreur lors du téléchargement de la photo.\n" "Veuillez réessayer plus tard."
         )
         logger.error(
             "photo_upload.download_error",

@@ -33,13 +33,13 @@ from agents.src.core.models import (
     TIME_BASED_CASQUETTE_MAPPING,
 )
 
-
 logger = structlog.get_logger(__name__)
 
 
 # ============================================================================
 # Context Manager
 # ============================================================================
+
 
 class ContextManager:
     """
@@ -50,10 +50,7 @@ class ContextManager:
     """
 
     def __init__(
-        self,
-        db_pool: asyncpg.Pool,
-        redis_client: redis.Redis,
-        cache_ttl: int = 300  # 5 minutes
+        self, db_pool: asyncpg.Pool, redis_client: redis.Redis, cache_ttl: int = 300  # 5 minutes
     ):
         """
         Initialize Context Manager.
@@ -102,15 +99,17 @@ class ContextManager:
         # Vérifier si contexte manuel (updated_by='manual')
         # H14 fix: Contexte manuel expire après 4h → retombe en auto-detect
         if row["updated_by"] == "manual" and row["current_casquette"]:
-            manual_age = datetime.now(timezone.utc) - row["last_updated_at"].replace(
-                tzinfo=timezone.utc
-            ) if row["last_updated_at"].tzinfo is None else datetime.now(timezone.utc) - row["last_updated_at"]
+            manual_age = (
+                datetime.now(timezone.utc) - row["last_updated_at"].replace(tzinfo=timezone.utc)
+                if row["last_updated_at"].tzinfo is None
+                else datetime.now(timezone.utc) - row["last_updated_at"]
+            )
             if manual_age <= timedelta(hours=4):
                 context = UserContext(
                     casquette=Casquette(row["current_casquette"]),
                     source=ContextSource.MANUAL,
                     updated_at=row["last_updated_at"],
-                    updated_by="manual"
+                    updated_by="manual",
                 )
             else:
                 # Contexte manuel expiré → auto-detect
@@ -126,9 +125,7 @@ class ContextManager:
         return context
 
     async def set_context(
-        self,
-        casquette: Optional[Casquette],
-        source: str = "manual"
+        self, casquette: Optional[Casquette], source: str = "manual"
     ) -> UserContext:
         """
         Force le contexte casquette manuellement (AC2).
@@ -143,19 +140,21 @@ class ContextManager:
             UserContext mis à jour
         """
         async with self.db_pool.acquire() as conn:
-            await conn.execute("""
+            await conn.execute(
+                """
                 UPDATE core.user_context
                 SET current_casquette = $1, updated_by = $2
                 WHERE id = 1
-            """, casquette.value if casquette else None, source)
+            """,
+                casquette.value if casquette else None,
+                source,
+            )
 
         # Invalider cache Redis
         await self.redis_client.delete(self._cache_key)
 
         logger.info(
-            "context_updated",
-            casquette=casquette.value if casquette else None,
-            source=source
+            "context_updated", casquette=casquette.value if casquette else None, source=source
         )
 
         # Retourner nouveau contexte
@@ -180,9 +179,7 @@ class ContextManager:
         if ongoing_event:
             logger.debug("context_detected_from_event", event_id=ongoing_event.id)
             return UserContext(
-                casquette=ongoing_event.casquette,
-                source=ContextSource.EVENT,
-                updated_by="system"
+                casquette=ongoing_event.casquette, source=ContextSource.EVENT, updated_by="system"
             )
 
         # Règle 3: Heuristique heure de la journée
@@ -190,9 +187,7 @@ class ContextManager:
         if time_based_casquette:
             logger.debug("context_detected_from_time", casquette=time_based_casquette.value)
             return UserContext(
-                casquette=time_based_casquette,
-                source=ContextSource.TIME,
-                updated_by="system"
+                casquette=time_based_casquette, source=ContextSource.TIME, updated_by="system"
             )
 
         # Règle 4: Dernier événement passé
@@ -200,18 +195,12 @@ class ContextManager:
         if last_event_casquette:
             logger.debug("context_detected_from_last_event", casquette=last_event_casquette.value)
             return UserContext(
-                casquette=last_event_casquette,
-                source=ContextSource.LAST_EVENT,
-                updated_by="system"
+                casquette=last_event_casquette, source=ContextSource.LAST_EVENT, updated_by="system"
             )
 
         # Règle 5: Défaut (NULL)
         logger.debug("context_default_null")
-        return UserContext(
-            casquette=None,
-            source=ContextSource.DEFAULT,
-            updated_by="system"
-        )
+        return UserContext(casquette=None, source=ContextSource.DEFAULT, updated_by="system")
 
     # ========================================================================
     # Detection Rules (Private)
@@ -250,7 +239,7 @@ class ContextManager:
             casquette=Casquette(row["casquette"]),
             title=row["title"],
             start_datetime=row["start_datetime"],
-            end_datetime=row["end_datetime"]
+            end_datetime=row["end_datetime"],
         )
 
     def _get_context_from_time(self) -> Optional[Casquette]:
@@ -322,7 +311,7 @@ class ContextManager:
                 casquette=Casquette(data["casquette"]) if data.get("casquette") else None,
                 source=ContextSource(data["source"]),
                 updated_at=datetime.fromisoformat(data["updated_at"]),
-                updated_by=data["updated_by"]
+                updated_by=data["updated_by"],
             )
         except (json.JSONDecodeError, KeyError, ValueError) as e:
             logger.warning("cache_read_deserialization_error", error=str(e))
@@ -345,14 +334,10 @@ class ContextManager:
                 "casquette": context.casquette.value if context.casquette else None,
                 "source": context.source.value,
                 "updated_at": context.updated_at.isoformat(),
-                "updated_by": context.updated_by
+                "updated_by": context.updated_by,
             }
 
-            await self.redis_client.setex(
-                self._cache_key,
-                self.cache_ttl,
-                json.dumps(data)
-            )
+            await self.redis_client.setex(self._cache_key, self.cache_ttl, json.dumps(data))
         except Exception as e:
             logger.warning("cache_write_error", error=str(e))
 
@@ -369,11 +354,7 @@ class ContextManager:
                 ON CONFLICT (id) DO NOTHING
             """)
 
-        return UserContext(
-            casquette=None,
-            source=ContextSource.DEFAULT,
-            updated_by="system"
-        )
+        return UserContext(casquette=None, source=ContextSource.DEFAULT, updated_by="system")
 
     async def invalidate_cache(self) -> None:
         """
@@ -389,10 +370,8 @@ class ContextManager:
 # Factory Function
 # ============================================================================
 
-async def get_context_manager(
-    db_pool: asyncpg.Pool,
-    redis_client: redis.Redis
-) -> ContextManager:
+
+async def get_context_manager(db_pool: asyncpg.Pool, redis_client: redis.Redis) -> ContextManager:
     """
     Factory function pour créer ContextManager.
 
@@ -403,8 +382,4 @@ async def get_context_manager(
     Returns:
         Instance ContextManager configurée
     """
-    return ContextManager(
-        db_pool=db_pool,
-        redis_client=redis_client,
-        cache_ttl=300  # 5 minutes
-    )
+    return ContextManager(db_pool=db_pool, redis_client=redis_client, cache_ttl=300)  # 5 minutes

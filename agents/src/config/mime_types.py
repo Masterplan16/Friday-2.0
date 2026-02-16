@@ -17,34 +17,29 @@ Blacklist : Types dangereux (exécutables, archives, vidéos lourdes)
 
 ALLOWED_MIME_TYPES = {
     # PDF
-    'application/pdf',
-
+    "application/pdf",
     # Images
-    'image/jpeg',
-    'image/jpg',  # Alias JPEG
-    'image/png',
-    'image/gif',
-    'image/webp',
-
+    "image/jpeg",
+    "image/jpg",  # Alias JPEG
+    "image/png",
+    "image/gif",
+    "image/webp",
     # Microsoft Office (OpenXML format)
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',  # DOCX
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',  # XLSX
-    'application/vnd.openxmlformats-officedocument.presentationml.presentation',  # PPTX
-
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",  # DOCX
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",  # XLSX
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation",  # PPTX
     # Microsoft Office (Legacy format - si nécessaire)
-    'application/msword',  # DOC
-    'application/vnd.ms-excel',  # XLS
-    'application/vnd.ms-powerpoint',  # PPT
-
+    "application/msword",  # DOC
+    "application/vnd.ms-excel",  # XLS
+    "application/vnd.ms-powerpoint",  # PPT
     # Text files
-    'text/plain',  # TXT
-    'text/csv',  # CSV
-    'text/html',  # HTML
-
+    "text/plain",  # TXT
+    "text/csv",  # CSV
+    "text/html",  # HTML
     # OpenDocument (LibreOffice)
-    'application/vnd.oasis.opendocument.text',  # ODT
-    'application/vnd.oasis.opendocument.spreadsheet',  # ODS
-    'application/vnd.oasis.opendocument.presentation',  # ODP
+    "application/vnd.oasis.opendocument.text",  # ODT
+    "application/vnd.oasis.opendocument.spreadsheet",  # ODS
+    "application/vnd.oasis.opendocument.presentation",  # ODP
 }
 
 # =====================================================================
@@ -58,42 +53,37 @@ ALLOWED_MIME_TYPES = {
 
 BLOCKED_MIME_TYPES = {
     # Exécutables Windows
-    'application/x-msdownload',  # .exe
-    'application/x-msdos-program',  # .com
-    'application/x-ms-dos-executable',  # .exe variants
-    'application/vnd.microsoft.portable-executable',  # PE format
-
+    "application/x-msdownload",  # .exe
+    "application/x-msdos-program",  # .com
+    "application/x-ms-dos-executable",  # .exe variants
+    "application/vnd.microsoft.portable-executable",  # PE format
     # Exécutables Unix/Linux
-    'application/x-executable',  # ELF binaries
-    'application/x-sharedlib',  # .so libraries
-
+    "application/x-executable",  # ELF binaries
+    "application/x-sharedlib",  # .so libraries
     # Scripts
-    'application/x-sh',  # Shell scripts (.sh)
-    'application/x-bash',  # Bash scripts
-    'application/x-python-code',  # Python bytecode
-    'application/javascript',  # JS (risk XSS si exécuté)
-    'text/x-python',  # Python scripts
-
+    "application/x-sh",  # Shell scripts (.sh)
+    "application/x-bash",  # Bash scripts
+    "application/x-python-code",  # Python bytecode
+    "application/javascript",  # JS (risk XSS si exécuté)
+    "text/x-python",  # Python scripts
     # Archives (peuvent contenir malware)
-    'application/zip',  # .zip
-    'application/x-zip-compressed',  # .zip variants
-    'application/x-rar-compressed',  # .rar
-    'application/x-7z-compressed',  # .7z
-    'application/x-tar',  # .tar
-    'application/gzip',  # .gz
-    'application/x-bzip2',  # .bz2
-
+    "application/zip",  # .zip
+    "application/x-zip-compressed",  # .zip variants
+    "application/x-rar-compressed",  # .rar
+    "application/x-7z-compressed",  # .7z
+    "application/x-tar",  # .tar
+    "application/gzip",  # .gz
+    "application/x-bzip2",  # .bz2
     # Vidéos lourdes (saturation disque VPS)
-    'video/mp4',  # .mp4
-    'video/mpeg',  # .mpeg
-    'video/x-msvideo',  # .avi
-    'video/x-matroska',  # .mkv
-    'video/quicktime',  # .mov
-
+    "video/mp4",  # .mp4
+    "video/mpeg",  # .mpeg
+    "video/x-msvideo",  # .avi
+    "video/x-matroska",  # .mkv
+    "video/quicktime",  # .mov
     # Autres types à risque
-    'application/x-java-archive',  # .jar (peut contenir malware)
-    'application/vnd.android.package-archive',  # .apk
-    'application/x-ms-application',  # .application (ClickOnce)
+    "application/x-java-archive",  # .jar (peut contenir malware)
+    "application/vnd.android.package-archive",  # .apk
+    "application/x-ms-application",  # .application (ClickOnce)
 }
 
 # =====================================================================
@@ -167,28 +157,37 @@ def get_mime_category(mime_type: str) -> str:
     """
     mime_normalized = mime_type.lower().strip()
 
-    if mime_normalized == 'application/pdf':
+    if mime_normalized == "application/pdf":
         return "pdf"
 
-    if mime_normalized.startswith('image/'):
+    if mime_normalized.startswith("image/"):
         return "image"
 
-    if 'word' in mime_normalized or 'excel' in mime_normalized or 'powerpoint' in mime_normalized:
+    if "word" in mime_normalized or "excel" in mime_normalized or "powerpoint" in mime_normalized:
         return "office"
 
-    if 'opendocument' in mime_normalized:
+    if "opendocument" in mime_normalized:
         return "office"
 
-    if mime_normalized.startswith('text/'):
+    if mime_normalized.startswith("text/"):
         return "text"
 
-    if 'zip' in mime_normalized or 'rar' in mime_normalized or 'tar' in mime_normalized or '7z' in mime_normalized:
+    if (
+        "zip" in mime_normalized
+        or "rar" in mime_normalized
+        or "tar" in mime_normalized
+        or "7z" in mime_normalized
+    ):
         return "archive"
 
-    if 'executable' in mime_normalized or 'msdownload' in mime_normalized or 'x-sh' in mime_normalized:
+    if (
+        "executable" in mime_normalized
+        or "msdownload" in mime_normalized
+        or "x-sh" in mime_normalized
+    ):
         return "executable"
 
-    if mime_normalized.startswith('video/'):
+    if mime_normalized.startswith("video/"):
         return "video"
 
     return "unknown"
@@ -208,5 +207,5 @@ MIME_STATS = {
         "office_legacy": 3,
         "text": 3,
         "opendocument": 3,
-    }
+    },
 }

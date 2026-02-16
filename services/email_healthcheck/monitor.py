@@ -32,6 +32,7 @@ from pydantic import BaseModel
 
 class ServiceStatus(BaseModel):
     """Status d'un service individuel."""
+
     name: str
     status: str  # "healthy", "degraded", "down"
     message: str
@@ -41,6 +42,7 @@ class ServiceStatus(BaseModel):
 
 class PipelineHealth(BaseModel):
     """Etat global du pipeline email."""
+
     overall_status: str  # "healthy", "degraded", "down"
     services: List[ServiceStatus]
     alerts: List[str] = []
@@ -79,29 +81,21 @@ async def check_imap_fetcher() -> ServiceStatus:
                     name="IMAP Fetcher",
                     status="healthy",
                     message=f"4 comptes actifs (heartbeat {age}s)",
-                    details={"heartbeat_age_s": age}
+                    details={"heartbeat_age_s": age},
                 )
             else:
                 return ServiceStatus(
                     name="IMAP Fetcher",
                     status="degraded",
                     message=f"Heartbeat stale ({age}s)",
-                    details={"heartbeat_age_s": age}
+                    details={"heartbeat_age_s": age},
                 )
         else:
             return ServiceStatus(
-                name="IMAP Fetcher",
-                status="down",
-                message="Pas de heartbeat Redis",
-                details={}
+                name="IMAP Fetcher", status="down", message="Pas de heartbeat Redis", details={}
             )
     except Exception as e:
-        return ServiceStatus(
-            name="IMAP Fetcher",
-            status="down",
-            message=f"Erreur: {e}",
-            details={}
-        )
+        return ServiceStatus(name="IMAP Fetcher", status="down", message=f"Erreur: {e}", details={})
 
 
 async def check_presidio() -> ServiceStatus:
@@ -122,7 +116,9 @@ async def check_presidio() -> ServiceStatus:
 
             if analyzer_ok and anonymizer_ok:
                 # Verifier que le modele FR est charge
-                entities_resp = await client.get("http://presidio-analyzer:3000/supportedentities?language=fr")
+                entities_resp = await client.get(
+                    "http://presidio-analyzer:3000/supportedentities?language=fr"
+                )
                 entities_ok = entities_resp.status_code == 200
 
                 return ServiceStatus(
@@ -132,8 +128,8 @@ async def check_presidio() -> ServiceStatus:
                     details={
                         "analyzer": "OK",
                         "anonymizer": "OK",
-                        "french_support": "OK" if entities_ok else "MISSING"
-                    }
+                        "french_support": "OK" if entities_ok else "MISSING",
+                    },
                 )
             else:
                 return ServiceStatus(
@@ -142,24 +138,16 @@ async def check_presidio() -> ServiceStatus:
                     message="Un service est down",
                     details={
                         "analyzer": "OK" if analyzer_ok else "DOWN",
-                        "anonymizer": "OK" if anonymizer_ok else "DOWN"
-                    }
+                        "anonymizer": "OK" if anonymizer_ok else "DOWN",
+                    },
                 )
 
     except httpx.ConnectError as e:
         return ServiceStatus(
-            name="Presidio",
-            status="down",
-            message=f"Cannot connect: {e}",
-            details={}
+            name="Presidio", status="down", message=f"Cannot connect: {e}", details={}
         )
     except Exception as e:
-        return ServiceStatus(
-            name="Presidio",
-            status="down",
-            message=f"Erreur: {e}",
-            details={}
-        )
+        return ServiceStatus(name="Presidio", status="down", message=f"Erreur: {e}", details={})
 
 
 async def check_redis_stream() -> ServiceStatus:
@@ -176,7 +164,7 @@ async def check_redis_stream() -> ServiceStatus:
         group_name = "email-processor"
 
         pending_info = await r.xpending(stream_name, group_name)
-        pending_count = pending_info.get('pending', 0) if pending_info else 0
+        pending_count = pending_info.get("pending", 0) if pending_info else 0
 
         threshold = 100
 
@@ -185,30 +173,22 @@ async def check_redis_stream() -> ServiceStatus:
                 name="Redis Stream",
                 status="healthy",
                 message=f"{pending_count} emails en attente",
-                details={"pending": pending_count, "threshold": threshold}
+                details={"pending": pending_count, "threshold": threshold},
             )
         else:
             return ServiceStatus(
                 name="Redis Stream",
                 status="degraded",
                 message=f"Backlog eleve: {pending_count} emails",
-                details={"pending": pending_count, "threshold": threshold}
+                details={"pending": pending_count, "threshold": threshold},
             )
 
     except aioredis.ConnectionError as e:
         return ServiceStatus(
-            name="Redis Stream",
-            status="down",
-            message=f"Cannot connect to Redis: {e}",
-            details={}
+            name="Redis Stream", status="down", message=f"Cannot connect to Redis: {e}", details={}
         )
     except Exception as e:
-        return ServiceStatus(
-            name="Redis Stream",
-            status="down",
-            message=f"Erreur: {e}",
-            details={}
-        )
+        return ServiceStatus(name="Redis Stream", status="down", message=f"Erreur: {e}", details={})
 
 
 async def check_consumer() -> ServiceStatus:
@@ -228,28 +208,22 @@ async def check_consumer() -> ServiceStatus:
                     name="Email Consumer",
                     status="healthy",
                     message=f"Actif (heartbeat {age}s)",
-                    details={"heartbeat_age_s": age}
+                    details={"heartbeat_age_s": age},
                 )
             else:
                 return ServiceStatus(
                     name="Email Consumer",
                     status="degraded",
                     message=f"Heartbeat stale ({age}s)",
-                    details={"heartbeat_age_s": age}
+                    details={"heartbeat_age_s": age},
                 )
         else:
             return ServiceStatus(
-                name="Email Consumer",
-                status="down",
-                message="Pas de heartbeat Redis",
-                details={}
+                name="Email Consumer", status="down", message="Pas de heartbeat Redis", details={}
             )
     except Exception as e:
         return ServiceStatus(
-            name="Email Consumer",
-            status="down",
-            message=f"Erreur: {e}",
-            details={}
+            name="Email Consumer", status="down", message=f"Erreur: {e}", details={}
         )
 
 
@@ -262,10 +236,7 @@ async def check_email_pipeline_health() -> PipelineHealth:
     """
     # Check tous les services en parallele
     results = await asyncio.gather(
-        check_imap_fetcher(),
-        check_presidio(),
-        check_redis_stream(),
-        check_consumer()
+        check_imap_fetcher(), check_presidio(), check_redis_stream(), check_consumer()
     )
 
     services = list(results)
@@ -298,10 +269,7 @@ async def check_email_pipeline_health() -> PipelineHealth:
         summary = f"🔴 Pipeline en panne ({down_count} service(s) down)"
 
     return PipelineHealth(
-        overall_status=overall_status,
-        services=services,
-        alerts=alerts,
-        summary=summary
+        overall_status=overall_status, services=services, alerts=alerts, summary=summary
     )
 
 
@@ -315,16 +283,12 @@ def format_status_message(health: PipelineHealth) -> str:
     Returns:
         Message formate pour Telegram
     """
-    lines = [
-        "📊 **Friday Email Pipeline Status**",
-        "",
-        health.summary,
-        "",
-        "**Services:**"
-    ]
+    lines = ["📊 **Friday Email Pipeline Status**", "", health.summary, "", "**Services:**"]
 
     for service in health.services:
-        icon = "✅" if service.status == "healthy" else "⚠️" if service.status == "degraded" else "🔴"
+        icon = (
+            "✅" if service.status == "healthy" else "⚠️" if service.status == "degraded" else "🔴"
+        )
         lines.append(f"{icon} **{service.name}**: {service.message}")
 
         # Ajouter details si pertinent

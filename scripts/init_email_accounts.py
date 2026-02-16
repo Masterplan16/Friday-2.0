@@ -99,8 +99,7 @@ async def main():
 
         # Check if account already exists
         existing = await conn.fetchrow(
-            "SELECT account_id FROM ingestion.email_accounts WHERE account_id = $1",
-            account_id
+            "SELECT account_id FROM ingestion.email_accounts WHERE account_id = $1", account_id
         )
 
         if existing:
@@ -131,7 +130,7 @@ async def main():
                 imap_host,
                 imap_port,
                 imap_user,
-                imap_password.encode('utf-8'),  # Trigger will encrypt with pgcrypto
+                imap_password.encode("utf-8"),  # Trigger will encrypt with pgcrypto
                 smtp_host,
                 smtp_port,
                 use_idle,

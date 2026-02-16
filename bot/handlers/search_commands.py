@@ -203,9 +203,7 @@ def _parse_query_and_filters(args_text: str) -> tuple[str, dict]:
 # ============================================================
 
 
-async def search_details_callback(
-    update: Update, context: ContextTypes.DEFAULT_TYPE
-) -> None:
+async def search_details_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
     Handler inline button "Détails" (Task 5.4).
 

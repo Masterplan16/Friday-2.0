@@ -39,7 +39,9 @@ class SemanticSearchRequest(BaseModel):
 
     query: str = Field(..., description="Texte requête utilisateur", min_length=1, max_length=1000)
     top_k: int = Field(default=10, description="Nombre résultats", ge=1, le=100)
-    filters: Optional[dict] = Field(default=None, description="Filtres optionnels (node_type, date_range)")
+    filters: Optional[dict] = Field(
+        default=None, description="Filtres optionnels (node_type, date_range)"
+    )
 
 
 class SearchResultResponse(BaseModel):
@@ -128,21 +130,20 @@ async def semantic_search(request: SemanticSearchRequest):
         logger.error("voyage_api_error", error=str(e), query=request.query)
         raise HTTPException(
             status_code=503,
-            detail="Embedding service temporarily unavailable. Please try again later."
+            detail="Embedding service temporarily unavailable. Please try again later.",
         )
 
     except VectorStoreError as e:
         logger.error("vectorstore_error", error=str(e), query=request.query)
         raise HTTPException(
             status_code=503,
-            detail="Search service temporarily unavailable. Please try again later."
+            detail="Search service temporarily unavailable. Please try again later.",
         )
 
     except AnonymizationError as e:
         logger.error("anonymization_error", error=str(e), query_length=len(request.query))
         raise HTTPException(
-            status_code=500,
-            detail="Query anonymization failed. Please try with a different query."
+            status_code=500, detail="Query anonymization failed. Please try with a different query."
         )
 
     except ValidationError as e:

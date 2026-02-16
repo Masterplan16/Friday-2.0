@@ -45,7 +45,7 @@ ACCOUNTS = [
             "auth": {
                 "user": os.getenv("GMAIL_PRO_IMAP_USER"),
                 "pass": os.getenv("GMAIL_PRO_APP_PASSWORD"),
-            }
+            },
         },
         "smtp": {
             "host": os.getenv("GMAIL_PRO_SMTP_HOST"),
@@ -54,8 +54,8 @@ ACCOUNTS = [
             "auth": {
                 "user": os.getenv("GMAIL_PRO_IMAP_USER"),
                 "pass": os.getenv("GMAIL_PRO_APP_PASSWORD"),
-            }
-        }
+            },
+        },
     },
     {
         "account_id": "account_personal",
@@ -68,7 +68,7 @@ ACCOUNTS = [
             "auth": {
                 "user": os.getenv("GMAIL_PERSO_IMAP_USER"),
                 "pass": os.getenv("GMAIL_PERSO_APP_PASSWORD"),
-            }
+            },
         },
         "smtp": {
             "host": os.getenv("GMAIL_PERSO_SMTP_HOST"),
@@ -77,8 +77,8 @@ ACCOUNTS = [
             "auth": {
                 "user": os.getenv("GMAIL_PERSO_IMAP_USER"),
                 "pass": os.getenv("GMAIL_PERSO_APP_PASSWORD"),
-            }
-        }
+            },
+        },
     },
     {
         "account_id": "account_faculty",
@@ -91,7 +91,7 @@ ACCOUNTS = [
             "auth": {
                 "user": os.getenv("ZIMBRA_IMAP_USER"),  # p00000004769@umontpellier.fr
                 "pass": os.getenv("ZIMBRA_PASSWORD"),
-            }
+            },
         },
         "smtp": {
             "host": os.getenv("ZIMBRA_SMTP_HOST"),
@@ -100,8 +100,8 @@ ACCOUNTS = [
             "auth": {
                 "user": os.getenv("ZIMBRA_IMAP_USER"),
                 "pass": os.getenv("ZIMBRA_PASSWORD"),
-            }
-        }
+            },
+        },
     },
     {
         "account_id": "account_protonmail",
@@ -115,7 +115,7 @@ ACCOUNTS = [
             "auth": {
                 "user": os.getenv("PROTONMAIL_IMAP_USER"),
                 "pass": os.getenv("PROTONMAIL_BRIDGE_PASSWORD"),
-            }
+            },
         },
         "smtp": {
             "host": os.getenv("PROTONMAIL_SMTP_HOST"),  # Tailscale IP du PC
@@ -125,13 +125,15 @@ ACCOUNTS = [
             "auth": {
                 "user": os.getenv("PROTONMAIL_IMAP_USER"),
                 "pass": os.getenv("PROTONMAIL_BRIDGE_PASSWORD"),
-            }
-        }
-    }
+            },
+        },
+    },
 ]
 
 
-async def create_account(client: httpx.AsyncClient, account: Dict[str, Any], dry_run: bool = False) -> bool:
+async def create_account(
+    client: httpx.AsyncClient, account: Dict[str, Any], dry_run: bool = False
+) -> bool:
     """Crée un compte EmailEngine."""
     account_id = account["account_id"]
 

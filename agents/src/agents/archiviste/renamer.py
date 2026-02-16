@@ -12,6 +12,7 @@ Exemples:
 
 Trust Layer: @friday_action avec trust=propose (Day 1).
 """
+
 import re
 from pathlib import Path
 from typing import Optional
@@ -21,7 +22,6 @@ import structlog
 from agents.src.agents.archiviste.models import MetadataExtraction, RenameResult
 from agents.src.middleware.trust import friday_action
 from agents.src.middleware.models import ActionResult
-
 
 logger = structlog.get_logger(__name__)
 
@@ -41,16 +41,14 @@ class DocumentRenamer:
     """
 
     # Caractères interdits Windows dans noms de fichiers (Task 3.3)
-    FORBIDDEN_CHARS = ['\\', '/', ':', '*', '?', '"', '<', '>', '|']
+    FORBIDDEN_CHARS = ["\\", "/", ":", "*", "?", '"', "<", ">", "|"]
 
     # Longueur max émetteur (Task 3.3)
     MAX_EMITTER_LENGTH = 50
 
     @friday_action(module="archiviste", action="rename", trust_default="propose")
     async def rename_document(
-        self,
-        original_filename: str,
-        metadata: MetadataExtraction
+        self, original_filename: str, metadata: MetadataExtraction
     ) -> ActionResult:
         """
         Renommer document selon convention standardisée (AC2).
@@ -79,7 +77,7 @@ class DocumentRenamer:
             "rename_document.start",
             original_filename=original_filename,
             doc_type=metadata.doc_type,
-            emitter=metadata.emitter
+            emitter=metadata.emitter,
         )
 
         try:
@@ -93,7 +91,7 @@ class DocumentRenamer:
                 logger.warning(
                     "rename_document.no_extension",
                     original_filename=original_filename,
-                    fallback=extension
+                    fallback=extension,
                 )
 
             # 2. Formatter date (ISO 8601)
@@ -115,7 +113,7 @@ class DocumentRenamer:
                 new_filename=new_filename,
                 metadata=metadata,
                 confidence=metadata.confidence,  # Confidence = celle de metadata
-                reasoning=f"Renommage selon convention : {metadata.doc_type} de {metadata.emitter}"
+                reasoning=f"Renommage selon convention : {metadata.doc_type} de {metadata.emitter}",
             )
 
             # 7. Construire ActionResult (Task 3.6)
@@ -127,24 +125,22 @@ class DocumentRenamer:
                 payload={
                     "rename_result": rename_result,
                     "original_filename": original_filename,
-                    "new_filename": new_filename
-                }
+                    "new_filename": new_filename,
+                },
             )
 
             logger.info(
                 "rename_document.success",
                 original_filename=original_filename,
                 new_filename=new_filename,
-                confidence=metadata.confidence
+                confidence=metadata.confidence,
             )
 
             return action_result
 
         except Exception as e:
             logger.error(
-                "rename_document.failure",
-                original_filename=original_filename,
-                error=str(e)
+                "rename_document.failure", original_filename=original_filename, error=str(e)
             )
             raise
 
@@ -187,15 +183,15 @@ class DocumentRenamer:
 
         # Supprimer caractères non-ASCII problématiques (accents, etc.)
         # On garde uniquement alphanumériques, tirets, underscores
-        sanitized = re.sub(r'[^a-zA-Z0-9\-_]', '', sanitized)
+        sanitized = re.sub(r"[^a-zA-Z0-9\-_]", "", sanitized)
 
         # Tronquer si trop long
         if len(sanitized) > self.MAX_EMITTER_LENGTH:
-            sanitized = sanitized[:self.MAX_EMITTER_LENGTH]
+            sanitized = sanitized[: self.MAX_EMITTER_LENGTH]
             logger.debug(
                 "rename_document.emitter_truncated",
                 original_length=len(emitter),
-                truncated_length=self.MAX_EMITTER_LENGTH
+                truncated_length=self.MAX_EMITTER_LENGTH,
             )
 
         # Si vide après sanitization → fallback
@@ -204,7 +200,7 @@ class DocumentRenamer:
             logger.warning(
                 "rename_document.emitter_empty_after_sanitize",
                 original_emitter=emitter,
-                fallback=sanitized
+                fallback=sanitized,
             )
 
         return sanitized

@@ -342,7 +342,7 @@ async def receipt_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             lines.append(f"Correction: {row['correction']}")
 
         # Story 2.6 AC4: Section spéciale pour emails envoyés (lisibilité améliorée)
-        if row['module'] == 'email' and row['action_type'] == 'draft_reply' and row.get("payload"):
+        if row["module"] == "email" and row["action_type"] == "draft_reply" and row.get("payload"):
             payload = row["payload"]
             lines.append("\n**Email Details**")
             if payload.get("account_id"):
@@ -352,7 +352,7 @@ async def receipt_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             if payload.get("message_id"):
                 lines.append(f"Message ID: `{payload['message_id'][:50]}...`")
             if payload.get("draft_body"):
-                draft_preview = truncate_text(payload['draft_body'], 300)
+                draft_preview = truncate_text(payload["draft_body"], 300)
                 lines.append(f"\nBrouillon (extrait):\n---\n{draft_preview}\n---")
 
         if verbose:
@@ -414,19 +414,24 @@ async def journal_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
                 filter_module = arg
                 break
 
-    logger.info("/journal command received", user_id=user_id, verbose=verbose, filter_module=filter_module)
+    logger.info(
+        "/journal command received", user_id=user_id, verbose=verbose, filter_module=filter_module
+    )
 
     try:
         pool = await _get_pool()
         async with pool.acquire() as conn:
             if filter_module:
-                rows = await conn.fetch("""
+                rows = await conn.fetch(
+                    """
                     SELECT id, module, action_type, status, confidence,
                            input_summary, output_summary, created_at
                     FROM core.action_receipts
                     WHERE module = $1
                     ORDER BY created_at DESC LIMIT 20
-                    """, filter_module)
+                    """,
+                    filter_module,
+                )
             else:
                 rows = await conn.fetch("""
                     SELECT id, module, action_type, status, confidence,
@@ -448,9 +453,9 @@ async def journal_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             conf = format_confidence(row["confidence"])
 
             # Story 2.6 AC4: Format spécialisé pour emails envoyés
-            if row['module'] == 'email' and row['action_type'] == 'draft_reply':
+            if row["module"] == "email" and row["action_type"] == "draft_reply":
                 # Extraire recipient_anon depuis output_summary
-                output_summary = row.get('output_summary', '')
+                output_summary = row.get("output_summary", "")
                 # Format: "Email envoyé → [RECIPIENT_ANON]" ou similaire
                 lines.append(f"`{ts}` {emoji} Email envoyé → {output_summary} {conf}")
             else:

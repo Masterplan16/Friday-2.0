@@ -25,7 +25,6 @@ from agents.src.core.models import (
     CASQUETTE_LABEL_MAPPING,
 )
 
-
 logger = structlog.get_logger(__name__)
 
 
@@ -33,10 +32,8 @@ logger = structlog.get_logger(__name__)
 # HANDLER /conflits (AC7)
 # ============================================================================
 
-async def handle_conflits_command(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE
-) -> None:
+
+async def handle_conflits_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
     Handler commande /conflits (AC7)
 
@@ -62,10 +59,7 @@ async def handle_conflits_command(
 
     db_pool = context.bot_data.get("db_pool")
     if not db_pool:
-        await message.reply_text(
-            "❌ Erreur système : db_pool non initialisé",
-            parse_mode="HTML"
-        )
+        await message.reply_text("❌ Erreur système : db_pool non initialisé", parse_mode="HTML")
         return
 
     try:
@@ -79,40 +73,30 @@ async def handle_conflits_command(
         month_stats = await _get_month_stats(db_pool)
 
         # Formater message dashboard
-        dashboard = _format_dashboard_message(
-            unresolved_conflicts,
-            resolved_week,
-            month_stats
-        )
+        dashboard = _format_dashboard_message(unresolved_conflicts, resolved_week, month_stats)
 
-        await message.reply_text(
-            dashboard,
-            parse_mode="HTML"
-        )
+        await message.reply_text(dashboard, parse_mode="HTML")
 
         logger.info(
             "conflits_command_executed",
             user_id=message.from_user.id,
             unresolved_count=len(unresolved_conflicts),
-            resolved_week=resolved_week
+            resolved_week=resolved_week,
         )
 
     except Exception as e:
         logger.error(
-            "conflits_command_error",
-            error=str(e),
-            user_id=message.from_user.id,
-            exc_info=True
+            "conflits_command_error", error=str(e), user_id=message.from_user.id, exc_info=True
         )
         await message.reply_text(
-            "❌ Erreur lors de la récupération des conflits",
-            parse_mode="HTML"
+            "❌ Erreur lors de la récupération des conflits", parse_mode="HTML"
         )
 
 
 # ============================================================================
 # QUERIES SQL
 # ============================================================================
+
 
 async def _get_unresolved_conflicts(db_pool: asyncpg.Pool) -> list:
     """
@@ -122,8 +106,7 @@ async def _get_unresolved_conflicts(db_pool: asyncpg.Pool) -> list:
         Liste conflits avec détails événements
     """
     async with db_pool.acquire() as conn:
-        rows = await conn.fetch(
-            """
+        rows = await conn.fetch("""
             SELECT
                 c.id,
                 c.event1_id,
@@ -144,8 +127,7 @@ async def _get_unresolved_conflicts(db_pool: asyncpg.Pool) -> list:
             WHERE c.resolved = false
             ORDER BY e1.properties->>'start_datetime' ASC
             LIMIT 20
-            """
-        )
+            """)
 
     return [dict(row) for row in rows]
 
@@ -167,7 +149,7 @@ async def _get_resolved_week_count(db_pool: asyncpg.Pool) -> int:
             WHERE resolved = true
               AND resolved_at >= $1
             """,
-            one_week_ago
+            one_week_ago,
         )
 
     return row["count"] if row else 0
@@ -200,7 +182,7 @@ async def _get_month_stats(db_pool: asyncpg.Pool) -> Dict[str, Any]:
             FROM knowledge.calendar_conflicts
             WHERE detected_at >= $1
             """,
-            one_month_ago
+            one_month_ago,
         )
 
         total = total_row["count"] if total_row else 0
@@ -222,7 +204,7 @@ async def _get_month_stats(db_pool: asyncpg.Pool) -> Dict[str, Any]:
             ORDER BY count DESC
             LIMIT 5
             """,
-            one_month_ago
+            one_month_ago,
         )
 
         by_casquettes = []
@@ -245,25 +227,18 @@ async def _get_month_stats(db_pool: asyncpg.Pool) -> Dict[str, Any]:
                 # Fallback si casquette invalide
                 pair = f"{casquette1} ⚡ {casquette2}"
 
-            by_casquettes.append({
-                "pair": pair,
-                "count": row["count"]
-            })
+            by_casquettes.append({"pair": pair, "count": row["count"]})
 
-    return {
-        "total": total,
-        "by_casquettes": by_casquettes
-    }
+    return {"total": total, "by_casquettes": by_casquettes}
 
 
 # ============================================================================
 # FORMATAGE MESSAGE
 # ============================================================================
 
+
 def _format_dashboard_message(
-    unresolved_conflicts: list,
-    resolved_week: int,
-    month_stats: Dict[str, Any]
+    unresolved_conflicts: list, resolved_week: int, month_stats: Dict[str, Any]
 ) -> str:
     """
     Formate message dashboard conflits (AC7)
@@ -291,10 +266,7 @@ def _format_dashboard_message(
     • 🎓 Enseignant ⚡ 🔬 Chercheur : 5
     • 🩺 Médecin ⚡ 🔬 Chercheur : 2
     """
-    lines = [
-        "📊 <b>DASHBOARD CONFLITS CALENDRIER</b>",
-        ""
-    ]
+    lines = ["📊 <b>DASHBOARD CONFLITS CALENDRIER</b>", ""]
 
     # Section 1: Conflits non résolus
     unresolved_count = len(unresolved_conflicts)
@@ -303,7 +275,9 @@ def _format_dashboard_message(
         lines.append("✅ <b>Aucun conflit non résolu</b>")
         lines.append("")
     else:
-        lines.append(f"🔴 <b>Non résolus</b> : {unresolved_count} conflit{'s' if unresolved_count > 1 else ''}")
+        lines.append(
+            f"🔴 <b>Non résolus</b> : {unresolved_count} conflit{'s' if unresolved_count > 1 else ''}"
+        )
         lines.append("")
 
         # Liste conflits (max 5 affichés)
@@ -314,7 +288,9 @@ def _format_dashboard_message(
         # Si plus de 5 conflits
         if unresolved_count > 5:
             remaining = unresolved_count - 5
-            lines.append(f"<i>... et {remaining} autre{'s' if remaining > 1 else ''} conflit{'s' if remaining > 1 else ''}</i>")
+            lines.append(
+                f"<i>... et {remaining} autre{'s' if remaining > 1 else ''} conflit{'s' if remaining > 1 else ''}</i>"
+            )
 
         lines.append("")
 
@@ -324,7 +300,9 @@ def _format_dashboard_message(
 
     # Section 3: Stats mois
     total_month = month_stats["total"]
-    lines.append(f"📊 <b>Stats mois</b> (30 jours) : {total_month} conflit{'s' if total_month > 1 else ''}")
+    lines.append(
+        f"📊 <b>Stats mois</b> (30 jours) : {total_month} conflit{'s' if total_month > 1 else ''}"
+    )
 
     if month_stats["by_casquettes"]:
         lines.append("")
@@ -377,9 +355,7 @@ def _format_conflict_line(conflict: dict) -> str:
     overlap_str = _format_duration(overlap)
 
     return (
-        f"📅 {date_str} {time_str} : "
-        f"{emoji1} {title1} ⚡ {emoji2} {title2} "
-        f"({overlap_str})"
+        f"📅 {date_str} {time_str} : " f"{emoji1} {title1} ⚡ {emoji2} {title2} " f"({overlap_str})"
     )
 
 
@@ -388,7 +364,7 @@ def _truncate_title(title: str, max_length: int = 20) -> str:
     if len(title) <= max_length:
         return title
 
-    return title[:max_length - 3] + "..."
+    return title[: max_length - 3] + "..."
 
 
 def _format_duration(minutes: int) -> str:

@@ -7,6 +7,7 @@ Retry automatique avec backoff exponentiel.
 Validation path traversal.
 Deplacement vers error_directory si echec persistant (AC5).
 """
+
 import asyncio
 import json
 import shutil
@@ -96,9 +97,7 @@ class FridayWatchdogHandler(FileSystemEventHandler):
         # Filtrer extensions
         if file_path.suffix.lower() not in self.extensions:
             logger.debug(
-                "watchdog.ignored_extension",
-                path=str(file_path),
-                extension=file_path.suffix
+                "watchdog.ignored_extension", path=str(file_path), extension=file_path.suffix
             )
             return
 
@@ -109,28 +108,18 @@ class FridayWatchdogHandler(FileSystemEventHandler):
                 logger.warning(
                     "watchdog.path_traversal_blocked",
                     path=str(file_path),
-                    watched_root=str(self.watched_root)
+                    watched_root=str(self.watched_root),
                 )
                 return
         except (OSError, ValueError) as e:
-            logger.error(
-                "watchdog.path_resolve_failed",
-                path=str(file_path),
-                error=str(e)
-            )
+            logger.error("watchdog.path_resolve_failed", path=str(file_path), error=str(e))
             return
 
         # Bridge sync watchdog thread -> async event loop
         if self._loop and self._loop.is_running():
-            asyncio.run_coroutine_threadsafe(
-                self._handle_file_detected(resolved),
-                self._loop
-            )
+            asyncio.run_coroutine_threadsafe(self._handle_file_detected(resolved), self._loop)
         else:
-            logger.warning(
-                "watchdog.event_loop_not_running",
-                path=str(file_path)
-            )
+            logger.warning("watchdog.event_loop_not_running", path=str(file_path))
 
     async def _handle_file_detected(self, file_path: Path) -> None:
         """
@@ -147,29 +136,18 @@ class FridayWatchdogHandler(FileSystemEventHandler):
             if self.stabilization_delay > 0:
                 stable = await self._wait_for_stabilization(file_path)
                 if not stable:
-                    logger.warning(
-                        "watchdog.file_not_stable",
-                        filename=file_path.name
-                    )
+                    logger.warning("watchdog.file_not_stable", filename=file_path.name)
                     return
 
             await self._publish_with_retry(file_path)
 
         except Exception as e:
-            logger.error(
-                "watchdog.handle_failed",
-                filename=file_path.name,
-                error=str(e)
-            )
+            logger.error("watchdog.handle_failed", filename=file_path.name, error=str(e))
             # AC5: Deplacer vers error_directory + publier pipeline.error
             self._move_to_error_dir(file_path)
             await self._publish_pipeline_error(file_path, e)
 
-    async def _wait_for_stabilization(
-        self,
-        file_path: Path,
-        max_wait: float = 10.0
-    ) -> bool:
+    async def _wait_for_stabilization(self, file_path: Path, max_wait: float = 10.0) -> bool:
         """
         Attendre que le fichier soit stable (ecriture complete).
 
@@ -211,10 +189,7 @@ class FridayWatchdogHandler(FileSystemEventHandler):
                 try:
                     file_size = file_path.stat().st_size
                 except OSError:
-                    logger.warning(
-                        "watchdog.file_disappeared",
-                        filename=file_path.name
-                    )
+                    logger.warning("watchdog.file_disappeared", filename=file_path.name)
                     return
 
                 # Format plat Redis Streams (coherent avec attachment_extractor.py)
@@ -239,7 +214,7 @@ class FridayWatchdogHandler(FileSystemEventHandler):
                     filename=file_path.name,
                     source=self.source_label,
                     size_bytes=file_size,
-                    extension=file_path.suffix.lower()
+                    extension=file_path.suffix.lower(),
                 )
                 return  # Success
 
@@ -253,7 +228,7 @@ class FridayWatchdogHandler(FileSystemEventHandler):
                         attempt=attempt,
                         max_retries=MAX_RETRIES,
                         backoff=backoff,
-                        error=str(e)
+                        error=str(e),
                     )
                     await asyncio.sleep(backoff)
                 else:
@@ -261,7 +236,7 @@ class FridayWatchdogHandler(FileSystemEventHandler):
                         "watchdog.publish_failed",
                         filename=file_path.name,
                         attempts=MAX_RETRIES,
-                        error=str(e)
+                        error=str(e),
                     )
 
         # Toutes tentatives echouees
@@ -292,17 +267,11 @@ class FridayWatchdogHandler(FileSystemEventHandler):
             shutil.move(str(file_path), str(dest))
 
             logger.info(
-                "watchdog.file_moved_to_errors",
-                filename=file_path.name,
-                destination=str(dest)
+                "watchdog.file_moved_to_errors", filename=file_path.name, destination=str(dest)
             )
 
         except Exception as e:
-            logger.error(
-                "watchdog.error_dir_move_failed",
-                filename=file_path.name,
-                error=str(e)
-            )
+            logger.error("watchdog.error_dir_move_failed", filename=file_path.name, error=str(e))
 
     async def _publish_pipeline_error(
         self,
@@ -334,15 +303,12 @@ class FridayWatchdogHandler(FileSystemEventHandler):
                 maxlen=5000,
             )
 
-            logger.info(
-                "watchdog.pipeline_error_published",
-                filename=file_path.name
-            )
+            logger.info("watchdog.pipeline_error_published", filename=file_path.name)
 
         except Exception as publish_err:
             # Best effort — Redis peut etre la cause de l'erreur initiale
             logger.error(
                 "watchdog.pipeline_error_publish_failed",
                 filename=file_path.name,
-                error=str(publish_err)
+                error=str(publish_err),
             )

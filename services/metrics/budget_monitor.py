@@ -38,7 +38,12 @@ class BudgetMonitor:
         - Cooldown 24h entre alertes identiques (évite spam)
     """
 
-    def __init__(self, db_url: str, telegram_token: Optional[str] = None, telegram_chat_id: Optional[str] = None):
+    def __init__(
+        self,
+        db_url: str,
+        telegram_token: Optional[str] = None,
+        telegram_chat_id: Optional[str] = None,
+    ):
         """
         Initialise budget monitor.
 
@@ -67,8 +72,7 @@ class BudgetMonitor:
 
         try:
             # Query vue core.api_budget_status
-            rows = await conn.fetch(
-                """
+            rows = await conn.fetch("""
                 SELECT
                     service,
                     monthly_limit_cents,
@@ -78,8 +82,7 @@ class BudgetMonitor:
                     status
                 FROM core.api_budget_status
                 ORDER BY usage_pct DESC
-                """
-            )
+                """)
 
             results = []
             for row in rows:
@@ -103,7 +106,9 @@ class BudgetMonitor:
         finally:
             await conn.close()
 
-    async def send_telegram_alert(self, service: str, status: str, usage_pct: float, spent_eur: float, limit_eur: float) -> None:
+    async def send_telegram_alert(
+        self, service: str, status: str, usage_pct: float, spent_eur: float, limit_eur: float
+    ) -> None:
         """
         Envoie alerte Telegram si budget WARNING ou EXCEEDED.
 

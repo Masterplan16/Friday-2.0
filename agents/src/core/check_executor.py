@@ -32,12 +32,7 @@ class CheckExecutor:
     CIRCUIT_BREAKER_THRESHOLD = 3  # 3 échecs consécutifs
     CIRCUIT_BREAKER_TIMEOUT = 3600  # 1 heure
 
-    def __init__(
-        self,
-        db_pool: asyncpg.Pool,
-        redis_client: Redis,
-        check_registry: CheckRegistry
-    ):
+    def __init__(self, db_pool: asyncpg.Pool, redis_client: Redis, check_registry: CheckRegistry):
         """
         Initialize Check Executor.
 
@@ -71,10 +66,7 @@ class CheckExecutor:
         check = self.check_registry.get_check(check_id)
         if check is None:
             logger.error("Check not found", check_id=check_id)
-            return CheckResult(
-                notify=False,
-                error=f"Check '{check_id}' not found in registry"
-            )
+            return CheckResult(notify=False, error=f"Check '{check_id}' not found in registry")
 
         # Vérifier circuit breaker (Task 5.4)
         circuit_breaker_key = f"check:disabled:{check_id}"
@@ -83,8 +75,7 @@ class CheckExecutor:
         if is_disabled:
             logger.warning("Check disabled by circuit breaker", check_id=check_id)
             return CheckResult(
-                notify=False,
-                error=f"Check '{check_id}' disabled by circuit breaker"
+                notify=False, error=f"Check '{check_id}' disabled by circuit breaker"
             )
 
         # Exécuter check avec isolation (Task 5.3)
@@ -101,11 +92,7 @@ class CheckExecutor:
             failures_key = f"check:failures:{check_id}"
             await self.redis_client.delete(failures_key)
 
-            logger.info(
-                "Check executed successfully",
-                check_id=check_id,
-                notify=result.notify
-            )
+            logger.info("Check executed successfully", check_id=check_id, notify=result.notify)
 
             return result
 
@@ -115,17 +102,14 @@ class CheckExecutor:
                 "Check execution failed",
                 check_id=check_id,
                 error=str(e),
-                error_type=type(e).__name__
+                error_type=type(e).__name__,
             )
 
             # Incrémenter compteur failures (Task 5.4)
             await self._increment_failures(check_id)
 
             # Retourner CheckResult avec erreur
-            return CheckResult(
-                notify=False,
-                error=f"Check execution failed: {str(e)}"
-            )
+            return CheckResult(notify=False, error=f"Check execution failed: {str(e)}")
 
     async def _increment_failures(self, check_id: str) -> None:
         """
@@ -145,28 +129,23 @@ class CheckExecutor:
 
         if failures >= self.CIRCUIT_BREAKER_THRESHOLD:
             # Ouvrir circuit breaker : disable check 1h
-            await self.redis_client.setex(
-                disabled_key,
-                self.CIRCUIT_BREAKER_TIMEOUT,
-                "1"
-            )
+            await self.redis_client.setex(disabled_key, self.CIRCUIT_BREAKER_TIMEOUT, "1")
 
             logger.error(
                 "Check circuit breaker opened",
                 check_id=check_id,
                 failures=failures,
-                timeout_seconds=self.CIRCUIT_BREAKER_TIMEOUT
+                timeout_seconds=self.CIRCUIT_BREAKER_TIMEOUT,
             )
 
             # Envoyer alerte System (Task 5.4)
-            await send_alert_system(
-                f"⚠️ Check '{check_id}' disabled for 1h ({failures} failures)"
-            )
+            await send_alert_system(f"⚠️ Check '{check_id}' disabled for 1h ({failures} failures)")
 
 
 # ============================================================================
 # Helper Functions
 # ============================================================================
+
 
 async def send_alert_system(message: str) -> None:
     """
@@ -178,10 +157,7 @@ async def send_alert_system(message: str) -> None:
     from agents.src.core.telegram_helper import send_to_system_alerts
 
     # Envoyer alerte au topic System
-    sent = await send_to_system_alerts(
-        message=message,
-        parse_mode="HTML"
-    )
+    sent = await send_to_system_alerts(message=message, parse_mode="HTML")
 
     if sent:
         logger.info("System alert sent", alert_preview=message[:50])

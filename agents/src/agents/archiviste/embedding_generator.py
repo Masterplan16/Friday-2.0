@@ -141,9 +141,7 @@ class EmbeddingGenerator:
 
         # 3. Valider dimensions (1024 pour voyage-4-large)
         if dimensions != EMBEDDING_DIMENSIONS:
-            raise ValueError(
-                f"Expected {EMBEDDING_DIMENSIONS} dimensions, got {dimensions}"
-            )
+            raise ValueError(f"Expected {EMBEDDING_DIMENSIONS} dimensions, got {dimensions}")
 
         # 4. Valider normalization (L2 norm ≈ 1.0)
         l2_norm = sum(x**2 for x in embedding_vector) ** 0.5
@@ -193,9 +191,7 @@ class EmbeddingGenerator:
             },
         )
 
-    async def _generate_with_retry(
-        self, texts: list[str], timeout: float
-    ) -> dict:
+    async def _generate_with_retry(self, texts: list[str], timeout: float) -> dict:
         """
         Génère embeddings avec retry automatique (backoff exponentiel).
 
@@ -228,9 +224,7 @@ class EmbeddingGenerator:
                 return response
 
             except asyncio.TimeoutError:
-                last_exception = TimeoutError(
-                    f"Embedding generation timeout after {timeout}s"
-                )
+                last_exception = TimeoutError(f"Embedding generation timeout after {timeout}s")
                 logger.warning(
                     "Embedding timeout, retrying",
                     attempt=attempt + 1,

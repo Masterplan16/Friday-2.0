@@ -14,7 +14,6 @@ from typing import Optional
 
 from agents.src.core.models import Casquette, CASQUETTE_EMOJI_MAPPING, CASQUETTE_LABEL_MAPPING
 
-
 # ============================================================================
 # Constants
 # ============================================================================
@@ -27,14 +26,14 @@ WEEKDAY_LABELS = {
     3: "Jeudi",
     4: "Vendredi",
     5: "Samedi",
-    6: "Dimanche"
+    6: "Dimanche",
 }
 
 # Labels période journée par casquette (heuristique)
 CASQUETTE_PERIOD_LABELS = {
     Casquette.MEDECIN: "Matin",
     Casquette.ENSEIGNANT: "Après-midi",
-    Casquette.CHERCHEUR: "Soirée"
+    Casquette.CHERCHEUR: "Soirée",
 }
 
 
@@ -42,10 +41,9 @@ CASQUETTE_PERIOD_LABELS = {
 # Template Functions
 # ============================================================================
 
+
 def format_briefing_message(
-    date: date,
-    grouped_events: dict[Casquette, list[dict]],
-    conflicts: list[dict]
+    date: date, grouped_events: dict[Casquette, list[dict]], conflicts: list[dict]
 ) -> str:
     """
     Formate message briefing avec groupement par casquette (AC3).
@@ -191,13 +189,13 @@ def _format_conflict_line(conflict: dict) -> str:
     else:
         overlap_str = f"{overlap_mins}min"
 
-    return f"• {time1} {casquette1_label} ⚡ {time2} {casquette2_label} ({overlap_str} chevauchement)"
+    return (
+        f"• {time1} {casquette1_label} ⚡ {time2} {casquette2_label} ({overlap_str} chevauchement)"
+    )
 
 
 def format_briefing_command_response(
-    date: date,
-    casquette_filter: Optional[Casquette],
-    events_count: int
+    date: date, casquette_filter: Optional[Casquette], events_count: int
 ) -> str:
     """
     Formate réponse commande /briefing (Story 4.2 à venir).

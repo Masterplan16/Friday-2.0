@@ -41,11 +41,9 @@ CASQUETTE_LABELS = {
 # FONCTION PRINCIPALE NOTIFICATION (AC3)
 # ============================================================================
 
+
 async def send_event_proposal(
-    bot: Bot,
-    topic_id: int,
-    supergroup_id: int,
-    event_data: Dict[str, Any]
+    bot: Bot, topic_id: int, supergroup_id: int, event_data: Dict[str, Any]
 ) -> bool:
     """
     Envoie notification événement détecté dans Topic Actions (AC3)
@@ -88,14 +86,14 @@ async def send_event_proposal(
             message_thread_id=topic_id,
             text=message,
             parse_mode="HTML",
-            reply_markup=keyboard
+            reply_markup=keyboard,
         )
 
         logger.info(
             "event_notification_sent",
             event_id=event_data["event_id"],
             topic="Actions",
-            event_title=event_data["title"]
+            event_title=event_data["title"],
         )
 
         return True
@@ -105,7 +103,7 @@ async def send_event_proposal(
             "event_notification_failed",
             event_id=event_data.get("event_id"),
             error=str(e),
-            exc_info=True
+            exc_info=True,
         )
         return False
 
@@ -113,6 +111,7 @@ async def send_event_proposal(
 # ============================================================================
 # FORMATAGE MESSAGE (AC3)
 # ============================================================================
+
 
 def _format_event_message(event_data: Dict[str, Any]) -> str:
     """
@@ -193,8 +192,18 @@ def _format_datetime_french(start: datetime, end: Optional[datetime] = None) -> 
 
     # Mois français
     MONTHS = [
-        "janvier", "février", "mars", "avril", "mai", "juin",
-        "juillet", "août", "septembre", "octobre", "novembre", "décembre"
+        "janvier",
+        "février",
+        "mars",
+        "avril",
+        "mai",
+        "juin",
+        "juillet",
+        "août",
+        "septembre",
+        "octobre",
+        "novembre",
+        "décembre",
     ]
 
     # Format : "Lundi 15 février 2026"
@@ -228,16 +237,14 @@ def _html_escape(text: str) -> str:
         Texte échappé
     """
     return (
-        text.replace("&", "&amp;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
-        .replace('"', "&quot;")
+        text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
     )
 
 
 # ============================================================================
 # INLINE KEYBOARD (AC3)
 # ============================================================================
+
 
 def _create_event_keyboard(event_id: str) -> InlineKeyboardMarkup:
     """
@@ -253,21 +260,12 @@ def _create_event_keyboard(event_id: str) -> InlineKeyboardMarkup:
     """
     keyboard = [
         [
-            InlineKeyboardButton(
-                "✅ Ajouter",
-                callback_data=f"event_approve:{event_id}"
-            ),
-            InlineKeyboardButton(
-                "✏️ Modifier",
-                callback_data=f"event_modify:{event_id}"
-            ),
+            InlineKeyboardButton("✅ Ajouter", callback_data=f"event_approve:{event_id}"),
+            InlineKeyboardButton("✏️ Modifier", callback_data=f"event_modify:{event_id}"),
         ],
         [
-            InlineKeyboardButton(
-                "❌ Ignorer",
-                callback_data=f"event_ignore:{event_id}"
-            ),
-        ]
+            InlineKeyboardButton("❌ Ignorer", callback_data=f"event_ignore:{event_id}"),
+        ],
     ]
 
     return InlineKeyboardMarkup(keyboard)
@@ -277,11 +275,9 @@ def _create_event_keyboard(event_id: str) -> InlineKeyboardMarkup:
 # NOTIFICATIONS GOOGLE CALENDAR SYNC (Story 7.2 Task 6)
 # ============================================================================
 
+
 async def send_calendar_sync_success(
-    bot: Bot,
-    topic_id: int,
-    supergroup_id: int,
-    event_data: Dict[str, Any]
+    bot: Bot, topic_id: int, supergroup_id: int, event_data: Dict[str, Any]
 ) -> bool:
     """
     Envoie notification après création Google Calendar réussie (AC3)
@@ -357,16 +353,13 @@ async def send_calendar_sync_success(
     except TelegramError as e:
         logger.error(
             f"calendar_sync_success_notification_failed: {event_data.get('event_id')} - {str(e)}",
-            exc_info=True
+            exc_info=True,
         )
         return False
 
 
 async def send_calendar_modification_detected(
-    bot: Bot,
-    topic_id: int,
-    supergroup_id: int,
-    modification_data: Dict[str, Any]
+    bot: Bot, topic_id: int, supergroup_id: int, modification_data: Dict[str, Any]
 ) -> bool:
     """
     Envoie notification modification détectée dans Google Calendar (AC4)
@@ -471,6 +464,6 @@ async def send_calendar_modification_detected(
     except TelegramError as e:
         logger.error(
             f"calendar_modification_notification_failed: {modification_data.get('event_id')} - {str(e)}",
-            exc_info=True
+            exc_info=True,
         )
         return False

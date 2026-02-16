@@ -29,7 +29,6 @@ from agents.src.core.models import (
     CASQUETTE_LABEL_MAPPING,
 )
 
-
 logger = structlog.get_logger(__name__)
 
 
@@ -37,10 +36,8 @@ logger = structlog.get_logger(__name__)
 # Handler: /casquette (affichage + changement)
 # ============================================================================
 
-async def handle_casquette_command(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE
-) -> None:
+
+async def handle_casquette_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
     Handler commande /casquette (AC2).
 
@@ -79,10 +76,7 @@ async def handle_casquette_command(
     await _handle_casquette_display(message, context_manager)
 
 
-async def _handle_casquette_display(
-    message,
-    context_manager: ContextManager
-) -> None:
+async def _handle_casquette_display(message, context_manager: ContextManager) -> None:
     """
     Affiche contexte actuel + prochains événements (AC2).
 
@@ -111,23 +105,19 @@ async def _handle_casquette_display(
     keyboard = _build_casquette_buttons()
 
     await message.reply_text(
-        text=text,
-        reply_markup=InlineKeyboardMarkup(keyboard),
-        parse_mode="HTML"
+        text=text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="HTML"
     )
 
     logger.info(
         "casquette_command_display",
         user_id=message.from_user.id,
         current_casquette=current_context.casquette.value if current_context.casquette else None,
-        source=current_context.source.value
+        source=current_context.source.value,
     )
 
 
 async def _handle_casquette_set(
-    message,
-    context_manager: ContextManager,
-    casquette_arg: str
+    message, context_manager: ContextManager, casquette_arg: str
 ) -> None:
     """
     Force contexte casquette manuellement (AC2).
@@ -146,7 +136,7 @@ async def _handle_casquette_set(
         await message.reply_text(
             "✅ Détection automatique réactivée\n\n"
             "Friday déterminera votre contexte selon vos événements et l'heure de la journée.",
-            parse_mode="HTML"
+            parse_mode="HTML",
         )
 
         logger.info("casquette_auto_detect_enabled", user_id=message.from_user.id)
@@ -161,7 +151,7 @@ async def _handle_casquette_set(
             "❌ Casquette invalide.\n\n"
             "Casquettes disponibles: <code>medecin</code>, <code>enseignant</code>, <code>chercheur</code>, <code>auto</code>\n\n"
             "Exemple: <code>/casquette medecin</code>",
-            parse_mode="HTML"
+            parse_mode="HTML",
         )
         logger.warning("casquette_invalid_argument", argument=casquette_arg)
         return
@@ -175,24 +165,18 @@ async def _handle_casquette_set(
     await message.reply_text(
         f"✅ Contexte changé → {emoji} <b>{label}</b>\n\n"
         "Ce contexte restera actif jusqu'à ce que vous le changiez à nouveau.",
-        parse_mode="HTML"
+        parse_mode="HTML",
     )
 
-    logger.info(
-        "casquette_set_manual",
-        user_id=message.from_user.id,
-        casquette=casquette.value
-    )
+    logger.info("casquette_set_manual", user_id=message.from_user.id, casquette=casquette.value)
 
 
 # ============================================================================
 # Helpers
 # ============================================================================
 
-def _format_context_display_message(
-    current_context,
-    upcoming_events: list
-) -> str:
+
+def _format_context_display_message(current_context, upcoming_events: list) -> str:
     """
     Formate message affichage contexte actuel (AC2).
 
@@ -217,16 +201,11 @@ def _format_context_display_message(
         ContextSource.EVENT: "Événement en cours",
         ContextSource.TIME: "Heure de la journée",
         ContextSource.LAST_EVENT: "Dernier événement",
-        ContextSource.DEFAULT: "Aucun événement"
+        ContextSource.DEFAULT: "Aucun événement",
     }
     source_label = source_map.get(current_context.source, current_context.source.value)
 
-    lines = [
-        header,
-        "",
-        f"<b>Détection</b> : {source_label}",
-        ""
-    ]
+    lines = [header, "", f"<b>Détection</b> : {source_label}", ""]
 
     # Prochains événements
     if upcoming_events:
@@ -256,30 +235,24 @@ def _build_casquette_buttons() -> list:
         [
             InlineKeyboardButton(
                 text=f"{CASQUETTE_EMOJI_MAPPING[Casquette.MEDECIN]} Médecin",
-                callback_data="casquette:medecin"
+                callback_data="casquette:medecin",
             ),
             InlineKeyboardButton(
                 text=f"{CASQUETTE_EMOJI_MAPPING[Casquette.ENSEIGNANT]} Enseignant",
-                callback_data="casquette:enseignant"
+                callback_data="casquette:enseignant",
             ),
         ],
         [
             InlineKeyboardButton(
                 text=f"{CASQUETTE_EMOJI_MAPPING[Casquette.CHERCHEUR]} Chercheur",
-                callback_data="casquette:chercheur"
+                callback_data="casquette:chercheur",
             ),
-            InlineKeyboardButton(
-                text="🔄 Auto",
-                callback_data="casquette:auto"
-            ),
-        ]
+            InlineKeyboardButton(text="🔄 Auto", callback_data="casquette:auto"),
+        ],
     ]
 
 
-async def _get_upcoming_events(
-    db_pool: asyncpg.Pool,
-    limit: int = 5
-) -> list:
+async def _get_upcoming_events(db_pool: asyncpg.Pool, limit: int = 5) -> list:
     """
     Récupère prochains événements (aujourd'hui + demain).
 
@@ -291,7 +264,8 @@ async def _get_upcoming_events(
         Liste événements avec format {casquette, title, start_time, end_time}
     """
     async with db_pool.acquire() as conn:
-        rows = await conn.fetch("""
+        rows = await conn.fetch(
+            """
             SELECT
                 properties->>'casquette' AS casquette,
                 properties->>'title' AS title,
@@ -305,7 +279,9 @@ async def _get_upcoming_events(
               AND properties->>'casquette' IS NOT NULL
             ORDER BY (properties->>'start_datetime')::timestamptz ASC
             LIMIT $1
-        """, limit)
+        """,
+            limit,
+        )
 
     events = []
     for row in rows:
@@ -318,12 +294,14 @@ async def _get_upcoming_events(
             # Casquette invalide → skip
             continue
 
-        events.append({
-            "casquette": casquette,
-            "title": row["title"],
-            "start_time": row["start_datetime"].strftime("%Hh%M"),
-            "end_time": row["end_datetime"].strftime("%Hh%M")
-        })
+        events.append(
+            {
+                "casquette": casquette,
+                "title": row["title"],
+                "start_time": row["start_datetime"].strftime("%Hh%M"),
+                "end_time": row["end_datetime"].strftime("%Hh%M"),
+            }
+        )
 
     return events
 
@@ -345,8 +323,4 @@ async def _get_context_manager(context: ContextTypes.DEFAULT_TYPE) -> ContextMan
     if not db_pool or not redis_client:
         raise RuntimeError("db_pool ou redis_client non initialisé dans bot_data")
 
-    return ContextManager(
-        db_pool=db_pool,
-        redis_client=redis_client,
-        cache_ttl=300
-    )
+    return ContextManager(db_pool=db_pool, redis_client=redis_client, cache_ttl=300)

@@ -164,7 +164,9 @@ async def check_sender_filter(
 
             # Blacklist -> skip analyse (economie tokens)
             if filter_type == "blacklist":
-                tokens_saved_estimate = 0.006  # $0.006 economie par email (classification + entites + embeddings)
+                tokens_saved_estimate = (
+                    0.006  # $0.006 economie par email (classification + entites + embeddings)
+                )
                 logger.info(
                     "sender_filter_blacklist",
                     email_id=email_id,
@@ -185,7 +187,9 @@ async def check_sender_filter(
             return None
 
     except Exception as e:
-        _circuit_breaker_failures[component_key] = _circuit_breaker_failures.get(component_key, 0) + 1
+        _circuit_breaker_failures[component_key] = (
+            _circuit_breaker_failures.get(component_key, 0) + 1
+        )
 
         logger.warning(
             "sender_filter_error",

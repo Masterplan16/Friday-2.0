@@ -15,6 +15,7 @@ AC4: Classification arborescence (Garanties/Actives, Garanties/Expirees)
 AC5: Trust Layer @friday_action (propose → auto)
 AC7: Performance <10s, timeout, logs structurés
 """
+
 import asyncio
 import os
 import time
@@ -246,7 +247,9 @@ class WarrantyOrchestrator:
 
         try:
             days_remaining = (expiration_date - date.today()).days
-            amount_str = f"{warranty_info.purchase_amount:.2f}€" if warranty_info.purchase_amount else "N/A"
+            amount_str = (
+                f"{warranty_info.purchase_amount:.2f}€" if warranty_info.purchase_amount else "N/A"
+            )
 
             message = (
                 f"🔔 <b>Garantie Détectée</b>\n\n"

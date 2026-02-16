@@ -35,7 +35,7 @@ def register_all_checks(registry: CheckRegistry) -> None:
         check_id="check_urgent_emails",
         priority=CheckPriority.HIGH,
         description="Emails urgents non lus",
-        execute_fn=check_urgent_emails
+        execute_fn=check_urgent_emails,
     )
 
     # Check 2: Alertes financières (MEDIUM)
@@ -43,7 +43,7 @@ def register_all_checks(registry: CheckRegistry) -> None:
         check_id="check_financial_alerts",
         priority=CheckPriority.MEDIUM,
         description="Échéances cotisations <7j",
-        execute_fn=check_financial_alerts
+        execute_fn=check_financial_alerts,
     )
 
     # Check 3: Rappels thèses (LOW)
@@ -51,7 +51,7 @@ def register_all_checks(registry: CheckRegistry) -> None:
         check_id="check_thesis_reminders",
         priority=CheckPriority.LOW,
         description="Relances thésards",
-        execute_fn=check_thesis_reminders
+        execute_fn=check_thesis_reminders,
     )
 
     # TODO Task 6.4: Intégrer check_calendar_conflicts (Story 7.3)

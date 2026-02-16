@@ -18,6 +18,7 @@ Performance (AC4) :
 - Timeout global 45s
 - Retry automatique (backoff exponentiel 1s, 2s, 4s max 3 tentatives)
 """
+
 import asyncio
 import json
 import time
@@ -31,7 +32,6 @@ from agents.src.agents.archiviste.ocr import SuryaOCREngine
 from agents.src.agents.archiviste.metadata_extractor import MetadataExtractor
 from agents.src.agents.archiviste.renamer import DocumentRenamer
 from agents.src.agents.archiviste.models import OCRResult
-
 
 logger = structlog.get_logger(__name__)
 
@@ -63,7 +63,7 @@ class OCRPipeline:
         self,
         redis_url: str = "redis://localhost:6379/0",
         db_url: Optional[str] = None,
-        timeout_seconds: int = 45
+        timeout_seconds: int = 45,
     ):
         """
         Initialiser pipeline OCR.
@@ -104,9 +104,8 @@ class OCRPipeline:
             return
         try:
             import asyncpg
-            self._db_pool = await asyncpg.create_pool(
-                self.db_url, min_size=1, max_size=3
-            )
+
+            self._db_pool = await asyncpg.create_pool(self.db_url, min_size=1, max_size=3)
             logger.info("pipeline.db_connected")
         except Exception as e:
             logger.error("pipeline.db_connection_failed", error=str(e))
@@ -118,10 +117,7 @@ class OCRPipeline:
             self._db_pool = None
 
     async def process_document(
-        self,
-        file_path: str,
-        filename: str,
-        metadata: Optional[Dict[str, Any]] = None
+        self, file_path: str, filename: str, metadata: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """
         Traiter document complet : OCR -> Extract -> Rename -> Store (AC3).
@@ -146,7 +142,7 @@ class OCRPipeline:
             "pipeline.process_start",
             file_path=file_path,
             filename=filename,
-            timeout=self.timeout_seconds
+            timeout=self.timeout_seconds,
         )
 
         try:
@@ -156,8 +152,7 @@ class OCRPipeline:
                 ocr_start = time.time()
                 try:
                     ocr_result = await self._retry_with_backoff(
-                        self.ocr_engine.ocr_document,
-                        file_path
+                        self.ocr_engine.ocr_document, file_path
                     )
                     ocr_duration = time.time() - ocr_start
 
@@ -166,7 +161,7 @@ class OCRPipeline:
                         filename=filename,
                         pages=ocr_result.page_count,
                         confidence=ocr_result.confidence,
-                        duration=ocr_duration
+                        duration=ocr_duration,
                     )
 
                 except NotImplementedError:
@@ -175,7 +170,7 @@ class OCRPipeline:
                     await self._publish_error_event(
                         filename=filename,
                         error_type="surya_unavailable",
-                        message="Surya OCR unavailable"
+                        message="Surya OCR unavailable",
                     )
                     raise
 
@@ -183,9 +178,7 @@ class OCRPipeline:
                 extract_start = time.time()
                 try:
                     metadata_result = await self._retry_with_backoff(
-                        self.metadata_extractor.extract_metadata,
-                        ocr_result,
-                        filename
+                        self.metadata_extractor.extract_metadata, ocr_result, filename
                     )
                     extract_duration = time.time() - extract_start
 
@@ -194,7 +187,7 @@ class OCRPipeline:
                         filename=filename,
                         doc_type=metadata_result.payload["metadata"].doc_type,
                         emitter=metadata_result.payload["metadata"].emitter,
-                        duration=extract_duration
+                        duration=extract_duration,
                     )
 
                 except NotImplementedError:
@@ -203,7 +196,7 @@ class OCRPipeline:
                     await self._publish_error_event(
                         filename=filename,
                         error_type="metadata_extraction_unavailable",
-                        message="Presidio or Claude unavailable"
+                        message="Presidio or Claude unavailable",
                     )
                     raise
 
@@ -211,9 +204,7 @@ class OCRPipeline:
                 rename_start = time.time()
                 try:
                     rename_result = await self._retry_with_backoff(
-                        self.renamer.rename_document,
-                        filename,
-                        metadata_result.payload["metadata"]
+                        self.renamer.rename_document, filename, metadata_result.payload["metadata"]
                     )
                     rename_duration = time.time() - rename_start
 
@@ -221,7 +212,7 @@ class OCRPipeline:
                         "pipeline.document_renamed",
                         filename=filename,
                         new_filename=rename_result.payload["new_filename"],
-                        duration=rename_duration
+                        duration=rename_duration,
                     )
 
                 except Exception as e:
@@ -230,11 +221,9 @@ class OCRPipeline:
                     await self._publish_error_event(
                         filename=filename,
                         error_type="rename_failed",
-                        message=f"Document rename failed: {str(e)}"
+                        message=f"Document rename failed: {str(e)}",
                     )
-                    raise NotImplementedError(
-                        f"Document rename failed: {str(e)}"
-                    ) from e
+                    raise NotImplementedError(f"Document rename failed: {str(e)}") from e
 
                 total_duration = time.time() - start_time
 
@@ -247,7 +236,7 @@ class OCRPipeline:
                     ocr_text=anonymized_text,
                     extracted_meta=extracted_meta,
                     ocr_result=ocr_result,
-                    total_duration=total_duration
+                    total_duration=total_duration,
                 )
 
                 # 5. Publish evenement 'document.processed' (Task 4.3)
@@ -262,9 +251,9 @@ class OCRPipeline:
                         "ocr_duration": ocr_duration,
                         "extract_duration": extract_duration,
                         "rename_duration": rename_duration,
-                        "total_duration": total_duration
+                        "total_duration": total_duration,
                     },
-                    "success": True
+                    "success": True,
                 }
 
                 await self._publish_processed_event(result)
@@ -275,14 +264,14 @@ class OCRPipeline:
                         "pipeline.latency_high",
                         filename=filename,
                         duration=total_duration,
-                        threshold=35.0
+                        threshold=35.0,
                     )
 
                 logger.info(
                     "pipeline.process_complete",
                     filename=filename,
                     total_duration=total_duration,
-                    success=True
+                    success=True,
                 )
 
                 return result
@@ -294,12 +283,12 @@ class OCRPipeline:
                 "pipeline.timeout",
                 filename=filename,
                 duration=duration,
-                timeout=self.timeout_seconds
+                timeout=self.timeout_seconds,
             )
             await self._publish_error_event(
                 filename=filename,
                 error_type="timeout",
-                message=f"Pipeline timeout apres {duration:.1f}s (limite {self.timeout_seconds}s)"
+                message=f"Pipeline timeout apres {duration:.1f}s (limite {self.timeout_seconds}s)",
             )
             raise
 
@@ -341,7 +330,7 @@ class OCRPipeline:
                         attempt=attempt,
                         max_retries=max_retries,
                         backoff=backoff,
-                        error=str(e)
+                        error=str(e),
                     )
                     await asyncio.sleep(backoff)
                 else:
@@ -349,7 +338,7 @@ class OCRPipeline:
                         "pipeline.retry_exhausted",
                         func=func.__name__,
                         attempts=max_retries,
-                        error=str(e)
+                        error=str(e),
                     )
 
         raise last_exception
@@ -361,7 +350,7 @@ class OCRPipeline:
         ocr_text: str,
         extracted_meta,
         ocr_result: OCRResult,
-        total_duration: float
+        total_duration: float,
     ):
         """
         Stocker metadata dans PostgreSQL (Task 5.2, fix C1).
@@ -406,16 +395,10 @@ class OCRPipeline:
                     total_duration,
                 )
                 logger.info(
-                    "pipeline.metadata_stored",
-                    filename=filename,
-                    doc_type=extracted_meta.doc_type
+                    "pipeline.metadata_stored", filename=filename, doc_type=extracted_meta.doc_type
                 )
         except Exception as e:
-            logger.error(
-                "pipeline.metadata_store_failed",
-                filename=filename,
-                error=str(e)
-            )
+            logger.error("pipeline.metadata_store_failed", filename=filename, error=str(e))
 
     async def _publish_processed_event(self, result: Dict[str, Any]):
         """
@@ -429,23 +412,15 @@ class OCRPipeline:
 
         try:
             await self.redis.xadd(
-                "document.processed",
-                {"data": json.dumps(result, default=_json_serializer)}
+                "document.processed", {"data": json.dumps(result, default=_json_serializer)}
             )
             logger.info(
-                "pipeline.event_published",
-                stream="document.processed",
-                filename=result["filename"]
+                "pipeline.event_published", stream="document.processed", filename=result["filename"]
             )
         except Exception as e:
             logger.error("pipeline.publish_failed", error=str(e))
 
-    async def _publish_error_event(
-        self,
-        filename: str,
-        error_type: str,
-        message: str
-    ):
+    async def _publish_error_event(self, filename: str, error_type: str, message: str):
         """
         Publier evenement erreur dans Redis Streams (Task 4.4).
 
@@ -459,17 +434,14 @@ class OCRPipeline:
                 "filename": filename,
                 "error_type": error_type,
                 "message": message,
-                "timestamp": datetime.now(timezone.utc).isoformat()
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             }
-            await self.redis.xadd(
-                "pipeline.error",
-                {"data": json.dumps(error_data)}
-            )
+            await self.redis.xadd("pipeline.error", {"data": json.dumps(error_data)})
             logger.info(
                 "pipeline.error_event_published",
                 stream="pipeline.error",
                 filename=filename,
-                error_type=error_type
+                error_type=error_type,
             )
         except Exception as e:
             logger.error("pipeline.error_publish_failed", error=str(e))

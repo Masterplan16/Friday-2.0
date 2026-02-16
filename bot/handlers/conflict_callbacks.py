@@ -25,7 +25,6 @@ import redis.asyncio as redis
 
 from agents.src.agents.calendar.models import ResolutionAction, ConflictResolution
 
-
 logger = structlog.get_logger(__name__)
 
 
@@ -40,10 +39,8 @@ MOVE_STATE_TTL = 300
 # ROUTER PRINCIPAL (AC6)
 # ============================================================================
 
-async def handle_conflict_button(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE
-) -> None:
+
+async def handle_conflict_button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
     Router principal callbacks conflits (AC6)
 
@@ -96,11 +93,7 @@ async def handle_conflict_button(
     # Router vers handlers spécifiques
     if action == "cancel":
         await handle_conflict_cancel(
-            query=query,
-            event_id=param,
-            db_pool=db_pool,
-            redis_client=redis_client,
-            context=context
+            query=query, event_id=param, db_pool=db_pool, redis_client=redis_client, context=context
         )
     elif action == "move":
         await handle_conflict_move(
@@ -108,14 +101,10 @@ async def handle_conflict_button(
             event_id=param,
             user_id=query.from_user.id,
             db_pool=db_pool,
-            redis_client=redis_client
+            redis_client=redis_client,
         )
     elif action == "ignore":
-        await handle_conflict_ignore(
-            query=query,
-            conflict_id=param,
-            db_pool=db_pool
-        )
+        await handle_conflict_ignore(query=query, conflict_id=param, db_pool=db_pool)
     else:
         logger.error("Unknown conflict action", action=action)
         await query.edit_message_text(f"❌ Action inconnue : {action}")
@@ -125,12 +114,13 @@ async def handle_conflict_button(
 # CALLBACK CANCEL - Annuler événement (AC6)
 # ============================================================================
 
+
 async def handle_conflict_cancel(
     query,
     event_id: str,
     db_pool: asyncpg.Pool,
     redis_client: redis.Redis,
-    context: ContextTypes.DEFAULT_TYPE
+    context: ContextTypes.DEFAULT_TYPE,
 ) -> None:
     """
     Callback button [Annuler X]
@@ -163,7 +153,7 @@ async def handle_conflict_cancel(
                 FROM knowledge.entities
                 WHERE id = $1 AND entity_type = 'EVENT'
                 """,
-                event_uuid
+                event_uuid,
             )
 
             if not event_row:
@@ -182,7 +172,7 @@ async def handle_conflict_cancel(
                 SET properties = jsonb_set(properties, '{status}', '"cancelled"')
                 WHERE id = $1 AND entity_type = 'EVENT'
                 """,
-                event_uuid
+                event_uuid,
             )
 
             if result == "UPDATE 0":
@@ -195,20 +185,19 @@ async def handle_conflict_cancel(
                 try:
                     casquette = event_props.get("casquette", "medecin")
                     await sync_manager.delete_event_from_google(
-                        google_event_id=google_event_id,
-                        casquette=casquette
+                        google_event_id=google_event_id, casquette=casquette
                     )
                     logger.info(
                         "event_deleted_from_google",
                         event_id=event_id,
-                        google_event_id=google_event_id
+                        google_event_id=google_event_id,
                     )
                 except Exception as e:
                     logger.error(
                         "google_calendar_delete_failed",
                         event_id=event_id,
                         error=str(e),
-                        exc_info=True
+                        exc_info=True,
                     )
                     # Continue même si delete Google Calendar échoue
 
@@ -222,7 +211,7 @@ async def handle_conflict_cancel(
                 WHERE (event1_id = $1 OR event2_id = $1)
                   AND resolved = false
                 """,
-                event_uuid
+                event_uuid,
             )
 
             logger.info(
@@ -230,16 +219,19 @@ async def handle_conflict_cancel(
                 event_id=event_id,
                 event_name=event_name,
                 user_id=query.from_user.id,
-                conflicts_resolved=updated_conflicts
+                conflicts_resolved=updated_conflicts,
             )
 
         # 4. Publier Redis Streams calendar.conflict.resolved
-        await redis_client.xadd('calendar:conflict.resolved', {
-            'event_id': event_id,
-            'action': 'cancel',
-            'resolved_at': datetime.now(timezone.utc).isoformat(),
-            'resolved_by': str(query.from_user.id)
-        })
+        await redis_client.xadd(
+            "calendar:conflict.resolved",
+            {
+                "event_id": event_id,
+                "action": "cancel",
+                "resolved_at": datetime.now(timezone.utc).isoformat(),
+                "resolved_by": str(query.from_user.id),
+            },
+        )
 
         # 5. Éditer message Telegram
         message = (
@@ -249,22 +241,14 @@ async def handle_conflict_cancel(
             f"<i>Annulé par {query.from_user.first_name}</i>"
         )
 
-        await query.edit_message_text(
-            message,
-            parse_mode="HTML"
-        )
+        await query.edit_message_text(message, parse_mode="HTML")
 
     except ValueError:
         logger.error("Invalid UUID format", event_id=event_id)
         await query.edit_message_text("❌ UUID événement invalide")
 
     except Exception as e:
-        logger.error(
-            "conflict_cancel_error",
-            event_id=event_id,
-            error=str(e),
-            exc_info=True
-        )
+        logger.error("conflict_cancel_error", event_id=event_id, error=str(e), exc_info=True)
         await query.edit_message_text("❌ Erreur lors de l'annulation événement")
 
 
@@ -272,12 +256,9 @@ async def handle_conflict_cancel(
 # CALLBACK MOVE - Dialogue déplacement événement (AC6)
 # ============================================================================
 
+
 async def handle_conflict_move(
-    query,
-    event_id: str,
-    user_id: int,
-    db_pool: asyncpg.Pool,
-    redis_client: redis.Redis
+    query, event_id: str, user_id: int, db_pool: asyncpg.Pool, redis_client: redis.Redis
 ) -> None:
     """
     Callback button [Déplacer X] - Step 1: Demande nouvelle date
@@ -315,7 +296,7 @@ async def handle_conflict_move(
                 FROM knowledge.entities
                 WHERE id = $1 AND entity_type = 'EVENT'
                 """,
-                event_uuid
+                event_uuid,
             )
 
             if not event_row:
@@ -333,20 +314,13 @@ async def handle_conflict_move(
             "event_id": event_id,
             "step": "waiting_date",
             "event_name": event_name,
-            "original_start": original_start
+            "original_start": original_start,
         }
 
-        await redis_client.set(
-            state_key,
-            json.dumps(state_data),
-            ex=MOVE_STATE_TTL
-        )
+        await redis_client.set(state_key, json.dumps(state_data), ex=MOVE_STATE_TTL)
 
         logger.info(
-            "conflict_move_started",
-            event_id=event_id,
-            user_id=user_id,
-            step="waiting_date"
+            "conflict_move_started", event_id=event_id, user_id=user_id, step="waiting_date"
         )
 
         # Éditer message + demande nouvelle date
@@ -360,29 +334,18 @@ async def handle_conflict_move(
             f"<i>Répondez dans les 5 minutes</i>"
         )
 
-        await query.edit_message_text(
-            message,
-            parse_mode="HTML"
-        )
+        await query.edit_message_text(message, parse_mode="HTML")
 
     except ValueError:
         logger.error("Invalid UUID format", event_id=event_id)
         await query.edit_message_text("❌ UUID événement invalide")
 
     except Exception as e:
-        logger.error(
-            "conflict_move_start_error",
-            event_id=event_id,
-            error=str(e),
-            exc_info=True
-        )
+        logger.error("conflict_move_start_error", event_id=event_id, error=str(e), exc_info=True)
         await query.edit_message_text("❌ Erreur lors du démarrage déplacement")
 
 
-async def handle_move_date_response(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE
-) -> bool:
+async def handle_move_date_response(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
     """
     Handler réponse utilisateur pour nouvelle date (Step 2)
 
@@ -425,16 +388,15 @@ async def handle_move_date_response(
             "❌ <b>Date invalide</b>\n\n"
             "Format attendu : <code>JJ/MM/AAAA</code>\n"
             "Exemple : <code>20/02/2026</code>",
-            parse_mode="HTML"
+            parse_mode="HTML",
         )
         return True  # Message traité (erreur)
 
     # Valider date future ou aujourd'hui
     if new_date < date.today():
         await update.message.reply_text(
-            "❌ <b>Date passée</b>\n\n"
-            "La nouvelle date doit être aujourd'hui ou dans le futur.",
-            parse_mode="HTML"
+            "❌ <b>Date passée</b>\n\n" "La nouvelle date doit être aujourd'hui ou dans le futur.",
+            parse_mode="HTML",
         )
         return True
 
@@ -442,17 +404,13 @@ async def handle_move_date_response(
     state["step"] = "waiting_time"
     state["new_date"] = message_text  # Stocker format original
 
-    await redis_client.set(
-        state_key,
-        json.dumps(state),
-        ex=MOVE_STATE_TTL
-    )
+    await redis_client.set(state_key, json.dumps(state), ex=MOVE_STATE_TTL)
 
     logger.info(
         "conflict_move_date_validated",
         event_id=state["event_id"],
         user_id=user_id,
-        new_date=message_text
+        new_date=message_text,
     )
 
     # Demander nouvelle heure
@@ -469,10 +427,7 @@ async def handle_move_date_response(
     return True
 
 
-async def handle_move_time_response(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE
-) -> bool:
+async def handle_move_time_response(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
     """
     Handler réponse utilisateur pour nouvelle heure (Step 3)
 
@@ -524,7 +479,7 @@ async def handle_move_time_response(
             "❌ <b>Heure invalide</b>\n\n"
             "Format attendu : <code>HH:MM</code>\n"
             "Exemple : <code>14:30</code>",
-            parse_mode="HTML"
+            parse_mode="HTML",
         )
         return True
 
@@ -546,7 +501,7 @@ async def handle_move_time_response(
                 FROM knowledge.entities
                 WHERE id = $1 AND entity_type = 'EVENT'
                 """,
-                event_uuid
+                event_uuid,
             )
 
             if not event_row:
@@ -576,7 +531,7 @@ async def handle_move_time_response(
                 """,
                 event_uuid,
                 json.dumps(new_datetime.isoformat()),
-                json.dumps(new_end_datetime.isoformat())
+                json.dumps(new_end_datetime.isoformat()),
             )
 
             # PATCH Google Calendar
@@ -591,20 +546,20 @@ async def handle_move_time_response(
                         casquette=casquette,
                         updates={
                             "start_datetime": new_datetime.isoformat(),
-                            "end_datetime": new_end_datetime.isoformat()
-                        }
+                            "end_datetime": new_end_datetime.isoformat(),
+                        },
                     )
                     logger.info(
                         "event_updated_in_google",
                         event_id=event_id,
-                        google_event_id=google_event_id
+                        google_event_id=google_event_id,
                     )
                 except Exception as e:
                     logger.error(
                         "google_calendar_update_failed",
                         event_id=event_id,
                         error=str(e),
-                        exc_info=True
+                        exc_info=True,
                     )
 
             # Marquer conflits résolu
@@ -617,26 +572,26 @@ async def handle_move_time_response(
                 WHERE (event1_id = $1 OR event2_id = $1)
                   AND resolved = false
                 """,
-                event_uuid
+                event_uuid,
             )
 
         # Publier Redis Streams
-        await redis_client.xadd('calendar:conflict.resolved', {
-            'event_id': event_id,
-            'action': 'move',
-            'new_datetime': new_datetime.isoformat(),
-            'resolved_at': datetime.now(timezone.utc).isoformat(),
-            'resolved_by': str(user_id)
-        })
+        await redis_client.xadd(
+            "calendar:conflict.resolved",
+            {
+                "event_id": event_id,
+                "action": "move",
+                "new_datetime": new_datetime.isoformat(),
+                "resolved_at": datetime.now(timezone.utc).isoformat(),
+                "resolved_by": str(user_id),
+            },
+        )
 
         # Supprimer état Redis
         await redis_client.delete(state_key)
 
         logger.info(
-            "event_moved",
-            event_id=event_id,
-            user_id=user_id,
-            new_datetime=new_datetime.isoformat()
+            "event_moved", event_id=event_id, user_id=user_id, new_datetime=new_datetime.isoformat()
         )
 
         # Notification succès
@@ -650,12 +605,7 @@ async def handle_move_time_response(
         await update.message.reply_text(message, parse_mode="HTML")
 
     except Exception as e:
-        logger.error(
-            "conflict_move_finalize_error",
-            event_id=event_id,
-            error=str(e),
-            exc_info=True
-        )
+        logger.error("conflict_move_finalize_error", event_id=event_id, error=str(e), exc_info=True)
         await update.message.reply_text("❌ Erreur lors du déplacement événement")
         await redis_client.delete(state_key)
 
@@ -666,11 +616,8 @@ async def handle_move_time_response(
 # CALLBACK IGNORE - Ignorer conflit (AC6)
 # ============================================================================
 
-async def handle_conflict_ignore(
-    query,
-    conflict_id: str,
-    db_pool: asyncpg.Pool
-) -> None:
+
+async def handle_conflict_ignore(query, conflict_id: str, db_pool: asyncpg.Pool) -> None:
     """
     Callback button [Ignorer conflit]
 
@@ -698,7 +645,7 @@ async def handle_conflict_ignore(
                     resolved_at = NOW()
                 WHERE id = $1
                 """,
-                conflict_uuid
+                conflict_uuid,
             )
 
             if result == "UPDATE 0":
@@ -706,11 +653,7 @@ async def handle_conflict_ignore(
                 await query.edit_message_text("❌ Conflit introuvable")
                 return
 
-        logger.info(
-            "conflict_ignored",
-            conflict_id=conflict_id,
-            user_id=query.from_user.id
-        )
+        logger.info("conflict_ignored", conflict_id=conflict_id, user_id=query.from_user.id)
 
         # Éditer message Telegram
         message = (
@@ -719,20 +662,12 @@ async def handle_conflict_ignore(
             f"<i>Ignoré par {query.from_user.first_name}</i>"
         )
 
-        await query.edit_message_text(
-            message,
-            parse_mode="HTML"
-        )
+        await query.edit_message_text(message, parse_mode="HTML")
 
     except ValueError:
         logger.error("Invalid UUID format", conflict_id=conflict_id)
         await query.edit_message_text("❌ UUID conflit invalide")
 
     except Exception as e:
-        logger.error(
-            "conflict_ignore_error",
-            conflict_id=conflict_id,
-            error=str(e),
-            exc_info=True
-        )
+        logger.error("conflict_ignore_error", conflict_id=conflict_id, error=str(e), exc_info=True)
         await query.edit_message_text("❌ Erreur lors de l'ignorance conflit")

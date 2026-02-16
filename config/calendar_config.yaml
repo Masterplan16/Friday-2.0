@@ -16,10 +16,10 @@ google_calendar:
       casquette: "personnel"  # Casquette par défaut (peut être changée dynamiquement par Friday)
       color: "#4285F4"  # Bleu Google Calendar
 
-  # Sync time range
+  # Sync time range (historique complet comme Google Calendar natif)
   sync_range:
-    past_days: 7       # Historique 1 semaine
-    future_days: 90    # Anticipation 3 mois
+    past_days: 7300    # 20 ans historique (événements depuis 2006)
+    future_days: 7300  # 20 ans futur (planification jusqu'en 2046)
 
   # Default reminders for new events
   default_reminders:

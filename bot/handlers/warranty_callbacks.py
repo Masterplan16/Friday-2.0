@@ -8,6 +8,7 @@ Callbacks:
 
 Pattern: Story 1.10 (Inline Buttons) + Story 3.2 (Classification Callbacks)
 """
+
 import os
 from typing import Optional
 
@@ -27,27 +28,27 @@ logger = structlog.get_logger(__name__)
 
 def build_warranty_inline_keyboard(warranty_id: str) -> InlineKeyboardMarkup:
     """Build inline keyboard for warranty validation (AC5)."""
-    return InlineKeyboardMarkup([
+    return InlineKeyboardMarkup(
         [
-            InlineKeyboardButton(
-                "✅ Approuver",
-                callback_data=f"warranty_confirm:{warranty_id}",
-            ),
-            InlineKeyboardButton(
-                "✏️ Corriger",
-                callback_data=f"warranty_edit:{warranty_id}",
-            ),
-            InlineKeyboardButton(
-                "🗑️ Ignorer",
-                callback_data=f"warranty_delete:{warranty_id}",
-            ),
+            [
+                InlineKeyboardButton(
+                    "✅ Approuver",
+                    callback_data=f"warranty_confirm:{warranty_id}",
+                ),
+                InlineKeyboardButton(
+                    "✏️ Corriger",
+                    callback_data=f"warranty_edit:{warranty_id}",
+                ),
+                InlineKeyboardButton(
+                    "🗑️ Ignorer",
+                    callback_data=f"warranty_delete:{warranty_id}",
+                ),
+            ]
         ]
-    ])
+    )
 
 
-async def callback_warranty_confirm(
-    update: Update, context: ContextTypes.DEFAULT_TYPE
-) -> None:
+async def callback_warranty_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle warranty confirmation button (AC5)."""
     query = update.callback_query
     await query.answer()
@@ -85,9 +86,7 @@ async def callback_warranty_confirm(
         await query.edit_message_text(f"❌ Erreur confirmation: {e}")
 
 
-async def callback_warranty_edit(
-    update: Update, context: ContextTypes.DEFAULT_TYPE
-) -> None:
+async def callback_warranty_edit(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle warranty edit button - prompt user for corrections (AC5)."""
     query = update.callback_query
     await query.answer()
@@ -107,9 +106,7 @@ async def callback_warranty_edit(
     logger.info("warranty_callback.edit_requested", warranty_id=warranty_id)
 
 
-async def callback_warranty_delete(
-    update: Update, context: ContextTypes.DEFAULT_TYPE
-) -> None:
+async def callback_warranty_delete(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle warranty deletion button - false positive (AC5)."""
     query = update.callback_query
     await query.answer()

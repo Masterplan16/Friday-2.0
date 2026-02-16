@@ -6,7 +6,6 @@ Story 7.1 AC7: Few-shot learning (5 exemples francais)
 
 from typing import Dict, Any, List
 
-
 # ============================================================================
 # EXEMPLES FEW-SHOT (AC7)
 # ============================================================================
@@ -27,13 +26,12 @@ EVENT_DETECTION_EXAMPLES: List[Dict[str, Any]] = [
                     "event_type": "medical",
                     "casquette": "medecin",
                     "confidence": 0.95,
-                    "context": "RDV cardio Dr Leblanc jeudi 14h30"
+                    "context": "RDV cardio Dr Leblanc jeudi 14h30",
                 }
             ],
-            "confidence_overall": 0.95
-        }
+            "confidence_overall": 0.95,
+        },
     },
-
     # Exemple 2: Reunion recurrente enseignement
     {
         "input": "Reunion pedagogique tous les mardis 10h salle B203",
@@ -49,13 +47,12 @@ EVENT_DETECTION_EXAMPLES: List[Dict[str, Any]] = [
                     "event_type": "meeting",
                     "casquette": "enseignant",
                     "confidence": 0.88,
-                    "context": "Reunion pedagogique tous les mardis 10h salle B203"
+                    "context": "Reunion pedagogique tous les mardis 10h salle B203",
                 }
             ],
-            "confidence_overall": 0.88
-        }
+            "confidence_overall": 0.88,
+        },
     },
-
     # Exemple 3: Deadline recherche sans heure precise
     {
         "input": "Soumission article journal cardiologie avant le 28 fevrier",
@@ -71,13 +68,12 @@ EVENT_DETECTION_EXAMPLES: List[Dict[str, Any]] = [
                     "event_type": "deadline",
                     "casquette": "chercheur",
                     "confidence": 0.92,
-                    "context": "Soumission article journal cardiologie avant le 28 fevrier"
+                    "context": "Soumission article journal cardiologie avant le 28 fevrier",
                 }
             ],
-            "confidence_overall": 0.92
-        }
+            "confidence_overall": 0.92,
+        },
     },
-
     # Exemple 4: Conference multi-jours
     {
         "input": "Congres europeen cardiologie interventionnelle du 10 au 12 mars 2026 a Lyon",
@@ -93,13 +89,12 @@ EVENT_DETECTION_EXAMPLES: List[Dict[str, Any]] = [
                     "event_type": "conference",
                     "casquette": "chercheur",
                     "confidence": 0.90,
-                    "context": "Congres europeen cardiologie interventionnelle du 10 au 12 mars 2026 a Lyon"
+                    "context": "Congres europeen cardiologie interventionnelle du 10 au 12 mars 2026 a Lyon",
                 }
             ],
-            "confidence_overall": 0.90
-        }
+            "confidence_overall": 0.90,
+        },
     },
-
     # Exemple 5: Evenement personnel informel (date relative)
     {
         "input": "Diner chez Marie samedi soir 20h, elle invite aussi Jean et Sophie",
@@ -115,12 +110,12 @@ EVENT_DETECTION_EXAMPLES: List[Dict[str, Any]] = [
                     "event_type": "personal",
                     "casquette": "personnel",
                     "confidence": 0.75,
-                    "context": "Diner chez Marie samedi soir 20h"
+                    "context": "Diner chez Marie samedi soir 20h",
                 }
             ],
-            "confidence_overall": 0.75
-        }
-    }
+            "confidence_overall": 0.75,
+        },
+    },
 ]
 
 
@@ -201,7 +196,7 @@ def build_event_detection_prompt(
     current_date: str,
     current_time: str = "12:00:00",
     timezone: str = "Europe/Paris",
-    current_casquette = None
+    current_casquette=None,
 ) -> str:
     """
     Construit le prompt complet pour detection evenements
@@ -266,12 +261,14 @@ def _format_json_example(data: Dict[str, Any]) -> str:
     Formate exemple JSON pour few-shot (sans import json pour eviter dependance)
     """
     import json
+
     return json.dumps(data, indent=2, ensure_ascii=False)
 
 
 # ============================================================================
 # PROMPT INJECTION PROTECTION
 # ============================================================================
+
 
 def sanitize_email_text(email_text: str) -> str:
     """

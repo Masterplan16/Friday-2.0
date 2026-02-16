@@ -79,10 +79,7 @@ def build_classification_prompt(
         _format_correction_rules(correction_rules or []),
         # Catégories disponibles
         "\n**CATÉGORIES DISPONIBLES** :\n",
-        *[
-            f"- `{cat}` : {desc}\n"
-            for cat, desc in CATEGORY_DESCRIPTIONS.items()
-        ],
+        *[f"- `{cat}` : {desc}\n" for cat, desc in CATEGORY_DESCRIPTIONS.items()],
         # Format output strict
         "\n**FORMAT DE SORTIE OBLIGATOIRE** :\n"
         "Tu DOIS retourner UNIQUEMENT un JSON valide, sans texte avant ou après.\n"
@@ -168,7 +165,9 @@ def _format_context_hint(current_casquette: Optional["Casquette"]) -> str:
     )
 
 
-def _format_correction_rules(rules: Sequence[CorrectionRule]) -> str:  # H4 fix: Sequence for immutability
+def _format_correction_rules(
+    rules: Sequence[CorrectionRule],
+) -> str:  # H4 fix: Sequence for immutability
     """
     Formate les règles de correction pour injection dans le prompt.
 
@@ -195,9 +194,7 @@ def _format_correction_rules(rules: Sequence[CorrectionRule]) -> str:  # H4 fix:
 
     for idx, rule in enumerate(rules_to_inject, start=1):
         # Utilise format_for_prompt() du modèle CorrectionRule
-        parts.append(
-            f"- Règle {idx}: {rule.format_for_prompt()}\n"
-        )
+        parts.append(f"- Règle {idx}: {rule.format_for_prompt()}\n")
 
     if len(rules) > 50:
         parts.append(

@@ -52,11 +52,9 @@ FINANCE_LABELS = {
 # NOTIFICATION TOPIC ACTIONS (Task 5.2 - trust=propose)
 # ============================================================================
 
+
 async def send_classification_proposal(
-    bot: Bot,
-    topic_id: int,
-    supergroup_id: int,
-    classification_data: Dict[str, Any]
+    bot: Bot, topic_id: int, supergroup_id: int, classification_data: Dict[str, Any]
 ) -> bool:
     """
     Envoie notification classification dans Topic Actions avec inline buttons.
@@ -93,14 +91,14 @@ async def send_classification_proposal(
             message_thread_id=topic_id,
             text=message,
             parse_mode="HTML",
-            reply_markup=keyboard
+            reply_markup=keyboard,
         )
 
         logger.info(
             "classification_notification_sent",
             document_id=classification_data["document_id"],
             topic="Actions",
-            category=classification_data["category"]
+            category=classification_data["category"],
         )
 
         return True
@@ -110,7 +108,7 @@ async def send_classification_proposal(
             "classification_notification_failed",
             document_id=classification_data.get("document_id"),
             error=str(e),
-            exc_info=True
+            exc_info=True,
         )
         return False
 
@@ -119,12 +117,13 @@ async def send_classification_proposal(
 # NOTIFICATION TOPIC METRICS (Task 5.4 - classification succès)
 # ============================================================================
 
+
 async def send_classification_success(
     bot: Bot,
     topic_id: int,
     supergroup_id: int,
     classification_data: Dict[str, Any],
-    latency_ms: Optional[float] = None
+    latency_ms: Optional[float] = None,
 ) -> bool:
     """
     Envoie notification succès classification dans Topic Metrics.
@@ -163,19 +162,13 @@ async def send_classification_success(
             message += f"\nLatence : {latency_ms:.0f}ms"
 
         await bot.send_message(
-            chat_id=supergroup_id,
-            message_thread_id=topic_id,
-            text=message,
-            parse_mode="HTML"
+            chat_id=supergroup_id, message_thread_id=topic_id, text=message, parse_mode="HTML"
         )
 
         return True
 
     except TelegramError as e:
-        logger.error(
-            "classification_success_notification_failed",
-            error=str(e)
-        )
+        logger.error("classification_success_notification_failed", error=str(e))
         return False
 
 
@@ -183,13 +176,14 @@ async def send_classification_success(
 # NOTIFICATION TOPIC SYSTEM (Task 5.5 - erreurs classification)
 # ============================================================================
 
+
 async def send_classification_error(
     bot: Bot,
     topic_id: int,
     supergroup_id: int,
     document_id: str,
     error_type: str,
-    error_detail: str
+    error_detail: str,
 ) -> bool:
     """
     Envoie notification erreur classification dans Topic System.
@@ -225,25 +219,20 @@ async def send_classification_error(
         )
 
         await bot.send_message(
-            chat_id=supergroup_id,
-            message_thread_id=topic_id,
-            text=message,
-            parse_mode="HTML"
+            chat_id=supergroup_id, message_thread_id=topic_id, text=message, parse_mode="HTML"
         )
 
         return True
 
     except TelegramError as e:
-        logger.error(
-            "classification_error_notification_failed",
-            error=str(e)
-        )
+        logger.error("classification_error_notification_failed", error=str(e))
         return False
 
 
 # ============================================================================
 # FORMATAGE MESSAGE (Task 5.2)
 # ============================================================================
+
 
 def _format_classification_message(classification_data: Dict[str, Any]) -> str:
     """
@@ -296,16 +285,14 @@ def _format_classification_message(classification_data: Dict[str, Any]) -> str:
 def _html_escape(text: str) -> str:
     """Echappe caractères spéciaux HTML pour Telegram parse_mode=HTML."""
     return (
-        text.replace("&", "&amp;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
-        .replace('"', "&quot;")
+        text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
     )
 
 
 # ============================================================================
 # INLINE KEYBOARD (Task 5.2)
 # ============================================================================
+
 
 def _create_classification_keyboard(receipt_id: str) -> InlineKeyboardMarkup:
     """
@@ -321,21 +308,12 @@ def _create_classification_keyboard(receipt_id: str) -> InlineKeyboardMarkup:
     """
     keyboard = [
         [
-            InlineKeyboardButton(
-                "✅ Approuver",
-                callback_data=f"classify_approve:{receipt_id}"
-            ),
-            InlineKeyboardButton(
-                "📂 Corriger",
-                callback_data=f"classify_correct:{receipt_id}"
-            ),
+            InlineKeyboardButton("✅ Approuver", callback_data=f"classify_approve:{receipt_id}"),
+            InlineKeyboardButton("📂 Corriger", callback_data=f"classify_correct:{receipt_id}"),
         ],
         [
-            InlineKeyboardButton(
-                "❌ Rejeter",
-                callback_data=f"classify_reject:{receipt_id}"
-            ),
-        ]
+            InlineKeyboardButton("❌ Rejeter", callback_data=f"classify_reject:{receipt_id}"),
+        ],
     ]
 
     return InlineKeyboardMarkup(keyboard)
@@ -356,18 +334,24 @@ def _create_correction_keyboard(receipt_id: str) -> InlineKeyboardMarkup:
     keyboard = [
         [
             InlineKeyboardButton("Pro", callback_data=f"classify_reclassify:{receipt_id}:pro"),
-            InlineKeyboardButton("Finance", callback_data=f"classify_reclassify:{receipt_id}:finance"),
+            InlineKeyboardButton(
+                "Finance", callback_data=f"classify_reclassify:{receipt_id}:finance"
+            ),
         ],
         [
-            InlineKeyboardButton("Université", callback_data=f"classify_reclassify:{receipt_id}:universite"),
-            InlineKeyboardButton("Recherche", callback_data=f"classify_reclassify:{receipt_id}:recherche"),
+            InlineKeyboardButton(
+                "Université", callback_data=f"classify_reclassify:{receipt_id}:universite"
+            ),
+            InlineKeyboardButton(
+                "Recherche", callback_data=f"classify_reclassify:{receipt_id}:recherche"
+            ),
         ],
         [
             InlineKeyboardButton("Perso", callback_data=f"classify_reclassify:{receipt_id}:perso"),
         ],
         [
             InlineKeyboardButton("🔙 Retour", callback_data=f"classify_back:{receipt_id}"),
-        ]
+        ],
     ]
 
     return InlineKeyboardMarkup(keyboard)
@@ -389,15 +373,21 @@ def _create_finance_perimeter_keyboard(receipt_id: str) -> InlineKeyboardMarkup:
             InlineKeyboardButton("SCM", callback_data=f"classify_finance:{receipt_id}:scm"),
         ],
         [
-            InlineKeyboardButton("SCI Ravas", callback_data=f"classify_finance:{receipt_id}:sci_ravas"),
-            InlineKeyboardButton("SCI Malbosc", callback_data=f"classify_finance:{receipt_id}:sci_malbosc"),
+            InlineKeyboardButton(
+                "SCI Ravas", callback_data=f"classify_finance:{receipt_id}:sci_ravas"
+            ),
+            InlineKeyboardButton(
+                "SCI Malbosc", callback_data=f"classify_finance:{receipt_id}:sci_malbosc"
+            ),
         ],
         [
-            InlineKeyboardButton("Personnel", callback_data=f"classify_finance:{receipt_id}:personal"),
+            InlineKeyboardButton(
+                "Personnel", callback_data=f"classify_finance:{receipt_id}:personal"
+            ),
         ],
         [
             InlineKeyboardButton("🔙 Retour", callback_data=f"classify_back:{receipt_id}"),
-        ]
+        ],
     ]
 
     return InlineKeyboardMarkup(keyboard)

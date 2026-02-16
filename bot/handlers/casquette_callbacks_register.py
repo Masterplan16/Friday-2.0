@@ -11,14 +11,11 @@ import structlog
 
 from bot.handlers.casquette_callbacks import handle_casquette_button
 
-
 logger = structlog.get_logger(__name__)
 
 
 def register_casquette_callbacks_handlers(
-    application: Application,
-    db_pool: asyncpg.Pool,
-    redis_client: redis.Redis
+    application: Application, db_pool: asyncpg.Pool, redis_client: redis.Redis
 ):
     """
     Enregistre les CallbackQueryHandlers pour casquettes.
@@ -36,6 +33,7 @@ def register_casquette_callbacks_handlers(
 
     Story 7.3 AC2: Inline buttons [Médecin] [Enseignant] [Chercheur] [Auto]
     """
+
     # Wrapper pour injecter db_pool et redis_client dans bot_data
     async def _casquette_wrapper(update, context):
         # Injecter db_pool et redis_client dans bot_data si pas déjà fait
@@ -47,8 +45,6 @@ def register_casquette_callbacks_handlers(
         return await handle_casquette_button(update, context)
 
     # Enregistrer handler avec pattern callback_data
-    application.add_handler(
-        CallbackQueryHandler(_casquette_wrapper, pattern=r"^casquette:")
-    )
+    application.add_handler(CallbackQueryHandler(_casquette_wrapper, pattern=r"^casquette:"))
 
     logger.info("Casquette callbacks handlers registered (Story 7.3)")

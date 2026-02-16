@@ -36,7 +36,6 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Optional
 
-
 # ============================================================
 # Enums partagés (cohérence entre backends)
 # ============================================================
@@ -196,9 +195,7 @@ class MemoryStore(ABC):
         pass
 
     @abstractmethod
-    async def get_nodes_by_type(
-        self, node_type: str, limit: int = 100
-    ) -> list[dict[str, Any]]:
+    async def get_nodes_by_type(self, node_type: str, limit: int = 100) -> list[dict[str, Any]]:
         """
         Récupère tous les nœuds d'un type donné.
 
@@ -253,9 +250,7 @@ class MemoryStore(ABC):
         pass
 
     @abstractmethod
-    async def get_edges_by_type(
-        self, relation_type: str, limit: int = 100
-    ) -> list[dict[str, Any]]:
+    async def get_edges_by_type(self, relation_type: str, limit: int = 100) -> list[dict[str, Any]]:
         """
         Récupère toutes les relations d'un type donné.
 
@@ -305,9 +300,7 @@ class MemoryStore(ABC):
         pass
 
     @abstractmethod
-    async def get_node_with_relations(
-        self, node_id: str, depth: int = 1
-    ) -> dict[str, Any]:
+    async def get_node_with_relations(self, node_id: str, depth: int = 1) -> dict[str, Any]:
         """
         Récupère un nœud avec ses relations sur N niveaux de profondeur.
 

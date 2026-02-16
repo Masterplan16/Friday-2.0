@@ -18,34 +18,18 @@ class TaskDetected(BaseModel):
     """
 
     description: str = Field(
-        ...,
-        min_length=5,
-        max_length=500,
-        description="Description de la tâche extraite"
+        ..., min_length=5, max_length=500, description="Description de la tâche extraite"
     )
     priority: str = Field(
-        ...,
-        pattern="^(high|normal|low)$",
-        description="Priorité de la tâche (high/normal/low)"
+        ..., pattern="^(high|normal|low)$", description="Priorité de la tâche (high/normal/low)"
     )
-    due_date: Optional[datetime] = Field(
-        None,
-        description="Date d'échéance si détectée (ISO 8601)"
-    )
+    due_date: Optional[datetime] = Field(None, description="Date d'échéance si détectée (ISO 8601)")
     confidence: float = Field(
-        ...,
-        ge=0.0,
-        le=1.0,
-        description="Confiance de la détection (0.0-1.0)"
+        ..., ge=0.0, le=1.0, description="Confiance de la détection (0.0-1.0)"
     )
-    context: str = Field(
-        ...,
-        max_length=1000,
-        description="Contexte d'extraction (extrait email)"
-    )
+    context: str = Field(..., max_length=1000, description="Contexte d'extraction (extrait email)")
     priority_keywords: Optional[List[str]] = Field(
-        None,
-        description="Mots-clés ayant justifié la priorité (AC7)"
+        None, description="Mots-clés ayant justifié la priorité (AC7)"
     )
 
     @field_validator("description")
@@ -71,14 +55,10 @@ class TaskExtractionResult(BaseModel):
     """
 
     tasks_detected: List[TaskDetected] = Field(
-        default_factory=list,
-        description="Liste des tâches détectées (peut être vide)"
+        default_factory=list, description="Liste des tâches détectées (peut être vide)"
     )
     confidence_overall: float = Field(
-        ...,
-        ge=0.0,
-        le=1.0,
-        description="Confiance globale de l'extraction"
+        ..., ge=0.0, le=1.0, description="Confiance globale de l'extraction"
     )
 
     @field_validator("tasks_detected")
@@ -90,9 +70,7 @@ class TaskExtractionResult(BaseModel):
         """
         for task in v:
             if task.confidence < 0.0 or task.confidence > 1.0:
-                raise ValueError(
-                    f"Task confidence must be 0.0-1.0, got {task.confidence}"
-                )
+                raise ValueError(f"Task confidence must be 0.0-1.0, got {task.confidence}")
         return v
 
     @field_validator("confidence_overall")

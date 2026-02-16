@@ -29,11 +29,7 @@ from anthropic import AsyncAnthropic
 from pydantic import BaseModel
 from redis.asyncio import Redis
 
-from agents.src.core.heartbeat_models import (
-    HeartbeatContext,
-    Check,
-    CheckPriority
-)
+from agents.src.core.heartbeat_models import HeartbeatContext, Check, CheckPriority
 
 logger = structlog.get_logger(__name__)
 
@@ -74,11 +70,7 @@ class LLMDecider:
     MAX_TOKENS = 500  # JSON response compact
     TIMEOUT_SECONDS = 10  # Timeout appel LLM
 
-    def __init__(
-        self,
-        llm_client: AsyncAnthropic,
-        redis_client: Redis
-    ):
+    def __init__(self, llm_client: AsyncAnthropic, redis_client: Redis):
         """
         Initialize LLM Décideur.
 
@@ -92,9 +84,7 @@ class LLMDecider:
         logger.info("LLMDecider initialized", model=self.MODEL_ID)
 
     async def decide_checks(
-        self,
-        context: HeartbeatContext,
-        available_checks: List[Check]
+        self, context: HeartbeatContext, available_checks: List[Check]
     ) -> Dict[str, Any]:
         """
         Décide quels checks exécuter selon contexte (Task 4.2).
@@ -108,27 +98,20 @@ class LLMDecider:
         """
         # Edge case : liste vide
         if not available_checks:
-            return {
-                "checks_to_run": [],
-                "reasoning": "No checks available"
-            }
+            return {"checks_to_run": [], "reasoning": "No checks available"}
 
         # Vérifier circuit breaker (Task 4.4)
         circuit_breaker_key = "heartbeat:llm_failures"
         failures = await self.redis_client.get(circuit_breaker_key)
 
         if failures and int(failures) >= self.CIRCUIT_BREAKER_THRESHOLD:
-            logger.warning(
-                "LLM circuit breaker open, using fallback",
-                failures=int(failures)
-            )
+            logger.warning("LLM circuit breaker open, using fallback", failures=int(failures))
             return self._fallback_decision(available_checks, "Circuit breaker open")
 
         # Appeler LLM avec timeout
         try:
             result = await asyncio.wait_for(
-                self._call_llm(context, available_checks),
-                timeout=self.TIMEOUT_SECONDS
+                self._call_llm(context, available_checks), timeout=self.TIMEOUT_SECONDS
             )
 
             # Succès → reset circuit breaker
@@ -147,9 +130,7 @@ class LLMDecider:
             return self._fallback_decision(available_checks, f"LLM error: {str(e)}")
 
     async def _call_llm(
-        self,
-        context: HeartbeatContext,
-        available_checks: List[Check]
+        self, context: HeartbeatContext, available_checks: List[Check]
     ) -> Dict[str, Any]:
         """
         Appelle LLM pour décision (Task 4.2).
@@ -172,12 +153,7 @@ class LLMDecider:
             model=self.MODEL_ID,
             temperature=self.TEMPERATURE,
             max_tokens=self.MAX_TOKENS,
-            messages=[
-                {
-                    "role": "user",
-                    "content": prompt
-                }
-            ]
+            messages=[{"role": "user", "content": prompt}],
         )
 
         # Parser réponse JSON
@@ -195,7 +171,7 @@ class LLMDecider:
             logger.info(
                 "LLM decision",
                 checks_count=len(decision["checks_to_run"]),
-                checks=decision["checks_to_run"]
+                checks=decision["checks_to_run"],
             )
 
             return decision
@@ -204,11 +180,7 @@ class LLMDecider:
             logger.error("Failed to parse LLM response", error=str(e), response=response_text)
             raise
 
-    def _build_prompt(
-        self,
-        context: HeartbeatContext,
-        available_checks: List[Check]
-    ) -> str:
+    def _build_prompt(self, context: HeartbeatContext, available_checks: List[Check]) -> str:
         """
         Construit prompt LLM décideur (Task 4.2).
 
@@ -228,10 +200,12 @@ class LLMDecider:
 - Dernière activité: {self._format_last_activity(context.last_activity_mainteneur)}"""
 
         # Formater checks disponibles
-        checks_str = "\n".join([
-            f"- **{check.check_id}** (priorité: {check.priority}): {check.description}"
-            for check in available_checks
-        ])
+        checks_str = "\n".join(
+            [
+                f"- **{check.check_id}** (priorité: {check.priority}): {check.description}"
+                for check in available_checks
+            ]
+        )
 
         # Prompt complet avec règles
         prompt = f"""Tu es l'assistant de décision du Heartbeat Engine de Friday.
@@ -300,11 +274,7 @@ Seuls les checks vraiment pertinents dans le contexte actuel doivent être exéc
             days = int(delta.total_seconds() / 86400)
             return f"Il y a {days}j"
 
-    def _fallback_decision(
-        self,
-        available_checks: List[Check],
-        reason: str
-    ) -> Dict[str, Any]:
+    def _fallback_decision(self, available_checks: List[Check], reason: str) -> Dict[str, Any]:
         """
         Décision fallback si LLM indisponible (Task 4.3).
 
@@ -324,14 +294,12 @@ Seuls les checks vraiment pertinents dans le contexte actuel doivent être exéc
         ]
 
         logger.warning(
-            "Using fallback decision",
-            reason=reason,
-            fallback_checks_count=len(fallback_checks)
+            "Using fallback decision", reason=reason, fallback_checks_count=len(fallback_checks)
         )
 
         return {
             "checks_to_run": fallback_checks,
-            "reasoning": f"Fallback mode ({reason}): HIGH + CRITICAL checks only"
+            "reasoning": f"Fallback mode ({reason}): HIGH + CRITICAL checks only",
         }
 
     async def _increment_failures(self, key: str) -> None:
@@ -350,7 +318,7 @@ Seuls les checks vraiment pertinents dans le contexte actuel doivent être exéc
             logger.error(
                 "LLM circuit breaker opened",
                 failures=failures,
-                timeout_seconds=self.CIRCUIT_BREAKER_TIMEOUT
+                timeout_seconds=self.CIRCUIT_BREAKER_TIMEOUT,
             )
         else:
             # Expiration courte pour reset si succès

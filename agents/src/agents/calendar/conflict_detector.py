@@ -18,7 +18,6 @@ from typing import Optional
 
 from agents.src.agents.calendar.models import CalendarEvent, CalendarConflict, Casquette
 
-
 logger = structlog.get_logger(__name__)
 
 
@@ -26,9 +25,9 @@ logger = structlog.get_logger(__name__)
 # Public API
 # ============================================================================
 
+
 async def detect_calendar_conflicts(
-    target_date: date,
-    db_pool: asyncpg.Pool
+    target_date: date, db_pool: asyncpg.Pool
 ) -> list[CalendarConflict]:
     """
     Détecte conflits calendrier pour une journée donnée (AC4).
@@ -64,7 +63,7 @@ async def detect_calendar_conflicts(
     conflicts = []
 
     for i, event1 in enumerate(events):
-        for event2 in events[i+1:]:
+        for event2 in events[i + 1 :]:
             # Check temporal overlap
             if _has_temporal_overlap(event1, event2):
                 # Check different casquettes (même casquette = pas conflit réel)
@@ -78,9 +77,7 @@ async def detect_calendar_conflicts(
                         continue
 
                     conflict = CalendarConflict(
-                        event1=event1,
-                        event2=event2,
-                        overlap_minutes=overlap_minutes
+                        event1=event1, event2=event2, overlap_minutes=overlap_minutes
                     )
 
                     conflicts.append(conflict)
@@ -90,22 +87,17 @@ async def detect_calendar_conflicts(
                         event1_id=event1.id,
                         event2_id=event2.id,
                         overlap_minutes=overlap_minutes,
-                        casquettes=f"{event1.casquette.value}/{event2.casquette.value}"
+                        casquettes=f"{event1.casquette.value}/{event2.casquette.value}",
                     )
 
     logger.info(
-        "conflict_detection_complete",
-        date=str(target_date),
-        conflicts_count=len(conflicts)
+        "conflict_detection_complete", date=str(target_date), conflicts_count=len(conflicts)
     )
 
     return conflicts
 
 
-async def save_conflict_to_db(
-    conflict: CalendarConflict,
-    db_pool: asyncpg.Pool
-) -> Optional[str]:
+async def save_conflict_to_db(conflict: CalendarConflict, db_pool: asyncpg.Pool) -> Optional[str]:
     """
     Sauvegarde conflit dans knowledge.calendar_conflicts (AC4).
 
@@ -130,7 +122,8 @@ async def save_conflict_to_db(
             # PostgreSQL ne supporte pas ON CONFLICT sur index d'expressions
             # directement, mais DO NOTHING fonctionne car l'index unique
             # déclenche le conflit sur la paire normalisée.
-            conflict_id = await conn.fetchval("""
+            conflict_id = await conn.fetchval(
+                """
                 INSERT INTO knowledge.calendar_conflicts (
                     event1_id,
                     event2_id,
@@ -144,7 +137,7 @@ async def save_conflict_to_db(
                 conflict.event1.id,
                 conflict.event2.id,
                 conflict.overlap_minutes,
-                conflict.detected_at
+                conflict.detected_at,
             )
 
             if conflict_id:
@@ -152,14 +145,14 @@ async def save_conflict_to_db(
                     "conflict_saved",
                     conflict_id=str(conflict_id),
                     event1_id=conflict.event1.id,
-                    event2_id=conflict.event2.id
+                    event2_id=conflict.event2.id,
                 )
                 return str(conflict_id)
             else:
                 logger.debug(
                     "conflict_duplicate_skipped",
                     event1_id=conflict.event1.id,
-                    event2_id=conflict.event2.id
+                    event2_id=conflict.event2.id,
                 )
                 return None
 
@@ -168,7 +161,7 @@ async def save_conflict_to_db(
                 "conflict_save_fk_error",
                 error=str(e),
                 event1_id=conflict.event1.id,
-                event2_id=conflict.event2.id
+                event2_id=conflict.event2.id,
             )
             raise
 
@@ -177,7 +170,7 @@ async def save_conflict_to_db(
                 "conflict_save_data_error",
                 error=str(e),
                 event1_id=conflict.event1.id,
-                event2_id=conflict.event2.id
+                event2_id=conflict.event2.id,
             )
             raise
 
@@ -219,9 +212,7 @@ def calculate_overlap(event1: CalendarEvent, event2: CalendarEvent) -> int:
 
 
 async def get_conflicts_range(
-    start_date: date,
-    end_date: date,
-    db_pool: asyncpg.Pool
+    start_date: date, end_date: date, db_pool: asyncpg.Pool
 ) -> list[CalendarConflict]:
     """
     Récupère conflits sur une plage de dates (AC5 - Heartbeat check).
@@ -255,7 +246,7 @@ async def get_conflicts_range(
     conflicts = []
 
     for i, event1 in enumerate(events):
-        for event2 in events[i+1:]:
+        for event2 in events[i + 1 :]:
             if _has_temporal_overlap(event1, event2):
                 if event1.casquette != event2.casquette:
                     overlap_minutes = calculate_overlap(event1, event2)
@@ -265,9 +256,7 @@ async def get_conflicts_range(
                         continue
 
                     conflict = CalendarConflict(
-                        event1=event1,
-                        event2=event2,
-                        overlap_minutes=overlap_minutes
+                        event1=event1, event2=event2, overlap_minutes=overlap_minutes
                     )
 
                     conflicts.append(conflict)
@@ -277,7 +266,7 @@ async def get_conflicts_range(
         start_date=str(start_date),
         end_date=str(end_date),
         events_fetched=len(events),
-        conflicts_count=len(conflicts)
+        conflicts_count=len(conflicts),
     )
 
     return conflicts
@@ -286,6 +275,7 @@ async def get_conflicts_range(
 # ============================================================================
 # Private Helpers
 # ============================================================================
+
 
 async def _get_events_for_day(target_date: date, db_pool: asyncpg.Pool) -> list[CalendarEvent]:
     """
@@ -304,7 +294,8 @@ async def _get_events_for_day(target_date: date, db_pool: asyncpg.Pool) -> list[
     async with db_pool.acquire() as conn:
         # Chevauchement temporel : l'événement commence avant la fin du jour
         # ET finit après le début du jour (capte les événements multi-jours)
-        rows = await conn.fetch("""
+        rows = await conn.fetch(
+            """
             SELECT
                 id,
                 properties->>'title' AS title,
@@ -319,15 +310,15 @@ async def _get_events_for_day(target_date: date, db_pool: asyncpg.Pool) -> list[
               AND (properties->>'end_datetime')::timestamptz > $1::date
               AND properties->>'casquette' IS NOT NULL
             ORDER BY (properties->>'start_datetime')::timestamptz ASC
-        """, target_date)
+        """,
+            target_date,
+        )
 
     return _rows_to_calendar_events(rows)
 
 
 async def _get_events_for_range(
-    start_date: date,
-    end_date: date,
-    db_pool: asyncpg.Pool
+    start_date: date, end_date: date, db_pool: asyncpg.Pool
 ) -> list[CalendarEvent]:
     """
     Récupère événements confirmés qui chevauchent une plage de dates.
@@ -347,7 +338,8 @@ async def _get_events_for_range(
         # Chevauchement temporel avec la plage complète :
         # événement commence avant la fin de la plage (end_date + 1 jour)
         # ET finit après le début de la plage (start_date)
-        rows = await conn.fetch("""
+        rows = await conn.fetch(
+            """
             SELECT
                 id,
                 properties->>'title' AS title,
@@ -362,7 +354,10 @@ async def _get_events_for_range(
               AND (properties->>'end_datetime')::timestamptz > $1::date
               AND properties->>'casquette' IS NOT NULL
             ORDER BY (properties->>'start_datetime')::timestamptz ASC
-        """, start_date, end_date)
+        """,
+            start_date,
+            end_date,
+        )
 
     return _rows_to_calendar_events(rows)
 
@@ -386,20 +381,20 @@ def _rows_to_calendar_events(rows: list) -> list[CalendarEvent]:
             casquette = Casquette(row["casquette"])
         except ValueError:
             logger.warning(
-                "invalid_casquette_skipped",
-                event_id=str(row["id"]),
-                casquette=row["casquette"]
+                "invalid_casquette_skipped", event_id=str(row["id"]), casquette=row["casquette"]
             )
             continue
 
-        events.append(CalendarEvent(
-            id=str(row["id"]),
-            title=row["title"],
-            casquette=casquette,
-            start_datetime=row["start_datetime"],
-            end_datetime=row["end_datetime"],
-            status=row["status"]
-        ))
+        events.append(
+            CalendarEvent(
+                id=str(row["id"]),
+                title=row["title"],
+                casquette=casquette,
+                start_datetime=row["start_datetime"],
+                end_datetime=row["end_datetime"],
+                status=row["status"],
+            )
+        )
 
     return events
 
@@ -427,5 +422,6 @@ def _has_temporal_overlap(event1: CalendarEvent, event2: CalendarEvent) -> bool:
         _has_temporal_overlap(event1, event2)  # False
         ```
     """
-    return (event1.start_datetime < event2.end_datetime and
-            event2.start_datetime < event1.end_datetime)
+    return (
+        event1.start_datetime < event2.end_datetime and event2.start_datetime < event1.end_datetime
+    )

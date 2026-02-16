@@ -4,6 +4,7 @@ Configuration de l'arborescence Friday pour classement documents.
 Story 3.2 - Task 2.5 et 2.6
 Charge et valide config/arborescence.yaml
 """
+
 import os
 from pathlib import Path
 from typing import Dict, Any, Set
@@ -46,8 +47,7 @@ class ArborescenceConfig(BaseModel):
 
         if actual_categories != required_categories:
             raise ValueError(
-                f"Categories must be exactly: {required_categories}. "
-                f"Got: {actual_categories}"
+                f"Categories must be exactly: {required_categories}. " f"Got: {actual_categories}"
             )
 
         # Vérifier périmètres finance (CRITIQUE)
@@ -72,9 +72,7 @@ class ArborescenceConfig(BaseModel):
         max_depth = v.get("max_depth")
         if max_depth is not None:
             if not isinstance(max_depth, int) or max_depth < 1 or max_depth > 10:
-                raise ValueError(
-                    f"max_depth must be an integer between 1 and 10, got: {max_depth}"
-                )
+                raise ValueError(f"max_depth must be an integer between 1 and 10, got: {max_depth}")
 
         # forbidden_names doit être une liste
         forbidden_names = v.get("forbidden_names", [])
@@ -110,9 +108,7 @@ class ArborescenceConfig(BaseModel):
         if subcategory:
             subcats = category_config.get("subcategories", {})
             if subcategory not in subcats:
-                raise KeyError(
-                    f"Unknown subcategory '{subcategory}' in category '{category}'"
-                )
+                raise KeyError(f"Unknown subcategory '{subcategory}' in category '{category}'")
             return subcats[subcategory]["path"].split("{")[0].rstrip("/")
         else:
             return category
@@ -136,16 +132,12 @@ class ArborescenceConfig(BaseModel):
         # Vérifier noms réservés Windows
         name_upper = name.upper().split(".")[0]  # Sans extension
         if name_upper in forbidden_names:
-            raise ValueError(
-                f"Reserved name not allowed: '{name}'"
-            )
+            raise ValueError(f"Reserved name not allowed: '{name}'")
 
         # Vérifier caractères interdits
         for char in forbidden_chars:
             if char in name:
-                raise ValueError(
-                    f"Forbidden character '{char}' in name: '{name}'"
-                )
+                raise ValueError(f"Forbidden character '{char}' in name: '{name}'")
 
         return True
 
@@ -166,9 +158,7 @@ class ArborescenceConfig(BaseModel):
         parts = [p for p in path.replace("\\", "/").split("/") if p]
 
         if len(parts) > max_depth:
-            raise ValueError(
-                f"Path depth {len(parts)} exceeds max_depth {max_depth}: '{path}'"
-            )
+            raise ValueError(f"Path depth {len(parts)} exceeds max_depth {max_depth}: '{path}'")
 
         return True
 

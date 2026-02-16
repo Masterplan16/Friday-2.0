@@ -34,12 +34,7 @@ from redis.asyncio import Redis
 
 from agents.src.core.check_registry import CheckRegistry
 from agents.src.core.context_provider import ContextProvider
-from agents.src.core.heartbeat_models import (
-    HeartbeatContext,
-    CheckResult,
-    CheckPriority,
-    Check
-)
+from agents.src.core.heartbeat_models import HeartbeatContext, CheckResult, CheckPriority, Check
 
 logger = structlog.get_logger(__name__)
 
@@ -58,7 +53,7 @@ class HeartbeatEngine:
         context_provider: ContextProvider,
         check_registry: CheckRegistry,
         llm_decider,  # Type: LLMDecider (forward reference, créé Task 4)
-        check_executor  # Type: CheckExecutor (forward reference, créé Task 5)
+        check_executor,  # Type: CheckExecutor (forward reference, créé Task 5)
     ):
         """
         Initialize Heartbeat Engine.
@@ -81,9 +76,7 @@ class HeartbeatEngine:
         logger.info("HeartbeatEngine initialized")
 
     async def run_heartbeat_cycle(
-        self,
-        mode: str = "one-shot",
-        interval_minutes: Optional[int] = None
+        self, mode: str = "one-shot", interval_minutes: Optional[int] = None
     ) -> Dict[str, Any]:
         """
         Exécute cycle(s) Heartbeat (Task 1.2).
@@ -109,10 +102,7 @@ class HeartbeatEngine:
             )
             interval_seconds = interval_minutes * 60
 
-            logger.info(
-                "Starting Heartbeat daemon",
-                interval_minutes=interval_minutes
-            )
+            logger.info("Starting Heartbeat daemon", interval_minutes=interval_minutes)
 
             try:
                 while True:
@@ -123,7 +113,7 @@ class HeartbeatEngine:
                         "Heartbeat cycle completed",
                         status=result["status"],
                         checks_executed=result.get("checks_executed", 0),
-                        checks_notified=result.get("checks_notified", 0)
+                        checks_notified=result.get("checks_notified", 0),
                     )
 
                     # Attendre avant prochain cycle
@@ -165,16 +155,14 @@ class HeartbeatEngine:
                 "Heartbeat cycle started",
                 current_time=context.current_time.isoformat(),
                 is_quiet_hours=context.is_quiet_hours,
-                casquette=context.current_casquette
+                casquette=context.current_casquette,
             )
 
             # 2. Sélectionner checks à exécuter
             if context.is_quiet_hours:
                 # Quiet hours (22h-8h) → CRITICAL checks seulement (AC1, Task 1.3)
                 logger.info("Quiet hours detected, executing CRITICAL checks only")
-                checks_to_run = self.check_registry.get_checks_by_priority(
-                    CheckPriority.CRITICAL
-                )
+                checks_to_run = self.check_registry.get_checks_by_priority(CheckPriority.CRITICAL)
                 selected_check_ids = [check.check_id for check in checks_to_run]
                 llm_reasoning = "Quiet hours: CRITICAL checks only"
 
@@ -182,8 +170,7 @@ class HeartbeatEngine:
                 # Hors quiet hours → LLM décideur (AC2, Task 1.3)
                 try:
                     decision = await self.llm_decider.decide_checks(
-                        context=context,
-                        available_checks=self.check_registry.get_all_checks()
+                        context=context, available_checks=self.check_registry.get_all_checks()
                     )
                     selected_check_ids = decision.get("checks_to_run", [])
                     llm_reasoning = decision.get("reasoning", "")
@@ -197,18 +184,13 @@ class HeartbeatEngine:
                     logger.info(
                         "LLM decider selected checks",
                         checks_count=len(checks_to_run),
-                        check_ids=selected_check_ids
+                        check_ids=selected_check_ids,
                     )
 
                 except Exception as e:
                     # Fallback si LLM crash → HIGH checks (AC2)
-                    logger.error(
-                        "LLM decider failed, fallback to HIGH checks",
-                        error=str(e)
-                    )
-                    checks_to_run = self.check_registry.get_checks_by_priority(
-                        CheckPriority.HIGH
-                    )
+                    logger.error("LLM decider failed, fallback to HIGH checks", error=str(e))
+                    checks_to_run = self.check_registry.get_checks_by_priority(CheckPriority.HIGH)
                     selected_check_ids = [check.check_id for check in checks_to_run]
                     llm_reasoning = f"LLM fallback (error: {str(e)})"
 
@@ -228,11 +210,7 @@ class HeartbeatEngine:
 
                 except Exception as e:
                     # Isolation : 1 check crash n'arrête pas les autres (AC6)
-                    logger.error(
-                        "Check execution failed",
-                        check_id=check.check_id,
-                        error=str(e)
-                    )
+                    logger.error("Check execution failed", check_id=check.check_id, error=str(e))
                     continue
 
             # 5. Sauvegarder metrics (AC4, AC6, Task 8)
@@ -247,14 +225,14 @@ class HeartbeatEngine:
                 checks_notified=checks_notified,
                 llm_decision_reasoning=llm_reasoning,
                 duration_ms=cycle_duration_ms,
-                error=None
+                error=None,
             )
 
             logger.info(
                 "Heartbeat cycle completed successfully",
                 checks_executed=checks_executed,
                 checks_notified=checks_notified,
-                duration_ms=cycle_duration_ms
+                duration_ms=cycle_duration_ms,
             )
 
             return {
@@ -263,16 +241,12 @@ class HeartbeatEngine:
                 "checks_notified": checks_notified,
                 "duration_ms": cycle_duration_ms,
                 "selected_checks": selected_check_ids,
-                "llm_reasoning": llm_reasoning
+                "llm_reasoning": llm_reasoning,
             }
 
         except Exception as e:
             # Erreur critique cycle complet (AC6, Task 1.5)
-            logger.error(
-                "Heartbeat cycle failed",
-                error=str(e),
-                error_type=type(e).__name__
-            )
+            logger.error("Heartbeat cycle failed", error=str(e), error_type=type(e).__name__)
 
             error_message = str(e)
 
@@ -288,26 +262,20 @@ class HeartbeatEngine:
                 checks_notified=checks_notified,
                 llm_decision_reasoning=llm_reasoning,
                 duration_ms=cycle_duration_ms,
-                error=error_message
+                error=error_message,
             )
 
             # Envoyer alerte System (AC6)
-            await self._send_alert_system(
-                f"⚠️ Heartbeat cycle failed: {error_message}"
-            )
+            await self._send_alert_system(f"⚠️ Heartbeat cycle failed: {error_message}")
 
             return {
                 "status": "error" if checks_executed == 0 else "partial_success",
                 "checks_executed": checks_executed,
                 "checks_notified": checks_notified,
-                "error": error_message
+                "error": error_message,
             }
 
-    async def _send_notification(
-        self,
-        result: CheckResult,
-        context: HeartbeatContext
-    ) -> None:
+    async def _send_notification(self, result: CheckResult, context: HeartbeatContext) -> None:
         """
         Envoie notification Telegram Topic Chat & Proactive (AC5, Task 7).
 
@@ -328,7 +296,7 @@ class HeartbeatEngine:
         from agents.src.core.telegram_helper import (
             send_to_chat_proactive,
             format_heartbeat_message,
-            create_action_keyboard
+            create_action_keyboard,
         )
 
         # Extraire check_id depuis payload (si disponible)
@@ -336,9 +304,7 @@ class HeartbeatEngine:
 
         # Formater message
         formatted_message = format_heartbeat_message(
-            check_id=check_id,
-            message=result.message,
-            emoji="🔔"
+            check_id=check_id, message=result.message, emoji="🔔"
         )
 
         # Créer inline keyboard si action définie
@@ -348,22 +314,13 @@ class HeartbeatEngine:
 
         # Envoyer notification
         sent = await send_to_chat_proactive(
-            message=formatted_message,
-            keyboard=keyboard,
-            parse_mode="HTML"
+            message=formatted_message, keyboard=keyboard, parse_mode="HTML"
         )
 
         if sent:
-            logger.info(
-                "Heartbeat notification sent",
-                check_id=check_id,
-                action=result.action
-            )
+            logger.info("Heartbeat notification sent", check_id=check_id, action=result.action)
         else:
-            logger.warning(
-                "Failed to send Heartbeat notification",
-                check_id=check_id
-            )
+            logger.warning("Failed to send Heartbeat notification", check_id=check_id)
 
     async def _save_metrics(
         self,
@@ -373,7 +330,7 @@ class HeartbeatEngine:
         checks_notified: int,
         llm_decision_reasoning: str,
         duration_ms: int,
-        error: Optional[str]
+        error: Optional[str],
     ) -> None:
         """
         Sauvegarde metrics cycle dans core.heartbeat_metrics (AC4, AC6, Task 8).
@@ -407,13 +364,13 @@ class HeartbeatEngine:
                     checks_notified,
                     llm_decision_reasoning,
                     duration_ms,
-                    error
+                    error,
                 )
 
             logger.debug(
                 "Heartbeat metrics saved",
                 checks_executed=checks_executed,
-                checks_notified=checks_notified
+                checks_notified=checks_notified,
             )
 
         except Exception as e:
@@ -430,10 +387,7 @@ class HeartbeatEngine:
         from agents.src.core.telegram_helper import send_to_system_alerts
 
         # Envoyer alerte au topic System
-        sent = await send_to_system_alerts(
-            message=message,
-            parse_mode="HTML"
-        )
+        sent = await send_to_system_alerts(message=message, parse_mode="HTML")
 
         if sent:
             logger.info("Heartbeat system alert sent", alert_preview=message[:50])

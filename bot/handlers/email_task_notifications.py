@@ -108,12 +108,14 @@ async def send_task_detected_notification(
     # Inline buttons (C1 fix: Utiliser pattern générique compatible Story 1.10)
     # Pattern callbacks.py: ^approve_[uuid]$ et ^reject_[uuid]$
     # Note: [Modifier] n'est pas implémenté MVP (Task 4 SKIPPED)
-    keyboard = InlineKeyboardMarkup([
+    keyboard = InlineKeyboardMarkup(
         [
-            InlineKeyboardButton("✅ Créer tâche(s)", callback_data=f"approve_{receipt_id}"),
-            InlineKeyboardButton("❌ Ignorer", callback_data=f"reject_{receipt_id}")
+            [
+                InlineKeyboardButton("✅ Créer tâche(s)", callback_data=f"approve_{receipt_id}"),
+                InlineKeyboardButton("❌ Ignorer", callback_data=f"reject_{receipt_id}"),
+            ]
         ]
-    ])
+    )
 
     # Send to topic Actions
     try:
@@ -122,20 +124,17 @@ async def send_task_detected_notification(
             message_thread_id=TOPIC_ACTIONS_ID,
             text=message_text,
             parse_mode="Markdown",
-            reply_markup=keyboard
+            reply_markup=keyboard,
         )
         logger.info(
             "task_notification_sent_actions",
             receipt_id=receipt_id,
             tasks_count=len(tasks),
-            topic="Actions"
+            topic="Actions",
         )
     except Exception as e:
         logger.error(
-            "task_notification_failed_actions",
-            receipt_id=receipt_id,
-            error=str(e),
-            exc_info=True
+            "task_notification_failed_actions", receipt_id=receipt_id, error=str(e), exc_info=True
         )
 
 
@@ -180,18 +179,15 @@ Sujet : {subject_anon}
             chat_id=TELEGRAM_SUPERGROUP_ID,
             message_thread_id=TOPIC_EMAIL_ID,
             text=message_text,
-            parse_mode="Markdown"
+            parse_mode="Markdown",
         )
         logger.info(
             "task_notification_sent_email",
             receipt_id=receipt_id,
             tasks_count=tasks_count,
-            topic="Email"
+            topic="Email",
         )
     except Exception as e:
         logger.error(
-            "task_notification_failed_email",
-            receipt_id=receipt_id,
-            error=str(e),
-            exc_info=True
+            "task_notification_failed_email", receipt_id=receipt_id, error=str(e), exc_info=True
         )

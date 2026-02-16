@@ -182,9 +182,7 @@ class EmbeddingPipeline:
             event_data = {k.decode(): v.decode() for k, v in data.items()}
             raw_doc_id = event_data.get("document_id")
             if not raw_doc_id:
-                raise PipelineError(
-                    f"Missing document_id in event data: {event_data}"
-                )
+                raise PipelineError(f"Missing document_id in event data: {event_data}")
             document_id = UUID(raw_doc_id)
 
             logger.info(

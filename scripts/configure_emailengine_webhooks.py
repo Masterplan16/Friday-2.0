@@ -21,22 +21,19 @@ import os
 import sys
 import logging
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 # ============================================
 # Configuration
 # ============================================
 
-EMAILENGINE_URL = os.getenv('EMAILENGINE_BASE_URL', 'http://localhost:3000')
-EMAILENGINE_SECRET = os.getenv('EMAILENGINE_SECRET')
-GATEWAY_URL = os.getenv('GATEWAY_URL', 'http://gateway:8000')
-WEBHOOK_SECRET = os.getenv('WEBHOOK_SECRET')
+EMAILENGINE_URL = os.getenv("EMAILENGINE_BASE_URL", "http://localhost:3000")
+EMAILENGINE_SECRET = os.getenv("EMAILENGINE_SECRET")
+GATEWAY_URL = os.getenv("GATEWAY_URL", "http://gateway:8000")
+WEBHOOK_SECRET = os.getenv("WEBHOOK_SECRET")
 
-ACCOUNTS = ['account-medical', 'account-faculty', 'account-research', 'account-personal']
+ACCOUNTS = ["account-medical", "account-faculty", "account-research", "account-personal"]
 
 if not EMAILENGINE_SECRET:
     logger.error("❌ EMAILENGINE_SECRET not set")
@@ -51,10 +48,9 @@ if not WEBHOOK_SECRET:
 # Functions
 # ============================================
 
+
 async def configure_webhook(
-    client: httpx.AsyncClient,
-    account_id: str,
-    dry_run: bool = False
+    client: httpx.AsyncClient, account_id: str, dry_run: bool = False
 ) -> bool:
     """
     Configure webhook pour un compte EmailEngine
@@ -78,17 +74,17 @@ async def configure_webhook(
 
     # Payload webhook EmailEngine API
     payload = {
-        'url': webhook_url,
-        'events': ['messageNew'],  # Événement: nouvel email
-        'enabled': True
+        "url": webhook_url,
+        "events": ["messageNew"],  # Événement: nouvel email
+        "enabled": True,
     }
 
     try:
         response = await client.post(
-            f'{EMAILENGINE_URL}/v1/account/{account_id}/webhooks',
+            f"{EMAILENGINE_URL}/v1/account/{account_id}/webhooks",
             json=payload,
-            headers={'Authorization': f'Bearer {EMAILENGINE_SECRET}'},
-            timeout=10.0
+            headers={"Authorization": f"Bearer {EMAILENGINE_SECRET}"},
+            timeout=10.0,
         )
 
         if response.status_code in [200, 201]:
@@ -106,11 +102,7 @@ async def configure_webhook(
         return False
 
 
-async def verify_webhook(
-    client: httpx.AsyncClient,
-    account_id: str,
-    dry_run: bool = False
-) -> bool:
+async def verify_webhook(client: httpx.AsyncClient, account_id: str, dry_run: bool = False) -> bool:
     """Vérifie qu'un webhook est configuré"""
     if dry_run:
         logger.info(f"🔵 [DRY-RUN] Would verify webhook for {account_id}")
@@ -118,9 +110,9 @@ async def verify_webhook(
 
     try:
         response = await client.get(
-            f'{EMAILENGINE_URL}/v1/account/{account_id}/webhooks',
-            headers={'Authorization': f'Bearer {EMAILENGINE_SECRET}'},
-            timeout=10.0
+            f"{EMAILENGINE_URL}/v1/account/{account_id}/webhooks",
+            headers={"Authorization": f"Bearer {EMAILENGINE_SECRET}"},
+            timeout=10.0,
         )
 
         if response.status_code == 200:
@@ -182,11 +174,11 @@ async def main(dry_run: bool = False):
         logger.info("🎉 All webhooks configured successfully!")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import argparse
 
-    parser = argparse.ArgumentParser(description='Configure EmailEngine webhooks')
-    parser.add_argument('--dry-run', action='store_true', help='Test mode')
+    parser = argparse.ArgumentParser(description="Configure EmailEngine webhooks")
+    parser.add_argument("--dry-run", action="store_true", help="Test mode")
     args = parser.parse_args()
 
     asyncio.run(main(dry_run=args.dry_run))

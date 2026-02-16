@@ -40,9 +40,7 @@ logger = structlog.get_logger(__name__)
 MAX_FILE_SIZE_TELEGRAM = 20 * 1024 * 1024  # 20 Mo
 
 # Storage paths (AC#3)
-PC_ARCHIVES_ROOT = os.getenv(
-    "PC_ARCHIVES_ROOT", r"C:\Users\lopez\BeeStation\Friday\Archives"
-)
+PC_ARCHIVES_ROOT = os.getenv("PC_ARCHIVES_ROOT", r"C:\Users\lopez\BeeStation\Friday\Archives")
 VPS_ARCHIVES_MIRROR = os.getenv("VPS_ARCHIVES_MIRROR", "/var/friday/archives")
 
 # Topics Telegram
@@ -79,7 +77,9 @@ class FileRequest(BaseModel):
 
     query: str = Field(..., description="Requête sémantique extraite")
     confidence: float = Field(..., ge=0.0, le=1.0, description="Confiance intention")
-    doc_type: Optional[str] = Field(None, description="Type document détecté (facture, contrat, etc.)")
+    doc_type: Optional[str] = Field(
+        None, description="Type document détecté (facture, contrat, etc.)"
+    )
     keywords: list[str] = Field(default_factory=list, description="Mots-clés extraits")
 
 
@@ -147,7 +147,7 @@ Réponds en JSON avec ce format :
     "confidence": 0.0-1.0
 }"""
 
-    prompt = f"Message utilisateur : \"{text}\"\n\nAnalyse l'intention :"
+    prompt = f'Message utilisateur : "{text}"\n\nAnalyse l\'intention :'
 
     try:
         # Anonymiser texte utilisateur avant appel LLM cloud (RGPD CLAUDE.md)
@@ -183,7 +183,9 @@ Réponds en JSON avec ce format :
         return file_request
 
     except json.JSONDecodeError as e:
-        logger.error("intent_json_parse_failed", error=str(e), response_content=response.content[:200])
+        logger.error(
+            "intent_json_parse_failed", error=str(e), response_content=response.content[:200]
+        )
         return None
 
     except Exception as e:
@@ -377,7 +379,7 @@ async def handle_file_send_request(update: Update, context: ContextTypes.DEFAULT
         if not results:
             # Aucun résultat trouvé
             await update.message.reply_text(
-                f"❌ Aucun fichier trouvé pour : \"{file_request.query}\"\n\n"
+                f'❌ Aucun fichier trouvé pour : "{file_request.query}"\n\n'
                 "Essayez avec d'autres mots-clés ou vérifiez si le document a été archivé.",
                 message_thread_id=TOPIC_EMAIL_COMMUNICATIONS,
             )
@@ -390,15 +392,22 @@ async def handle_file_send_request(update: Update, context: ContextTypes.DEFAULT
         if best_match.similarity < SEARCH_SIMILARITY_THRESHOLD:
             # Similarité faible → proposer alternatives
             alternatives = "\n".join(
-                [f"• {r.filename} ({r.doc_type or 'document'}) - {r.similarity*100:.0f}%" for r in results[:3]]
+                [
+                    f"• {r.filename} ({r.doc_type or 'document'}) - {r.similarity*100:.0f}%"
+                    for r in results[:3]
+                ]
             )
 
             await update.message.reply_text(
-                f"🤔 Aucun résultat exact trouvé pour : \"{file_request.query}\"\n\n"
+                f'🤔 Aucun résultat exact trouvé pour : "{file_request.query}"\n\n'
                 f"Suggestions (similarité <{SEARCH_SIMILARITY_THRESHOLD*100:.0f}%) :\n{alternatives}",
                 message_thread_id=TOPIC_EMAIL_COMMUNICATIONS,
             )
-            logger.info("low_similarity_results", query=file_request.query, best_similarity=best_match.similarity)
+            logger.info(
+                "low_similarity_results",
+                query=file_request.query,
+                best_similarity=best_match.similarity,
+            )
             return
 
         # 5. Retrieve fichier
@@ -413,7 +422,11 @@ async def handle_file_send_request(update: Update, context: ContextTypes.DEFAULT
                 f"Accédez-y directement depuis votre PC.",
                 message_thread_id=TOPIC_EMAIL_COMMUNICATIONS,
             )
-            logger.info("file_found_but_not_synced", filename=best_match.filename, pc_path=best_match.file_path)
+            logger.info(
+                "file_found_but_not_synced",
+                filename=best_match.filename,
+                pc_path=best_match.file_path,
+            )
             return
 
         # 6. Vérifier taille fichier
@@ -429,7 +442,11 @@ async def handle_file_send_request(update: Update, context: ContextTypes.DEFAULT
                 f"Accédez-y directement depuis votre PC.",
                 message_thread_id=TOPIC_EMAIL_COMMUNICATIONS,
             )
-            logger.info("file_too_large_for_telegram", filename=best_match.filename, size_mb=file_size / 1024 / 1024)
+            logger.info(
+                "file_too_large_for_telegram",
+                filename=best_match.filename,
+                size_mb=file_size / 1024 / 1024,
+            )
             return
 
         # 7. Envoi fichier Telegram
@@ -443,7 +460,10 @@ async def handle_file_send_request(update: Update, context: ContextTypes.DEFAULT
                 caption += f"Montant : {best_match.amount:.2f} EUR\n"
 
             await update.message.reply_document(
-                document=f, filename=best_match.filename, caption=caption, message_thread_id=TOPIC_EMAIL_COMMUNICATIONS
+                document=f,
+                filename=best_match.filename,
+                caption=caption,
+                message_thread_id=TOPIC_EMAIL_COMMUNICATIONS,
             )
 
         logger.info(

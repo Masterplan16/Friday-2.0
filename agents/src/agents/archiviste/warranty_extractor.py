@@ -10,6 +10,7 @@ Pipeline RGPD strict :
 
 Trust Layer: @friday_action avec trust=propose (Day 1).
 """
+
 import json
 from datetime import date
 from decimal import Decimal
@@ -38,11 +39,7 @@ logger = structlog.get_logger(__name__)
 CONFIDENCE_THRESHOLD = 0.75
 
 
-@friday_action(
-    module="archiviste",
-    action="extract_warranty",
-    trust_default="propose"
-)
+@friday_action(module="archiviste", action="extract_warranty", trust_default="propose")
 async def extract_warranty_from_document(
     document_id: str,
     ocr_text: str,
@@ -93,9 +90,7 @@ async def extract_warranty_from_document(
             )
         except Exception as e:
             logger.error("warranty_extraction.presidio_failure", error=str(e))
-            raise NotImplementedError(
-                f"Presidio anonymization unavailable: {e}"
-            ) from e
+            raise NotImplementedError(f"Presidio anonymization unavailable: {e}") from e
 
         # 2. Construire prompt few-shot avec correction_rules
         correction_rules = kwargs.get("_correction_rules", [])
@@ -117,9 +112,7 @@ async def extract_warranty_from_document(
             )
         except Exception as e:
             logger.error("warranty_extraction.claude_failure", error=str(e))
-            raise NotImplementedError(
-                f"Claude API unavailable: {e}"
-            ) from e
+            raise NotImplementedError(f"Claude API unavailable: {e}") from e
 
         # 4. Parser réponse JSON
         warranty_data = _parse_claude_response(content)
@@ -206,9 +199,7 @@ async def extract_warranty_from_document(
             document_id=document_id,
             error=str(e),
         )
-        raise RuntimeError(
-            f"Warranty extraction failed: {e}"
-        ) from e
+        raise RuntimeError(f"Warranty extraction failed: {e}") from e
 
 
 def _parse_claude_response(content: str) -> Dict[str, Any]:

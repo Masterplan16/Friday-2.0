@@ -22,7 +22,6 @@ import asyncio
 from typing import Dict, List, Optional
 import httpx
 
-
 # ============================================================================
 # Configuration (M1 FIX - extracted from hardcoded method)
 # ============================================================================
@@ -33,7 +32,7 @@ DEFAULT_ACCOUNT_MAPPING = {
     "antonio.lopez@example.com": "account_professional",
     "dr.lopez@hospital.fr": "account_medical",
     "lopez@university.fr": "account_academic",
-    "personal@gmail.com": "account_personal"
+    "personal@gmail.com": "account_personal",
 }
 
 
@@ -69,7 +68,7 @@ class EmailEngineClient:
             secret: Bearer token pour authentification API
         """
         self.http_client = http_client
-        self.base_url = base_url.rstrip('/')  # Remove trailing slash if present
+        self.base_url = base_url.rstrip("/")  # Remove trailing slash if present
         self.secret = secret
 
     # ========================================================================
@@ -105,8 +104,8 @@ class EmailEngineClient:
         """
         # Extract account_id from message_id format (account_id/message_id)
         if not account_id:
-            if '/' in message_id:
-                account_id, msg_id = message_id.split('/', 1)
+            if "/" in message_id:
+                account_id, msg_id = message_id.split("/", 1)
             else:
                 # Fallback: utiliser env var ou premier compte
                 account_id = "main"  # TODO: Config
@@ -115,9 +114,9 @@ class EmailEngineClient:
             msg_id = message_id
 
         response = await self.http_client.get(
-            f'{self.base_url}/v1/account/{account_id}/message/{msg_id}',
-            headers={'Authorization': f'Bearer {self.secret}'},
-            timeout=30.0
+            f"{self.base_url}/v1/account/{account_id}/message/{msg_id}",
+            headers={"Authorization": f"Bearer {self.secret}"},
+            timeout=30.0,
         )
 
         if response.status_code != 200:
@@ -127,7 +126,9 @@ class EmailEngineClient:
 
         return response.json()
 
-    async def download_attachment(self, email_id: str, attachment_id: str, account_id: Optional[str] = None) -> bytes:
+    async def download_attachment(
+        self, email_id: str, attachment_id: str, account_id: Optional[str] = None
+    ) -> bytes:
         """
         Télécharge pièce jointe via EmailEngine API
 
@@ -149,8 +150,8 @@ class EmailEngineClient:
         """
         # Extract account_id (voir get_message())
         if not account_id:
-            if '/' in email_id:
-                account_id, msg_id = email_id.split('/', 1)
+            if "/" in email_id:
+                account_id, msg_id = email_id.split("/", 1)
             else:
                 account_id = "main"  # TODO: Config
                 msg_id = email_id
@@ -158,15 +159,13 @@ class EmailEngineClient:
             msg_id = email_id
 
         response = await self.http_client.get(
-            f'{self.base_url}/v1/account/{account_id}/attachment/{attachment_id}',
-            headers={'Authorization': f'Bearer {self.secret}'},
-            timeout=60.0  # Timeout plus long pour download
+            f"{self.base_url}/v1/account/{account_id}/attachment/{attachment_id}",
+            headers={"Authorization": f"Bearer {self.secret}"},
+            timeout=60.0,  # Timeout plus long pour download
         )
 
         if response.status_code != 200:
-            raise Exception(
-                f"EmailEngine download_attachment failed: {response.status_code}"
-            )
+            raise Exception(f"EmailEngine download_attachment failed: {response.status_code}")
 
         return response.content
 
@@ -183,7 +182,7 @@ class EmailEngineClient:
         body_html: Optional[str] = None,
         in_reply_to: Optional[str] = None,
         references: Optional[List[str]] = None,
-        max_retries: int = 3
+        max_retries: int = 3,
     ) -> Dict:
         """
         Envoyer email via EmailEngine API (Story 2.5 AC5)
@@ -235,11 +234,7 @@ class EmailEngineClient:
         """
 
         # Build payload
-        payload = {
-            "to": [{"address": recipient_email}],
-            "subject": subject,
-            "text": body_text
-        }
+        payload = {"to": [{"address": recipient_email}], "subject": subject, "text": body_text}
 
         # Optional fields
         if body_html:
@@ -255,13 +250,13 @@ class EmailEngineClient:
         for attempt in range(1, max_retries + 1):
             try:
                 response = await self.http_client.post(
-                    f'{self.base_url}/v1/account/{account_id}/submit',
+                    f"{self.base_url}/v1/account/{account_id}/submit",
                     headers={
-                        'Authorization': f'Bearer {self.secret}',
-                        'Content-Type': 'application/json'
+                        "Authorization": f"Bearer {self.secret}",
+                        "Content-Type": "application/json",
                     },
                     json=payload,
-                    timeout=30.0
+                    timeout=30.0,
                 )
 
                 if response.status_code == 200:
@@ -322,7 +317,7 @@ class EmailEngineClient:
 
         # Logique : identifier le compte qui a reçu l'email
         # Mapping recipient → account_id
-        recipient = email_original.get('recipient_email') or email_original.get('to')
+        recipient = email_original.get("recipient_email") or email_original.get("to")
 
         # M1 FIX: Utilise constante globale au lieu de mapping local hardcodé
         # Fallback compte par défaut si recipient inconnu
@@ -340,4 +335,5 @@ class EmailEngineError(Exception):
 
     Raised quand une opération EmailEngine échoue après tous les retries.
     """
+
     pass

@@ -148,7 +148,10 @@ class UrgencyResult(BaseModel):
                     "factors": {
                         "vip": True,
                         "keywords": ["deadline", "urgent"],
-                        "deadline": {"pattern": "avant demain", "context": "Réponse avant demain 17h"},
+                        "deadline": {
+                            "pattern": "avant demain",
+                            "context": "Réponse avant demain 17h",
+                        },
                     },
                 },
                 {

@@ -82,7 +82,9 @@ async def init_consumer_group(redis_client: Redis) -> None:
             raise
 
 
-async def cleanup_transit_file(file_path: str, delay_seconds: int = TRANSIT_CLEANUP_DELAY_SECONDS) -> None:
+async def cleanup_transit_file(
+    file_path: str, delay_seconds: int = TRANSIT_CLEANUP_DELAY_SECONDS
+) -> None:
     """
     Supprime fichier zone transit après délai (AC2 Story 3.6).
 
@@ -140,7 +142,12 @@ async def process_document_event(
     """
     # Extraire champs (bytes ou str selon source)
     filename = event_data.get(b"filename") or event_data.get("filename")
-    file_path = event_data.get(b"file_path") or event_data.get("file_path") or event_data.get(b"filepath") or event_data.get("filepath")
+    file_path = (
+        event_data.get(b"file_path")
+        or event_data.get("file_path")
+        or event_data.get(b"filepath")
+        or event_data.get("filepath")
+    )
     source = event_data.get(b"source") or event_data.get("source")
     mime_type = event_data.get(b"mime_type") or event_data.get("mime_type")
 
@@ -233,13 +240,19 @@ async def consume_loop(redis_client: Redis, pipeline: OCRPipeline) -> None:
             for stream_name, stream_messages in messages:
                 for event_id, event_data in stream_messages:
                     log = logger.bind(
-                        event_id=event_id.decode("utf-8") if isinstance(event_id, bytes) else event_id
+                        event_id=(
+                            event_id.decode("utf-8") if isinstance(event_id, bytes) else event_id
+                        )
                     )
 
                     try:
                         # Traiter événement
                         await process_document_event(
-                            event_id=event_id.decode("utf-8") if isinstance(event_id, bytes) else event_id,
+                            event_id=(
+                                event_id.decode("utf-8")
+                                if isinstance(event_id, bytes)
+                                else event_id
+                            ),
                             event_data=event_data,
                             pipeline=pipeline,
                         )

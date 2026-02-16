@@ -20,10 +20,9 @@ logger = logging.getLogger(__name__)
 # CALLBACK APPROVE - Ajouter à l'agenda (AC3)
 # ============================================================================
 
+
 async def handle_event_approve(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE,
-    db_pool: asyncpg.Pool
+    update: Update, context: ContextTypes.DEFAULT_TYPE, db_pool: asyncpg.Pool
 ):
     """
     Callback button [Ajouter à l'agenda]
@@ -64,7 +63,7 @@ async def handle_event_approve(
                 WHERE id = $1 AND entity_type = 'EVENT'
                 RETURNING name, properties
                 """,
-                event_id
+                event_id,
             )
 
             if result == "UPDATE 0":
@@ -74,8 +73,7 @@ async def handle_event_approve(
 
             # Récupérer données événement
             event_row = await conn.fetchrow(
-                "SELECT name, properties FROM knowledge.entities WHERE id = $1",
-                event_id
+                "SELECT name, properties FROM knowledge.entities WHERE id = $1", event_id
             )
 
             event_name = event_row["name"]
@@ -85,18 +83,21 @@ async def handle_event_approve(
                 "event_approved",
                 event_id=event_id,
                 event_name=event_name,
-                user_id=query.from_user.id
+                user_id=query.from_user.id,
             )
 
             # 2. Publier calendar.event.confirmed dans Redis Streams
             redis_client = context.bot_data.get("redis_client")
             if redis_client:
-                await redis_client.xadd('calendar:event.confirmed', {
-                    'event_id': str(event_id),
-                    'status': 'confirmed',
-                    'confirmed_at': datetime.utcnow().isoformat(),
-                    'confirmed_by': str(query.from_user.id)
-                })
+                await redis_client.xadd(
+                    "calendar:event.confirmed",
+                    {
+                        "event_id": str(event_id),
+                        "status": "confirmed",
+                        "confirmed_at": datetime.utcnow().isoformat(),
+                        "confirmed_by": str(query.from_user.id),
+                    },
+                )
 
         # 3. Story 7.2: Sync to Google Calendar
         google_event_id = None
@@ -110,8 +111,7 @@ async def handle_event_approve(
 
                 # Récupérer le html_link mis à jour
                 updated_row = await db_pool.fetchrow(
-                    "SELECT properties FROM knowledge.entities WHERE id = $1",
-                    event_id
+                    "SELECT properties FROM knowledge.entities WHERE id = $1", event_id
                 )
                 html_link = updated_row["properties"].get("html_link")
 
@@ -119,14 +119,11 @@ async def handle_event_approve(
                     "event_synced_to_google",
                     event_id=event_id,
                     google_event_id=google_event_id,
-                    casquette=casquette
+                    casquette=casquette,
                 )
             except Exception as e:
                 logger.error(
-                    "google_calendar_sync_failed",
-                    event_id=event_id,
-                    error=str(e),
-                    exc_info=True
+                    "google_calendar_sync_failed", event_id=event_id, error=str(e), exc_info=True
                 )
                 # Continue même si sync Google Calendar échoue
 
@@ -145,11 +142,7 @@ async def handle_event_approve(
 
         message += f"<i>Approuvé par {query.from_user.first_name}</i>"
 
-        await query.edit_message_text(
-            message,
-            parse_mode="HTML",
-            disable_web_page_preview=True
-        )
+        await query.edit_message_text(message, parse_mode="HTML", disable_web_page_preview=True)
 
         # 5. Story 7.3: Trigger détection conflits après ajout événement (AC5)
         try:
@@ -161,10 +154,7 @@ async def handle_event_approve(
             event_date = start_datetime_parsed.date()
 
             # Détecter conflits pour cette date
-            conflicts = await detect_calendar_conflicts(
-                target_date=event_date,
-                db_pool=db_pool
-            )
+            conflicts = await detect_calendar_conflicts(target_date=event_date, db_pool=db_pool)
 
             # Notifier immédiatement si conflits trouvés
             if conflicts:
@@ -172,9 +162,7 @@ async def handle_event_approve(
                 for conflict in conflicts:
                     # Envoyer alerte conflit Topic Actions
                     conflict_sent = await send_conflict_alert(
-                        bot=bot,
-                        conflict=conflict,
-                        conflict_id=None  # Pas encore enregistré en DB
+                        bot=bot, conflict=conflict, conflict_id=None  # Pas encore enregistré en DB
                     )
 
                     if conflict_sent:
@@ -182,7 +170,7 @@ async def handle_event_approve(
                             "conflict_alert_sent_after_event_approve",
                             event_id=event_id,
                             event_date=event_date.isoformat(),
-                            conflicts_detected=len(conflicts)
+                            conflicts_detected=len(conflicts),
                         )
 
         except Exception as conflict_e:
@@ -191,29 +179,21 @@ async def handle_event_approve(
                 "conflict_detection_after_event_failed",
                 event_id=event_id,
                 error=str(conflict_e),
-                exc_info=True
+                exc_info=True,
             )
 
     except Exception as e:
-        logger.error(
-            "event_approve_failed",
-            event_id=event_id,
-            error=str(e),
-            exc_info=True
-        )
-        await query.edit_message_text(
-            f"❌ Erreur lors de l'approbation : {str(e)}"
-        )
+        logger.error("event_approve_failed", event_id=event_id, error=str(e), exc_info=True)
+        await query.edit_message_text(f"❌ Erreur lors de l'approbation : {str(e)}")
 
 
 # ============================================================================
 # CALLBACK MODIFY - Modifier événement (AC3)
 # ============================================================================
 
+
 async def handle_event_modify(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE,
-    db_pool: asyncpg.Pool
+    update: Update, context: ContextTypes.DEFAULT_TYPE, db_pool: asyncpg.Pool
 ):
     """
     Callback button [Modifier]
@@ -250,26 +230,21 @@ async def handle_event_modify(
         f"<code>/edit_event {event_id}</code>\n\n"
         "<i>Dialogue complet de modification disponible dans Story 7.3</i>",
         parse_mode="HTML",
-        reply_markup=InlineKeyboardMarkup([
-            [InlineKeyboardButton("🔙 Retour", callback_data=f"event_back:{event_id}")]
-        ])
+        reply_markup=InlineKeyboardMarkup(
+            [[InlineKeyboardButton("🔙 Retour", callback_data=f"event_back:{event_id}")]]
+        ),
     )
 
-    logger.info(
-        "event_modify_requested",
-        event_id=event_id,
-        user_id=query.from_user.id
-    )
+    logger.info("event_modify_requested", event_id=event_id, user_id=query.from_user.id)
 
 
 # ============================================================================
 # CALLBACK IGNORE - Ignorer événement (AC3)
 # ============================================================================
 
+
 async def handle_event_ignore(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE,
-    db_pool: asyncpg.Pool
+    update: Update, context: ContextTypes.DEFAULT_TYPE, db_pool: asyncpg.Pool
 ):
     """
     Callback button [Ignorer]
@@ -308,7 +283,7 @@ async def handle_event_ignore(
                 WHERE id = $1 AND entity_type = 'EVENT'
                 RETURNING name
                 """,
-                event_id
+                event_id,
             )
 
             if result == "UPDATE 0":
@@ -317,8 +292,7 @@ async def handle_event_ignore(
                 return
 
             event_row = await conn.fetchrow(
-                "SELECT name FROM knowledge.entities WHERE id = $1",
-                event_id
+                "SELECT name FROM knowledge.entities WHERE id = $1", event_id
             )
 
             event_name = event_row["name"]
@@ -327,7 +301,7 @@ async def handle_event_ignore(
                 "event_ignored",
                 event_id=event_id,
                 event_name=event_name,
-                user_id=query.from_user.id
+                user_id=query.from_user.id,
             )
 
         # 2. Éditer message Telegram
@@ -335,29 +309,21 @@ async def handle_event_ignore(
             f"❌ <b>Événement ignoré</b>\n\n"
             f"<b>{event_name}</b>\n\n"
             f"<i>Ignoré par {query.from_user.first_name}</i>",
-            parse_mode="HTML"
+            parse_mode="HTML",
         )
 
     except Exception as e:
-        logger.error(
-            "event_ignore_failed",
-            event_id=event_id,
-            error=str(e),
-            exc_info=True
-        )
-        await query.edit_message_text(
-            f"❌ Erreur lors de l'ignorance : {str(e)}"
-        )
+        logger.error("event_ignore_failed", event_id=event_id, error=str(e), exc_info=True)
+        await query.edit_message_text(f"❌ Erreur lors de l'ignorance : {str(e)}")
 
 
 # ============================================================================
 # CALLBACK BACK - Retour message original
 # ============================================================================
 
+
 async def handle_event_back(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE,
-    db_pool: asyncpg.Pool
+    update: Update, context: ContextTypes.DEFAULT_TYPE, db_pool: asyncpg.Pool
 ):
     """
     Callback button [Retour]
@@ -384,8 +350,7 @@ async def handle_event_back(
         # Récupérer données événement
         async with db_pool.acquire() as conn:
             event_row = await conn.fetchrow(
-                "SELECT name, properties FROM knowledge.entities WHERE id = $1",
-                event_id
+                "SELECT name, properties FROM knowledge.entities WHERE id = $1", event_id
             )
 
             if not event_row:
@@ -406,22 +371,13 @@ async def handle_event_back(
             "location": event_props.get("location"),
             "participants": event_props.get("participants", []),
             "casquette": event_props.get("casquette"),
-            "confidence": event_props.get("confidence", 0.0)
+            "confidence": event_props.get("confidence", 0.0),
         }
 
         message = _format_event_message(event_data)
         keyboard = _create_event_keyboard(event_id)
 
-        await query.edit_message_text(
-            message,
-            parse_mode="HTML",
-            reply_markup=keyboard
-        )
+        await query.edit_message_text(message, parse_mode="HTML", reply_markup=keyboard)
 
     except Exception as e:
-        logger.error(
-            "event_back_failed",
-            event_id=event_id,
-            error=str(e),
-            exc_info=True
-        )
+        logger.error("event_back_failed", event_id=event_id, error=str(e), exc_info=True)

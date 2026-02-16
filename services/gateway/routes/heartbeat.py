@@ -36,10 +36,8 @@ _heartbeat_engine: Optional[HeartbeatEngine] = None
 # Helper: Initialize Heartbeat Stack
 # ============================================
 
-async def get_heartbeat_engine(
-    db_pool: asyncpg.Pool,
-    redis_client: Redis
-) -> HeartbeatEngine:
+
+async def get_heartbeat_engine(db_pool: asyncpg.Pool, redis_client: Redis) -> HeartbeatEngine:
     """
     Initialize and return HeartbeatEngine singleton.
 
@@ -58,14 +56,8 @@ async def get_heartbeat_engine(
         return _heartbeat_engine
 
     # Context Manager + Provider
-    context_manager = ContextManager(
-        db_pool=db_pool,
-        redis_client=redis_client
-    )
-    context_provider = ContextProvider(
-        context_manager=context_manager,
-        db_pool=db_pool
-    )
+    context_manager = ContextManager(db_pool=db_pool, redis_client=redis_client)
+    context_provider = ContextProvider(context_manager=context_manager, db_pool=db_pool)
 
     # Check Registry + register checks (singleton, safe to call once)
     check_registry = CheckRegistry()
@@ -78,16 +70,11 @@ async def get_heartbeat_engine(
         raise ValueError("ANTHROPIC_API_KEY environment variable not set")
 
     llm_client = AsyncAnthropic(api_key=anthropic_api_key)
-    llm_decider = LLMDecider(
-        llm_client=llm_client,
-        redis_client=redis_client
-    )
+    llm_decider = LLMDecider(llm_client=llm_client, redis_client=redis_client)
 
     # Check Executor
     check_executor = CheckExecutor(
-        db_pool=db_pool,
-        redis_client=redis_client,
-        check_registry=check_registry
+        db_pool=db_pool, redis_client=redis_client, check_registry=check_registry
     )
 
     # Heartbeat Engine
@@ -97,7 +84,7 @@ async def get_heartbeat_engine(
         context_provider=context_provider,
         check_registry=check_registry,
         llm_decider=llm_decider,
-        check_executor=check_executor
+        check_executor=check_executor,
     )
 
     return _heartbeat_engine
@@ -107,10 +94,10 @@ async def get_heartbeat_engine(
 # POST /api/v1/heartbeat/trigger
 # ============================================
 
+
 @router.post("/trigger")
 async def trigger_heartbeat_cycle(
-    request: Request,
-    current_user: Dict[str, str] = Depends(get_current_user)
+    request: Request, current_user: Dict[str, str] = Depends(get_current_user)
 ) -> Dict[str, Any]:
     """
     Déclenche cycle Heartbeat one-shot (mode cron).
@@ -131,8 +118,7 @@ async def trigger_heartbeat_cycle(
     # Check if Heartbeat enabled
     if os.getenv("HEARTBEAT_ENABLED", "true").lower() != "true":
         raise HTTPException(
-            status_code=503,
-            detail="Heartbeat Engine is disabled (HEARTBEAT_ENABLED=false)"
+            status_code=503, detail="Heartbeat Engine is disabled (HEARTBEAT_ENABLED=false)"
         )
 
     # Get dependencies from app state
@@ -140,15 +126,11 @@ async def trigger_heartbeat_cycle(
     redis_client: Redis = request.app.state.redis
 
     if db_pool is None or redis_client is None:
-        raise HTTPException(
-            status_code=503,
-            detail="Database or Redis connection not available"
-        )
+        raise HTTPException(status_code=503, detail="Database or Redis connection not available")
 
     try:
         logger.info(
-            "Heartbeat cycle triggered",
-            triggered_by=current_user.get("username", "unknown")
+            "Heartbeat cycle triggered", triggered_by=current_user.get("username", "unknown")
         )
 
         # Initialize HeartbeatEngine
@@ -162,31 +144,24 @@ async def trigger_heartbeat_cycle(
             status=result["status"],
             checks_executed=result["checks_executed"],
             checks_notified=result["checks_notified"],
-            duration_ms=result.get("duration_ms", 0)
+            duration_ms=result.get("duration_ms", 0),
         )
 
         return result
 
     except Exception as e:
-        logger.error(
-            "Heartbeat cycle failed",
-            error=str(e),
-            exc_info=True
-        )
-        raise HTTPException(
-            status_code=500,
-            detail=f"Heartbeat cycle failed: {str(e)}"
-        )
+        logger.error("Heartbeat cycle failed", error=str(e), exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Heartbeat cycle failed: {str(e)}")
 
 
 # ============================================
 # GET /api/v1/heartbeat/status
 # ============================================
 
+
 @router.get("/status")
 async def heartbeat_status(
-    request: Request,
-    current_user: Dict[str, str] = Depends(get_current_user)
+    request: Request, current_user: Dict[str, str] = Depends(get_current_user)
 ) -> Dict[str, Any]:
     """
     Retourne statut Heartbeat Engine.
@@ -211,7 +186,7 @@ async def heartbeat_status(
         "mode": mode,
         "interval_minutes": interval_minutes,
         "last_cycle_timestamp": None,
-        "silence_rate_7d": None
+        "silence_rate_7d": None,
     }
 
     # Get last cycle timestamp from DB (if available)
@@ -227,9 +202,7 @@ async def heartbeat_status(
                     status["last_cycle_timestamp"] = last_cycle["cycle_timestamp"].isoformat()
 
                 # Calculate silence_rate 7d
-                silence_rate = await conn.fetchval(
-                    "SELECT core.calculate_silence_rate(7)"
-                )
+                silence_rate = await conn.fetchval("SELECT core.calculate_silence_rate(7)")
                 if silence_rate is not None:
                     status["silence_rate_7d"] = float(silence_rate)
 
@@ -242,6 +215,7 @@ async def heartbeat_status(
 # ============================================================================
 # GET /api/v1/heartbeat/health
 # ============================================================================
+
 
 @router.get("/health")
 async def heartbeat_health() -> Dict[str, str]:

@@ -9,7 +9,7 @@ Story 7.3 Task 9.2: Injection contexte casquette actuel (bias subtil)
 """
 
 import json
-import logging
+import structlog
 import asyncio
 import time
 from typing import Dict, Any, Optional, TYPE_CHECKING
@@ -55,7 +55,7 @@ CIRCUIT_BREAKER_THRESHOLD = 3  # Echecs consecutifs avant alerte
 CONFIDENCE_THRESHOLD = 0.75
 
 # Logging
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 # ============================================================================
@@ -211,8 +211,9 @@ async def extract_events_from_email(
             # Extraire texte reponse
             response_text = response.content[0].text
 
-            # Reset circuit breaker sur succes
-            _circuit_breaker_failures = 0
+            # H15 fix: Reset circuit breaker sous lock
+            async with _circuit_breaker_lock:
+                _circuit_breaker_failures = 0
             break
 
         except RateLimitError as e:
@@ -228,7 +229,8 @@ async def extract_events_from_email(
             )
 
             if attempt == MAX_RETRIES:
-                _circuit_breaker_failures += 1
+                async with _circuit_breaker_lock:
+                    _circuit_breaker_failures += 1
                 raise EventExtractionError(
                     f"RateLimitError apres {MAX_RETRIES} tentatives"
                 )
@@ -250,7 +252,8 @@ async def extract_events_from_email(
             )
 
             if attempt == MAX_RETRIES:
-                _circuit_breaker_failures += 1
+                async with _circuit_breaker_lock:
+                    _circuit_breaker_failures += 1
                 raise EventExtractionError(f"APIError Claude: {e}")
 
             await _async_sleep(2)

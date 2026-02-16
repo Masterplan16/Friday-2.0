@@ -669,21 +669,20 @@ Gestion des 3 rôles professionnels (médecin/enseignant/chercheur) et détectio
 - `bot/handlers/conflict_notifications.py` (~378 lignes) : Notifications conflits
 - `bot/handlers/conflict_callbacks.py` (~670 lignes) : Résolution conflits + state machine
 
-**Heartbeat** (2 fichiers, ~550 lignes) :
-- `agents/src/core/heartbeat_checks/calendar_conflicts.py` (~361 lignes) : Check périodique 7j
-- `bot/handlers/briefing.py` : Briefing multi-casquettes (3 casquettes)
+**Heartbeat** (1 fichier, ~300 lignes) :
+- `agents/src/core/heartbeat_checks/calendar_conflicts.py` (~300 lignes) : Check périodique 7j
 
 **Influence contexte** (2 fichiers modifiés) :
-- `agents/src/agents/email/classifier.py` + `prompts.py` : Bias subtil classification email
+- `agents/src/agents/email/classifier.py` + `prompts.py` : Bias subtil classification email (D17 Sonnet)
 - `agents/src/agents/calendar/event_detector.py` + `prompts.py` : Bias subtil détection événements
 
-**Tests** (14 fichiers, 125 tests) :
+**Tests** (10 fichiers) :
 - `tests/unit/core/test_context_manager.py` (18 tests)
 - `tests/unit/bot/test_*` (24 tests)
 - `tests/unit/agents/test_context_influence.py` (6 tests)
 - `tests/unit/core/test_heartbeat_check_calendar_conflicts.py` (10 tests)
 - `tests/integration/test_context_pipeline.py` (8 tests)
-- `tests/e2e/test_multi_casquettes_e2e.py` (5 tests)
+- `tests/e2e/test_multi_casquettes_e2e.py` (4 tests)
 
 **Documentation** (1 guide complet, ~650 lignes) :
 - `docs/multi-casquettes-conflicts.md` : Guide complet architecture + utilisation
@@ -694,8 +693,10 @@ Gestion des 3 rôles professionnels (médecin/enseignant/chercheur) et détectio
 - ✅ Détection conflits Allen's interval algebra (13 relations temporelles)
 - ✅ Résolution conflits Telegram (annuler, reporter, accepter)
 - ✅ Heartbeat check conflits 7j (2h, skip quiet hours 22h-08h)
-- ✅ Briefing multi-casquettes (groupé par casquette, ordre chrono)
+- ✅ 4 casquettes (médecin/enseignant/chercheur/personnel)
+- ✅ Contexte manuel expire après 4h (retombe en auto-detect)
 - ✅ Commandes Telegram `/casquette` + `/conflits`
+- ✅ Code review adversariale (Opus 4.6) : 57+ issues fixées
 
 **Dépendances** :
 - Epic 1 (PostgreSQL, Redis, Bot Telegram, Trust Layer)

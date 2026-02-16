@@ -11,6 +11,8 @@ Commandes:
 Inline buttons: [Médecin] [Enseignant] [Chercheur] [Auto]
 """
 
+import os
+
 import asyncpg
 import redis.asyncio as redis
 import structlog
@@ -55,6 +57,11 @@ async def handle_casquette_command(
     """
     message = update.message
     if not message:
+        return
+
+    # H1 fix: Vérifier que l'utilisateur est le propriétaire
+    owner_id = os.getenv("OWNER_USER_ID")
+    if owner_id and str(message.from_user.id) != owner_id:
         return
 
     # Récupérer argument (casquette à forcer)
@@ -106,7 +113,7 @@ async def _handle_casquette_display(
     await message.reply_text(
         text=text,
         reply_markup=InlineKeyboardMarkup(keyboard),
-        parse_mode="Markdown"
+        parse_mode="HTML"
     )
 
     logger.info(
@@ -139,7 +146,7 @@ async def _handle_casquette_set(
         await message.reply_text(
             "✅ Détection automatique réactivée\n\n"
             "Friday déterminera votre contexte selon vos événements et l'heure de la journée.",
-            parse_mode="Markdown"
+            parse_mode="HTML"
         )
 
         logger.info("casquette_auto_detect_enabled", user_id=message.from_user.id)
@@ -152,9 +159,9 @@ async def _handle_casquette_set(
         # Casquette invalide
         await message.reply_text(
             "❌ Casquette invalide.\n\n"
-            "Casquettes disponibles: `medecin`, `enseignant`, `chercheur`, `auto`\n\n"
-            "Exemple: `/casquette medecin`",
-            parse_mode="Markdown"
+            "Casquettes disponibles: <code>medecin</code>, <code>enseignant</code>, <code>chercheur</code>, <code>auto</code>\n\n"
+            "Exemple: <code>/casquette medecin</code>",
+            parse_mode="HTML"
         )
         logger.warning("casquette_invalid_argument", argument=casquette_arg)
         return
@@ -166,9 +173,9 @@ async def _handle_casquette_set(
     label = CASQUETTE_LABEL_MAPPING[casquette]
 
     await message.reply_text(
-        f"✅ Contexte changé → {emoji} **{label}**\n\n"
+        f"✅ Contexte changé → {emoji} <b>{label}</b>\n\n"
         "Ce contexte restera actif jusqu'à ce que vous le changiez à nouveau.",
-        parse_mode="Markdown"
+        parse_mode="HTML"
     )
 
     logger.info(
@@ -194,15 +201,15 @@ def _format_context_display_message(
         upcoming_events: Liste événements prochains
 
     Returns:
-        Message formaté Markdown
+        Message formaté HTML
     """
     # Header
     if current_context.casquette:
         emoji = CASQUETTE_EMOJI_MAPPING[current_context.casquette]
         label = CASQUETTE_LABEL_MAPPING[current_context.casquette]
-        header = f"🎭 **Contexte actuel** : {emoji} {label}"
+        header = f"🎭 <b>Contexte actuel</b> : {emoji} {label}"
     else:
-        header = "🎭 **Contexte actuel** : Auto-détection"
+        header = "🎭 <b>Contexte actuel</b> : Auto-détection"
 
     # Source détection
     source_map = {
@@ -217,23 +224,23 @@ def _format_context_display_message(
     lines = [
         header,
         "",
-        f"**Détection** : {source_label}",
+        f"<b>Détection</b> : {source_label}",
         ""
     ]
 
     # Prochains événements
     if upcoming_events:
-        lines.append("**Prochains événements** :")
+        lines.append("<b>Prochains événements</b> :")
         for event in upcoming_events:
             emoji = CASQUETTE_EMOJI_MAPPING.get(event["casquette"], "")
             label = CASQUETTE_LABEL_MAPPING.get(event["casquette"], event["casquette"])
             time_range = f"{event['start_time']}-{event['end_time']}"
             lines.append(f"• {time_range} : {event['title']} ({emoji} {label})")
     else:
-        lines.append("_Aucun événement à venir_")
+        lines.append("<i>Aucun événement à venir</i>")
 
     lines.append("")
-    lines.append("_Utilisez les boutons ci-dessous pour changer de casquette_")
+    lines.append("<i>Utilisez les boutons ci-dessous pour changer de casquette</i>")
 
     return "\n".join(lines)
 

@@ -7,10 +7,10 @@ Models:
 - ContextSource: Enum source détermination contexte
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
-from typing import Optional
-from pydantic import BaseModel, Field
+from typing import Literal, Optional
+from pydantic import BaseModel, ConfigDict, Field
 
 
 # ============================================================================
@@ -31,6 +31,13 @@ class Casquette(str, Enum):
     MEDECIN = "medecin"
     ENSEIGNANT = "enseignant"
     CHERCHEUR = "chercheur"
+    PERSONNEL = "personnel"
+
+
+class ConflictStatus(str, Enum):
+    """Statut conflit calendrier (AC4/AC6)."""
+    UNRESOLVED = "unresolved"
+    RESOLVED = "resolved"
 
 
 # ============================================================================
@@ -53,16 +60,16 @@ class UserContext(BaseModel):
         description="Source de détermination du contexte (MANUAL > EVENT > TIME > LAST_EVENT > DEFAULT)"
     )
     updated_at: datetime = Field(
-        default_factory=datetime.now,
+        default_factory=lambda: datetime.now(timezone.utc),
         description="Timestamp dernière mise à jour contexte"
     )
-    updated_by: str = Field(
+    updated_by: Literal["system", "manual"] = Field(
         "system",
         description="Source du changement: 'system' (auto-detect) ou 'manual' (commande Telegram)"
     )
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "casquette": "medecin",
                 "source": "event",
@@ -70,31 +77,7 @@ class UserContext(BaseModel):
                 "updated_by": "system"
             }
         }
-
-
-class ContextDetectionRule(BaseModel):
-    """
-    Règle de détection automatique contexte (AC1).
-
-    Priorité descendante:
-    1. Manuel (commande /casquette)
-    2. Événement en cours
-    3. Heuristique heure
-    4. Dernier événement
-    5. Défaut (NULL)
-    """
-    priority: int = Field(..., description="Priorité (1=plus haute)")
-    source: ContextSource = Field(..., description="Source de la règle")
-    condition: str = Field(..., description="Description condition règle")
-
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "priority": 2,
-                "source": "event",
-                "condition": "Événement en cours (NOW() entre start/end)"
-            }
-        }
+    )
 
 
 class OngoingEvent(BaseModel):
@@ -109,8 +92,8 @@ class OngoingEvent(BaseModel):
     start_datetime: datetime = Field(..., description="Début événement")
     end_datetime: datetime = Field(..., description="Fin événement")
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": "550e8400-e29b-41d4-a716-446655440000",
                 "casquette": "medecin",
@@ -119,6 +102,7 @@ class OngoingEvent(BaseModel):
                 "end_datetime": "2026-02-17T15:00:00Z"
             }
         }
+    )
 
 
 # ============================================================================
@@ -137,6 +121,7 @@ CASQUETTE_EMOJI_MAPPING = {
     Casquette.MEDECIN: "🩺",
     Casquette.ENSEIGNANT: "🎓",
     Casquette.CHERCHEUR: "🔬",
+    Casquette.PERSONNEL: "🏠",
 }
 
 # Labels français par casquette
@@ -144,4 +129,5 @@ CASQUETTE_LABEL_MAPPING = {
     Casquette.MEDECIN: "Médecin",
     Casquette.ENSEIGNANT: "Enseignant",
     Casquette.CHERCHEUR: "Chercheur",
+    Casquette.PERSONNEL: "Personnel",
 }

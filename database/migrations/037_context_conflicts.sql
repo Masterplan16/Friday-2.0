@@ -18,7 +18,7 @@ BEGIN;
 
 CREATE TABLE IF NOT EXISTS core.user_context (
     id INT PRIMARY KEY DEFAULT 1,
-    current_casquette TEXT CHECK (current_casquette IN ('medecin', 'enseignant', 'chercheur')),
+    current_casquette TEXT CHECK (current_casquette IN ('medecin', 'enseignant', 'chercheur', 'personnel')),
     last_updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_by TEXT NOT NULL DEFAULT 'system' CHECK (updated_by IN ('system', 'manual')),
 
@@ -75,7 +75,13 @@ CREATE TABLE IF NOT EXISTS knowledge.calendar_conflicts (
     resolution_action TEXT CHECK (resolution_action IN ('cancel', 'move', 'ignore')),
 
     -- Contrainte: event1 et event2 doivent être différents
-    CONSTRAINT check_different_events CHECK (event1_id != event2_id)
+    CONSTRAINT check_different_events CHECK (event1_id != event2_id),
+
+    -- Contrainte: résolution cohérente (resolved=true => resolved_at et resolution_action requis)
+    CONSTRAINT check_resolution_consistency CHECK (
+        (resolved = FALSE AND resolved_at IS NULL AND resolution_action IS NULL)
+        OR (resolved = TRUE AND resolved_at IS NOT NULL AND resolution_action IS NOT NULL)
+    )
 );
 
 -- Commentaires documentation

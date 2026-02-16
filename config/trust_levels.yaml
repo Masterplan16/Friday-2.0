@@ -4,16 +4,16 @@ agenda:
   schedule: blocked
 archiviste:
   classify: propose
-  extract_metadata: propose  # Story 3.1 - AC5 (propose Day 1)
-  ocr: auto  # Story 3.1 - OCR Surya (auto, pas de décision)
-  rename: propose  # Story 3.1 - AC5 (propose Day 1)
+  extract_metadata: propose
+  ocr: auto
+  rename: propose
   track_warranty: auto
 briefing:
   aggregate_data: auto
   generate: auto
   prioritize_items: propose
 calendar:
-  detect_event: propose  # Story 7.1 - AC3 (propose Day 1, validation Telegram requise)
+  detect_event: propose
 coach:
   adjust_intensity: propose
   generate_workout: blocked
@@ -74,7 +74,7 @@ menus:
   generate_shopping_list: propose
 modules:
   email:
-    classify: auto
+    classify: propose
   finance:
     classify_transaction: blocked
 photos:

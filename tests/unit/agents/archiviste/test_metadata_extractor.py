@@ -90,7 +90,7 @@ async def test_extract_metadata_with_presidio_anonymization(
 
     # Assert - Presidio appelé AVANT Claude
     mock_anonymize.assert_called_once()
-    assert sample_ocr_result.text in str(mock_anonymize.call_args)
+    assert mock_anonymize.call_args[0][0] == sample_ocr_result.text
 
     # Claude reçoit texte anonymisé
     mock_llm.complete.assert_called_once()
@@ -100,9 +100,9 @@ async def test_extract_metadata_with_presidio_anonymization(
 
     # ActionResult retourné correctement
     assert isinstance(result, ActionResult)
-    assert isinstance(result.payload["metadata"], MetadataExtraction)
-    assert result.payload["metadata"].doc_type == "Facture"
-    assert result.payload["metadata"].amount == 145.0
+    assert isinstance(result.payload["metadata"], dict)
+    assert result.payload["metadata"]["doc_type"] == "Facture"
+    assert result.payload["metadata"]["amount"] == 145.0
 
 
 @pytest.mark.asyncio
@@ -139,10 +139,10 @@ async def test_extract_metadata_facture_success(
     # Assert
     assert isinstance(result, ActionResult)
     metadata = result.payload["metadata"]
-    assert metadata.doc_type == "Facture"
-    assert metadata.emitter == "Boulanger"
-    assert metadata.amount == 599.0
-    assert metadata.date == datetime(2026, 2, 8)
+    assert metadata["doc_type"] == "Facture"
+    assert metadata["emitter"] == "Boulanger"
+    assert metadata["amount"] == 599.0
+    assert datetime.fromisoformat(metadata["date"]) == datetime(2026, 2, 8)
     assert result.confidence >= 0.85  # Minimum de OCR + Claude
 
 
@@ -179,9 +179,9 @@ async def test_extract_metadata_courrier_no_amount(
 
     # Assert
     metadata = result.payload["metadata"]
-    assert metadata.doc_type == "Courrier"
-    assert metadata.emitter == "ARS"
-    assert metadata.amount == 0.0  # Pas de montant
+    assert metadata["doc_type"] == "Courrier"
+    assert metadata["emitter"] == "ARS"
+    assert metadata["amount"] == 0.0  # Pas de montant
 
 
 @pytest.mark.asyncio
@@ -220,8 +220,8 @@ async def test_extract_metadata_fallback_date_today(
 
     # Assert
     metadata = result.payload["metadata"]
-    assert metadata.date.date() == datetime.now().date()  # Fallback aujourd'hui
-    assert metadata.doc_type == "Inconnu"
+    assert datetime.fromisoformat(metadata["date"]).date() == datetime.now().date()  # Fallback aujourd'hui
+    assert metadata["doc_type"] == "Inconnu"
 
 
 @pytest.mark.asyncio
@@ -360,4 +360,4 @@ async def test_extract_metadata_preserves_emitter_raw(
 
     # Assert - Emitter preserved as-is (sanitization in renamer, not model)
     metadata = result.payload["metadata"]
-    assert metadata.emitter == "Labo / Tests*?"
+    assert metadata["emitter"] == "Labo / Tests*?"

@@ -130,9 +130,14 @@ google_calendar:
       name: "Calendrier Chercheur"
       casquette: "chercheur"
       color: "#0000ff"
-  sync_range:
-    past_days: 7      # Sync événements 7j passé
-    future_days: 90   # Sync événements 90j futur
+  # Sync time range - OPTIONNEL (Google Calendar API: timeMin/timeMax sont optionnels)
+  # Si null ou omis: récupère TOUT l'historique sans limite (recommandé pour historique complet)
+  sync_range: null    # null = pas de limite (récupère tous événements depuis 2006, lancement Google Calendar)
+
+  # Alternative: limiter explicitement la plage de synchronisation
+  # sync_range:
+  #   past_days: 7300     # ~20 ans historique (jusqu'à 2006, création Google Calendar)
+  #   future_days: 18250  # 50 ans futur (planification jusqu'en 2076)
   default_reminders:
     - method: "popup"
       minutes: 30     # Rappel 30 min avant
@@ -153,6 +158,44 @@ CALENDAR_CONFIG_PATH=config/calendar_config.yaml
 DATABASE_URL=postgresql://user:pass@postgres:5432/friday
 REDIS_URL=redis://user:pass@redis:6379/0
 ```
+
+---
+
+## Plage de Synchronisation (sync_range)
+
+### Configuration Recommandée : Historique Illimité
+
+**Par défaut : `sync_range: null`** (pas de limite temporelle)
+
+Selon la [documentation officielle Google Calendar API](https://developers.google.com/workspace/calendar/api/v3/reference/events/list), les paramètres `timeMin` et `timeMax` sont **optionnels**. Si non spécifiés, l'API retourne **tous les événements disponibles** sans filtre temporel.
+
+#### Avantages Historique Illimité
+
+✅ **Comportement identique à Google Calendar natif** (garde tout en mémoire)
+✅ **Aucune perte d'information** (événements depuis 2006 — lancement Google Calendar)
+✅ **Pas de limite artificielle** (~20 ans d'historique réel + planification illimitée)
+✅ **Performance première sync** : +30 secondes ONE TIME (acceptable)
+✅ **Performance sync incrémentale** : +1-2 secondes (invisible, seuls les événements modifiés sont transférés)
+
+#### Impact Quotas Google Calendar API
+
+| Métrique | Valeur | Impact |
+|----------|--------|--------|
+| **Quota API Google** | 1,000,000 requests/jour | ✅ Largement suffisant |
+| **Friday sync** | 48 syncs/jour (toutes les 30 min) × 1 calendrier = 48 requests/jour | ✅ 0.0048% du quota |
+| **Budget restant** | 999,952 requests/jour | ✅ Aucun risque de rate limit |
+
+#### Configuration Limitée (Optionnelle)
+
+Si besoin de limiter explicitement (par exemple, pour réduire la charge première sync) :
+
+```yaml
+sync_range:
+  past_days: 7300     # ~20 ans historique (jusqu'à 2006, création Google Calendar)
+  future_days: 18250  # 50 ans futur (planification jusqu'en 2076)
+```
+
+**Note** : Les limites artificielles ne sont généralement PAS nécessaires. L'API Google gère efficacement les grandes plages temporelles.
 
 ---
 

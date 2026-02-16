@@ -16,10 +16,15 @@ google_calendar:
       casquette: "personnel"  # Casquette par défaut (peut être changée dynamiquement par Friday)
       color: "#4285F4"  # Bleu Google Calendar
 
-  # Sync time range (historique complet comme Google Calendar natif)
-  sync_range:
-    past_days: 7300    # 20 ans historique (événements depuis 2006)
-    future_days: 7300  # 20 ans futur (planification jusqu'en 2046)
+  # Sync time range - OPTIONNEL (si absent ou null, récupère TOUT l'historique sans limite)
+  # Selon doc officielle Google Calendar API: timeMin/timeMax sont optionnels
+  # Si non spécifiés, l'API retourne tous les événements disponibles (Google Calendar existe depuis 2006)
+  sync_range: null  # null = pas de limite (récupère tout l'historique Google Calendar depuis sa création)
+
+  # Alternative: spécifier des limites explicites si besoin
+  # sync_range:
+  #   past_days: 7300    # ~20 ans historique (jusqu'à 2006, lancement Google Calendar)
+  #   future_days: 18250  # 50 ans futur (planification jusqu'en 2076)
 
   # Default reminders for new events
   default_reminders:

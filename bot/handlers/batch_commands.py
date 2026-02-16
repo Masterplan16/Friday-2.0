@@ -338,9 +338,7 @@ async def handle_batch_command(update: Update, context: ContextTypes.DEFAULT_TYP
         ],
     ]
 
-    await update.message.reply_text(
-        message, reply_markup=InlineKeyboardMarkup(keyboard)
-    )
+    await update.message.reply_text(message, reply_markup=InlineKeyboardMarkup(keyboard))
 
     logger.info(
         "batch_command_confirmation",

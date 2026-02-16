@@ -1,6 +1,6 @@
 # Story 1.18: Commande /pending pour Actions en Attente
 
-Status: review
+Status: done
 
 **Epic**: 1 - Socle Opérationnel & Contrôle
 **Estimation**: XS (Extra Small - 3-4h)
@@ -99,9 +99,9 @@ Ajouter une commande `/pending` qui liste **uniquement les actions en attente de
 
 ## 🔧 Implémentation
 
-### Fichiers à créer
+### Fichiers modifiés
 
-#### 1. Handler dans `bot/handlers/trust_budget_commands.py` (~80 lignes)
+#### 1. Handler dans `bot/handlers/trust_budget_commands.py` (~130 lignes)
 
 ```python
 async def pending_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -136,7 +136,7 @@ async def pending_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     filter_module = None
     if context.args:
         for arg in context.args:
-            if arg != "-v":
+            if not arg.startswith("-"):
                 filter_module = arg
                 break
 
@@ -174,9 +174,9 @@ async def pending_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
         # Formater output
         count = len(rows)
-        header = f"📋 **Actions en attente de validation** ({count})"
+        header = f"📋 Actions en attente de validation ({count})"
         if filter_module:
-            header = f"📋 **Actions en attente - Module: {filter_module}** ({count})"
+            header = f"📋 Actions en attente - Module: {filter_module} ({count})"
 
         lines = [header, ""]
 
@@ -186,7 +186,7 @@ async def pending_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             module_action = f"{row['module']}.{row['action_type']}"
             confidence = format_confidence(row['confidence']) if row['confidence'] else "N/A"
 
-            lines.append(f"⏳ `{id_short}` | {module_action} | {timestamp}")
+            lines.append(f"⏳ {id_short} | {module_action} | {timestamp}")
 
             if verbose and row['input_summary']:
                 input_trunc = truncate_text(row['input_summary'], 150)
@@ -196,7 +196,7 @@ async def pending_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
                 output_trunc = truncate_text(row['output_summary'], 150)
                 lines.append(f"   → {output_trunc}")
 
-            lines.append(f"   Confidence: {confidence} | [Voir détail: /receipt {id_short}]")
+            lines.append(f"   Confidence: {confidence} | Voir detail: /receipt {id_short}")
             lines.append("")
 
         # Footer
@@ -442,7 +442,7 @@ Ajouter dans la liste des commandes :
 4. `bot/README.md` — Liste commandes (~5 lignes)
 5. `_bmad-output/implementation-artifacts/sprint-status.yaml` — Ajout Story 1.18
 
-**Total : 2 créés, 5 modifiés (~235 lignes ajoutées)**
+**Total : 2 créés, 5 modifiés (~581 lignes ajoutées/modifiées)**
 
 ---
 

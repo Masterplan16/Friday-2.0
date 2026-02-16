@@ -874,40 +874,59 @@ Dedup PC (Story 3.8) :
 
 ### Agent Model Used
 
-(À remplir lors de l'implémentation)
+Claude Opus 4.6 (code review adversariale)
 
 ### Debug Log References
 
-(À remplir lors de l'implémentation)
+N/A — Review only, pas de debug session
 
 ### Completion Notes List
 
-(À remplir lors de l'implémentation)
+**Code Review Adversariale (2026-02-16)** — 12 issues trouvées et corrigées :
+
+| ID | Sev | Fix | Description |
+|----|-----|-----|-------------|
+| C1 | Critical | story file | Tasks non cochées [x] malgré implémentation complète |
+| C2 | Critical | telegram-user-guide.md | Section dedup manquante dans guide utilisateur |
+| C3 | Critical | commands.py | /scan_dedup absent du /help |
+| H1 | High | dedup_commands.py:248 | File handle leak `open()` sans context manager |
+| H2 | High | priority_engine.py:302 | DUPLICATE_PATTERNS regex défini mais jamais utilisé |
+| H3 | High | priority_engine.py:171 | Comparaison path case-sensitive sur Windows |
+| M1 | Medium | dedup_commands.py:30,99 | Chemins hardcodés → env vars DEDUP_REPORTS_DIR/DEDUP_ROOT_PATH |
+| M2 | Medium | deleter.py:143 | Import send2trash dans la boucle → déplacé en début de méthode |
+| M3 | Medium | scanner.py:231 | O(n) list comprehension → compteur incrémental |
+| M4 | Medium | models.py:155,169,176 | datetime.now() sans timezone → datetime.now(timezone.utc) |
+| L1 | Low | dedup_commands.py:110,349 | asyncio.create_task exceptions silencieusement perdues → done_callback |
+| L2 | Low | deleter.py:145 | Race condition stat() entre exists check et suppression → try/except |
 
 ### File List
 
-**Production** (à créer) :
-- `agents/src/agents/dedup/scanner.py` (~400 lignes)
-- `agents/src/agents/dedup/priority_engine.py` (~300 lignes)
-- `agents/src/agents/dedup/report_generator.py` (~200 lignes)
-- `agents/src/agents/dedup/deleter.py` (~250 lignes)
-- `agents/src/agents/dedup/models.py` (~100 lignes)
-- `bot/handlers/dedup_commands.py` (~350 lignes)
-- `database/migrations/040_dedup_jobs.sql` (~80 lignes)
+**Production** :
+- `agents/src/agents/dedup/__init__.py` — Module exports
+- `agents/src/agents/dedup/scanner.py` (~395 lignes) — Scan engine SHA256
+- `agents/src/agents/dedup/priority_engine.py` (~305 lignes) — Priority rules engine
+- `agents/src/agents/dedup/report_generator.py` (~182 lignes) — CSV report generator
+- `agents/src/agents/dedup/deleter.py` (~245 lignes) — Batch deletion + safety checks
+- `agents/src/agents/dedup/models.py` (~177 lignes) — Pydantic models
+- `bot/handlers/dedup_commands.py` (~450 lignes) — /scan_dedup + inline buttons
+- `database/migrations/042_dedup_jobs.sql` (~84 lignes) — Audit trail table
 
-**Tests** (à créer) :
-- `tests/unit/agents/dedup/test_scanner.py` (12 tests)
-- `tests/unit/agents/dedup/test_priority_engine.py` (14 tests)
+**Tests** :
+- `tests/unit/agents/dedup/test_scanner.py` (22 tests)
+- `tests/unit/agents/dedup/test_priority_engine.py` (25 tests)
 - `tests/unit/agents/dedup/test_report_generator.py` (3 tests)
-- `tests/unit/agents/dedup/test_deleter.py` (8 tests)
-- `tests/unit/bot/test_dedup_commands.py` (6 tests)
-- `tests/integration/test_dedup_full_scan.py` (3 tests)
-- `tests/integration/test_dedup_deletion.py` (2 tests)
+- `tests/unit/agents/dedup/test_deleter.py` (10 tests)
+- `tests/unit/bot/test_dedup_commands.py` (7 tests)
+- `tests/integration/dedup/test_dedup_full_scan.py` (5 tests)
 - `tests/e2e/test_dedup_complete_workflow.py` (1 test)
 
-**Documentation** (à créer) :
+**Documentation** :
 - `docs/dedup-pc-scan-spec.md` (~500 lignes)
-- `docs/telegram-user-guide.md` (section dedup update)
+- `docs/telegram-user-guide.md` (section dedup ajoutée)
+
+**Fichiers modifiés** :
+- `bot/main.py` — Register dedup handlers
+- `bot/handlers/commands.py` — Ajout /scan_dedup dans /help
 
 ---
 
@@ -1125,3 +1144,4 @@ TOTAL:             73 passed, 1 skipped
 | Date | Change |
 |------|--------|
 | 2026-02-16 | Story implementation complete — all 10 tasks, 73 tests passing |
+| 2026-02-16 | Code review adversariale (Opus 4.6) — 12 issues fixées (3C+3H+4M+2L) |

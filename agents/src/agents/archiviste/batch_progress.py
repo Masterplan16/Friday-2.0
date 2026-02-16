@@ -145,9 +145,7 @@ class BatchProgressTracker:
                 return
 
         # Progress percentage
-        progress_pct = (
-            (self.processed / self.total_files * 100) if self.total_files > 0 else 0
-        )
+        progress_pct = (self.processed / self.total_files * 100) if self.total_files > 0 else 0
 
         # Elapsed time
         elapsed = int(time.time() - self.start_time)
@@ -180,15 +178,9 @@ class BatchProgressTracker:
                     "Pause" if not self.paused else "Reprendre",
                     callback_data=f"batch_pause_{self.batch_id}",
                 ),
-                InlineKeyboardButton(
-                    "Annuler", callback_data=f"batch_cancel_{self.batch_id}"
-                ),
+                InlineKeyboardButton("Annuler", callback_data=f"batch_cancel_{self.batch_id}"),
             ],
-            [
-                InlineKeyboardButton(
-                    "Details", callback_data=f"batch_details_{self.batch_id}"
-                )
-            ],
+            [InlineKeyboardButton("Details", callback_data=f"batch_details_{self.batch_id}")],
         ]
 
         # Edit message

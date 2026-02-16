@@ -116,15 +116,11 @@ class DedupScanner:
             # Build full priority path
             priority_path = self.config.root_path / priority_fragment
             if priority_path.exists() and priority_path.is_dir():
-                await self._scan_directory(
-                    priority_path, scanned_paths, timeout_seconds
-                )
+                await self._scan_directory(priority_path, scanned_paths, timeout_seconds)
 
         # Phase 2: Scan remaining paths under root
         if not self._cancelled:
-            await self._scan_directory(
-                self.config.root_path, scanned_paths, timeout_seconds
-            )
+            await self._scan_directory(self.config.root_path, scanned_paths, timeout_seconds)
 
         # Phase 3: Build duplicate groups
         groups = self._build_duplicate_groups()
@@ -254,9 +250,7 @@ class DedupScanner:
         path_str_lower = str(file_path).lower()
         for excl in self.config.excluded_folders:
             # Use path separator to avoid partial matches
-            if "\\" + excl + "\\" in path_str_lower or path_str_lower.startswith(
-                excl
-            ):
+            if "\\" + excl + "\\" in path_str_lower or path_str_lower.startswith(excl):
                 return False
 
         # Dev folders (check any part of path)
@@ -310,9 +304,7 @@ class DedupScanner:
         self.size_cache[path_str] = file_size
 
         # Compute SHA256 (run in thread to avoid blocking)
-        sha256_hash = await asyncio.to_thread(
-            self._hash_file, file_path
-        )
+        sha256_hash = await asyncio.to_thread(self._hash_file, file_path)
 
         # Cache
         self.hash_cache[path_str] = sha256_hash

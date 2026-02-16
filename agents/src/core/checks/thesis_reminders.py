@@ -17,7 +17,7 @@ logger = structlog.get_logger(__name__)
 
 
 @friday_action(module="heartbeat", action="check_thesis_reminders", trust_default="auto")
-async def check_thesis_reminders(db_pool: asyncpg.Pool) -> CheckResult:
+async def check_thesis_reminders(db_pool: asyncpg.Pool, **kwargs) -> CheckResult:
     """
     Check relances thésards sans contact depuis 14j (AC3, Task 6.3).
 
@@ -30,7 +30,8 @@ async def check_thesis_reminders(db_pool: asyncpg.Pool) -> CheckResult:
     try:
         async with db_pool.acquire() as conn:
             # Query étudiants sans contact depuis 14j
-            students = await conn.fetch("""
+            students = await conn.fetch(
+                """
                 SELECT
                     entity_id,
                     name,
@@ -40,7 +41,8 @@ async def check_thesis_reminders(db_pool: asyncpg.Pool) -> CheckResult:
                 WHERE entity_type = 'STUDENT'
                   AND (metadata->>'last_contact')::date < NOW() - INTERVAL '14 days'
                 ORDER BY (metadata->>'last_contact')::date ASC
-                """)
+                """
+            )
 
         if not students:
             # Silence = bon comportement (AC4)

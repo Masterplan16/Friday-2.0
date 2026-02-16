@@ -46,7 +46,7 @@ class DocumentRenamer:
 
     @friday_action(module="archiviste", action="rename", trust_default="propose")
     async def rename_document(
-        self, original_filename: str, metadata: MetadataExtraction
+        self, original_filename: str, metadata: MetadataExtraction, **kwargs
     ) -> ActionResult:
         """
         Renommer document selon convention standardisée (AC2).

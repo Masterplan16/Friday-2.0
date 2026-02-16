@@ -67,8 +67,7 @@ async def draft_email_reply(
     email_data: dict,
     db_pool: asyncpg.Pool,
     user_preferences: Optional[dict] = None,
-    _correction_rules: Optional[list] = None,  # Injecté par @friday_action middleware
-    _rules_prompt: Optional[str] = None,  # Injecté par @friday_action middleware
+    **kwargs,  # Accept decorator-injected args (_correction_rules, _rules_prompt)
 ) -> ActionResult:
     """
     Rédiger brouillon réponse email avec few-shot learning

@@ -25,6 +25,7 @@ async def create_tasks_with_validation(
     email_subject: str,
     db_pool: asyncpg.Pool,
     bot=None,  # M5 fix: Bot pour notifications (optionnel pour tests)
+    **kwargs,  # Accept decorator-injected args (_correction_rules, _rules_prompt)
 ) -> ActionResult:
     """
     Créer tâches depuis email avec validation Trust Layer
@@ -177,12 +178,14 @@ async def create_tasks_with_validation(
             # Récupérer le receipt_id du dernier receipt créé pour cette action
             # (le middleware @friday_action l'a créé juste avant de retourner)
             async with db_pool.acquire() as conn:
-                receipt_id = await conn.fetchval("""
+                receipt_id = await conn.fetchval(
+                    """
                     SELECT id FROM core.action_receipts
                     WHERE module = 'email' AND action_type = 'extract_task'
                     ORDER BY created_at DESC
                     LIMIT 1
-                    """)
+                    """
+                )
 
             if receipt_id:
                 from bot.handlers.email_task_notifications import (

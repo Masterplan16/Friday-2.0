@@ -220,6 +220,62 @@ Telegram response (top-5 résultats)
 - Si Claude CLI indisponible → recherche pgvector seule (pas de Desktop Search)
 - Notification Telegram : "Desktop Search indisponible, résultats pgvector uniquement"
 
+### Desktop Search Setup (2026-02-16)
+
+**Scripts PowerShell créés** :
+1. **`scripts/setup-desktop-search.ps1`** : Setup automatique complet
+   - Active venv au début (corrige détection Claude CLI)
+   - Vérifie prérequis : Claude CLI, Tailscale, Redis VPS
+   - Crée `.env.desktop` avec configuration
+   - Démarre consumer Desktop Search
+   - Option `-ConfigOnly` pour setup sans démarrage
+
+2. **`scripts/start-desktop-search.ps1`** : Démarrage consumer
+   - Charge `.env.desktop`
+   - Active venv
+   - Lance `python -m agents.src.tools.desktop_search_consumer`
+
+3. **`scripts/test-desktop-search.ps1`** : Tests prérequis
+   - 5 tests : venv, Claude CLI, Tailscale, VPS ping, fichiers Python
+   - Output SUCCES/ECHEC avec diagnostics
+
+**Documentation créée** :
+- **`docs/desktop-search-quickstart.md`** : Guide démarrage rapide
+  - Démarrage 1 commande
+  - Configuration manuelle
+  - Troubleshooting (Claude CLI, Tailscale, Redis)
+  - Architecture diagram
+  - Sécurité (Presidio, Tailscale, Redis ACL)
+  - Roadmap Phase 2 (NAS DS725+)
+
+**Configuration `.env.desktop`** (généré automatiquement) :
+```env
+REDIS_URL=redis://friday-vps:6379/0
+CLAUDE_CLI_PATH=claude
+SEARCH_BASE_PATH=C:\Users\lopez\BeeStation\Friday\Archives
+DESKTOP_SEARCH_CONSUMER_NAME=desktop-worker-{HOSTNAME}
+DESKTOP_SEARCH_TIMEOUT=30
+```
+
+**Commande démarrage** :
+```powershell
+.\scripts\setup-desktop-search.ps1  # Setup + start
+.\scripts\test-desktop-search.ps1   # Tests prérequis uniquement
+```
+
+**Tests Telegram** :
+```
+/search factures électricité 2025
+→ Résultats en 2-5s (pgvector + Claude CLI)
+```
+
+**Prérequis validés** :
+- ✅ Claude Code CLI v2.1.32 installé (vérifié manuellement)
+- ✅ Tailscale connecté VPS
+- ✅ Python venv `.venv` activé
+- ✅ Redis VPS accessible via Tailscale
+- ✅ Fichiers Python consumer + wrapper en place
+
 ### Dépendances Story
 
 **Epic 1 (Socle)** :

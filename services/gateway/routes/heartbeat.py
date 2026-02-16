@@ -23,7 +23,7 @@ from anthropic import AsyncAnthropic
 from fastapi import APIRouter, Depends, HTTPException, Request
 from redis.asyncio import Redis
 
-from ..auth import get_current_user
+from auth import get_current_user
 
 logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/api/v1/heartbeat", tags=["heartbeat"])

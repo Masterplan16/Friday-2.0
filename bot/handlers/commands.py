@@ -53,6 +53,9 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 • `/conflits 14j` - Conflits 14 prochains jours
 • `/calendar sync` - Forcer sync Google Calendar
 
+🔄 **DÉDUPLICATION** (Story 3.8)
+• `/scan_dedup` - Scanner le PC pour trouver les doublons
+
 📚 Plus d'infos: `docs/telegram-user-guide.md`
 """
 

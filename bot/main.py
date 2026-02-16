@@ -20,9 +20,11 @@ from bot.config import ConfigurationError, load_bot_config, validate_bot_permiss
 from bot.handlers import (
     arborescence_commands,
     backup_commands,
+    batch_commands,
     casquette_commands,
     commands,
     conflict_commands,
+    dedup_commands,
     draft_commands,
     email_status_commands,
     messages,
@@ -171,6 +173,9 @@ class FridayBot:
         )
         self.application.add_handler(CommandHandler("stats", trust_budget_commands.stats_command))
         self.application.add_handler(CommandHandler("budget", trust_budget_commands.budget_command))
+        self.application.add_handler(
+            CommandHandler("pending", trust_budget_commands.pending_command)
+        )
 
         # Commande Story 1.12 - Backup & Sync
         self.application.add_handler(CommandHandler("backup", backup_commands.backup_command))
@@ -336,6 +341,83 @@ class FridayBot:
             )
         )
         logger.info("Story 3.6 file send intent handler registered")
+
+        # Story 3.7 - Batch Processing Command (Intent Detection)
+        self.application.add_handler(
+            MessageHandler(
+                filters.TEXT & ~filters.COMMAND,
+                batch_commands.handle_batch_command,
+                block=False,  # Ne bloque pas les handlers suivants si intention non détectée
+            )
+        )
+        logger.info("Story 3.7 batch processing intent handler registered")
+
+        # Story 3.7 - Batch Callback Handlers (Start/Cancel/Options/Pause/Details)
+        from telegram.ext import CallbackQueryHandler
+
+        self.application.add_handler(
+            CallbackQueryHandler(
+                batch_commands.handle_batch_start_callback,
+                pattern=r"^batch_start_",
+            )
+        )
+        self.application.add_handler(
+            CallbackQueryHandler(
+                batch_commands.handle_batch_cancel_callback,
+                pattern=r"^batch_cancel_",
+            )
+        )
+        self.application.add_handler(
+            CallbackQueryHandler(
+                batch_commands.handle_batch_options_callback,
+                pattern=r"^batch_options_",
+            )
+        )
+        self.application.add_handler(
+            CallbackQueryHandler(
+                batch_commands.handle_batch_pause_callback,
+                pattern=r"^batch_pause_",
+            )
+        )
+        self.application.add_handler(
+            CallbackQueryHandler(
+                batch_commands.handle_batch_details_callback,
+                pattern=r"^batch_details_",
+            )
+        )
+        logger.info("Story 3.7 batch callback handlers registered")
+
+        # Story 3.8 - Commande /scan_dedup (Scan & Deduplication PC)
+        self.application.add_handler(
+            CommandHandler("scan_dedup", dedup_commands.scan_dedup_command)
+        )
+
+        # Story 3.8 - Dedup Callback Handlers (Report/Delete/Confirm/Cancel)
+        self.application.add_handler(
+            CallbackQueryHandler(
+                dedup_commands.handle_dedup_report_callback,
+                pattern=r"^dedup_report_",
+            )
+        )
+        self.application.add_handler(
+            CallbackQueryHandler(
+                dedup_commands.handle_dedup_delete_callback,
+                pattern=r"^dedup_delete_",
+            )
+        )
+        self.application.add_handler(
+            CallbackQueryHandler(
+                dedup_commands.handle_dedup_confirm_callback,
+                pattern=r"^dedup_confirm_",
+            )
+        )
+        self.application.add_handler(
+            CallbackQueryHandler(
+                dedup_commands.handle_dedup_cancel_callback,
+                pattern=r"^dedup_cancel_",
+            )
+        )
+        logger.info("Story 3.8 dedup scan handlers registered")
 
         # Messages texte libres (Chat & Proactive uniquement)
         self.application.add_handler(

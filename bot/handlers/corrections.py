@@ -91,9 +91,7 @@ class CorrectionsHandler:
             try:
                 receipt_uuid = uuid_mod.UUID(receipt_id)
             except ValueError:
-                await query.message.reply_text(
-                    f"Format receipt_id invalide: {receipt_id[:8]}..."
-                )
+                await query.message.reply_text(f"Format receipt_id invalide: {receipt_id[:8]}...")
                 return
 
             async with self.db_pool.acquire() as conn:
@@ -155,13 +153,11 @@ class CorrectionsHandler:
 
         for i in range(0, len(categories), 2):
             row_buttons = []
-            for cat_key, cat_label in categories[i:i + 2]:
+            for cat_key, cat_label in categories[i : i + 2]:
                 # Prefix court "cc_" pour rester sous 64 bytes Telegram
                 # (ancien "correct_email_cat_" depassait avec universite/recherche)
                 callback_data = f"cc_{cat_key}_{receipt_id}"
-                row_buttons.append(
-                    InlineKeyboardButton(cat_label, callback_data=callback_data)
-                )
+                row_buttons.append(InlineKeyboardButton(cat_label, callback_data=callback_data))
             keyboard.append(row_buttons)
 
         reply_markup = InlineKeyboardMarkup(keyboard)

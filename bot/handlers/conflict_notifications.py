@@ -21,7 +21,6 @@ from agents.src.core.models import (
     CASQUETTE_LABEL_MAPPING,
 )
 
-
 logger = structlog.get_logger(__name__)
 
 
@@ -45,10 +44,9 @@ TELEGRAM_SUPERGROUP_ID = os.getenv("TELEGRAM_SUPERGROUP_ID")
 # FONCTION PRINCIPALE NOTIFICATION (AC4)
 # ============================================================================
 
+
 async def send_conflict_alert(
-    bot: Bot,
-    conflict: CalendarConflict,
-    conflict_id: Optional[str] = None
+    bot: Bot, conflict: CalendarConflict, conflict_id: Optional[str] = None
 ) -> bool:
     """
     Envoie notification conflit calendrier dans Topic Actions (AC4)
@@ -84,16 +82,12 @@ async def send_conflict_alert(
     """
     # Validation config
     if not TOPIC_ACTIONS_ID:
-        logger.error(
-            "conflict_notification_failed",
-            reason="TOPIC_ACTIONS_ID envvar manquante"
-        )
+        logger.error("conflict_notification_failed", reason="TOPIC_ACTIONS_ID envvar manquante")
         return False
 
     if not TELEGRAM_SUPERGROUP_ID:
         logger.error(
-            "conflict_notification_failed",
-            reason="TELEGRAM_SUPERGROUP_ID envvar manquante"
+            "conflict_notification_failed", reason="TELEGRAM_SUPERGROUP_ID envvar manquante"
         )
         return False
 
@@ -107,7 +101,7 @@ async def send_conflict_alert(
             event1_title=conflict.event1.title,
             event2_id=conflict.event2.id,
             event2_title=conflict.event2.title,
-            conflict_id=conflict_id
+            conflict_id=conflict_id,
         )
 
         # Envoyer message dans Topic Actions
@@ -116,7 +110,7 @@ async def send_conflict_alert(
             message_thread_id=int(TOPIC_ACTIONS_ID),
             text=message,
             parse_mode="HTML",
-            reply_markup=keyboard
+            reply_markup=keyboard,
         )
 
         logger.info(
@@ -126,7 +120,7 @@ async def send_conflict_alert(
             event1_title=conflict.event1.title,
             event2_title=conflict.event2.title,
             overlap_minutes=conflict.overlap_minutes,
-            topic="Actions"
+            topic="Actions",
         )
 
         return True
@@ -136,7 +130,7 @@ async def send_conflict_alert(
             "conflict_notification_telegram_error",
             error=str(e),
             event1_id=conflict.event1.id,
-            event2_id=conflict.event2.id
+            event2_id=conflict.event2.id,
         )
         return False
 
@@ -146,7 +140,7 @@ async def send_conflict_alert(
             error=str(e),
             event1_id=conflict.event1.id,
             event2_id=conflict.event2.id,
-            exc_info=True
+            exc_info=True,
         )
         return False
 
@@ -154,6 +148,7 @@ async def send_conflict_alert(
 # ============================================================================
 # HELPERS FORMATAGE MESSAGE
 # ============================================================================
+
 
 def _format_conflict_message(conflict: CalendarConflict) -> str:
     """
@@ -178,10 +173,7 @@ def _format_conflict_message(conflict: CalendarConflict) -> str:
     ⚠️ Deux casquettes différentes en conflit
     """
     # Header
-    lines = [
-        f"{EMOJI_WARNING} <b>CONFLIT CALENDRIER DÉTECTÉ</b>",
-        ""
-    ]
+    lines = [f"{EMOJI_WARNING} <b>CONFLIT CALENDRIER DÉTECTÉ</b>", ""]
 
     # Événement 1
     lines.extend(_format_event_section(conflict.event1))
@@ -228,9 +220,7 @@ def _format_event_section(event) -> list[str]:
     # Émoji + titre
     emoji = CASQUETTE_EMOJI_MAPPING[event.casquette]
     label = CASQUETTE_LABEL_MAPPING[event.casquette]
-    lines = [
-        f"{emoji} <b>{event.title}</b> ({label})"
-    ]
+    lines = [f"{emoji} <b>{event.title}</b> ({label})"]
 
     # Date (format français long)
     date_str = _format_date_french(event.start_datetime)
@@ -259,8 +249,18 @@ def _format_date_french(dt: datetime) -> str:
     # Jours et mois en français
     jours = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"]
     mois = [
-        "janvier", "février", "mars", "avril", "mai", "juin",
-        "juillet", "août", "septembre", "octobre", "novembre", "décembre"
+        "janvier",
+        "février",
+        "mars",
+        "avril",
+        "mai",
+        "juin",
+        "juillet",
+        "août",
+        "septembre",
+        "octobre",
+        "novembre",
+        "décembre",
     ]
 
     jour_semaine = jours[dt.weekday()]
@@ -297,12 +297,9 @@ def _format_duration(minutes: int) -> str:
 # HELPERS INLINE KEYBOARD (AC6)
 # ============================================================================
 
+
 def _create_conflict_keyboard(
-    event1_id: str,
-    event1_title: str,
-    event2_id: str,
-    event2_title: str,
-    conflict_id: Optional[str]
+    event1_id: str, event1_title: str, event2_id: str, event2_title: str, conflict_id: Optional[str]
 ) -> InlineKeyboardMarkup:
     """
     Crée inline keyboard résolution conflit (AC6)
@@ -334,24 +331,20 @@ def _create_conflict_keyboard(
     # Ligne 1 : Boutons événement 1
     row1 = [
         InlineKeyboardButton(
-            text=f"❌ Annuler {event1_label}",
-            callback_data=f"conflict:cancel:{event1_id}"
+            text=f"❌ Annuler {event1_label}", callback_data=f"conflict:cancel:{event1_id}"
         ),
         InlineKeyboardButton(
-            text=f"📆 Déplacer {event1_label}",
-            callback_data=f"conflict:move:{event1_id}"
+            text=f"📆 Déplacer {event1_label}", callback_data=f"conflict:move:{event1_id}"
         ),
     ]
 
     # Ligne 2 : Boutons événement 2
     row2 = [
         InlineKeyboardButton(
-            text=f"❌ Annuler {event2_label}",
-            callback_data=f"conflict:cancel:{event2_id}"
+            text=f"❌ Annuler {event2_label}", callback_data=f"conflict:cancel:{event2_id}"
         ),
         InlineKeyboardButton(
-            text=f"📆 Déplacer {event2_label}",
-            callback_data=f"conflict:move:{event2_id}"
+            text=f"📆 Déplacer {event2_label}", callback_data=f"conflict:move:{event2_id}"
         ),
     ]
 
@@ -361,8 +354,7 @@ def _create_conflict_keyboard(
     if conflict_id:
         row3 = [
             InlineKeyboardButton(
-                text="✅ Ignorer conflit",
-                callback_data=f"conflict:ignore:{conflict_id}"
+                text="✅ Ignorer conflit", callback_data=f"conflict:ignore:{conflict_id}"
             )
         ]
         rows.append(row3)
@@ -384,4 +376,4 @@ def _truncate_title(title: str, max_length: int = 20) -> str:
     if len(title) <= max_length:
         return title
 
-    return title[:max_length - 3] + "..."
+    return title[: max_length - 3] + "..."

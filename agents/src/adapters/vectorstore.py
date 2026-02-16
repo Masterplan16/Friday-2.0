@@ -82,7 +82,9 @@ VOYAGE_COST_PER_TOKEN_CENTS = VOYAGE_COST_PER_TOKEN_EUR * 100  # En centimes EUR
 class EmbeddingRequest(BaseModel):
     """Requête génération embeddings"""
 
-    texts: list[str] = Field(..., description=f"Textes à embedder (max {VOYAGE_BATCH_MAX_TEXTS} batch Voyage)")
+    texts: list[str] = Field(
+        ..., description=f"Textes à embedder (max {VOYAGE_BATCH_MAX_TEXTS} batch Voyage)"
+    )
     model: str = Field(default=VOYAGE_MODEL_DEFAULT, description="Modèle embeddings")
     anonymize: bool = Field(default=True, description="Appliquer anonymisation Presidio")
 
@@ -91,7 +93,9 @@ class EmbeddingResponse(BaseModel):
     """Réponse génération embeddings"""
 
     embeddings: list[list[float]] = Field(..., description="Vecteurs embeddings")
-    dimensions: int = Field(..., description=f"Nombre dimensions ({VOYAGE_DIMENSIONS_DEFAULT} pour voyage-4-large)")
+    dimensions: int = Field(
+        ..., description=f"Nombre dimensions ({VOYAGE_DIMENSIONS_DEFAULT} pour voyage-4-large)"
+    )
     tokens_used: int = Field(..., description="Tokens consommés")
     anonymization_applied: bool = Field(False, description="True si anonymisation appliquée")
 
@@ -256,13 +260,9 @@ class VoyageAIAdapter:
             self.client = voyageai.Client(api_key=self.api_key, timeout=timeout)
         except ImportError as e:
             if "voyageai" in str(e):
-                raise ImportError(
-                    "voyageai package manquant. Installer avec: pip install voyageai"
-                )
+                raise ImportError("voyageai package manquant. Installer avec: pip install voyageai")
             elif "httpx" in str(e):
-                raise ImportError(
-                    "httpx package manquant. Installer avec: pip install httpx"
-                )
+                raise ImportError("httpx package manquant. Installer avec: pip install httpx")
             raise
 
         logger.info(
@@ -336,7 +336,9 @@ class VoyageAIAdapter:
             )
 
             embeddings = response.embeddings
-            tokens_used = getattr(response, "total_tokens", len(processed_texts) * 100)  # Estimation
+            tokens_used = getattr(
+                response, "total_tokens", len(processed_texts) * 100
+            )  # Estimation
 
             logger.info(
                 "voyage_embeddings_generated",
@@ -349,7 +351,11 @@ class VoyageAIAdapter:
             await self._track_api_usage(
                 tokens_input=tokens_used,
                 operation="embed",
-                metadata={"model": self.model, "batch_size": len(texts), "anonymized": anonymization_applied}
+                metadata={
+                    "model": self.model,
+                    "batch_size": len(texts),
+                    "anonymized": anonymization_applied,
+                },
             )
 
             return EmbeddingResponse(
@@ -387,9 +393,7 @@ class VoyageAIAdapter:
             query_text = query
 
         try:
-            response = self.client.embed(
-                texts=[query_text], model=self.model, input_type="query"
-            )
+            response = self.client.embed(texts=[query_text], model=self.model, input_type="query")
 
             tokens_used = getattr(response, "total_tokens", 100)  # Estimation
 
@@ -397,7 +401,7 @@ class VoyageAIAdapter:
             await self._track_api_usage(
                 tokens_input=tokens_used,
                 operation="embed_query",
-                metadata={"model": self.model, "anonymized": anonymize}
+                metadata={"model": self.model, "anonymized": anonymize},
             )
 
             return response.embeddings[0]
@@ -760,6 +764,5 @@ async def get_vectorstore_adapter(
 
     else:
         raise ValueError(
-            f"Provider embeddings inconnu: {provider}. "
-            "Supportés: voyage, openai, cohere, ollama"
+            f"Provider embeddings inconnu: {provider}. " "Supportés: voyage, openai, cohere, ollama"
         )

@@ -102,15 +102,17 @@ def load_accounts_config() -> List[Dict[str, Any]]:
 
             use_idle = os.getenv(f"{prefix}_USE_IDLE", "true").lower() == "true"
 
-            accounts.append({
-                "account_id": account_id,
-                "email": value,
-                "imap_host": os.getenv(f"{prefix}_IMAP_HOST", ""),
-                "imap_port": int(os.getenv(f"{prefix}_IMAP_PORT", "993")),
-                "imap_user": os.getenv(f"{prefix}_IMAP_USER", value),
-                "imap_password": os.getenv(f"{prefix}_IMAP_PASSWORD", ""),
-                "use_idle": use_idle,
-            })
+            accounts.append(
+                {
+                    "account_id": account_id,
+                    "email": value,
+                    "imap_host": os.getenv(f"{prefix}_IMAP_HOST", ""),
+                    "imap_port": int(os.getenv(f"{prefix}_IMAP_PORT", "993")),
+                    "imap_user": os.getenv(f"{prefix}_IMAP_USER", value),
+                    "imap_password": os.getenv(f"{prefix}_IMAP_PASSWORD", ""),
+                    "use_idle": use_idle,
+                }
+            )
 
     if not accounts:
         logger.error("no_imap_accounts_configured")
@@ -340,7 +342,11 @@ class IMAPAccountWatcher:
                         fetch_data = result.lines
 
                     for item in fetch_data:
-                        item_str = item.decode("utf-8", errors="replace") if isinstance(item, (bytes, bytearray)) else str(item)
+                        item_str = (
+                            item.decode("utf-8", errors="replace")
+                            if isinstance(item, (bytes, bytearray))
+                            else str(item)
+                        )
                         match = re.search(r"UID\s+(\d+)", item_str)
                         if match:
                             uids.append(match.group(1))
@@ -443,7 +449,11 @@ class IMAPAccountWatcher:
                 elif isinstance(item, (bytes, bytearray)):
                     item_bytes = bytes(item)
                     # Ignorer lignes de status IMAP
-                    if item_bytes.strip() == b')' or b'FETCH' in item_bytes or b'completed' in item_bytes:
+                    if (
+                        item_bytes.strip() == b")"
+                        or b"FETCH" in item_bytes
+                        or b"completed" in item_bytes
+                    ):
                         continue
                     raw_email = item_bytes
                     break
@@ -500,7 +510,9 @@ class IMAPAccountWatcher:
         try:
             from_anon = (await anonymize_text(from_header)).anonymized_text
             subject_anon = (await anonymize_text(subject)).anonymized_text
-            body_preview_anon = (await anonymize_text(body_preview)).anonymized_text if body_preview else ""
+            body_preview_anon = (
+                (await anonymize_text(body_preview)).anonymized_text if body_preview else ""
+            )
         except Exception as e:
             logger.error(
                 "presidio_anonymization_failed",

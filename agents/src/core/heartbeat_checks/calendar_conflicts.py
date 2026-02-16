@@ -16,9 +16,8 @@ import structlog
 from agents.src.core.heartbeat_models import CheckResult, CheckPriority
 from agents.src.agents.calendar.conflict_detector import (
     detect_calendar_conflicts,
-    get_conflicts_range
+    get_conflicts_range,
 )
-
 
 logger = structlog.get_logger(__name__)
 
@@ -27,9 +26,9 @@ logger = structlog.get_logger(__name__)
 # CHECK FUNCTION (AC5)
 # ============================================================================
 
+
 async def check_calendar_conflicts(
-    context: Dict[str, Any],
-    db_pool: Optional[asyncpg.Pool] = None
+    context: Dict[str, Any], db_pool: Optional[asyncpg.Pool] = None
 ) -> CheckResult:
     """
     Check Heartbeat Phase 3 : Détection conflits calendrier (AC5)
@@ -51,21 +50,16 @@ async def check_calendar_conflicts(
         # 1. Vérifier quiet hours (skip sauf conflit urgent)
         if _should_skip_quiet_hours(context):
             logger.debug("heartbeat_check_calendar_conflicts_skipped_quiet_hours")
-            return CheckResult(
-                notify=False,
-                message=""
-            )
+            return CheckResult(notify=False, message="")
 
         # 2. Récupérer ou créer pool DB
         if db_pool is None:
             import os
+
             database_url = os.getenv("DATABASE_URL")
             if not database_url:
                 logger.error("DATABASE_URL envvar manquante")
-                return CheckResult(
-                    notify=False,
-                    error="DATABASE_URL envvar manquante"
-                )
+                return CheckResult(notify=False, error="DATABASE_URL envvar manquante")
 
             db_pool = await asyncpg.create_pool(database_url)
             pool_created = True
@@ -74,30 +68,19 @@ async def check_calendar_conflicts(
         today = date.today()
         end_date = today + timedelta(days=7)
 
-        conflicts = await get_conflicts_range(
-            start_date=today,
-            end_date=end_date,
-            db_pool=db_pool
-        )
+        conflicts = await get_conflicts_range(start_date=today, end_date=end_date, db_pool=db_pool)
 
         # C2 fix: detect_calendar_conflicts retourne CalendarConflict (Pydantic),
         # pas des dicts. Tous les conflits détectés sont frais = non résolus.
         if not conflicts:
-            logger.debug(
-                "heartbeat_check_calendar_conflicts_ok",
-                total_conflicts=0,
-                unresolved=0
-            )
-            return CheckResult(
-                notify=False,
-                message=""
-            )
+            logger.debug("heartbeat_check_calendar_conflicts_ok", total_conflicts=0, unresolved=0)
+            return CheckResult(notify=False, message="")
 
         # 4. Notifier si conflits détectés
         logger.info(
             "heartbeat_check_calendar_conflicts_found",
             unresolved_conflicts=len(conflicts),
-            total_conflicts=len(conflicts)
+            total_conflicts=len(conflicts),
         )
 
         # Formater message notification
@@ -109,31 +92,21 @@ async def check_calendar_conflicts(
             action="view_conflicts",
             payload={
                 "conflict_count": len(conflicts),
-                "date_range": {
-                    "start": today.isoformat(),
-                    "end": end_date.isoformat()
-                },
+                "date_range": {"start": today.isoformat(), "end": end_date.isoformat()},
                 "conflicts": [
                     {
                         "event1_id": c.event1.id,
                         "event2_id": c.event2.id,
-                        "overlap_minutes": c.overlap_minutes
+                        "overlap_minutes": c.overlap_minutes,
                     }
                     for c in conflicts
-                ]
-            }
+                ],
+            },
         )
 
     except Exception as e:
-        logger.error(
-            "heartbeat_check_calendar_conflicts_error",
-            error=str(e),
-            exc_info=True
-        )
-        return CheckResult(
-            notify=False,
-            error=str(e)
-        )
+        logger.error("heartbeat_check_calendar_conflicts_error", error=str(e), exc_info=True)
+        return CheckResult(notify=False, error=str(e))
     finally:
         # Pool leak fix: toujours fermer si créé localement
         if pool_created and db_pool:
@@ -143,6 +116,7 @@ async def check_calendar_conflicts(
 # ============================================================================
 # HELPERS
 # ============================================================================
+
 
 def _should_skip_quiet_hours(context: Dict[str, Any]) -> bool:
     """
@@ -176,18 +150,12 @@ def _should_skip_quiet_hours(context: Dict[str, Any]) -> bool:
     # Pour l'instant, skip toujours pendant quiet hours
     # Story 4.1 complète permettra d'accéder aux conflits urgents ici
 
-    logger.debug(
-        "heartbeat_check_calendar_conflicts_quiet_hours",
-        hour=hour
-    )
+    logger.debug("heartbeat_check_calendar_conflicts_quiet_hours", hour=hour)
 
     return True  # Skip pendant quiet hours (Day 1)
 
 
-def _format_conflict_notification(
-    conflicts: list,
-    context: Dict[str, Any]
-) -> str:
+def _format_conflict_notification(conflicts: list, context: Dict[str, Any]) -> str:
     """
     Formate message notification Telegram conflits (AC5)
 
@@ -213,7 +181,7 @@ def _format_conflict_notification(
     lines = [
         f"⚠️ <b>{count} conflit{'s' if count > 1 else ''} calendrier détecté{'s' if count > 1 else ''}</b>",
         "<i>(prochains 7 jours)</i>",
-        ""
+        "",
     ]
 
     # Grouper conflits par date (C2 fix: attributs Pydantic, pas .get())
@@ -262,7 +230,9 @@ def _format_conflict_notification(
     # Si plus de 3 dates avec conflits
     remaining_dates = len(conflicts_by_date) - max_dates
     if remaining_dates > 0:
-        lines.append(f"<i>... et {remaining_dates} autre{'s' if remaining_dates > 1 else ''} date{'s' if remaining_dates > 1 else ''}</i>")
+        lines.append(
+            f"<i>... et {remaining_dates} autre{'s' if remaining_dates > 1 else ''} date{'s' if remaining_dates > 1 else ''}</i>"
+        )
 
     lines.append("")
     lines.append("/conflits pour détails et résolution")
@@ -284,7 +254,7 @@ def _truncate_title(title: str, max_length: int = 25) -> str:
     if len(title) <= max_length:
         return title
 
-    return title[:max_length - 3] + "..."
+    return title[: max_length - 3] + "..."
 
 
 # ============================================================================
@@ -297,5 +267,5 @@ CHECK_METADATA = {
     "description": "Détecte conflits calendrier non résolus (7 jours)",
     "function": check_calendar_conflicts,
     "story": "7.3",
-    "phase": 3  # Heartbeat Phase 3 (après urgent checks et proactif)
+    "phase": 3,  # Heartbeat Phase 3 (après urgent checks et proactif)
 }

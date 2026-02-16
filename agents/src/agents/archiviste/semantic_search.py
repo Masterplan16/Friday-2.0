@@ -253,9 +253,7 @@ class SemanticSearcher:
                 metadata={
                     "category": row["classification_category"],
                     "subcategory": row["classification_subcategory"],
-                    "classification_confidence": float(
-                        row["classification_confidence"] or 0.0
-                    ),
+                    "classification_confidence": float(row["classification_confidence"] or 0.0),
                     "document_metadata": row["document_metadata"],
                 },
             )
@@ -323,9 +321,7 @@ class SemanticSearcher:
         duration_ms = (time.time() - start_time) * 1000
 
         # Confidence = score moyen des résultats
-        avg_score = (
-            sum(r.score for r in results) / len(results) if results else 0.0
-        )
+        avg_score = sum(r.score for r in results) / len(results) if results else 0.0
 
         return ActionResult(
             input_summary=f"Query: '{query}' (top_{top_k})",

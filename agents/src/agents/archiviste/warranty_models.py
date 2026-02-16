@@ -6,6 +6,7 @@ Définit les structures de données pour :
 - WarrantyInfo : Informations garantie extraites par Claude
 - WarrantyExtractionResult : Résultat complet extraction
 """
+
 from datetime import date
 from decimal import Decimal
 from enum import Enum
@@ -16,6 +17,7 @@ from pydantic import BaseModel, Field, field_validator
 
 class WarrantyCategory(str, Enum):
     """Catégories de garantie supportées (AC4)."""
+
     ELECTRONICS = "electronics"
     APPLIANCES = "appliances"
     AUTOMOTIVE = "automotive"
@@ -38,35 +40,17 @@ class WarrantyInfo(BaseModel):
         purchase_amount: Montant achat en EUR
         confidence: Score de confiance [0.0-1.0]
     """
-    warranty_detected: bool = Field(
-        ..., description="Si une garantie a été détectée"
-    )
-    item_name: str = Field(
-        ..., min_length=1, max_length=500,
-        description="Nom du produit"
-    )
-    item_category: WarrantyCategory = Field(
-        ..., description="Catégorie du produit"
-    )
-    vendor: Optional[str] = Field(
-        None, max_length=255,
-        description="Fournisseur/vendeur"
-    )
-    purchase_date: date = Field(
-        ..., description="Date d'achat"
-    )
+
+    warranty_detected: bool = Field(..., description="Si une garantie a été détectée")
+    item_name: str = Field(..., min_length=1, max_length=500, description="Nom du produit")
+    item_category: WarrantyCategory = Field(..., description="Catégorie du produit")
+    vendor: Optional[str] = Field(None, max_length=255, description="Fournisseur/vendeur")
+    purchase_date: date = Field(..., description="Date d'achat")
     warranty_duration_months: int = Field(
-        ..., ge=1, le=120,
-        description="Durée garantie en mois (1-120)"
+        ..., ge=1, le=120, description="Durée garantie en mois (1-120)"
     )
-    purchase_amount: Optional[Decimal] = Field(
-        None, ge=0,
-        description="Montant achat en EUR"
-    )
-    confidence: float = Field(
-        ..., ge=0.0, le=1.0,
-        description="Score de confiance extraction"
-    )
+    purchase_amount: Optional[Decimal] = Field(None, ge=0, description="Montant achat en EUR")
+    confidence: float = Field(..., ge=0.0, le=1.0, description="Score de confiance extraction")
 
     @field_validator("purchase_date")
     @classmethod
@@ -80,6 +64,7 @@ class WarrantyInfo(BaseModel):
     def expiration_date(self) -> date:
         """Calcule la date d'expiration."""
         from dateutil.relativedelta import relativedelta
+
         return self.purchase_date + relativedelta(months=self.warranty_duration_months)
 
 
@@ -91,5 +76,6 @@ class WarrantyExtractionResult(BaseModel):
         warranty_info: Informations garantie (None si pas détectée)
         error: Message d'erreur si extraction échouée
     """
+
     warranty_info: Optional[WarrantyInfo] = None
     error: Optional[str] = None

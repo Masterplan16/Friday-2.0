@@ -44,12 +44,16 @@ class SyncRange(BaseModel):
     """Sync time range configuration.
 
     Attributes:
-        past_days: Number of days in the past to sync (default 7)
-        future_days: Number of days in the future to sync (default 90)
+        past_days: Number of days in the past to sync (None = no limit, retrieves all history)
+        future_days: Number of days in the future to sync (None = no limit)
     """
 
-    past_days: int = Field(default=7, ge=0, description="Days in the past to sync")
-    future_days: int = Field(default=90, ge=1, description="Days in the future to sync")
+    past_days: int | None = Field(
+        default=None, ge=0, description="Days in the past to sync (None = unlimited)"
+    )
+    future_days: int | None = Field(
+        default=None, ge=1, description="Days in the future to sync (None = unlimited)"
+    )
 
 
 class DefaultReminder(BaseModel):

@@ -21,11 +21,14 @@ logger = structlog.get_logger(__name__)
 # Singleton Bot Telegram
 _telegram_bot: Optional[Bot] = None
 
+
 def _get_supergroup_id() -> Optional[str]:
     return os.getenv("TELEGRAM_SUPERGROUP_ID")
 
+
 def _get_topic_chat_proactive_id() -> Optional[str]:
     return os.getenv("TOPIC_CHAT_PROACTIVE_ID")
+
 
 def _get_topic_system_id() -> Optional[str]:
     return os.getenv("TOPIC_SYSTEM_ID")
@@ -34,6 +37,7 @@ def _get_topic_system_id() -> Optional[str]:
 # ============================================================================
 # BOT TELEGRAM SINGLETON
 # ============================================================================
+
 
 def get_telegram_bot() -> Optional[Bot]:
     """
@@ -62,10 +66,9 @@ def get_telegram_bot() -> Optional[Bot]:
 # ENVOI NOTIFICATIONS
 # ============================================================================
 
+
 async def send_to_chat_proactive(
-    message: str,
-    keyboard: Optional[InlineKeyboardMarkup] = None,
-    parse_mode: str = "HTML"
+    message: str, keyboard: Optional[InlineKeyboardMarkup] = None, parse_mode: str = "HTML"
 ) -> bool:
     """
     Envoie notification au Topic Chat & Proactive (DEFAULT).
@@ -98,30 +101,23 @@ async def send_to_chat_proactive(
             message_thread_id=int(topic_id),
             text=message,
             parse_mode=parse_mode,
-            reply_markup=keyboard
+            reply_markup=keyboard,
         )
 
         logger.info(
-            "Heartbeat notification sent",
-            topic="Chat & Proactive",
-            message_preview=message[:50]
+            "Heartbeat notification sent", topic="Chat & Proactive", message_preview=message[:50]
         )
 
         return True
 
     except TelegramError as e:
         logger.error(
-            "Failed to send Heartbeat notification",
-            topic="Chat & Proactive",
-            error=str(e)
+            "Failed to send Heartbeat notification", topic="Chat & Proactive", error=str(e)
         )
         return False
 
 
-async def send_to_system_alerts(
-    message: str,
-    parse_mode: str = "HTML"
-) -> bool:
+async def send_to_system_alerts(message: str, parse_mode: str = "HTML") -> bool:
     """
     Envoie alerte au Topic System & Alerts.
 
@@ -141,9 +137,7 @@ async def send_to_system_alerts(
     system_topic_id = _get_topic_system_id()
 
     if not supergroup_id or not system_topic_id:
-        logger.warning(
-            "TELEGRAM_SUPERGROUP_ID or TOPIC_SYSTEM_ID not set - alert skipped"
-        )
+        logger.warning("TELEGRAM_SUPERGROUP_ID or TOPIC_SYSTEM_ID not set - alert skipped")
         return False
 
     try:
@@ -151,23 +145,15 @@ async def send_to_system_alerts(
             chat_id=int(supergroup_id),
             message_thread_id=int(system_topic_id),
             text=message,
-            parse_mode=parse_mode
+            parse_mode=parse_mode,
         )
 
-        logger.info(
-            "System alert sent",
-            topic="System & Alerts",
-            message_preview=message[:50]
-        )
+        logger.info("System alert sent", topic="System & Alerts", message_preview=message[:50])
 
         return True
 
     except TelegramError as e:
-        logger.error(
-            "Failed to send System alert",
-            topic="System & Alerts",
-            error=str(e)
-        )
+        logger.error("Failed to send System alert", topic="System & Alerts", error=str(e))
         return False
 
 
@@ -175,11 +161,8 @@ async def send_to_system_alerts(
 # FORMATAGE MESSAGES HEARTBEAT
 # ============================================================================
 
-def format_heartbeat_message(
-    check_id: str,
-    message: str,
-    emoji: str = "🔔"
-) -> str:
+
+def format_heartbeat_message(check_id: str, message: str, emoji: str = "🔔") -> str:
     """
     Formate message notification Heartbeat.
 
@@ -217,20 +200,17 @@ def create_action_keyboard(action: str, check_id: str) -> InlineKeyboardMarkup:
     action_buttons = {
         "view_urgent_emails": [
             InlineKeyboardButton(
-                "📬 Voir emails urgents",
-                callback_data=f"heartbeat_action:{action}:{check_id}"
+                "📬 Voir emails urgents", callback_data=f"heartbeat_action:{action}:{check_id}"
             )
         ],
         "view_financial_alerts": [
             InlineKeyboardButton(
-                "💰 Voir alertes finance",
-                callback_data=f"heartbeat_action:{action}:{check_id}"
+                "💰 Voir alertes finance", callback_data=f"heartbeat_action:{action}:{check_id}"
             )
         ],
         "view_thesis_reminders": [
             InlineKeyboardButton(
-                "🎓 Voir thésards",
-                callback_data=f"heartbeat_action:{action}:{check_id}"
+                "🎓 Voir thésards", callback_data=f"heartbeat_action:{action}:{check_id}"
             )
         ],
     }
@@ -241,8 +221,7 @@ def create_action_keyboard(action: str, check_id: str) -> InlineKeyboardMarkup:
         # Action inconnue → bouton générique
         buttons = [
             InlineKeyboardButton(
-                "🔍 Détails",
-                callback_data=f"heartbeat_action:{action}:{check_id}"
+                "🔍 Détails", callback_data=f"heartbeat_action:{action}:{check_id}"
             )
         ]
 
@@ -252,8 +231,5 @@ def create_action_keyboard(action: str, check_id: str) -> InlineKeyboardMarkup:
 def _html_escape(text: str) -> str:
     """Echappe caractères spéciaux HTML pour Telegram parse_mode=HTML."""
     return (
-        text.replace("&", "&amp;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
-        .replace('"', "&quot;")
+        text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
     )

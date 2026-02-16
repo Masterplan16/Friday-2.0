@@ -127,8 +127,8 @@ async def extract_tasks_from_email(
     )
 
     # M3 fix: Anonymiser metadata pour éviter prompt injection
-    sender_safe = email_metadata.get('sender', 'UNKNOWN')
-    subject_safe = email_metadata.get('subject', 'N/A')
+    sender_safe = email_metadata.get("sender", "UNKNOWN")
+    subject_safe = email_metadata.get("subject", "N/A")
 
     # Anonymiser sender et subject (peuvent contenir PII ou instructions malveillantes)
     try:
@@ -172,9 +172,7 @@ Retourner JSON structuré avec confidence par tâche.
                 max_tokens=500,  # Tâches courtes attendues
                 temperature=0.1,  # Déterministe
                 system=prompt,
-                messages=[
-                    {"role": "user", "content": user_prompt}
-                ],
+                messages=[{"role": "user", "content": user_prompt}],
             )
 
             # Extraire texte réponse
@@ -184,7 +182,7 @@ Retourner JSON structuré avec confidence par tâche.
                 "claude_task_extraction_response",
                 email_id=email_metadata.get("email_id"),
                 response_length=len(response_text),
-                attempt=attempt
+                attempt=attempt,
             )
 
             break  # Succès, sortir de la boucle retry
@@ -196,12 +194,12 @@ Retourner JSON structuré avec confidence par tâche.
                 attempt=attempt,
                 max_retries=max_retries,
                 error=str(e),
-                error_type=type(e).__name__
+                error_type=type(e).__name__,
             )
 
             if attempt < max_retries:
                 # Backoff exponentiel : 2^1=2s, 2^2=4s, 2^3=8s
-                backoff = backoff_base ** attempt
+                backoff = backoff_base**attempt
                 await asyncio.sleep(backoff)
             else:
                 # Dernier essai échoué, re-raise
@@ -209,7 +207,7 @@ Retourner JSON structuré avec confidence par tâche.
                     "claude_task_extraction_failed_after_retries",
                     email_id=email_metadata.get("email_id"),
                     error=str(e),
-                    exc_info=False  # M1 fix: Pas exc_info pour éviter leak API key
+                    exc_info=False,  # M1 fix: Pas exc_info pour éviter leak API key
                 )
                 raise
 
@@ -219,7 +217,7 @@ Retourner JSON structuré avec confidence par tâche.
                 "claude_task_extraction_failed",
                 email_id=email_metadata.get("email_id"),
                 error=str(e),
-                exc_info=False  # M1 fix: Pas exc_info pour éviter leak API key
+                exc_info=False,  # M1 fix: Pas exc_info pour éviter leak API key
             )
             raise
 
@@ -230,8 +228,8 @@ Retourner JSON structuré avec confidence par tâche.
     try:
         # Strip markdown code fences si Claude enveloppe en ```json...```
         cleaned = response_text.strip()
-        cleaned = re.sub(r'^```(?:json)?\s*', '', cleaned)
-        cleaned = re.sub(r'\s*```$', '', cleaned)
+        cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned)
+        cleaned = re.sub(r"\s*```$", "", cleaned)
         cleaned = cleaned.strip()
 
         if not cleaned:
@@ -256,7 +254,7 @@ Retourner JSON structuré avec confidence par tâche.
                             "invalid_due_date_format",
                             email_id=email_metadata.get("email_id"),
                             due_date_raw=task.get("due_date"),
-                            error=str(e)
+                            error=str(e),
                         )
                         # Fallback: date None (tâche sans échéance)
                         task["due_date"] = None

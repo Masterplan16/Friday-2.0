@@ -10,8 +10,9 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator
 
-
-MAX_ATTACHMENT_SIZE_BYTES = 52428800  # 50 Mo default (configurable via MAX_ATTACHMENT_SIZE_MB env var)
+MAX_ATTACHMENT_SIZE_BYTES = (
+    52428800  # 50 Mo default (configurable via MAX_ATTACHMENT_SIZE_MB env var)
+)
 MAX_FILENAME_LENGTH = 200
 
 
@@ -24,13 +25,13 @@ class Attachment(BaseModel):
     filepath: str
     size_bytes: int = Field(..., gt=0, le=MAX_ATTACHMENT_SIZE_BYTES)
     mime_type: str
-    status: Literal['pending', 'processed', 'archived', 'error'] = 'pending'
+    status: Literal["pending", "processed", "archived", "error"] = "pending"
     extracted_at: datetime
     processed_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
 
-    @field_validator('filename')
+    @field_validator("filename")
     @classmethod
     def validate_filename(cls, v: str) -> str:
         """Valide nom fichier (max 200 chars, pas vide)."""
@@ -42,20 +43,20 @@ class Attachment(BaseModel):
 
         return v.strip()
 
-    @field_validator('mime_type')
+    @field_validator("mime_type")
     @classmethod
     def validate_mime_type(cls, v: str) -> str:
         """Valide format MIME type (type/subtype)."""
-        if not v or '/' not in v:
+        if not v or "/" not in v:
             raise ValueError("Invalid MIME type format (expected: type/subtype)")
 
-        parts = v.split('/')
+        parts = v.split("/")
         if len(parts) != 2 or not all(parts):
             raise ValueError("Invalid MIME type format")
 
         return v.lower()  # Normalisation lowercase
 
-    @field_validator('filepath')
+    @field_validator("filepath")
     @classmethod
     def validate_filepath(cls, v: str) -> str:
         """Valide filepath (pas vide, format Unix)."""
@@ -63,7 +64,7 @@ class Attachment(BaseModel):
             raise ValueError("Filepath cannot be empty")
 
         # Format Unix paths (zone transit VPS)
-        if not v.startswith('/'):
+        if not v.startswith("/"):
             raise ValueError("Filepath must be absolute Unix path")
 
         return v.strip()
@@ -82,9 +83,9 @@ class Attachment(BaseModel):
                 "extracted_at": "2026-02-11T10:30:00Z",
                 "processed_at": None,
                 "created_at": "2026-02-11T10:30:00Z",
-                "updated_at": "2026-02-11T10:30:00Z"
+                "updated_at": "2026-02-11T10:30:00Z",
             }
-        }
+        },
     }
 
 
@@ -107,12 +108,12 @@ class AttachmentExtractResult(BaseModel):
     reasoning: str = ""
     payload: dict[str, Any] = Field(default_factory=dict)  # Middleware trust compatibility
 
-    @field_validator('filepaths')
+    @field_validator("filepaths")
     @classmethod
     def validate_filepaths(cls, v: list[str]) -> list[str]:
         """Valide liste filepaths (Unix paths absolus)."""
         for filepath in v:
-            if not filepath.startswith('/'):
+            if not filepath.startswith("/"):
                 raise ValueError(f"Filepath must be absolute Unix path: {filepath}")
 
         return v
@@ -126,7 +127,9 @@ class AttachmentExtractResult(BaseModel):
             attachments_total: Nombre total attachments dans email
         """
         self.input_summary = f"Email {email_id} avec {attachments_total} pièce(s) jointe(s)"
-        self.output_summary = f"→ {self.extracted_count} extraite(s), {self.failed_count} ignorée(s)"
+        self.output_summary = (
+            f"→ {self.extracted_count} extraite(s), {self.failed_count} ignorée(s)"
+        )
 
         # Reasoning détaillé
         reasons = []
@@ -135,7 +138,9 @@ class AttachmentExtractResult(BaseModel):
         if self.failed_count > 0:
             reasons.append(f"{self.failed_count} PJ ignorées (MIME bloqué ou taille)")
 
-        self.reasoning = "Extraction PJ : " + ", ".join(reasons) if reasons else "Aucune PJ à extraire"
+        self.reasoning = (
+            "Extraction PJ : " + ", ".join(reasons) if reasons else "Aucune PJ à extraire"
+        )
 
     def model_dump_receipt(self) -> dict[str, Any]:
         """
@@ -149,9 +154,9 @@ class AttachmentExtractResult(BaseModel):
             Dict compatible avec structure table core.action_receipts
         """
         # Champs ajoutés dynamiquement par @friday_action
-        module = getattr(self, 'module', None)
-        action_type = getattr(self, 'action_type', None)
-        action_id = getattr(self, 'action_id', None)
+        module = getattr(self, "module", None)
+        action_type = getattr(self, "action_type", None)
+        action_id = getattr(self, "action_id", None)
 
         if module is None or action_type is None:
             raise ValueError(
@@ -161,10 +166,10 @@ class AttachmentExtractResult(BaseModel):
         # Payload avec stats extraction (merge avec payload existant)
         payload_merged = {
             **self.payload,  # Existing payload
-            'extracted_count': self.extracted_count,
-            'failed_count': self.failed_count,
-            'total_size_mb': self.total_size_mb,
-            'filepaths': self.filepaths
+            "extracted_count": self.extracted_count,
+            "failed_count": self.failed_count,
+            "total_size_mb": self.total_size_mb,
+            "filepaths": self.filepaths,
         }
 
         return {
@@ -178,7 +183,7 @@ class AttachmentExtractResult(BaseModel):
             "payload": payload_merged,
             "status": "auto",  # Trust level default
             "trust_level": "auto",
-            "duration_ms": getattr(self, 'duration_ms', None)  # Calculé par middleware
+            "duration_ms": getattr(self, "duration_ms", None),  # Calculé par middleware
         }
 
     model_config = {
@@ -190,12 +195,12 @@ class AttachmentExtractResult(BaseModel):
                 "total_size_mb": 0.38,
                 "filepaths": [
                     "/var/friday/transit/attachments/2026-02-11/123_0_facture.pdf",
-                    "/var/friday/transit/attachments/2026-02-11/123_1_photo.jpg"
+                    "/var/friday/transit/attachments/2026-02-11/123_1_photo.jpg",
                 ],
                 "input_summary": "Email abc123 avec 3 pièce(s) jointe(s)",
                 "output_summary": "→ 2 extraite(s), 1 ignorée(s)",
                 "confidence": 1.0,
-                "reasoning": "Extraction PJ : 2 PJ extraites (0.38 Mo), 1 PJ ignorées (MIME bloqué ou taille)"
+                "reasoning": "Extraction PJ : 2 PJ extraites (0.38 Mo), 1 PJ ignorées (MIME bloqué ou taille)",
             }
-        }
+        },
     }

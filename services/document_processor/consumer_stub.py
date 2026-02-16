@@ -183,9 +183,11 @@ async def consume_loop(redis_client: Redis, db_pool: asyncpg.Pool) -> None:
                     try:
                         # Traiter événement
                         await process_document_event(
-                            event_id=event_id.decode("utf-8")
-                            if isinstance(event_id, bytes)
-                            else event_id,
+                            event_id=(
+                                event_id.decode("utf-8")
+                                if isinstance(event_id, bytes)
+                                else event_id
+                            ),
                             event_data=event_data,
                             db_pool=db_pool,
                         )
@@ -195,17 +197,21 @@ async def consume_loop(redis_client: Redis, db_pool: asyncpg.Pool) -> None:
 
                         logger.info(
                             "event_acked",
-                            event_id=event_id.decode("utf-8")
-                            if isinstance(event_id, bytes)
-                            else event_id,
+                            event_id=(
+                                event_id.decode("utf-8")
+                                if isinstance(event_id, bytes)
+                                else event_id
+                            ),
                         )
 
                     except Exception as e:
                         logger.error(
                             "event_processing_error",
-                            event_id=event_id.decode("utf-8")
-                            if isinstance(event_id, bytes)
-                            else event_id,
+                            event_id=(
+                                event_id.decode("utf-8")
+                                if isinstance(event_id, bytes)
+                                else event_id
+                            ),
                             error=str(e),
                         )
                         # Continue sans ACK -> message sera relivré

@@ -31,26 +31,22 @@ async def check_urgent_emails(db_pool: asyncpg.Pool) -> CheckResult:
     try:
         async with db_pool.acquire() as conn:
             # Query emails urgents non lus
-            urgent_count = await conn.fetchval(
-                """
+            urgent_count = await conn.fetchval("""
                 SELECT COUNT(*)
                 FROM ingestion.emails
                 WHERE priority = 'urgent'
                   AND read = false
-                """
-            )
+                """)
 
             # Query détails pour message
-            urgent_emails = await conn.fetch(
-                """
+            urgent_emails = await conn.fetch("""
                 SELECT sender, subject
                 FROM ingestion.emails
                 WHERE priority = 'urgent'
                   AND read = false
                 ORDER BY received_at DESC
                 LIMIT 3
-                """
-            )
+                """)
 
         if urgent_count == 0:
             # Silence = bon comportement (AC4)
@@ -67,21 +63,15 @@ async def check_urgent_emails(db_pool: asyncpg.Pool) -> CheckResult:
         if urgent_count > 3:
             message += f"\n... et {urgent_count - 3} autre(s)"
 
-        logger.info(
-            "Urgent emails detected",
-            count=urgent_count
-        )
+        logger.info("Urgent emails detected", count=urgent_count)
 
         return CheckResult(
             notify=True,
             message=message,
             action="view_urgent_emails",
-            payload={"check_id": "check_urgent_emails", "count": urgent_count}
+            payload={"check_id": "check_urgent_emails", "count": urgent_count},
         )
 
     except Exception as e:
         logger.error("check_urgent_emails failed", error=str(e))
-        return CheckResult(
-            notify=False,
-            error=f"Failed to check urgent emails: {str(e)}"
-        )
+        return CheckResult(notify=False, error=f"Failed to check urgent emails: {str(e)}")

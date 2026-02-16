@@ -29,16 +29,16 @@ async def main():
     print(f"=== SEARCH result ===")
     print(f"  type(result) = {type(result)}")
     print(f"  result = {result}")
-    if hasattr(result, 'result'):
+    if hasattr(result, "result"):
         print(f"  result.result = {result.result}")
-    if hasattr(result, 'lines'):
+    if hasattr(result, "lines"):
         print(f"  result.lines = {result.lines}")
         for i, line in enumerate(result.lines):
             print(f"    line[{i}] type={type(line)} repr={repr(line)[:200]}")
 
     # Get first seq_num
-    status = result.result if hasattr(result, 'result') else result[0]
-    lines = result.lines if hasattr(result, 'lines') else result[1]
+    status = result.result if hasattr(result, "result") else result[0]
+    lines = result.lines if hasattr(result, "lines") else result[1]
     seq_nums = []
     if status == "OK":
         for line in lines:

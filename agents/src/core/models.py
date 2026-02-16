@@ -12,13 +12,14 @@ from enum import Enum
 from typing import Literal, Optional
 from pydantic import BaseModel, ConfigDict, Field
 
-
 # ============================================================================
 # Enums
 # ============================================================================
 
+
 class ContextSource(str, Enum):
     """Source de détermination du contexte casquette (AC1)."""
+
     MANUAL = "manual"  # Commande Telegram /casquette <casquette>
     EVENT = "event"  # Événement en cours (NOW() entre start/end)
     TIME = "time"  # Heuristique heure de la journée
@@ -28,6 +29,7 @@ class ContextSource(str, Enum):
 
 class Casquette(str, Enum):
     """Casquettes professionnelles du Mainteneur."""
+
     MEDECIN = "medecin"
     ENSEIGNANT = "enseignant"
     CHERCHEUR = "chercheur"
@@ -36,6 +38,7 @@ class Casquette(str, Enum):
 
 class ConflictStatus(str, Enum):
     """Statut conflit calendrier (AC4/AC6)."""
+
     UNRESOLVED = "unresolved"
     RESOLVED = "resolved"
 
@@ -44,6 +47,7 @@ class ConflictStatus(str, Enum):
 # Models
 # ============================================================================
 
+
 class UserContext(BaseModel):
     """
     Contexte casquette actuel du Mainteneur (AC1).
@@ -51,21 +55,21 @@ class UserContext(BaseModel):
     Le contexte influence tous les modules (email, événements, briefing).
     Détermination automatique selon 5 règles prioritaires.
     """
+
     casquette: Optional[Casquette] = Field(
-        None,
-        description="Casquette active: medecin, enseignant, chercheur, ou None (auto-detect)"
+        None, description="Casquette active: medecin, enseignant, chercheur, ou None (auto-detect)"
     )
     source: ContextSource = Field(
         ...,
-        description="Source de détermination du contexte (MANUAL > EVENT > TIME > LAST_EVENT > DEFAULT)"
+        description="Source de détermination du contexte (MANUAL > EVENT > TIME > LAST_EVENT > DEFAULT)",
     )
     updated_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
-        description="Timestamp dernière mise à jour contexte"
+        description="Timestamp dernière mise à jour contexte",
     )
     updated_by: Literal["system", "manual"] = Field(
         "system",
-        description="Source du changement: 'system' (auto-detect) ou 'manual' (commande Telegram)"
+        description="Source du changement: 'system' (auto-detect) ou 'manual' (commande Telegram)",
     )
 
     model_config = ConfigDict(
@@ -74,7 +78,7 @@ class UserContext(BaseModel):
                 "casquette": "medecin",
                 "source": "event",
                 "updated_at": "2026-02-17T14:30:00Z",
-                "updated_by": "system"
+                "updated_by": "system",
             }
         }
     )
@@ -86,6 +90,7 @@ class OngoingEvent(BaseModel):
 
     Utilisé par ContextManager._get_ongoing_event()
     """
+
     id: str = Field(..., description="UUID événement")
     casquette: Casquette = Field(..., description="Casquette de l'événement")
     title: str = Field(..., description="Titre événement")
@@ -99,7 +104,7 @@ class OngoingEvent(BaseModel):
                 "casquette": "medecin",
                 "title": "Consultation Dr Dupont",
                 "start_datetime": "2026-02-17T14:00:00Z",
-                "end_datetime": "2026-02-17T15:00:00Z"
+                "end_datetime": "2026-02-17T15:00:00Z",
             }
         }
     )

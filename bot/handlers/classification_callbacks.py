@@ -20,10 +20,9 @@ logger = logging.getLogger(__name__)
 # CALLBACK APPROVE - Approuver classification (Task 5.2)
 # ============================================================================
 
+
 async def handle_classify_approve(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE,
-    db_pool: asyncpg.Pool
+    update: Update, context: ContextTypes.DEFAULT_TYPE, db_pool: asyncpg.Pool
 ):
     """
     Callback button [Approuver]
@@ -70,7 +69,7 @@ async def handle_classify_approve(
                 WHERE id = $1 AND status = 'pending'
                 """,
                 uuid.UUID(receipt_id),
-                query.from_user.id
+                query.from_user.id,
             )
 
             if result == "UPDATE 0":
@@ -96,32 +95,20 @@ async def handle_classify_approve(
             except Exception as notif_err:
                 logger.warning("Failed to send metrics notification", error=str(notif_err))
 
-        logger.info(
-            "classification_approved",
-            receipt_id=receipt_id,
-            user_id=query.from_user.id
-        )
+        logger.info("classification_approved", receipt_id=receipt_id, user_id=query.from_user.id)
 
     except Exception as e:
-        logger.error(
-            "classify_approve_failed",
-            receipt_id=receipt_id,
-            error=str(e),
-            exc_info=True
-        )
-        await query.edit_message_text(
-            f"❌ Erreur lors de l'approbation : {str(e)[:200]}"
-        )
+        logger.error("classify_approve_failed", receipt_id=receipt_id, error=str(e), exc_info=True)
+        await query.edit_message_text(f"❌ Erreur lors de l'approbation : {str(e)[:200]}")
 
 
 # ============================================================================
 # CALLBACK CORRECT - Corriger destination (Task 5.3)
 # ============================================================================
 
+
 async def handle_classify_correct(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE,
-    db_pool: asyncpg.Pool
+    update: Update, context: ContextTypes.DEFAULT_TYPE, db_pool: asyncpg.Pool
 ):
     """
     Callback button [Corriger destination]
@@ -154,16 +141,13 @@ async def handle_classify_correct(
     from bot.handlers.classification_notifications import _create_correction_keyboard
 
     await query.edit_message_text(
-        "📂 <b>Corriger la destination</b>\n\n"
-        "Choisissez la catégorie correcte :",
+        "📂 <b>Corriger la destination</b>\n\n" "Choisissez la catégorie correcte :",
         parse_mode="HTML",
-        reply_markup=_create_correction_keyboard(receipt_id)
+        reply_markup=_create_correction_keyboard(receipt_id),
     )
 
     logger.info(
-        "classification_correction_requested",
-        receipt_id=receipt_id,
-        user_id=query.from_user.id
+        "classification_correction_requested", receipt_id=receipt_id, user_id=query.from_user.id
     )
 
 
@@ -171,10 +155,9 @@ async def handle_classify_correct(
 # CALLBACK REJECT - Rejeter classification (Task 5.2)
 # ============================================================================
 
+
 async def handle_classify_reject(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE,
-    db_pool: asyncpg.Pool
+    update: Update, context: ContextTypes.DEFAULT_TYPE, db_pool: asyncpg.Pool
 ):
     """
     Callback button [Rejeter]
@@ -212,7 +195,7 @@ async def handle_classify_reject(
                 WHERE id = $1 AND status = 'pending'
                 """,
                 uuid.UUID(receipt_id),
-                query.from_user.id
+                query.from_user.id,
             )
 
             if result == "UPDATE 0":
@@ -237,32 +220,20 @@ async def handle_classify_reject(
             except Exception as notif_err:
                 logger.warning("Failed to send metrics notification", error=str(notif_err))
 
-        logger.info(
-            "classification_rejected",
-            receipt_id=receipt_id,
-            user_id=query.from_user.id
-        )
+        logger.info("classification_rejected", receipt_id=receipt_id, user_id=query.from_user.id)
 
     except Exception as e:
-        logger.error(
-            "classify_reject_failed",
-            receipt_id=receipt_id,
-            error=str(e),
-            exc_info=True
-        )
-        await query.edit_message_text(
-            f"❌ Erreur lors du rejet : {str(e)[:200]}"
-        )
+        logger.error("classify_reject_failed", receipt_id=receipt_id, error=str(e), exc_info=True)
+        await query.edit_message_text(f"❌ Erreur lors du rejet : {str(e)[:200]}")
 
 
 # ============================================================================
 # CALLBACK RECLASSIFY - Réassigner catégorie (Task 5.3)
 # ============================================================================
 
+
 async def handle_classify_reclassify(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE,
-    db_pool: asyncpg.Pool
+    update: Update, context: ContextTypes.DEFAULT_TYPE, db_pool: asyncpg.Pool
 ):
     """
     Callback reclassification : choix d'une nouvelle catégorie.
@@ -299,10 +270,9 @@ async def handle_classify_reclassify(
         from bot.handlers.classification_notifications import _create_finance_perimeter_keyboard
 
         await query.edit_message_text(
-            "💰 <b>Sélectionner le périmètre finance</b>\n\n"
-            "Choisissez le périmètre correct :",
+            "💰 <b>Sélectionner le périmètre finance</b>\n\n" "Choisissez le périmètre correct :",
             parse_mode="HTML",
-            reply_markup=_create_finance_perimeter_keyboard(receipt_id)
+            reply_markup=_create_finance_perimeter_keyboard(receipt_id),
         )
         return
 
@@ -320,7 +290,7 @@ async def handle_classify_reclassify(
                 )
                 """,
                 uuid.UUID(receipt_id),
-                new_category
+                new_category,
             )
 
             await conn.execute(
@@ -332,7 +302,7 @@ async def handle_classify_reclassify(
                 WHERE id = $1
                 """,
                 uuid.UUID(receipt_id),
-                query.from_user.id
+                query.from_user.id,
             )
 
         category_labels = {
@@ -347,36 +317,30 @@ async def handle_classify_reclassify(
             f"📂 <b>Classification corrigée</b>\n\n"
             f"Nouvelle catégorie : {label}\n\n"
             f"<i>Corrigé par {query.from_user.first_name}</i>",
-            parse_mode="HTML"
+            parse_mode="HTML",
         )
 
         logger.info(
             "classification_reclassified",
             receipt_id=receipt_id,
             new_category=new_category,
-            user_id=query.from_user.id
+            user_id=query.from_user.id,
         )
 
     except Exception as e:
         logger.error(
-            "classify_reclassify_failed",
-            receipt_id=receipt_id,
-            error=str(e),
-            exc_info=True
+            "classify_reclassify_failed", receipt_id=receipt_id, error=str(e), exc_info=True
         )
-        await query.edit_message_text(
-            f"❌ Erreur lors de la reclassification : {str(e)[:200]}"
-        )
+        await query.edit_message_text(f"❌ Erreur lors de la reclassification : {str(e)[:200]}")
 
 
 # ============================================================================
 # CALLBACK FINANCE PERIMETER - Sélection périmètre (Task 5.3)
 # ============================================================================
 
+
 async def handle_classify_finance(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE,
-    db_pool: asyncpg.Pool
+    update: Update, context: ContextTypes.DEFAULT_TYPE, db_pool: asyncpg.Pool
 ):
     """
     Callback sélection périmètre finance.
@@ -424,7 +388,7 @@ async def handle_classify_finance(
                 )
                 """,
                 uuid.UUID(receipt_id),
-                perimeter
+                perimeter,
             )
 
             await conn.execute(
@@ -436,7 +400,7 @@ async def handle_classify_finance(
                 WHERE id = $1
                 """,
                 uuid.UUID(receipt_id),
-                query.from_user.id
+                query.from_user.id,
             )
 
         finance_labels = {
@@ -452,36 +416,28 @@ async def handle_classify_finance(
             f"💰 <b>Classification corrigée</b>\n\n"
             f"Catégorie : Finance > {label}\n\n"
             f"<i>Corrigé par {query.from_user.first_name}</i>",
-            parse_mode="HTML"
+            parse_mode="HTML",
         )
 
         logger.info(
             "classification_finance_perimeter_set",
             receipt_id=receipt_id,
             perimeter=perimeter,
-            user_id=query.from_user.id
+            user_id=query.from_user.id,
         )
 
     except Exception as e:
-        logger.error(
-            "classify_finance_failed",
-            receipt_id=receipt_id,
-            error=str(e),
-            exc_info=True
-        )
-        await query.edit_message_text(
-            f"❌ Erreur lors de la correction finance : {str(e)[:200]}"
-        )
+        logger.error("classify_finance_failed", receipt_id=receipt_id, error=str(e), exc_info=True)
+        await query.edit_message_text(f"❌ Erreur lors de la correction finance : {str(e)[:200]}")
 
 
 # ============================================================================
 # CALLBACK BACK - Retour message original (Task 5.3)
 # ============================================================================
 
+
 async def handle_classify_back(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE,
-    db_pool: asyncpg.Pool
+    update: Update, context: ContextTypes.DEFAULT_TYPE, db_pool: asyncpg.Pool
 ):
     """
     Callback [Retour] : restaure le message original avec inline buttons.
@@ -508,7 +464,7 @@ async def handle_classify_back(
                 SELECT payload, module, action_type, output_summary, confidence
                 FROM core.action_receipts WHERE id = $1
                 """,
-                uuid.UUID(receipt_id)
+                uuid.UUID(receipt_id),
             )
 
             if not row:
@@ -534,16 +490,7 @@ async def handle_classify_back(
         message = _format_classification_message(classification_data)
         keyboard = _create_classification_keyboard(receipt_id)
 
-        await query.edit_message_text(
-            message,
-            parse_mode="HTML",
-            reply_markup=keyboard
-        )
+        await query.edit_message_text(message, parse_mode="HTML", reply_markup=keyboard)
 
     except Exception as e:
-        logger.error(
-            "classify_back_failed",
-            receipt_id=receipt_id,
-            error=str(e),
-            exc_info=True
-        )
+        logger.error("classify_back_failed", receipt_id=receipt_id, error=str(e), exc_info=True)

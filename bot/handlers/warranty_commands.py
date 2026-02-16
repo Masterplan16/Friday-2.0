@@ -8,6 +8,7 @@ Commandes:
 
 Pattern: Story 1.11 (Commands) + Story 2.3 (VIP Commands)
 """
+
 import os
 from datetime import date
 
@@ -60,9 +61,7 @@ async def _check_owner(update: Update) -> bool:
     return True
 
 
-async def warranties_command(
-    update: Update, context: ContextTypes.DEFAULT_TYPE
-) -> None:
+async def warranties_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
     /warranties - Liste toutes garanties actives groupées par catégorie (AC6).
 
@@ -76,16 +75,14 @@ async def warranties_command(
     try:
         db_pool = await _get_db_pool(context)
 
-        rows = await db_pool.fetch(
-            """
+        rows = await db_pool.fetch("""
             SELECT item_name, item_category, vendor, expiration_date,
                    purchase_amount,
                    (expiration_date - CURRENT_DATE) AS days_remaining
             FROM knowledge.warranties
             WHERE status = 'active'
             ORDER BY item_category, expiration_date ASC
-            """
-        )
+            """)
 
         if not rows:
             await update.message.reply_text(
@@ -130,9 +127,7 @@ async def warranties_command(
         await update.message.reply_text(f"❌ Erreur: {e}")
 
 
-async def warranty_expiring_command(
-    update: Update, context: ContextTypes.DEFAULT_TYPE
-) -> None:
+async def warranty_expiring_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
     /warranty_expiring - Garanties expirant dans <60 jours (AC6).
     """
@@ -142,8 +137,7 @@ async def warranty_expiring_command(
     try:
         db_pool = await _get_db_pool(context)
 
-        rows = await db_pool.fetch(
-            """
+        rows = await db_pool.fetch("""
             SELECT item_name, item_category, vendor, expiration_date,
                    purchase_amount,
                    (expiration_date - CURRENT_DATE) AS days_remaining
@@ -151,8 +145,7 @@ async def warranty_expiring_command(
             WHERE status = 'active'
               AND expiration_date BETWEEN CURRENT_DATE AND (CURRENT_DATE + INTERVAL '60 days')
             ORDER BY expiration_date ASC
-            """
-        )
+            """)
 
         if not rows:
             await update.message.reply_text(
@@ -174,8 +167,7 @@ async def warranty_expiring_command(
                 priority = "ℹ️"
 
             lines.append(
-                f"{priority} {icon} {row['item_name']} - "
-                f"expire {exp_date} (dans {days} jours)"
+                f"{priority} {icon} {row['item_name']} - " f"expire {exp_date} (dans {days} jours)"
             )
 
         lines.append(f"\nTotal: {len(rows)} garantie(s)")
@@ -190,9 +182,7 @@ async def warranty_expiring_command(
         await update.message.reply_text(f"❌ Erreur: {e}")
 
 
-async def warranty_stats_command(
-    update: Update, context: ContextTypes.DEFAULT_TYPE
-) -> None:
+async def warranty_stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
     /warranty_stats - Statistiques garanties (AC6).
 
@@ -210,6 +200,7 @@ async def warranty_stats_command(
         db_pool = await _get_db_pool(context)
 
         from agents.src.agents.archiviste.warranty_db import get_warranty_stats
+
         stats = await get_warranty_stats(db_pool)
 
         lines = ["📊 <b>Statistiques Garanties</b>\n"]

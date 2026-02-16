@@ -9,6 +9,7 @@ Pipeline RGPD strict (AC6) :
 
 Trust Layer: @friday_action avec trust=propose (Day 1).
 """
+
 import json
 from datetime import datetime
 from typing import Optional
@@ -20,7 +21,6 @@ from agents.src.middleware.trust import friday_action
 from agents.src.middleware.models import ActionResult
 from agents.src.adapters.llm import get_llm_adapter
 from agents.src.tools.anonymize import anonymize_text, deanonymize_text
-
 
 logger = structlog.get_logger(__name__)
 
@@ -73,11 +73,7 @@ Réponds UNIQUEMENT avec le JSON, sans texte avant ou après.
 """
 
     @friday_action(module="archiviste", action="extract_metadata", trust_default="propose")
-    async def extract_metadata(
-        self,
-        ocr_result: OCRResult,
-        filename: str
-    ) -> ActionResult:
+    async def extract_metadata(self, ocr_result: OCRResult, filename: str) -> ActionResult:
         """
         Extraire métadonnées depuis résultat OCR (AC3, AC6).
 
@@ -101,7 +97,7 @@ Réponds UNIQUEMENT avec le JSON, sans texte avant ou après.
             "extract_metadata.start",
             filename=filename,
             ocr_confidence=ocr_result.confidence,
-            ocr_length=len(ocr_result.text)
+            ocr_length=len(ocr_result.text),
         )
 
         try:
@@ -111,21 +107,17 @@ Réponds UNIQUEMENT avec le JSON, sans texte avant ou après.
                 logger.debug(
                     "extract_metadata.anonymized",
                     entities_count=len(mapping),
-                    entities_types=list(set(k.split("_")[0] for k in mapping.keys()))
+                    entities_types=list(set(k.split("_")[0] for k in mapping.keys())),
                 )
             except Exception as e:
                 # Fail-explicit (AC7) : Si Presidio crash
                 logger.error("extract_metadata.presidio_failure", error=str(e))
-                raise NotImplementedError(
-                    f"Presidio anonymization unavailable: {str(e)}"
-                ) from e
+                raise NotImplementedError(f"Presidio anonymization unavailable: {str(e)}") from e
 
             # 2. Préparer prompt Claude avec texte anonymisé
             today_date = datetime.now().strftime("%Y-%m-%d")
             prompt = self.EXTRACTION_PROMPT_TEMPLATE.format(
-                ocr_text=anonymized_text,
-                filename=filename,
-                today_date=today_date
+                ocr_text=anonymized_text, filename=filename, today_date=today_date
             )
 
             # 3. Appeler Claude Sonnet 4.5 (AC3, Decision D17)
@@ -134,22 +126,20 @@ Réponds UNIQUEMENT avec le JSON, sans texte avant ou après.
                 response = await llm.complete(
                     prompt=prompt,
                     temperature=0.1,  # Extraction = déterministe
-                    max_tokens=300,   # Métadonnées courtes
-                    model="claude-sonnet-4-5-20250929"
+                    max_tokens=300,  # Métadonnées courtes
+                    model="claude-sonnet-4-5-20250929",
                 )
 
                 logger.debug(
                     "extract_metadata.claude_response",
                     input_tokens=response.usage.input_tokens if hasattr(response, "usage") else 0,
-                    output_tokens=response.usage.output_tokens if hasattr(response, "usage") else 0
+                    output_tokens=response.usage.output_tokens if hasattr(response, "usage") else 0,
                 )
 
             except Exception as e:
                 # Fail-explicit (AC7) : Si Claude crash
                 logger.error("extract_metadata.claude_failure", error=str(e))
-                raise NotImplementedError(
-                    f"Claude API unavailable: {str(e)}"
-                ) from e
+                raise NotImplementedError(f"Claude API unavailable: {str(e)}") from e
 
             # 4. Parser réponse JSON Claude (Task 2.5)
             try:
@@ -177,7 +167,7 @@ Réponds UNIQUEMENT avec le JSON, sans texte avant ou après.
                     emitter=emitter,
                     amount=float(metadata_dict.get("amount", 0.0)),
                     confidence=float(metadata_dict["confidence"]),
-                    reasoning=metadata_dict["reasoning"]
+                    reasoning=metadata_dict["reasoning"],
                 )
 
                 # 5. Calculer confidence globale (AC5)
@@ -195,7 +185,7 @@ Réponds UNIQUEMENT avec le JSON, sans texte avant ou après.
                         "ocr_result": ocr_result,
                         "filename": filename,
                         "anonymized_text": anonymized_text,
-                    }
+                    },
                 )
 
                 logger.info(
@@ -204,20 +194,16 @@ Réponds UNIQUEMENT avec le JSON, sans texte avant ou après.
                     doc_type=metadata.doc_type,
                     emitter=metadata.emitter,
                     amount=metadata.amount,
-                    confidence=global_confidence
+                    confidence=global_confidence,
                 )
 
                 return action_result
 
             except (json.JSONDecodeError, KeyError, ValueError) as e:
                 logger.error(
-                    "extract_metadata.parse_failure",
-                    error=str(e),
-                    claude_response=content[:200]
+                    "extract_metadata.parse_failure", error=str(e), claude_response=content[:200]
                 )
-                raise NotImplementedError(
-                    f"Failed to parse Claude response: {str(e)}"
-                ) from e
+                raise NotImplementedError(f"Failed to parse Claude response: {str(e)}") from e
 
         except NotImplementedError:
             # Re-raise NotImplementedError (fail-explicit)
@@ -226,6 +212,4 @@ Réponds UNIQUEMENT avec le JSON, sans texte avant ou après.
         except Exception as e:
             # Autre erreur inattendue
             logger.error("extract_metadata.unexpected_error", error=str(e))
-            raise NotImplementedError(
-                f"Metadata extraction failed: {str(e)}"
-            ) from e
+            raise NotImplementedError(f"Metadata extraction failed: {str(e)}") from e

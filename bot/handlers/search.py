@@ -30,7 +30,9 @@ async def handle_search_command(update, context):
     query = " ".join(context.args) if context.args else ""
 
     if not query:
-        await update.message.reply_text("Usage: /search <requête>\n\nExemple: /search facture plombier")
+        await update.message.reply_text(
+            "Usage: /search <requête>\n\nExemple: /search facture plombier"
+        )
         return
 
     # Stub minimal (retourne message TODO)

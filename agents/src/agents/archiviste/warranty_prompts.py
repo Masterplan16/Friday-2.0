@@ -4,6 +4,7 @@ Prompts few-shot pour extraction de garanties (Story 3.4 AC1).
 5 exemples français couvrant les catégories :
 Electronics, Appliances, Automotive, Medical, Furniture
 """
+
 import json
 
 WARRANTY_EXTRACTION_SYSTEM_PROMPT = """Tu es un assistant spécialisé dans l'extraction d'informations de garantie depuis des documents (factures, bons de garantie, reçus).
@@ -28,8 +29,8 @@ WARRANTY_EXTRACTION_EXAMPLES = [
             "purchase_date": "2026-02-04",
             "warranty_duration_months": 24,
             "purchase_amount": 149.99,
-            "confidence": 0.95
-        }
+            "confidence": 0.95,
+        },
     },
     {
         "input": "BON DE LIVRAISON\nDarty\nLave-linge Bosch Serie 4 WAN28228FF\nDate achat: 15/11/2025\nMontant: 549,00 EUR\nGarantie contractuelle Darty: 5 ans pièces et main d'oeuvre\nN° série: WAN28228FF-2025-789",
@@ -41,8 +42,8 @@ WARRANTY_EXTRACTION_EXAMPLES = [
             "purchase_date": "2025-11-15",
             "warranty_duration_months": 60,
             "purchase_amount": 549.00,
-            "confidence": 0.92
-        }
+            "confidence": 0.92,
+        },
     },
     {
         "input": "FACTURE\nNorauto Montpellier\nBatterie Bosch S4 005 60Ah\nDate: 23/08/2025\nPrix: 89,90 EUR TTC\nGarantie: 3 ans\nVéhicule: Peugeot 3008",
@@ -54,8 +55,8 @@ WARRANTY_EXTRACTION_EXAMPLES = [
             "purchase_date": "2025-08-23",
             "warranty_duration_months": 36,
             "purchase_amount": 89.90,
-            "confidence": 0.90
-        }
+            "confidence": 0.90,
+        },
     },
     {
         "input": "FACTURE PROFORMA\nGIE AGORA\nOtoscope Heine Beta 200\nDate: 10/01/2026\nMontant HT: 285,00 EUR\nTVA 20%: 57,00 EUR\nTTC: 342,00 EUR\nGarantie constructeur: 2 ans",
@@ -67,8 +68,8 @@ WARRANTY_EXTRACTION_EXAMPLES = [
             "purchase_date": "2026-01-10",
             "warranty_duration_months": 24,
             "purchase_amount": 342.00,
-            "confidence": 0.93
-        }
+            "confidence": 0.93,
+        },
     },
     {
         "input": "Facture IKEA Montpellier\nBureau MALM blanc 140x65cm\nRéf: 602.141.59\nDate: 20/12/2025\nPrix: 169,00 EUR\nGarantie: 10 ans sur structure\nMerci de votre visite",
@@ -80,16 +81,13 @@ WARRANTY_EXTRACTION_EXAMPLES = [
             "purchase_date": "2025-12-20",
             "warranty_duration_months": 120,
             "purchase_amount": 169.00,
-            "confidence": 0.91
-        }
-    }
+            "confidence": 0.91,
+        },
+    },
 ]
 
 
-def build_warranty_extraction_prompt(
-    ocr_text: str,
-    correction_rules: list | None = None
-) -> str:
+def build_warranty_extraction_prompt(ocr_text: str, correction_rules: list | None = None) -> str:
     """
     Construit le prompt utilisateur pour extraction de garantie.
 

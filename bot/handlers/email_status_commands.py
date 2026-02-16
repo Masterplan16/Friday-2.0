@@ -15,10 +15,7 @@ sys.path.insert(0, str(project_root))
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from services.email_healthcheck.monitor import (
-    check_email_pipeline_health,
-    format_status_message
-)
+from services.email_healthcheck.monitor import check_email_pipeline_health, format_status_message
 
 
 async def email_status_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -32,10 +29,7 @@ async def email_status_command(update: Update, context: ContextTypes.DEFAULT_TYP
         return
 
     # Send "typing..." indicator
-    await context.bot.send_chat_action(
-        chat_id=update.effective_chat.id,
-        action="typing"
-    )
+    await context.bot.send_chat_action(chat_id=update.effective_chat.id, action="typing")
 
     try:
         # Check pipeline health
@@ -45,15 +39,11 @@ async def email_status_command(update: Update, context: ContextTypes.DEFAULT_TYP
         message = format_status_message(health)
 
         # Send to Telegram
-        await update.message.reply_text(
-            message,
-            parse_mode="Markdown"
-        )
+        await update.message.reply_text(message, parse_mode="Markdown")
 
     except Exception as e:
         await update.message.reply_text(
-            f"❌ Erreur lors de la vérification du pipeline:\n\n`{e}`",
-            parse_mode="Markdown"
+            f"❌ Erreur lors de la vérification du pipeline:\n\n`{e}`", parse_mode="Markdown"
         )
 
 

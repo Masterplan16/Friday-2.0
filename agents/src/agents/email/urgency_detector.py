@@ -92,7 +92,9 @@ async def detect_urgency(
         if vip_factor > 0:
             factors_details.append(f"VIP={vip_factor:.1f}")
         if keywords_factor > 0:
-            factors_details.append(f"keywords={keywords_factor:.1f} ({len(keywords_matched)} matches)")
+            factors_details.append(
+                f"keywords={keywords_factor:.1f} ({len(keywords_matched)} matches)"
+            )
         if deadline_factor > 0:
             factors_details.append(f"deadline={deadline_factor:.1f}")
 
@@ -126,7 +128,11 @@ async def detect_urgency(
 
         return ActionResult(
             input_summary=f"Email text ({len(email_text)} chars, VIP={vip_status})",
-            output_summary=f"Urgent (score={urgency_score:.2f})" if is_urgent else f"Normal (score={urgency_score:.2f})",
+            output_summary=(
+                f"Urgent (score={urgency_score:.2f})"
+                if is_urgent
+                else f"Normal (score={urgency_score:.2f})"
+            ),
             confidence=urgency_score,
             reasoning=reasoning,
             payload={"urgency": urgency_result.model_dump(), "is_urgent": is_urgent},
@@ -162,17 +168,17 @@ async def check_urgency_keywords(
     """
     try:
         async with db_pool.acquire() as conn:
-            rows = await conn.fetch(
-                """
+            rows = await conn.fetch("""
                 SELECT keyword, weight
                 FROM core.urgency_keywords
                 WHERE active = TRUE
                 ORDER BY weight DESC
-                """
-            )
+                """)
 
             if not rows:
-                logger.warning("urgency_keywords_empty", message="No active urgency keywords in database")
+                logger.warning(
+                    "urgency_keywords_empty", message="No active urgency keywords in database"
+                )
                 return []
 
             # Recherche case-insensitive

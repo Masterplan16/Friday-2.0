@@ -25,6 +25,7 @@ OWNER_USER_ID = os.getenv("OWNER_USER_ID")
 # Helper functions
 # ----------------------------------------------------------------
 
+
 def _validate_email_format(email: str) -> bool:
     pattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
     return bool(re.match(pattern, email))
@@ -140,6 +141,7 @@ async def _add_filter(update, context, filter_type: str, category=None, confiden
 # /vip <email|domain>
 # ----------------------------------------------------------------
 
+
 async def vip_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handler /vip <email|domain> - Marquer comme VIP."""
     await _add_filter(update, context, filter_type="vip", confidence=0.95)
@@ -149,14 +151,18 @@ async def vip_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 # /blacklist <email|domain>
 # ----------------------------------------------------------------
 
+
 async def blacklist_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handler /blacklist <email|domain> - Skip analyse (economie tokens)."""
-    await _add_filter(update, context, filter_type="blacklist", category="blacklisted", confidence=1.0)
+    await _add_filter(
+        update, context, filter_type="blacklist", category="blacklisted", confidence=1.0
+    )
 
 
 # ----------------------------------------------------------------
 # /whitelist <email|domain>
 # ----------------------------------------------------------------
+
 
 async def whitelist_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handler /whitelist <email|domain> - Analyser normalement."""
@@ -166,6 +172,7 @@ async def whitelist_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 # ----------------------------------------------------------------
 # /filters [list|stats|delete]
 # ----------------------------------------------------------------
+
 
 async def filters_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handler /filters [list|stats|delete <target>]"""
@@ -185,13 +192,11 @@ async def filters_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     try:
         async with db_pool.acquire() as db:
             if subcommand == "list":
-                filters = await db.fetch(
-                    """
+                filters = await db.fetch("""
                     SELECT sender_email, sender_domain, filter_type, category, created_at
                     FROM core.sender_filters
                     ORDER BY filter_type, created_at DESC
-                    """
-                )
+                    """)
 
                 if not filters:
                     await update.message.reply_text(
@@ -223,38 +228,38 @@ async def filters_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
                     msg += "\n\n"
 
                 if blacklist_items:
-                    msg += f"**Blacklist ({len(blacklist_items)}) :**\n" + "\n".join(blacklist_items[:10])
+                    msg += f"**Blacklist ({len(blacklist_items)}) :**\n" + "\n".join(
+                        blacklist_items[:10]
+                    )
                     if len(blacklist_items) > 10:
                         msg += f"\n  _... et {len(blacklist_items) - 10} autres_"
                     msg += "\n\n"
 
                 if whitelist_items:
-                    msg += f"**Whitelist ({len(whitelist_items)}) :**\n" + "\n".join(whitelist_items[:10])
+                    msg += f"**Whitelist ({len(whitelist_items)}) :**\n" + "\n".join(
+                        whitelist_items[:10]
+                    )
                     if len(whitelist_items) > 10:
                         msg += f"\n  _... et {len(whitelist_items) - 10} autres_"
 
                 await update.message.reply_text(msg, parse_mode="Markdown")
 
             elif subcommand == "stats":
-                stats = await db.fetchrow(
-                    """
+                stats = await db.fetchrow("""
                     SELECT
                         COUNT(*) as total_filters,
                         COUNT(*) FILTER (WHERE filter_type = 'vip') as vip_count,
                         COUNT(*) FILTER (WHERE filter_type = 'blacklist') as blacklist_count,
                         COUNT(*) FILTER (WHERE filter_type = 'whitelist') as whitelist_count
                     FROM core.sender_filters
-                    """
-                )
+                    """)
 
                 # Economie tokens reelle depuis core.llm_usage
-                savings = await db.fetchrow(
-                    """
+                savings = await db.fetchrow("""
                     SELECT COALESCE(SUM(tokens_saved_by_filters), 0) as tokens_saved
                     FROM core.llm_usage
                     WHERE date_trunc('month', timestamp) = date_trunc('month', CURRENT_DATE)
-                    """
-                )
+                    """)
 
                 msg = (
                     f"**Statistiques filtrage**\n\n"
@@ -289,13 +294,17 @@ async def filters_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
                 deleted_count = int(deleted.split()[-1]) if deleted else 0
 
                 if deleted_count > 0:
-                    logger.info("filter_deleted", user_id=user_id, target=target, count=deleted_count)
+                    logger.info(
+                        "filter_deleted", user_id=user_id, target=target, count=deleted_count
+                    )
                     await update.message.reply_text(
                         f"Filtre supprime : `{target}` ({deleted_count} entree(s))",
                         parse_mode="Markdown",
                     )
                 else:
-                    await update.message.reply_text(f"Aucun filtre trouve pour `{target}`", parse_mode="Markdown")
+                    await update.message.reply_text(
+                        f"Aucun filtre trouve pour `{target}`", parse_mode="Markdown"
+                    )
 
             else:
                 await update.message.reply_text(

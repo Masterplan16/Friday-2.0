@@ -9,6 +9,7 @@ Usage:
     result = await engine.ocr_document("facture.pdf")
     print(result.text, result.confidence)
 """
+
 import os
 import time
 from pathlib import Path
@@ -32,7 +33,7 @@ class SuryaOCREngine:
     """
 
     # Formats de fichiers supportés (AC1, Dev Notes)
-    SUPPORTED_FORMATS = {'.jpg', '.jpeg', '.png', '.tiff', '.tif', '.pdf'}
+    SUPPORTED_FORMATS = {".jpg", ".jpeg", ".png", ".tiff", ".tif", ".pdf"}
 
     def __init__(self, device: str = "cpu"):
         """
@@ -152,7 +153,7 @@ class SuryaOCREngine:
             path = Path(file_path)
             images = []
 
-            if path.suffix.lower() == '.pdf':
+            if path.suffix.lower() == ".pdf":
                 # Convertir PDF en images
                 pdf_doc = fitz.open(file_path)
                 for page_num in range(len(pdf_doc)):
@@ -174,7 +175,7 @@ class SuryaOCREngine:
                 self.det_model,
                 self.det_processor,
                 self.rec_model,
-                self.rec_processor
+                self.rec_processor,
             )
 
             # Extraire texte et confidence
@@ -185,7 +186,7 @@ class SuryaOCREngine:
                 for line in page_pred.text_lines:
                     all_text.append(line.text)
                     # Calculer confidence moyenne (Surya retourne confidence par caractère)
-                    if hasattr(line, 'confidence'):
+                    if hasattr(line, "confidence"):
                         all_confidences.append(line.confidence)
 
             # Concaténer tout le texte avec saut de ligne
@@ -205,7 +206,7 @@ class SuryaOCREngine:
                 confidence=round(avg_confidence, 2),
                 page_count=len(images),
                 language=language,
-                processing_time=round(processing_time, 2)
+                processing_time=round(processing_time, 2),
             )
 
         except Exception as e:

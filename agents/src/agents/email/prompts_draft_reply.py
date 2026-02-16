@@ -14,7 +14,6 @@ Story: 2.5 Brouillon Réponse Email
 
 from typing import Optional
 
-
 # ============================================================================
 # Main Prompt Builder
 # ============================================================================
@@ -25,7 +24,7 @@ def build_draft_reply_prompt(
     email_type: str,
     correction_rules: list[dict],
     writing_examples: list[dict],
-    user_preferences: Optional[dict] = None
+    user_preferences: Optional[dict] = None,
 ) -> tuple[str, str]:
     """
     Build system + user prompts pour génération brouillon email
@@ -57,11 +56,7 @@ def build_draft_reply_prompt(
 
     # Default preferences (AC2 - Day 1 fallback)
     if user_preferences is None:
-        user_preferences = {
-            "tone": "formal",
-            "tutoiement": False,
-            "verbosity": "concise"
-        }
+        user_preferences = {"tone": "formal", "tutoiement": False, "verbosity": "concise"}
 
     # Format components
     preferences_text = _format_user_preferences(user_preferences)
@@ -129,9 +124,9 @@ def _format_user_preferences(preferences: dict) -> str:
         True
     """
 
-    tone = preferences.get('tone', 'formal')
-    tutoiement = preferences.get('tutoiement', False)
-    verbosity = preferences.get('verbosity', 'concise')
+    tone = preferences.get("tone", "formal")
+    tutoiement = preferences.get("tutoiement", False)
+    verbosity = preferences.get("verbosity", "concise")
 
     # Traduction EN -> FR pour clarté
     tone_fr = "formel" if tone == "formal" else "informel"
@@ -171,8 +166,8 @@ def _format_writing_examples(examples: list[dict]) -> str:
     parts = ["Exemples du style Mainteneur :\n---"]
 
     for idx, ex in enumerate(examples, 1):
-        subject = ex.get('subject', 'No subject')
-        body = ex.get('body', 'No body')
+        subject = ex.get("subject", "No subject")
+        body = ex.get("body", "No body")
 
         parts.append(f"""
 Exemple {idx}:
@@ -212,8 +207,8 @@ def _format_correction_rules(rules: list[dict]) -> str:
     parts = ["Règles de correction prioritaires :"]
 
     for idx, rule in enumerate(rules, 1):
-        conditions = rule.get('conditions', 'N/A')
-        output = rule.get('output', 'N/A')
+        conditions = rule.get("conditions", "N/A")
+        output = rule.get("output", "N/A")
 
         parts.append(f"{idx}. {conditions} → {output}")
 

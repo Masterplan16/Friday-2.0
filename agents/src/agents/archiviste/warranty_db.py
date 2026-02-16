@@ -7,6 +7,7 @@ TIMESTAMPTZ pour dates.
 
 Patterns réutilisés: Stories 3.1-3.3 (asyncpg, gen_random_uuid).
 """
+
 from datetime import date, timedelta
 from decimal import Decimal
 from typing import Any, Dict, List, Optional
@@ -141,8 +142,7 @@ async def get_active_warranties(
     db_pool: asyncpg.Pool,
 ) -> List[Dict[str, Any]]:
     """Query all active warranties."""
-    rows = await db_pool.fetch(
-        """
+    rows = await db_pool.fetch("""
         SELECT
             id, item_name, item_category, vendor,
             purchase_date, warranty_duration_months,
@@ -152,8 +152,7 @@ async def get_active_warranties(
         FROM knowledge.warranties
         WHERE status = 'active'
         ORDER BY expiration_date ASC
-        """
-    )
+        """)
     return [dict(r) for r in rows]
 
 
@@ -201,55 +200,48 @@ async def get_warranty_stats(
     stats = {}
 
     # Active count
-    stats["total_active"] = await db_pool.fetchval(
-        "SELECT COUNT(*) FROM knowledge.warranties WHERE status = 'active'"
-    ) or 0
+    stats["total_active"] = (
+        await db_pool.fetchval("SELECT COUNT(*) FROM knowledge.warranties WHERE status = 'active'")
+        or 0
+    )
 
     # Expired in last 12 months
-    stats["expired_12m"] = await db_pool.fetchval(
-        """
+    stats["expired_12m"] = await db_pool.fetchval("""
         SELECT COUNT(*) FROM knowledge.warranties
         WHERE status = 'expired'
           AND updated_at >= NOW() - INTERVAL '12 months'
-        """
-    ) or 0
+        """) or 0
 
     # Total amount covered (active)
-    stats["total_amount"] = await db_pool.fetchval(
-        """
+    stats["total_amount"] = await db_pool.fetchval("""
         SELECT COALESCE(SUM(purchase_amount), 0)
         FROM knowledge.warranties
         WHERE status = 'active' AND purchase_amount IS NOT NULL
-        """
-    ) or Decimal("0")
+        """) or Decimal("0")
 
     # Next expiring
-    next_row = await db_pool.fetchrow(
-        """
+    next_row = await db_pool.fetchrow("""
         SELECT item_name, expiration_date,
                (expiration_date - CURRENT_DATE) AS days_remaining
         FROM knowledge.warranties
         WHERE status = 'active'
         ORDER BY expiration_date ASC
         LIMIT 1
-        """
-    )
+        """)
     if next_row:
         stats["next_expiry"] = dict(next_row)
     else:
         stats["next_expiry"] = None
 
     # By category
-    category_rows = await db_pool.fetch(
-        """
+    category_rows = await db_pool.fetch("""
         SELECT item_category, COUNT(*) AS count,
                COALESCE(SUM(purchase_amount), 0) AS total_amount
         FROM knowledge.warranties
         WHERE status = 'active'
         GROUP BY item_category
         ORDER BY count DESC
-        """
-    )
+        """)
     stats["by_category"] = [dict(r) for r in category_rows]
 
     return stats

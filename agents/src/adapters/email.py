@@ -117,9 +117,7 @@ class EmailAdapter(ABC):
     """
 
     @abstractmethod
-    async def get_message(
-        self, account_id: str, message_id: str
-    ) -> EmailMessage:
+    async def get_message(self, account_id: str, message_id: str) -> EmailMessage:
         """
         Recupere un email complet.
 
@@ -136,9 +134,7 @@ class EmailAdapter(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    async def download_attachment(
-        self, account_id: str, message_id: str, part_id: str
-    ) -> bytes:
+    async def download_attachment(self, account_id: str, message_id: str, part_id: str) -> bytes:
         """
         Telecharge une piece jointe.
 
@@ -263,9 +259,7 @@ class IMAPDirectAdapter(EmailAdapter):
 
         return accounts
 
-    async def get_message(
-        self, account_id: str, message_id: str
-    ) -> EmailMessage:
+    async def get_message(self, account_id: str, message_id: str) -> EmailMessage:
         """Fetch email complet via IMAP FETCH."""
         try:
             import aioimaplib
@@ -307,9 +301,7 @@ class IMAPDirectAdapter(EmailAdapter):
             await imap.select("INBOX")
 
             # Fetch par UID avec BODY.PEEK[] (ne marque PAS \Seen)
-            status, data = await imap.uid(
-                "fetch", message_id, "(BODY.PEEK[])"
-            )
+            status, data = await imap.uid("fetch", message_id, "(BODY.PEEK[])")
 
             if status != "OK" or not data:
                 raise EmailAdapterError(
@@ -333,7 +325,11 @@ class IMAPDirectAdapter(EmailAdapter):
                 elif isinstance(item, (bytes, bytearray)):
                     item_bytes = bytes(item)
                     # Ignorer les lignes de status IMAP
-                    if item_bytes.strip() == b')' or b'FETCH' in item_bytes or b'completed' in item_bytes:
+                    if (
+                        item_bytes.strip() == b")"
+                        or b"FETCH" in item_bytes
+                        or b"completed" in item_bytes
+                    ):
                         continue
                     raw_bytes = item_bytes
                     break
@@ -383,12 +379,14 @@ class IMAPDirectAdapter(EmailAdapter):
                     content_disposition = str(part.get("Content-Disposition", ""))
 
                     if "attachment" in content_disposition:
-                        attachments.append({
-                            "filename": part.get_filename() or "unnamed",
-                            "content_type": content_type,
-                            "size": len(part.get_payload(decode=True) or b""),
-                            "part_id": part.get("X-Attachment-Id", ""),
-                        })
+                        attachments.append(
+                            {
+                                "filename": part.get_filename() or "unnamed",
+                                "content_type": content_type,
+                                "size": len(part.get_payload(decode=True) or b""),
+                                "part_id": part.get("X-Attachment-Id", ""),
+                            }
+                        )
                     elif content_type == "text/plain":
                         payload = part.get_payload(decode=True)
                         if payload:
@@ -404,9 +402,7 @@ class IMAPDirectAdapter(EmailAdapter):
             else:
                 payload = msg.get_payload(decode=True)
                 if payload:
-                    text = payload.decode(
-                        msg.get_content_charset() or "utf-8", errors="replace"
-                    )
+                    text = payload.decode(msg.get_content_charset() or "utf-8", errors="replace")
                     if msg.get_content_type() == "text/html":
                         body_html = text
                     else:
@@ -422,9 +418,7 @@ class IMAPDirectAdapter(EmailAdapter):
 
             # Extraire to
             to_header = msg.get("To", "")
-            to_addresses = [
-                addr.strip() for addr in to_header.split(",") if addr.strip()
-            ]
+            to_addresses = [addr.strip() for addr in to_header.split(",") if addr.strip()]
 
             result = EmailMessage(
                 message_id=message_id,
@@ -449,9 +443,7 @@ class IMAPDirectAdapter(EmailAdapter):
             return result
 
         except ImportError:
-            raise EmailAdapterError(
-                "aioimaplib not installed. Run: pip install aioimaplib>=2.0.1"
-            )
+            raise EmailAdapterError("aioimaplib not installed. Run: pip install aioimaplib>=2.0.1")
         except EmailAdapterError:
             raise
         except Exception as e:
@@ -463,9 +455,7 @@ class IMAPDirectAdapter(EmailAdapter):
             )
             raise EmailAdapterError(f"IMAP get_message failed: {e}") from e
 
-    async def download_attachment(
-        self, account_id: str, message_id: str, part_id: str
-    ) -> bytes:
+    async def download_attachment(self, account_id: str, message_id: str, part_id: str) -> bytes:
         """Download piece jointe via IMAP FETCH BODY[part_id]."""
         try:
             import aioimaplib
@@ -482,14 +472,10 @@ class IMAPDirectAdapter(EmailAdapter):
             await imap.select("INBOX")
 
             # Fetch la partie specifique (PEEK = ne marque PAS \Seen)
-            status, data = await imap.uid(
-                "fetch", message_id, f"(BODY.PEEK[{part_id}])"
-            )
+            status, data = await imap.uid("fetch", message_id, f"(BODY.PEEK[{part_id}])")
 
             if status != "OK" or not data:
-                raise EmailAdapterError(
-                    f"IMAP attachment fetch failed: {status}"
-                )
+                raise EmailAdapterError(f"IMAP attachment fetch failed: {status}")
 
             # Parser response aioimaplib (meme logique que get_message)
             raw_bytes = None
@@ -501,7 +487,11 @@ class IMAPDirectAdapter(EmailAdapter):
                         break
                 elif isinstance(item, (bytes, bytearray)):
                     item_bytes = bytes(item)
-                    if item_bytes.strip() == b')' or b'FETCH' in item_bytes or b'completed' in item_bytes:
+                    if (
+                        item_bytes.strip() == b")"
+                        or b"FETCH" in item_bytes
+                        or b"completed" in item_bytes
+                    ):
                         continue
                     raw_bytes = item_bytes
                     break
@@ -510,17 +500,13 @@ class IMAPDirectAdapter(EmailAdapter):
                 raw_bytes = bytes(data[1])
 
             if not raw_bytes:
-                raise EmailAdapterError(
-                    f"No attachment content in IMAP response"
-                )
+                raise EmailAdapterError(f"No attachment content in IMAP response")
 
             await imap.logout()
             return raw_bytes
 
         except ImportError:
-            raise EmailAdapterError(
-                "aioimaplib not installed. Run: pip install aioimaplib>=2.0.1"
-            )
+            raise EmailAdapterError("aioimaplib not installed. Run: pip install aioimaplib>=2.0.1")
         except EmailAdapterError:
             raise
         except Exception as e:

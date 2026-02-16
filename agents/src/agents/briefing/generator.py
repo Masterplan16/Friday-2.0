@@ -18,13 +18,13 @@ from typing import Optional
 from agents.src.core.models import Casquette, CASQUETTE_EMOJI_MAPPING, CASQUETTE_LABEL_MAPPING
 from agents.src.agents.briefing.templates import format_briefing_message
 
-
 logger = structlog.get_logger(__name__)
 
 
 # ============================================================================
 # Briefing Generator
 # ============================================================================
+
 
 class BriefingGenerator:
     """
@@ -44,9 +44,7 @@ class BriefingGenerator:
         self.db_pool = db_pool
 
     async def generate_morning_briefing(
-        self,
-        target_date: Optional[date] = None,
-        filter_casquette: Optional[Casquette] = None
+        self, target_date: Optional[date] = None, filter_casquette: Optional[Casquette] = None
     ) -> str:
         """
         Génère briefing matinal avec groupement par casquette (AC3).
@@ -78,7 +76,7 @@ class BriefingGenerator:
         logger.info(
             "generating_morning_briefing",
             date=str(target_date),
-            filter_casquette=filter_casquette.value if filter_casquette else None
+            filter_casquette=filter_casquette.value if filter_casquette else None,
         )
 
         # Récupérer événements du jour
@@ -93,16 +91,14 @@ class BriefingGenerator:
 
         # Formater message
         message = format_briefing_message(
-            date=target_date,
-            grouped_events=grouped_events,
-            conflicts=conflicts
+            date=target_date, grouped_events=grouped_events, conflicts=conflicts
         )
 
         logger.info(
             "morning_briefing_generated",
             date=str(target_date),
             events_count=len(events),
-            conflicts_count=len(conflicts)
+            conflicts_count=len(conflicts),
         )
 
         return message
@@ -112,9 +108,7 @@ class BriefingGenerator:
     # ========================================================================
 
     async def _get_events_for_day(
-        self,
-        target_date: date,
-        filter_casquette: Optional[Casquette] = None
+        self, target_date: date, filter_casquette: Optional[Casquette] = None
     ) -> list[dict]:
         """
         Récupère événements pour une journée donnée.
@@ -161,13 +155,15 @@ class BriefingGenerator:
                 # Casquette invalide → skip
                 continue
 
-            events.append({
-                "id": str(row["id"]),
-                "title": row["title"],
-                "casquette": casquette,
-                "start_datetime": row["start_datetime"],
-                "end_datetime": row["end_datetime"]
-            })
+            events.append(
+                {
+                    "id": str(row["id"]),
+                    "title": row["title"],
+                    "casquette": casquette,
+                    "start_datetime": row["start_datetime"],
+                    "end_datetime": row["end_datetime"],
+                }
+            )
 
         return events
 
@@ -181,11 +177,7 @@ class BriefingGenerator:
         Returns:
             Dict {Casquette: [événements]} trié par casquette
         """
-        grouped = {
-            Casquette.MEDECIN: [],
-            Casquette.ENSEIGNANT: [],
-            Casquette.CHERCHEUR: []
-        }
+        grouped = {Casquette.MEDECIN: [], Casquette.ENSEIGNANT: [], Casquette.CHERCHEUR: []}
 
         for event in events:
             casquette = event["casquette"]

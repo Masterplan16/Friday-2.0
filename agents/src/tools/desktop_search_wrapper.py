@@ -88,7 +88,8 @@ async def search_desktop(
     cmd = [
         CLAUDE_CLI_PATH,
         "--print",  # Non-interactif, stdout seulement
-        "--output-format", "json",
+        "--output-format",
+        "json",
         search_prompt,
     ]
 
@@ -107,9 +108,7 @@ async def search_desktop(
             )
         except asyncio.TimeoutError:
             process.kill()
-            raise TimeoutError(
-                f"Claude CLI search timeout after {TIMEOUT_SECONDS}s"
-            )
+            raise TimeoutError(f"Claude CLI search timeout after {TIMEOUT_SECONDS}s")
 
         if process.returncode != 0:
             error_msg = stderr.decode() if stderr else "Unknown error"
@@ -178,7 +177,8 @@ async def _is_claude_cli_available() -> bool:
     """Verifie si Claude Code CLI est disponible (async, non-bloquant)."""
     try:
         process = await asyncio.create_subprocess_exec(
-            CLAUDE_CLI_PATH, "--version",
+            CLAUDE_CLI_PATH,
+            "--version",
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )

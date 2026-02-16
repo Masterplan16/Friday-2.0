@@ -4,6 +4,7 @@ Pipeline de classification de documents pour l'agent Archiviste.
 Story 3.2 - Task 4
 Consumer Redis Streams document.processed → classify → move → PostgreSQL → document.classified
 """
+
 import asyncio
 import json
 import time
@@ -63,10 +64,7 @@ class ClassificationPipeline:
         # Créer consumer group si n'existe pas
         try:
             await self.redis_client.xgroup_create(
-                self.stream_key,
-                self.consumer_group,
-                id="0",
-                mkstream=True
+                self.stream_key, self.consumer_group, id="0", mkstream=True
             )
         except redis.ResponseError as e:
             if "BUSYGROUP" not in str(e):
@@ -83,7 +81,7 @@ class ClassificationPipeline:
                     consumername=self.consumer_name,
                     streams={self.stream_key: ">"},
                     count=1,
-                    block=5000
+                    block=5000,
                 )
 
                 if not messages:
@@ -94,11 +92,7 @@ class ClassificationPipeline:
                     for msg_id, data in msgs:
                         await self._process_with_retry(msg_id, data)
                         # Acknowledge message
-                        await self.redis_client.xack(
-                            self.stream_key,
-                            self.consumer_group,
-                            msg_id
-                        )
+                        await self.redis_client.xack(self.stream_key, self.consumer_group, msg_id)
 
             except Exception as e:
                 logger.error("pipeline_consumer_error", error=str(e))
@@ -118,8 +112,7 @@ class ClassificationPipeline:
             try:
                 # Timeout global 10s (Task 4.6)
                 await asyncio.wait_for(
-                    self._process_document(msg_id, data),
-                    timeout=PROCESS_TIMEOUT_S
+                    self._process_document(msg_id, data), timeout=PROCESS_TIMEOUT_S
                 )
                 return  # Succès, on sort
             except asyncio.TimeoutError:
@@ -128,7 +121,7 @@ class ClassificationPipeline:
                     "document_processing_timeout",
                     document_id=document_id,
                     timeout_s=PROCESS_TIMEOUT_S,
-                    attempt=attempt
+                    attempt=attempt,
                 )
                 if attempt == MAX_RETRIES:
                     await self._notify_processing_failure(
@@ -142,7 +135,7 @@ class ClassificationPipeline:
                     document_id=document_id,
                     error=str(e),
                     attempt=attempt,
-                    next_backoff_s=backoff
+                    next_backoff_s=backoff,
                 )
                 if attempt == MAX_RETRIES:
                     await self._notify_processing_failure(
@@ -158,7 +151,7 @@ class ClassificationPipeline:
                     "document_processing_failed",
                     document_id=document_id,
                     error=str(e),
-                    attempt=attempt
+                    attempt=attempt,
                 )
                 await self._notify_processing_failure(document_id, str(e))
                 return
@@ -178,41 +171,30 @@ class ClassificationPipeline:
         metadata_json = data.get(b"metadata", b"{}").decode()
         metadata = json.loads(metadata_json)
 
-        logger.info(
-            "document_processing_started",
-            document_id=document_id,
-            file_path=file_path
-        )
+        logger.info("document_processing_started", document_id=document_id, file_path=file_path)
 
         # === PHASE 1 : Classification ===
         t_classify_start = time.monotonic()
-        classification_result = await self.classifier.classify({
-            "ocr_text": metadata.get("ocr_text", ""),
-            "document_id": document_id
-        })
+        classification_result = await self.classifier.classify(
+            {"ocr_text": metadata.get("ocr_text", ""), "document_id": document_id}
+        )
         classify_duration_ms = (time.monotonic() - t_classify_start) * 1000
 
         # Extraire ClassificationResult du payload
-        classification = ClassificationResult(
-            **classification_result.payload
-        )
+        classification = ClassificationResult(**classification_result.payload)
 
         # === PHASE 2 : Validation anti-contamination (AC6) ===
         if classification.category == "finance":
             valid_perimeters = {"selarl", "scm", "sci_ravas", "sci_malbosc", "personal"}
             if classification.subcategory not in valid_perimeters:
-                raise ValueError(
-                    f"Invalid financial perimeter: {classification.subcategory}"
-                )
+                raise ValueError(f"Invalid financial perimeter: {classification.subcategory}")
 
         # === PHASE 3 : Déplacement fichier ===
         move_duration_ms = 0.0
         if classification.confidence >= 0.7:
             t_move_start = time.monotonic()
             move_result = await self.file_mover.move_document(
-                source_path=file_path,
-                classification=classification,
-                document_id=document_id
+                source_path=file_path, classification=classification, document_id=document_id
             )
             move_duration_ms = (time.monotonic() - t_move_start) * 1000
 
@@ -226,7 +208,7 @@ class ClassificationPipeline:
                 "low_confidence_classification",
                 document_id=document_id,
                 confidence=classification.confidence,
-                category=classification.category
+                category=classification.category,
             )
             # Notification Telegram topic System (M4)
             await self._notify_low_confidence(document_id, classification)
@@ -245,8 +227,8 @@ class ClassificationPipeline:
                 "subcategory": classification.subcategory or "",
                 "final_path": final_path,
                 "confidence": str(classification.confidence),
-                "status": status
-            }
+                "status": status,
+            },
         )
 
         # === Latency monitoring (Task 9.2-9.3) ===
@@ -261,15 +243,13 @@ class ClassificationPipeline:
             status=status,
             classify_duration_ms=round(classify_duration_ms, 1),
             move_duration_ms=round(move_duration_ms, 1),
-            total_duration_ms=round(total_duration_ms, 1)
+            total_duration_ms=round(total_duration_ms, 1),
         )
 
         # Alerte si médiane latence > 8s (Task 9.3)
         await self._check_latency_alert()
 
-    async def _notify_low_confidence(
-        self, document_id: str, classification: ClassificationResult
-    ):
+    async def _notify_low_confidence(self, document_id: str, classification: ClassificationResult):
         """
         Notifie via Redis Streams quand confidence <0.7 (Task 4.7).
 
@@ -287,8 +267,8 @@ class ClassificationPipeline:
                 "message": (
                     f"Classification confidence {classification.confidence:.2f} < 0.7 "
                     f"pour document {document_id}. Validation manuelle requise."
-                )
-            }
+                ),
+            },
         )
 
     async def _notify_processing_failure(self, document_id: str, error: str):
@@ -303,10 +283,8 @@ class ClassificationPipeline:
                 "type": "classification_failure",
                 "document_id": document_id,
                 "error": error,
-                "message": (
-                    f"Classification echouee pour document {document_id}: {error}"
-                )
-            }
+                "message": (f"Classification echouee pour document {document_id}: {error}"),
+            },
         )
 
     async def _check_latency_alert(self):
@@ -327,7 +305,7 @@ class ClassificationPipeline:
                 "classification_latency_alert",
                 median_ms=round(median, 1),
                 threshold_ms=LATENCY_ALERT_MEDIAN_MS,
-                window_size=n
+                window_size=n,
             )
             await self.redis_client.xadd(
                 "notification.system",
@@ -337,8 +315,8 @@ class ClassificationPipeline:
                         f"Latence classification elevee: mediane {median:.0f}ms "
                         f"(seuil {LATENCY_ALERT_MEDIAN_MS}ms) "
                         f"sur les {n} derniers documents"
-                    )
-                }
+                    ),
+                },
             )
 
 

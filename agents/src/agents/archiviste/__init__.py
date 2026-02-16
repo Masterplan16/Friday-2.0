@@ -11,11 +11,8 @@ Note (M3 fix): Les imports requierent redis, structlog, et les adapters
 Friday (llm, anonymize). En cas de dependance manquante, le module
 leve ImportError avec un message explicite.
 """
-from agents.src.agents.archiviste.models import (
-    OCRResult,
-    MetadataExtraction,
-    RenameResult
-)
+
+from agents.src.agents.archiviste.models import OCRResult, MetadataExtraction, RenameResult
 from agents.src.agents.archiviste.ocr import SuryaOCREngine
 from agents.src.agents.archiviste.metadata_extractor import MetadataExtractor
 from agents.src.agents.archiviste.renamer import DocumentRenamer

@@ -153,7 +153,9 @@ class DesktopSearchConsumer:
         try:
             # Decoder data (bytes -> str)
             event_data = {
-                (k.decode() if isinstance(k, bytes) else k): (v.decode() if isinstance(v, bytes) else v)
+                (k.decode() if isinstance(k, bytes) else k): (
+                    v.decode() if isinstance(v, bytes) else v
+                )
                 for k, v in data.items()
             }
             query = event_data.get("query")

@@ -15,14 +15,11 @@ from bot.handlers.conflict_callbacks import (
     handle_move_time_response,
 )
 
-
 logger = structlog.get_logger(__name__)
 
 
 def register_conflict_callbacks_handlers(
-    application: Application,
-    db_pool: asyncpg.Pool,
-    redis_client: redis.Redis
+    application: Application, db_pool: asyncpg.Pool, redis_client: redis.Redis
 ):
     """
     Enregistre les handlers pour résolution conflits calendrier.
@@ -43,6 +40,7 @@ def register_conflict_callbacks_handlers(
 
     Story 7.3 AC6: Résolution conflits via inline buttons + dialogue
     """
+
     # Wrapper pour injecter dépendances dans bot_data
     async def _conflict_wrapper(update, context):
         if "db_pool" not in context.bot_data:
@@ -68,17 +66,10 @@ def register_conflict_callbacks_handlers(
         await handle_move_time_response(update, context)
 
     # 1. Enregistrer CallbackQueryHandler pour inline buttons conflits
-    application.add_handler(
-        CallbackQueryHandler(_conflict_wrapper, pattern=r"^conflict:")
-    )
+    application.add_handler(CallbackQueryHandler(_conflict_wrapper, pattern=r"^conflict:"))
 
     # 2. Enregistrer MessageHandler pour dialogue déplacement
     # Filtre : Messages texte privés (pas groupes) ou en réponse
-    application.add_handler(
-        MessageHandler(
-            filters.TEXT & ~filters.COMMAND,
-            _move_dialogue_wrapper
-        )
-    )
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, _move_dialogue_wrapper))
 
     logger.info("Conflict callbacks handlers registered (Story 7.3)")

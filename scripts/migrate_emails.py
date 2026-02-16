@@ -69,8 +69,7 @@ CHECKPOINT_INTERVAL = 50
 LOG_INTERVAL = 10
 
 # IMAP months for SEARCH command
-IMAP_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
-               "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+IMAP_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 
 # Graceful shutdown
 _shutdown = False
@@ -105,18 +104,22 @@ class Checkpoint:
                 data = json.load(f)
             self.processed_uids = data.get("processed_uids", {})
             self.stats = data.get("stats", self.stats)
-            logger.info("checkpoint_loaded", migrated=self.stats["migrated"],
-                        skipped=self.stats["skipped"])
+            logger.info(
+                "checkpoint_loaded", migrated=self.stats["migrated"], skipped=self.stats["skipped"]
+            )
             return True
         return False
 
     def save(self):
         with open(self.filepath, "w") as f:
-            json.dump({
-                "processed_uids": self.processed_uids,
-                "stats": self.stats,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-            }, f)
+            json.dump(
+                {
+                    "processed_uids": self.processed_uids,
+                    "stats": self.stats,
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                },
+                f,
+            )
 
     def is_done(self, account_id: str, uid: str) -> bool:
         return uid in self.processed_uids.get(account_id, [])
@@ -142,14 +145,16 @@ def load_accounts() -> list[dict[str, Any]]:
                 continue
             seen.add(account_id)
             prefix = f"IMAP_ACCOUNT_{raw_id}"
-            accounts.append({
-                "account_id": account_id,
-                "email": value,
-                "imap_host": os.getenv(f"{prefix}_IMAP_HOST", ""),
-                "imap_port": int(os.getenv(f"{prefix}_IMAP_PORT", "993")),
-                "imap_user": os.getenv(f"{prefix}_IMAP_USER", value),
-                "imap_password": os.getenv(f"{prefix}_IMAP_PASSWORD", ""),
-            })
+            accounts.append(
+                {
+                    "account_id": account_id,
+                    "email": value,
+                    "imap_host": os.getenv(f"{prefix}_IMAP_HOST", ""),
+                    "imap_port": int(os.getenv(f"{prefix}_IMAP_PORT", "993")),
+                    "imap_user": os.getenv(f"{prefix}_IMAP_USER", value),
+                    "imap_password": os.getenv(f"{prefix}_IMAP_PASSWORD", ""),
+                }
+            )
     return accounts
 
 
@@ -220,9 +225,7 @@ async def imap_search_date_range(
     return seq_nums
 
 
-async def imap_fetch_email(
-    imap: aioimaplib.IMAP4_SSL, seq_num: str
-) -> Optional[dict]:
+async def imap_fetch_email(imap: aioimaplib.IMAP4_SSL, seq_num: str) -> Optional[dict]:
     """Fetch un email complet par sequence number. Retourne dict (incl. uid) ou None."""
     result = await imap.fetch(seq_num, "(UID BODY.PEEK[] INTERNALDATE)")
     status = result.result if hasattr(result, "result") else result[0]
@@ -247,7 +250,7 @@ async def imap_fetch_email(
         hdr_bytes = data[0]
         if isinstance(hdr_bytes, (bytes, bytearray)):
             hdr = bytes(hdr_bytes).decode("utf-8", errors="replace")
-            uid_match = re.search(r'UID (\d+)', hdr)
+            uid_match = re.search(r"UID (\d+)", hdr)
             if uid_match:
                 uid = uid_match.group(1)
             date_match = re.search(r'INTERNALDATE "([^"]+)"', hdr)
@@ -299,7 +302,7 @@ async def imap_fetch_email(
 
     # Extraire email sender pour filtrage
     from_email = ""
-    addr_match = re.search(r'<([^>]+)>', from_header)
+    addr_match = re.search(r"<([^>]+)>", from_header)
     if addr_match:
         from_email = addr_match.group(1)
     elif "@" in from_header:
@@ -411,15 +414,17 @@ async def classify_email_haiku(
 
         text = response.content[0].text.strip()
         # Strip markdown fences
-        text = re.sub(r'^```(?:json)?\s*', '', text)
-        text = re.sub(r'\s*```$', '', text)
+        text = re.sub(r"^```(?:json)?\s*", "", text)
+        text = re.sub(r"\s*```$", "", text)
         text = text.strip()
 
         classification = EmailClassification.model_validate_json(text)
         return classification.category, classification.confidence
 
     except Exception as e:
-        logger.warning("classification_failed", error=str(e), response=text[:200] if 'text' in dir() else "N/A")
+        logger.warning(
+            "classification_failed", error=str(e), response=text[:200] if "text" in dir() else "N/A"
+        )
         return "inconnu", 0.0
 
 
@@ -489,7 +494,8 @@ async def process_one_email(
             # 2. Check dedup DB
             exists = await db_pool.fetchval(
                 "SELECT id FROM ingestion.emails WHERE account_id = $1 AND message_id = $2 LIMIT 1",
-                account_id, uid,
+                account_id,
+                uid,
             )
             if exists:
                 return "skipped", uid
@@ -511,8 +517,13 @@ async def process_one_email(
                 # Store as blacklisted (same as consumer)
                 anon_data = await anonymize_email(email_data)
                 await store_email(
-                    db_pool, account_id, uid, email_data, anon_data,
-                    category="blacklisted", confidence=1.0,
+                    db_pool,
+                    account_id,
+                    uid,
+                    email_data,
+                    anon_data,
+                    category="blacklisted",
+                    confidence=1.0,
                 )
                 return "blacklisted", uid
 
@@ -529,8 +540,13 @@ async def process_one_email(
 
             # 6. Store in DB
             email_id = await store_email(
-                db_pool, account_id, uid, email_data, anon_data,
-                category=category, confidence=confidence,
+                db_pool,
+                account_id,
+                uid,
+                email_data,
+                anon_data,
+                category=category,
+                confidence=confidence,
             )
 
             if email_id:
@@ -539,8 +555,13 @@ async def process_one_email(
                 return "skipped", uid  # ON CONFLICT = doublon
 
         except Exception as e:
-            logger.error("process_email_failed", account_id=account_id,
-                         seq_num=seq_num, error=str(e), error_type=type(e).__name__)
+            logger.error(
+                "process_email_failed",
+                account_id=account_id,
+                seq_num=seq_num,
+                error=str(e),
+                error_type=type(e).__name__,
+            )
             return "failed", None
 
 
@@ -577,7 +598,7 @@ async def migrate_account(
             remaining = limit - checkpoint.stats["migrated"] - checkpoint.stats["blacklisted"]
             if remaining <= 0:
                 return stats
-            seq_nums = seq_nums[:remaining + checkpoint.stats["skipped"] + 50]  # Marge pour skips
+            seq_nums = seq_nums[: remaining + checkpoint.stats["skipped"] + 50]  # Marge pour skips
 
         logger.info("processing_start", account_id=account_id, seq_nums=len(seq_nums))
 
@@ -596,7 +617,12 @@ async def migrate_account(
                 break
 
             result, uid = await process_one_email(
-                imap, anthropic_client, db_pool, account_id, seq_num, semaphore,
+                imap,
+                anthropic_client,
+                db_pool,
+                account_id,
+                seq_num,
+                semaphore,
             )
 
             stats[result] += 1
@@ -662,9 +688,15 @@ async def main_migrate(args: argparse.Namespace):
         logger.error("no_accounts_found")
         sys.exit(1)
 
-    logger.info("migration_starting", accounts=len(accounts),
-                since=args.since, until=args.until, limit=args.limit,
-                model=MODEL, concurrency=MAX_CONCURRENT)
+    logger.info(
+        "migration_starting",
+        accounts=len(accounts),
+        since=args.since,
+        until=args.until,
+        limit=args.limit,
+        model=MODEL,
+        concurrency=MAX_CONCURRENT,
+    )
 
     # Connexions
     db_pool = await asyncpg.create_pool(DATABASE_URL, min_size=2, max_size=10)
@@ -679,8 +711,13 @@ async def main_migrate(args: argparse.Namespace):
             break
 
         stats = await migrate_account(
-            account, anthropic_client, db_pool, checkpoint,
-            since=args.since, until=args.until, limit=args.limit,
+            account,
+            anthropic_client,
+            db_pool,
+            checkpoint,
+            since=args.since,
+            until=args.until,
+            limit=args.limit,
         )
 
         for k in total_stats:
@@ -714,8 +751,12 @@ def main():
     parser.add_argument("--limit", type=int, help="Limite nombre emails migres")
     parser.add_argument("--account", type=str, help="Filtrer par account_id")
     parser.add_argument("--resume", action="store_true", help="Reprendre depuis checkpoint")
-    parser.add_argument("--concurrency", type=int, default=MAX_CONCURRENT,
-                        help=f"Concurrence max appels API (defaut: {MAX_CONCURRENT})")
+    parser.add_argument(
+        "--concurrency",
+        type=int,
+        default=MAX_CONCURRENT,
+        help=f"Concurrence max appels API (defaut: {MAX_CONCURRENT})",
+    )
 
     args = parser.parse_args()
 

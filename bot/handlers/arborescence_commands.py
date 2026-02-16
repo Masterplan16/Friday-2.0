@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 # OWNER VALIDATION (Task 6.6)
 # ============================================================================
 
+
 def _is_owner(user_id: int) -> bool:
     """Vérifie que l'utilisateur est le Mainteneur (OWNER_USER_ID)."""
     owner_user_id = int(os.getenv("OWNER_USER_ID", "0"))
@@ -31,6 +32,7 @@ def _is_owner(user_id: int) -> bool:
 # ============================================================================
 # COMMANDE PRINCIPALE /arbo (Task 6.1-6.2)
 # ============================================================================
+
 
 async def arbo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
@@ -69,13 +71,14 @@ async def arbo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
             "<code>/arbo stats</code> — Statistiques par catégorie\n"
             "<code>/arbo add &lt;category&gt; &lt;path&gt;</code> — Ajouter dossier\n"
             "<code>/arbo remove &lt;path&gt;</code> — Supprimer dossier\n",
-            parse_mode="HTML"
+            parse_mode="HTML",
         )
 
 
 # ============================================================================
 # AFFICHAGE ARBORESCENCE ASCII (Task 6.2)
 # ============================================================================
+
 
 async def _show_arborescence(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
@@ -98,14 +101,10 @@ async def _show_arborescence(update: Update, context: ContextTypes.DEFAULT_TYPE)
         await update.message.reply_text(message, parse_mode="HTML")
 
     except FileNotFoundError:
-        await update.message.reply_text(
-            "Fichier config/arborescence.yaml introuvable"
-        )
+        await update.message.reply_text("Fichier config/arborescence.yaml introuvable")
     except Exception as e:
         logger.error("arbo_display_failed", error=str(e))
-        await update.message.reply_text(
-            f"Erreur : {str(e)[:200]}"
-        )
+        await update.message.reply_text(f"Erreur : {str(e)[:200]}")
 
 
 def _build_ascii_tree(categories: dict) -> str:
@@ -154,6 +153,7 @@ def _build_ascii_tree(categories: dict) -> str:
 # STATISTIQUES PAR CATÉGORIE (Task 6.5)
 # ============================================================================
 
+
 async def _show_stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
     Affiche statistiques de classification par catégorie (Task 6.5).
@@ -167,8 +167,7 @@ async def _show_stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 
     try:
         async with db_pool.acquire() as conn:
-            rows = await conn.fetch(
-                """
+            rows = await conn.fetch("""
                 SELECT
                     COALESCE(classification_category, 'non classifié') as category,
                     COALESCE(classification_subcategory, '-') as subcategory,
@@ -177,24 +176,17 @@ async def _show_stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
                 WHERE classification_category IS NOT NULL
                 GROUP BY classification_category, classification_subcategory
                 ORDER BY count DESC
-                """
-            )
+                """)
 
-            total = await conn.fetchval(
-                "SELECT COUNT(*) FROM ingestion.document_metadata"
-            )
+            total = await conn.fetchval("SELECT COUNT(*) FROM ingestion.document_metadata")
 
-            classified = await conn.fetchval(
-                """
+            classified = await conn.fetchval("""
                 SELECT COUNT(*) FROM ingestion.document_metadata
                 WHERE classification_category IS NOT NULL
-                """
-            )
+                """)
 
         if not rows:
-            await update.message.reply_text(
-                "Aucun document classifié pour le moment."
-            )
+            await update.message.reply_text("Aucun document classifié pour le moment.")
             return
 
         lines = ["<b>Statistiques classification</b>\n"]
@@ -222,11 +214,9 @@ async def _show_stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 # AJOUTER DOSSIER (Task 6.3)
 # ============================================================================
 
+
 async def _add_folder(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE,
-    category: str,
-    path: str
+    update: Update, context: ContextTypes.DEFAULT_TYPE, category: str, path: str
 ) -> None:
     """
     Ajoute un nouveau dossier à l'arborescence (Task 6.3).
@@ -262,6 +252,7 @@ async def _add_folder(
     # Validation nom de dossier
     try:
         from agents.src.config.arborescence_config import get_arborescence_config
+
         config = get_arborescence_config()
         config.validate_path_name(path)
     except ValueError as e:
@@ -274,26 +265,18 @@ async def _add_folder(
         f"Dossier ajouté : {category}/{path}\n\n"
         f"<i>Note : la modification du YAML sera effective au prochain redémarrage. "
         f"Le dossier physique sera créé automatiquement lors du prochain classement.</i>",
-        parse_mode="HTML"
+        parse_mode="HTML",
     )
 
-    logger.info(
-        "arbo_folder_added",
-        category=category,
-        path=path,
-        user_id=update.effective_user.id
-    )
+    logger.info("arbo_folder_added", category=category, path=path, user_id=update.effective_user.id)
 
 
 # ============================================================================
 # SUPPRIMER DOSSIER (Task 6.4)
 # ============================================================================
 
-async def _remove_folder(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE,
-    path: str
-) -> None:
+
+async def _remove_folder(update: Update, context: ContextTypes.DEFAULT_TYPE, path: str) -> None:
     """
     Supprime un dossier de l'arborescence (Task 6.4).
 
@@ -309,8 +292,11 @@ async def _remove_folder(
     """
     # Protection périmètres finance racine (Task 6.6)
     finance_root_paths = {
-        "finance/selarl", "finance/scm", "finance/sci_ravas",
-        "finance/sci_malbosc", "finance/personal"
+        "finance/selarl",
+        "finance/scm",
+        "finance/sci_ravas",
+        "finance/sci_malbosc",
+        "finance/personal",
     }
     if path in finance_root_paths:
         await update.message.reply_text(
@@ -322,20 +308,14 @@ async def _remove_folder(
     # Protection catégories racine
     root_categories = {"pro", "finance", "universite", "recherche", "perso"}
     if path in root_categories:
-        await update.message.reply_text(
-            "Les catégories racine ne peuvent pas être supprimées."
-        )
+        await update.message.reply_text("Les catégories racine ne peuvent pas être supprimées.")
         return
 
     await update.message.reply_text(
         f"Dossier marqué pour suppression : {path}\n\n"
         f"<i>Note : le dossier physique ne sera pas supprimé s'il contient des documents. "
         f"La modification du YAML sera effective au prochain redémarrage.</i>",
-        parse_mode="HTML"
+        parse_mode="HTML",
     )
 
-    logger.info(
-        "arbo_folder_removed",
-        path=path,
-        user_id=update.effective_user.id
-    )
+    logger.info("arbo_folder_removed", path=path, user_id=update.effective_user.id)

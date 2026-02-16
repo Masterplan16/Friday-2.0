@@ -29,8 +29,9 @@ except ImportError:
     SMTPSendError = Exception  # type: ignore[assignment,misc]
 from bot.handlers.draft_reply_notifications import (
     send_email_confirmation_notification,
-    send_email_failure_notification
+    send_email_failure_notification,
 )
+
 try:
     from agents.src.tools.anonymize import anonymize_text
 except ImportError:
@@ -43,7 +44,7 @@ ACCOUNT_NAME_MAPPING = {
     "account_professional": "professional",
     "account_medical": "medical",
     "account_academic": "academic",
-    "account_personal": "personal"
+    "account_personal": "personal",
 }
 
 
@@ -53,7 +54,7 @@ async def send_email_via_emailengine(
     http_client: Optional[httpx.AsyncClient] = None,
     emailengine_url: str = "",
     emailengine_secret: str = "",
-    bot: Optional[Bot] = None
+    bot: Optional[Bot] = None,
 ) -> Dict:
     """
     Envoyer email apres validation Approve (Story 2.5 AC5)
@@ -97,26 +98,22 @@ async def send_email_via_emailengine(
 
     async with db_pool.acquire() as conn:
         # Étape 1 : Load receipt
-        receipt = await conn.fetchrow(
-            "SELECT * FROM core.action_receipts WHERE id=$1",
-            receipt_id
-        )
+        receipt = await conn.fetchrow("SELECT * FROM core.action_receipts WHERE id=$1", receipt_id)
 
         if not receipt:
             raise ValueError(f"Receipt {receipt_id} not found")
 
         # Étape 2 : Vérifier status='approved'
-        if receipt['status'] != 'approved':
+        if receipt["status"] != "approved":
             raise ValueError(
-                f"Receipt {receipt_id} status is '{receipt['status']}', "
-                f"expected 'approved'"
+                f"Receipt {receipt_id} status is '{receipt['status']}', " f"expected 'approved'"
             )
 
         # Étape 3 : Extract payload
-        payload = receipt['payload']
-        draft_body = payload.get('draft_body')
-        email_original_id = payload.get('email_original_id')
-        email_type = payload.get('email_type', 'professional')
+        payload = receipt["payload"]
+        draft_body = payload.get("draft_body")
+        email_original_id = payload.get("email_original_id")
+        email_type = payload.get("email_type", "professional")
 
         if not draft_body:
             raise ValueError(f"Receipt {receipt_id} missing draft_body in payload")
@@ -126,18 +123,17 @@ async def send_email_via_emailengine(
 
         # Étape 4 : Fetch email original
         email_original = await conn.fetchrow(
-            "SELECT * FROM ingestion.emails WHERE id=$1",
-            email_original_id
+            "SELECT * FROM ingestion.emails WHERE id=$1", email_original_id
         )
 
         if not email_original:
             raise ValueError(f"Email original {email_original_id} not found")
 
     # Extract data needed for EmailEngine (hors DB context)
-    recipient_email = email_original['sender_email']
-    original_subject = email_original['subject']
+    recipient_email = email_original["sender_email"]
+    original_subject = email_original["subject"]
     subject = f"Re: {original_subject}"
-    in_reply_to = email_original.get('message_id')
+    in_reply_to = email_original.get("message_id")
     references = [in_reply_to] if in_reply_to else []
 
     # =======================================================================
@@ -160,19 +156,19 @@ async def send_email_via_emailengine(
             body_text=draft_body,
             body_html=body_html,
             in_reply_to=in_reply_to,
-            references=references
+            references=references,
         )
 
         if not send_result.success:
             raise SMTPSendError(f"SMTP send failed: {send_result.error}")
 
-        result = {'messageId': send_result.message_id, 'success': True}
+        result = {"messageId": send_result.message_id, "success": True}
 
         logger.info(
             "email_sent_via_adapter",
             receipt_id=receipt_id,
             message_id=send_result.message_id,
-            recipient=recipient_email
+            recipient=recipient_email,
         )
 
         # ========================================================================
@@ -198,7 +194,7 @@ async def send_email_via_emailengine(
                     recipient_anon=recipient_anon,
                     subject_anon=subject_anon,
                     account_name=account_name,
-                    sent_at=datetime.now()
+                    sent_at=datetime.now(),
                 )
 
             except Exception as notif_error:
@@ -206,16 +202,11 @@ async def send_email_via_emailengine(
                 logger.warning(
                     "email_confirmation_notification_failed",
                     receipt_id=receipt_id,
-                    error=str(notif_error)
+                    error=str(notif_error),
                 )
 
     except (SMTPSendError, EmailAdapterError) as e:
-        logger.error(
-            "smtp_send_failed",
-            receipt_id=receipt_id,
-            error=str(e),
-            exc_info=True
-        )
+        logger.error("smtp_send_failed", receipt_id=receipt_id, error=str(e), exc_info=True)
         # UPDATE receipt status='failed' (acquire nouvelle connexion)
         async with db_pool.acquire() as conn:
             await conn.execute(
@@ -224,7 +215,7 @@ async def send_email_via_emailengine(
                 SET status='failed', executed_at=NOW()
                 WHERE id=$1
                 """,
-                receipt_id
+                receipt_id,
             )
 
         # ========================================================================
@@ -242,7 +233,7 @@ async def send_email_via_emailengine(
                     bot=bot,
                     receipt_id=receipt_id,
                     error_message=str(e),
-                    recipient_anon=recipient_anon
+                    recipient_anon=recipient_anon,
                 )
 
             except Exception as notif_error:
@@ -250,7 +241,7 @@ async def send_email_via_emailengine(
                 logger.error(
                     "email_failure_notification_failed",
                     receipt_id=receipt_id,
-                    error=str(notif_error)
+                    error=str(notif_error),
                 )
 
         raise
@@ -267,7 +258,7 @@ async def send_email_via_emailengine(
             SET status='executed', executed_at=NOW()
             WHERE id=$1
             """,
-            receipt_id
+            receipt_id,
         )
 
         # Étape 8 : INSERT writing_example (few-shot learning AC5)
@@ -278,24 +269,20 @@ async def send_email_via_emailengine(
             """,
             email_type,
             subject,
-            draft_body
+            draft_body,
         )
 
-        logger.info(
-            "writing_example_stored",
-            receipt_id=receipt_id,
-            email_type=email_type
-        )
+        logger.info("writing_example_stored", receipt_id=receipt_id, email_type=email_type)
 
     # =======================================================================
     # Return success
     # =======================================================================
 
     return {
-        'success': True,
-        'messageId': result.get('messageId'),
-        'recipient': recipient_email,
-        'subject': subject
+        "success": True,
+        "messageId": result.get("messageId"),
+        "recipient": recipient_email,
+        "subject": subject,
     }
 
 
@@ -311,10 +298,11 @@ def _determine_account_id(email_original: Dict) -> str:
     Returns:
         Account ID pour envoi reponse
     """
-    recipient = email_original.get('recipient_email') or email_original.get('to')
+    recipient = email_original.get("recipient_email") or email_original.get("to")
 
     # Mapping configurable (a terme: depuis DB ou config)
     import os
+
     mapping_str = os.getenv("ACCOUNT_EMAIL_MAPPING", "")
     if mapping_str:
         # Format: "email1:account1,email2:account2"

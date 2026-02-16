@@ -26,7 +26,9 @@ try:
 
     # 3. Verifier consumer group existe
     groups = r.xinfo_groups(STREAM_NAME)
-    group_names = [g["name"].decode() if isinstance(g["name"], bytes) else g["name"] for g in groups]
+    group_names = [
+        g["name"].decode() if isinstance(g["name"], bytes) else g["name"] for g in groups
+    ]
     if CONSUMER_GROUP not in group_names:
         print(f"UNHEALTHY: Consumer group '{CONSUMER_GROUP}' missing")
         sys.exit(1)

@@ -62,13 +62,11 @@ async def get_processed_uids_from_db():
 
     conn = await asyncpg.connect(db_url)
 
-    rows = await conn.fetch(
-        """
+    rows = await conn.fetch("""
         SELECT account_id, message_id
         FROM ingestion.emails
         ORDER BY account_id, message_id::integer
-        """
-    )
+        """)
 
     await conn.close()
 
@@ -239,7 +237,11 @@ async def restore_all_seen_for_account(account_id, account_config, dry_run=True)
                     fetch_data = result.lines
 
                 for item in fetch_data:
-                    item_str = item.decode("utf-8", errors="replace") if isinstance(item, (bytes, bytearray)) else str(item)
+                    item_str = (
+                        item.decode("utf-8", errors="replace")
+                        if isinstance(item, (bytes, bytearray))
+                        else str(item)
+                    )
                     match = re.search(r"UID\s+(\d+)", item_str)
                     if match:
                         uids.append(match.group(1))
@@ -291,9 +293,15 @@ async def restore_all_seen_for_account(account_id, account_config, dry_run=True)
 async def main():
     import argparse
 
-    parser = argparse.ArgumentParser(description="Restaurer flags UNSEEN sur emails marqués SEEN par erreur")
-    parser.add_argument("--apply", action="store_true", help="Appliquer les changements (sans = dry-run)")
-    parser.add_argument("--all", action="store_true", help="Restaurer TOUS les SEEN (pas juste ceux en DB)")
+    parser = argparse.ArgumentParser(
+        description="Restaurer flags UNSEEN sur emails marqués SEEN par erreur"
+    )
+    parser.add_argument(
+        "--apply", action="store_true", help="Appliquer les changements (sans = dry-run)"
+    )
+    parser.add_argument(
+        "--all", action="store_true", help="Restaurer TOUS les SEEN (pas juste ceux en DB)"
+    )
     args = parser.parse_args()
 
     dry_run = not args.apply

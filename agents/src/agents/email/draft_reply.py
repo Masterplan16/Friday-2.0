@@ -40,7 +40,6 @@ from agents.src.middleware.models import ActionResult, StepDetail
 from agents.src.tools.anonymize import anonymize_text, deanonymize_text
 from agents.src.adapters.llm import get_llm_adapter
 
-
 # ============================================================================
 # Configuration
 # ============================================================================
@@ -70,7 +69,7 @@ async def draft_email_reply(
     db_pool: asyncpg.Pool,
     user_preferences: Optional[dict] = None,
     _correction_rules: Optional[list] = None,  # Injecté par @friday_action middleware
-    _rules_prompt: Optional[str] = None  # Injecté par @friday_action middleware
+    _rules_prompt: Optional[str] = None,  # Injecté par @friday_action middleware
 ) -> ActionResult:
     """
     Rédiger brouillon réponse email avec few-shot learning
@@ -122,9 +121,9 @@ async def draft_email_reply(
     # Étape 1: Anonymiser email source (RGPD NFR6, NFR7)
     # ========================================================================
 
-    email_text = email_data.get('body', '')
-    email_from = email_data.get('from', 'Unknown')
-    email_subject = email_data.get('subject', 'No subject')
+    email_text = email_data.get("body", "")
+    email_from = email_data.get("from", "Unknown")
+    email_subject = email_data.get("subject", "No subject")
 
     # Anonymisation Presidio AVANT appel Claude cloud (CRITIQUE)
     anon_result = await anonymize_text(email_text)
@@ -140,12 +139,10 @@ async def draft_email_reply(
     # Étape 2: Charger writing examples (few-shot learning AC2)
     # ========================================================================
 
-    email_type = email_data.get('category', 'professional')
+    email_type = email_data.get("category", "professional")
 
     writing_examples = await load_writing_examples(
-        db_pool=db_pool,
-        email_type=email_type,
-        limit=DEFAULT_WRITING_EXAMPLES
+        db_pool=db_pool, email_type=email_type, limit=DEFAULT_WRITING_EXAMPLES
     )
 
     # ========================================================================
@@ -153,9 +150,7 @@ async def draft_email_reply(
     # ========================================================================
 
     correction_rules = await _fetch_correction_rules(
-        db_pool=db_pool,
-        module='email',
-        scope='draft_reply'
+        db_pool=db_pool, module="email", scope="draft_reply"
     )
 
     # ========================================================================
@@ -170,7 +165,7 @@ async def draft_email_reply(
         email_type=email_type,
         correction_rules=correction_rules,
         writing_examples=writing_examples,
-        user_preferences=user_preferences
+        user_preferences=user_preferences,
     )
 
     # ========================================================================
@@ -181,7 +176,7 @@ async def draft_email_reply(
         system_prompt=system_prompt,
         user_prompt=user_prompt,
         temperature=CLAUDE_TEMPERATURE_DRAFT,
-        max_tokens=CLAUDE_MAX_TOKENS_DRAFT
+        max_tokens=CLAUDE_MAX_TOKENS_DRAFT,
     )
 
     # ========================================================================
@@ -226,52 +221,58 @@ async def draft_email_reply(
             "draft_body": draft_body,
             "email_original_id": email_id,  # Nécessaire pour envoi via SMTP (D25)
             "prompt_tokens": prompt_tokens_est,
-            "response_tokens": response_tokens_est
+            "response_tokens": response_tokens_est,
         },
         steps=[
             StepDetail(
                 step_number=1,
                 description="Anonymize email source",
                 confidence=1.0,
-                metadata={"input_length": len(email_text), "output_length": len(email_text_anon)}
+                metadata={"input_length": len(email_text), "output_length": len(email_text_anon)},
             ),
             StepDetail(
                 step_number=2,
                 description="Load writing examples",
                 confidence=1.0 if writing_examples else 0.5,
-                metadata={"examples_count": len(writing_examples), "email_type": email_type}
+                metadata={"examples_count": len(writing_examples), "email_type": email_type},
             ),
             StepDetail(
                 step_number=3,
                 description="Load correction rules",
                 confidence=1.0,
-                metadata={"rules_count": len(correction_rules)}
+                metadata={"rules_count": len(correction_rules)},
             ),
             StepDetail(
                 step_number=4,
                 description="Build prompts",
                 confidence=1.0,
-                metadata={"system_prompt_length": len(system_prompt), "user_prompt_length": len(user_prompt)}
+                metadata={
+                    "system_prompt_length": len(system_prompt),
+                    "user_prompt_length": len(user_prompt),
+                },
             ),
             StepDetail(
                 step_number=5,
                 description="Generate with Claude Sonnet 4.5",
                 confidence=confidence,
-                metadata={"temperature": CLAUDE_TEMPERATURE_DRAFT, "max_tokens": CLAUDE_MAX_TOKENS_DRAFT}
+                metadata={
+                    "temperature": CLAUDE_TEMPERATURE_DRAFT,
+                    "max_tokens": CLAUDE_MAX_TOKENS_DRAFT,
+                },
             ),
             StepDetail(
                 step_number=6,
                 description="Deanonymize draft",
                 confidence=1.0,
-                metadata={"input_length": len(draft_body_anon), "output_length": len(draft_body)}
+                metadata={"input_length": len(draft_body_anon), "output_length": len(draft_body)},
             ),
             StepDetail(
                 step_number=7,
                 description="Validate draft",
                 confidence=0.90,
-                metadata={"draft_length": len(draft_body), "valid": True}
-            )
-        ]
+                metadata={"draft_length": len(draft_body), "valid": True},
+            ),
+        ],
     )
 
 
@@ -281,9 +282,7 @@ async def draft_email_reply(
 
 
 async def load_writing_examples(
-    db_pool: asyncpg.Pool,
-    email_type: str,
-    limit: int = 5
+    db_pool: asyncpg.Pool, email_type: str, limit: int = 5
 ) -> list[dict]:
     """
     Charger top N exemples récents du style Mainteneur
@@ -334,7 +333,7 @@ async def load_writing_examples(
         LIMIT $2
         """,
         email_type,
-        limit
+        limit,
     )
 
     return [dict(row) for row in rows]
@@ -354,11 +353,7 @@ async def load_writing_examples(
 # ============================================================================
 
 
-async def _fetch_correction_rules(
-    db_pool: asyncpg.Pool,
-    module: str,
-    scope: str
-) -> list[dict]:
+async def _fetch_correction_rules(db_pool: asyncpg.Pool, module: str, scope: str) -> list[dict]:
     """
     Charger correction rules actives pour injection dans prompt
 
@@ -399,7 +394,7 @@ async def _fetch_correction_rules(
         """,
         module,
         scope,
-        MAX_CORRECTION_RULES
+        MAX_CORRECTION_RULES,
     )
 
     return [dict(row) for row in rows]
@@ -411,11 +406,7 @@ async def _fetch_correction_rules(
 
 
 async def _call_claude_with_retry(
-    system_prompt: str,
-    user_prompt: str,
-    temperature: float,
-    max_tokens: int,
-    max_retries: int = 3
+    system_prompt: str, user_prompt: str, temperature: float, max_tokens: int, max_retries: int = 3
 ) -> str:
     """
     Appeler Claude Sonnet 4.5 avec retry logic
@@ -457,16 +448,16 @@ async def _call_claude_with_retry(
             response = await llm_adapter.complete(
                 messages=[
                     {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
+                    {"role": "user", "content": user_prompt},
                 ],
                 temperature=temperature,
                 max_tokens=max_tokens,
-                model=CLAUDE_MODEL  # claude-sonnet-4-5-20250929
+                model=CLAUDE_MODEL,  # claude-sonnet-4-5-20250929
             )
 
             # Extraire texte de la réponse
-            if isinstance(response, dict) and 'content' in response:
-                return response['content'].strip()
+            if isinstance(response, dict) and "content" in response:
+                return response["content"].strip()
             elif isinstance(response, str):
                 return response.strip()
             else:
@@ -474,9 +465,7 @@ async def _call_claude_with_retry(
 
         except Exception as e:
             if attempt == max_retries:
-                raise Exception(
-                    f"Claude API failed after {max_retries} attempts: {str(e)}"
-                ) from e
+                raise Exception(f"Claude API failed after {max_retries} attempts: {str(e)}") from e
 
             # Backoff exponentiel: 1s, 2s
             await asyncio.sleep(2 ** (attempt - 1))

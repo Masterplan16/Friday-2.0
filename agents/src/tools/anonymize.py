@@ -161,6 +161,7 @@ async def anonymize_text(
         print("[DEBUG] Testing Presidio connection...", flush=True)
         try:
             import socket
+
             # Parse URL to get host and port
             host = PRESIDIO_ANALYZER_URL.split("://")[1].split(":")[0]
             port = 3000
@@ -199,7 +200,9 @@ async def anonymize_text(
             analyze_response.raise_for_status()
             entities_found = analyze_response.json()
         except Exception as analyze_error:
-            print(f"[DEBUG] POST failed: {type(analyze_error).__name__}: {analyze_error}", flush=True)
+            print(
+                f"[DEBUG] POST failed: {type(analyze_error).__name__}: {analyze_error}", flush=True
+            )
             raise
 
         if not entities_found:

@@ -10,6 +10,7 @@ Architecture:
 - Trust Layer avec @friday_action decorator
 - Validation stricte périmètres finance (anti-contamination AC6)
 """
+
 import json
 import structlog
 from typing import Dict, Any, List, Optional
@@ -84,11 +85,7 @@ class DocumentClassifier:
         ocr_text = metadata["ocr_text"]
         document_id = metadata["document_id"]
 
-        logger.info(
-            "classification_started",
-            document_id=document_id,
-            text_length=len(ocr_text)
-        )
+        logger.info("classification_started", document_id=document_id, text_length=len(ocr_text))
 
         # Anonymisation Presidio AVANT appel Claude (RGPD critique)
         anonymized_text = await anonymize_text(ocr_text)
@@ -103,7 +100,7 @@ class DocumentClassifier:
         response_raw = await self.llm_adapter.complete(
             prompt=prompt,
             temperature=0.3,  # Classification = déterministe
-            max_tokens=200    # Réponse courte structurée
+            max_tokens=200,  # Réponse courte structurée
         )
 
         # Parsing JSON de la réponse LLM
@@ -120,7 +117,7 @@ class DocumentClassifier:
             document_id=document_id,
             category=category,
             subcategory=subcategory,
-            confidence=confidence
+            confidence=confidence,
         )
 
         # Validation périmètre finance (AC6 - Anti-contamination)
@@ -128,9 +125,7 @@ class DocumentClassifier:
             if subcategory is None:
                 raise ValueError("Finance category requires subcategory")
 
-            valid_finance_perimeters = {
-                "selarl", "scm", "sci_ravas", "sci_malbosc", "personal"
-            }
+            valid_finance_perimeters = {"selarl", "scm", "sci_ravas", "sci_malbosc", "personal"}
 
             if subcategory not in valid_finance_perimeters:
                 raise ValueError(
@@ -147,16 +142,18 @@ class DocumentClassifier:
             subcategory=subcategory,
             path=path,
             confidence=confidence,
-            reasoning=reasoning
+            reasoning=reasoning,
         )
 
         # Construction ActionResult
         return ActionResult(
             input_summary=f"Document {document_id} ({len(ocr_text)} chars OCR)",
-            output_summary=f"→ {category}" + (f"/{subcategory}" if subcategory else "") + f" ({path})",
+            output_summary=f"→ {category}"
+            + (f"/{subcategory}" if subcategory else "")
+            + f" ({path})",
             confidence=confidence,
             reasoning=reasoning,
-            payload=classification.model_dump()
+            payload=classification.model_dump(),
         )
 
     def _parse_llm_response(self, response_raw) -> Dict[str, Any]:
@@ -189,21 +186,13 @@ class DocumentClassifier:
             try:
                 return json.loads(text)
             except json.JSONDecodeError as e:
-                logger.error(
-                    "llm_response_parse_error",
-                    response_preview=text[:200],
-                    error=str(e)
-                )
-                raise ValueError(
-                    f"Failed to parse LLM response as JSON: {e}"
-                ) from e
+                logger.error("llm_response_parse_error", response_preview=text[:200], error=str(e))
+                raise ValueError(f"Failed to parse LLM response as JSON: {e}") from e
 
         raise ValueError(f"Unexpected LLM response type: {type(response_raw)}")
 
     def _build_classification_prompt(
-        self,
-        ocr_text: str,
-        correction_rules: Optional[List] = None
+        self, ocr_text: str, correction_rules: Optional[List] = None
     ) -> str:
         """
         Construit le prompt pour Claude Sonnet 4.5.

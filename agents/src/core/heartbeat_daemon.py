@@ -69,7 +69,7 @@ class HeartbeatDaemon:
             "HeartbeatDaemon initialized",
             enabled=self.enabled,
             mode=self.mode,
-            interval_minutes=self.interval_minutes
+            interval_minutes=self.interval_minutes,
         )
 
     async def connect(self):
@@ -79,11 +79,7 @@ class HeartbeatDaemon:
         if not database_url:
             raise ValueError("DATABASE_URL environment variable not set")
 
-        self.db_pool = await asyncpg.create_pool(
-            database_url,
-            min_size=2,
-            max_size=5
-        )
+        self.db_pool = await asyncpg.create_pool(database_url, min_size=2, max_size=5)
         logger.info("Connected to PostgreSQL")
 
         # Redis
@@ -91,10 +87,7 @@ class HeartbeatDaemon:
         if not redis_url:
             raise ValueError("REDIS_URL environment variable not set")
 
-        self.redis_client = await Redis.from_url(
-            redis_url,
-            decode_responses=True
-        )
+        self.redis_client = await Redis.from_url(redis_url, decode_responses=True)
         logger.info("Connected to Redis")
 
         # Initialize stack Heartbeat
@@ -103,14 +96,8 @@ class HeartbeatDaemon:
     async def _init_heartbeat_stack(self):
         """Initialize Heartbeat Engine stack."""
         # Context Manager + Provider
-        context_manager = ContextManager(
-            db_pool=self.db_pool,
-            redis_client=self.redis_client
-        )
-        context_provider = ContextProvider(
-            context_manager=context_manager,
-            db_pool=self.db_pool
-        )
+        context_manager = ContextManager(db_pool=self.db_pool, redis_client=self.redis_client)
+        context_provider = ContextProvider(context_manager=context_manager, db_pool=self.db_pool)
 
         # Check Registry + register checks
         check_registry = CheckRegistry()
@@ -123,16 +110,11 @@ class HeartbeatDaemon:
             raise ValueError("ANTHROPIC_API_KEY environment variable not set")
 
         llm_client = AsyncAnthropic(api_key=anthropic_api_key)
-        llm_decider = LLMDecider(
-            llm_client=llm_client,
-            redis_client=self.redis_client
-        )
+        llm_decider = LLMDecider(llm_client=llm_client, redis_client=self.redis_client)
 
         # Check Executor
         check_executor = CheckExecutor(
-            db_pool=self.db_pool,
-            redis_client=self.redis_client,
-            check_registry=check_registry
+            db_pool=self.db_pool, redis_client=self.redis_client, check_registry=check_registry
         )
 
         # Heartbeat Engine
@@ -142,7 +124,7 @@ class HeartbeatDaemon:
             context_provider=context_provider,
             check_registry=check_registry,
             llm_decider=llm_decider,
-            check_executor=check_executor
+            check_executor=check_executor,
         )
 
         logger.info("HeartbeatEngine initialized")
@@ -159,8 +141,7 @@ class HeartbeatDaemon:
 
             try:
                 await self.engine.run_heartbeat_cycle(
-                    mode="daemon",
-                    interval_minutes=self.interval_minutes
+                    mode="daemon", interval_minutes=self.interval_minutes
                 )
             except asyncio.CancelledError:
                 logger.info("Heartbeat daemon stopped (SIGTERM received)")
@@ -204,10 +185,7 @@ async def main():
     loop = asyncio.get_event_loop()
     try:
         for sig in (signal.SIGTERM, signal.SIGINT):
-            loop.add_signal_handler(
-                sig,
-                lambda s=sig: daemon.handle_signal(s)
-            )
+            loop.add_signal_handler(sig, lambda s=sig: daemon.handle_signal(s))
     except NotImplementedError:
         # Windows: loop.add_signal_handler() not supported
         logger.warning("Signal handlers not supported on this platform (Windows)")
@@ -222,7 +200,7 @@ async def main():
         # Wait for shutdown signal or task completion
         await asyncio.wait(
             [run_task, asyncio.create_task(daemon.shutdown_event.wait())],
-            return_when=asyncio.FIRST_COMPLETED
+            return_when=asyncio.FIRST_COMPLETED,
         )
 
         # Cancel running task if still active

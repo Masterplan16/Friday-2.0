@@ -23,7 +23,6 @@ from agents.src.core.models import (
     CASQUETTE_LABEL_MAPPING,
 )
 
-
 logger = structlog.get_logger(__name__)
 
 
@@ -31,10 +30,8 @@ logger = structlog.get_logger(__name__)
 # Handler: Inline Buttons Casquette
 # ============================================================================
 
-async def handle_casquette_button(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE
-) -> None:
+
+async def handle_casquette_button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
     Handler callbacks inline buttons casquette (AC2).
 
@@ -93,22 +90,15 @@ async def _handle_auto_detect(query, context_manager: ContextManager) -> None:
 
     await query.edit_message_text(
         text="✅ **Détection automatique réactivée**\n\n"
-             "Friday déterminera votre contexte selon vos événements et l'heure de la journée.\n\n"
-             "_Utilisez `/casquette` pour voir le contexte actuel._",
-        parse_mode="Markdown"
+        "Friday déterminera votre contexte selon vos événements et l'heure de la journée.\n\n"
+        "_Utilisez `/casquette` pour voir le contexte actuel._",
+        parse_mode="Markdown",
     )
 
-    logger.info(
-        "casquette_button_auto",
-        user_id=query.from_user.id
-    )
+    logger.info("casquette_button_auto", user_id=query.from_user.id)
 
 
-async def _handle_set_casquette(
-    query,
-    context_manager: ContextManager,
-    casquette_arg: str
-) -> None:
+async def _handle_set_casquette(query, context_manager: ContextManager, casquette_arg: str) -> None:
     """
     Force contexte casquette (callback button casquette spécifique).
 
@@ -123,8 +113,8 @@ async def _handle_set_casquette(
     except ValueError:
         await query.edit_message_text(
             text=f"❌ **Casquette invalide** : `{casquette_arg}`\n\n"
-                 "Casquettes disponibles: médecin, enseignant, chercheur",
-            parse_mode="Markdown"
+            "Casquettes disponibles: médecin, enseignant, chercheur",
+            parse_mode="Markdown",
         )
         logger.warning("casquette_button_invalid", argument=casquette_arg)
         return
@@ -137,16 +127,12 @@ async def _handle_set_casquette(
 
     await query.edit_message_text(
         text=f"✅ **Contexte changé** → {emoji} **{label}**\n\n"
-             "Ce contexte restera actif jusqu'à ce que vous le changiez à nouveau.\n\n"
-             "_Utilisez `/casquette` pour revenir au menu._",
-        parse_mode="Markdown"
+        "Ce contexte restera actif jusqu'à ce que vous le changiez à nouveau.\n\n"
+        "_Utilisez `/casquette` pour revenir au menu._",
+        parse_mode="Markdown",
     )
 
-    logger.info(
-        "casquette_button_set",
-        user_id=query.from_user.id,
-        casquette=casquette.value
-    )
+    logger.info("casquette_button_set", user_id=query.from_user.id, casquette=casquette.value)
 
 
 async def _get_context_manager(context: ContextTypes.DEFAULT_TYPE) -> ContextManager:
@@ -165,8 +151,4 @@ async def _get_context_manager(context: ContextTypes.DEFAULT_TYPE) -> ContextMan
     if not db_pool or not redis_client:
         raise RuntimeError("db_pool ou redis_client non initialisé dans bot_data")
 
-    return ContextManager(
-        db_pool=db_pool,
-        redis_client=redis_client,
-        cache_ttl=300
-    )
+    return ContextManager(db_pool=db_pool, redis_client=redis_client, cache_ttl=300)

@@ -45,9 +45,19 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 # Seuils suggestions
 VIP_MIN_EMAILS = 50
 BLACKLIST_KEYWORDS = [
-    "newsletter", "noreply", "no-reply", "marketing", "promo",
-    "notification", "alert", "mailer-daemon", "unsubscribe",
-    "bounce", "daemon", "automated", "do-not-reply",
+    "newsletter",
+    "noreply",
+    "no-reply",
+    "marketing",
+    "promo",
+    "notification",
+    "alert",
+    "mailer-daemon",
+    "unsubscribe",
+    "bounce",
+    "daemon",
+    "automated",
+    "do-not-reply",
 ]
 
 CSV_HEADERS = ["domain", "email_count", "suggestion", "action"]
@@ -56,6 +66,7 @@ CSV_HEADERS = ["domain", "email_count", "suggestion", "action"]
 # ============================================================================
 # IMAP Account Config (meme logique que imap_fetcher.py)
 # ============================================================================
+
 
 def load_accounts_config() -> List[Dict]:
     """Charge config comptes IMAP depuis variables d'environnement."""
@@ -73,14 +84,16 @@ def load_accounts_config() -> List[Dict]:
 
             prefix = f"IMAP_ACCOUNT_{raw_id}"
 
-            accounts.append({
-                "account_id": account_id,
-                "email": value,
-                "imap_host": os.getenv(f"{prefix}_IMAP_HOST", ""),
-                "imap_port": int(os.getenv(f"{prefix}_IMAP_PORT", "993")),
-                "imap_user": os.getenv(f"{prefix}_IMAP_USER", value),
-                "imap_password": os.getenv(f"{prefix}_IMAP_PASSWORD", ""),
-            })
+            accounts.append(
+                {
+                    "account_id": account_id,
+                    "email": value,
+                    "imap_host": os.getenv(f"{prefix}_IMAP_HOST", ""),
+                    "imap_port": int(os.getenv(f"{prefix}_IMAP_PORT", "993")),
+                    "imap_user": os.getenv(f"{prefix}_IMAP_USER", value),
+                    "imap_password": os.getenv(f"{prefix}_IMAP_PASSWORD", ""),
+                }
+            )
 
     return accounts
 
@@ -88,6 +101,7 @@ def load_accounts_config() -> List[Dict]:
 # ============================================================================
 # IMAP Fetch Senders
 # ============================================================================
+
 
 async def fetch_senders_from_account(account: Dict) -> List[str]:
     """
@@ -156,7 +170,7 @@ async def fetch_senders_from_account(account: Dict) -> List[str]:
         processed = 0
 
         for i in range(0, total, batch_size):
-            batch = seq_nums[i:i + batch_size]
+            batch = seq_nums[i : i + batch_size]
             seq_range = ",".join(batch)
 
             try:
@@ -193,7 +207,9 @@ async def fetch_senders_from_account(account: Dict) -> List[str]:
 
                 processed += len(batch)
                 if processed % 500 == 0 or processed == total:
-                    print(f"  [{account_id}] Progression: {processed}/{total} ({len(senders)} senders)")
+                    print(
+                        f"  [{account_id}] Progression: {processed}/{total} ({len(senders)} senders)"
+                    )
 
             except Exception as e:
                 print(f"  [{account_id}] WARN: batch {i} error: {e}")
@@ -247,6 +263,7 @@ async def fetch_all_senders_imap() -> List[str]:
 # Analysis & Suggestions
 # ============================================================================
 
+
 def analyze_domains(senders: list[str], top_n: int = 200) -> list[dict]:
     """Analyse les domaines et genere suggestions."""
     domain_counter: Counter = Counter()
@@ -264,12 +281,14 @@ def analyze_domains(senders: list[str], top_n: int = 200) -> list[dict]:
     results = []
     for domain, count in domain_counter.most_common(top_n):
         suggestion = _suggest_filter(domain, count, domain_senders.get(domain, set()))
-        results.append({
-            "domain": domain,
-            "email_count": count,
-            "suggestion": suggestion,
-            "action": "",  # A remplir par Mainteneur
-        })
+        results.append(
+            {
+                "domain": domain,
+                "email_count": count,
+                "suggestion": suggestion,
+                "action": "",  # A remplir par Mainteneur
+            }
+        )
 
     return results
 
@@ -300,6 +319,7 @@ def _suggest_filter(domain: str, count: int, senders: set[str]) -> str:
 # CSV I/O
 # ============================================================================
 
+
 def save_csv(domains: list[dict], output_path: str) -> None:
     """Sauvegarde resultats en CSV."""
     with open(output_path, "w", newline="", encoding="utf-8") as f:
@@ -321,7 +341,9 @@ def validate_csv(csv_path: str) -> bool:
         for i, row in enumerate(reader, start=2):
             action = row.get("action", "").strip()
             if action and action not in ("vip", "whitelist", "blacklist"):
-                print(f"ERROR line {i}: Invalid action '{action}' (must be vip/whitelist/blacklist or empty)")
+                print(
+                    f"ERROR line {i}: Invalid action '{action}' (must be vip/whitelist/blacklist or empty)"
+                )
                 return False
 
             domain = row.get("domain", "").strip()
@@ -376,10 +398,9 @@ async def apply_filters_from_csv(csv_path: str) -> dict[str, int]:
 # Main
 # ============================================================================
 
+
 async def main() -> None:
-    parser = argparse.ArgumentParser(
-        description="Extract top email domains via IMAP direct (D25)"
-    )
+    parser = argparse.ArgumentParser(description="Extract top email domains via IMAP direct (D25)")
     parser.add_argument("--top", type=int, default=200, help="Top N domains (default: 200)")
     parser.add_argument("--output", type=str, default="domain_filters.csv", help="Output CSV file")
     parser.add_argument("--apply", type=str, default=None, help="Apply filters from CSV file")
@@ -395,9 +416,11 @@ async def main() -> None:
         print("CSV valid. Applying filters...")
         stats = await apply_filters_from_csv(args.apply)
         total = stats["vip"] + stats["whitelist"] + stats["blacklist"]
-        print(f"\n{total} filtres appliques : "
-              f"{stats['vip']} VIP, {stats['whitelist']} whitelist, {stats['blacklist']} blacklist "
-              f"({stats['skipped']} ignores)")
+        print(
+            f"\n{total} filtres appliques : "
+            f"{stats['vip']} VIP, {stats['whitelist']} whitelist, {stats['blacklist']} blacklist "
+            f"({stats['skipped']} ignores)"
+        )
         return
 
     # Mode extraction IMAP

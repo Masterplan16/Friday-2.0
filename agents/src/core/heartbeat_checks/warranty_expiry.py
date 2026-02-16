@@ -13,6 +13,7 @@ Alertes :
 Anti-spam : warranty_alerts table (unique warranty_id + alert_type)
 Quiet hours : 22h-8h (skip sauf CRITICAL <7 jours)
 """
+
 import os
 from datetime import datetime, time
 from typing import Any, Dict, List, Optional
@@ -71,7 +72,9 @@ async def check_warranty_expiry(
             expired = [w for w in warranties_60d if w.get("days_remaining", 999) <= 0]
             warranties_7d = [w for w in warranties_60d if 0 < w.get("days_remaining", 999) <= 7]
             warranties_30d = [w for w in warranties_60d if 7 < w.get("days_remaining", 999) <= 30]
-            warranties_60d_only = [w for w in warranties_60d if 30 < w.get("days_remaining", 999) <= 60]
+            warranties_60d_only = [
+                w for w in warranties_60d if 30 < w.get("days_remaining", 999) <= 60
+            ]
 
             # 4. Marquer expirées
             for w in expired:
@@ -89,12 +92,14 @@ async def check_warranty_expiry(
                 warranty_id = str(w["id"])
                 if not await check_alert_sent(db_pool, warranty_id, "7_days"):
                     await record_alert_sent(db_pool, warranty_id, "7_days")
-                    alerts_sent.append({
-                        "item": w["item_name"],
-                        "days": w["days_remaining"],
-                        "priority": CheckPriority.CRITICAL,
-                        "alert_type": "7_days",
-                    })
+                    alerts_sent.append(
+                        {
+                            "item": w["item_name"],
+                            "days": w["days_remaining"],
+                            "priority": CheckPriority.CRITICAL,
+                            "alert_type": "7_days",
+                        }
+                    )
 
             # HIGH : 30 jours (respect quiet hours)
             if not is_quiet_hours:
@@ -102,12 +107,14 @@ async def check_warranty_expiry(
                     warranty_id = str(w["id"])
                     if not await check_alert_sent(db_pool, warranty_id, "30_days"):
                         await record_alert_sent(db_pool, warranty_id, "30_days")
-                        alerts_sent.append({
-                            "item": w["item_name"],
-                            "days": w["days_remaining"],
-                            "priority": CheckPriority.HIGH,
-                            "alert_type": "30_days",
-                        })
+                        alerts_sent.append(
+                            {
+                                "item": w["item_name"],
+                                "days": w["days_remaining"],
+                                "priority": CheckPriority.HIGH,
+                                "alert_type": "30_days",
+                            }
+                        )
 
             # MEDIUM : 60 jours (respect quiet hours)
             if not is_quiet_hours:
@@ -115,12 +122,14 @@ async def check_warranty_expiry(
                     warranty_id = str(w["id"])
                     if not await check_alert_sent(db_pool, warranty_id, "60_days"):
                         await record_alert_sent(db_pool, warranty_id, "60_days")
-                        alerts_sent.append({
-                            "item": w["item_name"],
-                            "days": w["days_remaining"],
-                            "priority": CheckPriority.MEDIUM,
-                            "alert_type": "60_days",
-                        })
+                        alerts_sent.append(
+                            {
+                                "item": w["item_name"],
+                                "days": w["days_remaining"],
+                                "priority": CheckPriority.MEDIUM,
+                                "alert_type": "60_days",
+                            }
+                        )
 
             # 6. Construire message
             if not alerts_sent and not expired:

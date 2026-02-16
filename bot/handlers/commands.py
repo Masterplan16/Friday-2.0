@@ -40,6 +40,19 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 • `/vip list` - Lister les VIPs
 • `/vip remove <email>` - Retirer un VIP
 
+📎 **FICHIERS** (Story 3.6)
+• **Upload** - Glisser-déposer fichier (PDF, Office, images)
+• **Recherche** - Message naturel: "Envoie-moi la facture du plombier"
+• `/search <query>` - Recherche sémantique documents
+• `/arbo` - Voir arborescence documents
+• `/arbo stats` - Statistiques classification
+
+📅 **CALENDRIER & MULTI-CASQUETTES** (Story 7.2-7.3)
+• `/casquette` - Changer casquette (médecin/enseignant/chercheur)
+• `/conflits` - Voir conflits calendrier (7j par défaut)
+• `/conflits 14j` - Conflits 14 prochains jours
+• `/calendar sync` - Forcer sync Google Calendar
+
 📚 Plus d'infos: `docs/telegram-user-guide.md`
 """
 

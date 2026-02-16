@@ -1181,6 +1181,411 @@ Le Desktop Search est automatiquement utilise quand le PC est disponible. Si le 
 
 ---
 
+## 📎 Fichiers via Telegram (Story 3.6)
+
+### Qu'est-ce que c'est ?
+
+Friday peut **recevoir et envoyer des fichiers** directement via Telegram. Envoyez vos documents (factures, contrats, photos), Friday les archive automatiquement et vous les retrouve ensuite par recherche sémantique.
+
+**Fonctionnalités** :
+- ✅ Upload automatique documents/photos → Pipeline OCR → PostgreSQL
+- ✅ Recherche sémantique → Friday vous envoie le fichier trouvé
+- ✅ Validation MIME types + rate limiting + anonymisation RGPD
+
+---
+
+### Envoyer un fichier à Friday
+
+**Méthode 1 : Drag & Drop (Desktop)**
+1. Ouvrir topic **💬 Chat & Proactive** ou **📬 Email & Communications**
+2. Glisser-déposer fichier dans conversation Telegram
+3. Friday reçoit automatiquement → Notifie traitement en cours
+
+**Méthode 2 : Upload Mobile**
+1. Ouvrir topic **💬 Chat & Proactive**
+2. Cliquer icône trombone 📎
+3. Sélectionner fichier depuis galerie/fichiers
+4. Envoyer
+
+**Types fichiers supportés** :
+
+| Type | Extensions | Taille max |
+|------|-----------|------------|
+| **Documents** | `.pdf`, `.docx`, `.xlsx`, `.csv` | 20 Mo |
+| **Images** | `.png`, `.jpg`, `.jpeg` | 20 Mo |
+
+**Notification après upload** :
+
+```
+✅ Fichier reçu : facture_plombier_2026.pdf
+
+📁 Taille : 1.2 Mo
+⏳ Traitement en cours (OCR + classification)...
+
+Vous recevrez une notification quand le traitement sera terminé.
+```
+
+**Pipeline automatique** :
+1. **Zone transit** : Fichier stocké temporairement (`/var/friday/transit/telegram_uploads/`)
+2. **OCR** : Extraction texte via Surya (Story 3.1)
+3. **Metadata** : Extraction type document, émetteur, montant via Claude
+4. **Classification** : Classement dans arborescence (Story 3.2)
+5. **Embeddings** : Indexation pgvector pour recherche future (Story 6.2)
+6. **Cleanup** : Zone transit nettoyée après 15 minutes
+
+**Notification traitement terminé** (Topic Email) :
+
+```
+✅ Document archivé : facture_plombier_2026.pdf
+
+📄 Type : facture
+💰 Montant : 350.00 EUR
+🏢 Émetteur : Plomberie Dupont
+📁 Catégorie : finance/selarl
+
+Retrouvez-le via recherche : "facture plombier"
+```
+
+---
+
+### Recevoir un fichier de Friday
+
+**Deux méthodes pour retrouver vos documents :**
+
+#### Méthode 1 : Recherche sémantique naturelle (recommandée)
+
+Envoyez une phrase normale dans le topic **💬 Chat & Proactive** :
+
+```
+User: "Envoie-moi la facture du plombier"
+
+Friday: 🔍 Recherche : facture plombier...
+
+[Quelques secondes plus tard]
+
+Friday: 📄 Voici le fichier trouvé
+
+📄 facture_plombier_2026.pdf
+Type : facture
+Émetteur : Plomberie Dupont
+Montant : 350.00 EUR
+
+[Fichier PDF envoyé directement dans Telegram]
+```
+
+**Exemples requêtes** :
+- "Envoie-moi la facture du plombier"
+- "Je veux le contrat SELARL"
+- "Donne-moi le dernier relevé bancaire SCI Ravas"
+- "Où est mon certificat d'assurance ?"
+- "Peux-tu me retrouver la garantie du frigo ?"
+
+**Friday détecte automatiquement** que vous demandez un fichier (pas juste une information).
+
+#### Méthode 2 : Commande `/search` (alternative)
+
+Si la recherche naturelle ne fonctionne pas, utilisez la commande explicite :
+
+```
+/search facture plombier
+```
+
+Voir section [Archiviste - Recherche Sémantique](#archiviste---recherche-sémantique-story-33) pour détails complets.
+
+---
+
+### Cas particuliers
+
+#### Fichier trouvé mais pas sur VPS (pas encore synchronisé)
+
+```
+✅ Fichier trouvé : Contrat_SELARL.pdf
+📁 Emplacement PC : C:\Users\lopez\BeeStation\Friday\Archives\pro\Contrat_SELARL.pdf
+
+⚠️ Le fichier n'est pas encore synchronisé sur le VPS.
+Accédez-y directement depuis votre PC.
+```
+
+**Cause** : Fichier sur PC mais pas encore copié sur VPS via Syncthing/Tailscale.
+
+**Solution** : Attendre quelques minutes (sync automatique) ou accéder directement sur PC.
+
+---
+
+#### Fichier trop gros pour Telegram (>20 Mo)
+
+```
+✅ Fichier trouvé : presentation_conference.pptx
+📁 Emplacement : C:\Users\lopez\BeeStation\Friday\Archives\recherche\presentation_conference.pptx
+
+❌ Fichier trop volumineux pour Telegram : 35.2 Mo
+Limite : 20 Mo
+
+Accédez-y directement depuis votre PC.
+```
+
+**Cause** : Telegram Bot API limite uploads à 20 Mo.
+
+**Solution** : Accéder fichier directement sur PC (chemin fourni).
+
+---
+
+#### Aucun fichier trouvé
+
+```
+❌ Aucun fichier trouvé pour : "facture électricien"
+
+Essayez avec d'autres mots-clés ou vérifiez si le document a été archivé.
+```
+
+**Causes possibles** :
+- Document jamais envoyé à Friday → Envoyez-le maintenant
+- Mots-clés trop spécifiques → Essayez termes plus généraux
+- Document archivé récemment → Attendre indexation (quelques minutes)
+
+**Suggestion** : Reformuler requête avec synonymes ("facture", "invoice", "électricité").
+
+---
+
+#### Résultats multiples (similarité faible)
+
+Si Friday trouve plusieurs documents mais aucun avec haute confiance (>70%), il propose des suggestions :
+
+```
+🤔 Aucun résultat exact trouvé pour : "facture plombier"
+
+Suggestions (similarité <70%) :
+• Facture_Materiel_Medical.pdf (document) - 68%
+• Releve_Bancaire_SELARL.pdf (relevé) - 65%
+• Contrat_Assurance_Cabinet.pdf (contrat) - 60%
+```
+
+**Action** : Affiner requête avec plus de contexte ("facture plombier 2026", "facture plombier intervention urgente").
+
+---
+
+### Sécurité & RGPD
+
+**Validation stricte fichiers** :
+
+✅ **Whitelist MIME types** : 12 types autorisés (PDF, Office, images courantes)
+
+❌ **Blacklist types dangereux** : 25+ extensions bloquées (`.exe`, `.bat`, `.sh`, `.zip`, `.rar`, etc.)
+
+✅ **Taille max** : 20 Mo (limite Telegram Bot API)
+
+✅ **Anonymisation Presidio** : Métadonnées extraites anonymisées AVANT envoi à Claude
+
+✅ **Zone transit éphémère** : Fichiers bruts supprimés après 15 minutes (traitement terminé)
+
+**Protection données** :
+- Fichiers uploadés stockés temporairement uniquement
+- Extraction métadonnées via Claude cloud avec anonymisation RGPD
+- Stockage final chiffré sur BeeStation/NAS
+- Pas de PII en clair dans notifications Telegram
+
+---
+
+### Rate Limiting
+
+**Limite uploads** : 20 fichiers/minute par utilisateur
+
+**Si dépassé** :
+
+```
+⚠️ Limite d'upload atteinte (20 fichiers/minute)
+
+Veuillez attendre 45 secondes avant d'envoyer d'autres fichiers.
+```
+
+**Rationale** : Éviter saturation pipeline OCR + protection abus.
+
+---
+
+### Performance & Latence
+
+| Opération | Latence cible | Mesuré avec |
+|-----------|---------------|-------------|
+| Upload → Zone transit | <5s | Fichier 5 Mo |
+| Recherche + Envoi | <10s | Fichier trouvé sur PC |
+| OCR Pipeline complet | <30s | PDF 10 pages |
+
+**Optimisations** :
+- Download asynchrone (AsyncIO)
+- Batch processing (10 messages/batch)
+- Index HNSW pgvector (m=16, ef_construction=64)
+
+---
+
+### Limitations Day 1
+
+❌ **Pas de récupération directe depuis PC** : Si fichier pas sur VPS, Friday vous notifie chemin PC mais ne peut pas l'envoyer automatiquement. (Phase 2 : Tailscale/rsync direct)
+
+❌ **Pas de support archives** (`.zip`, `.rar`) : Sécurité + complexité extraction.
+
+❌ **Pas de support vidéos/audio** : `.mp4`, `.avi`, `.mp3`, `.wav` non supportés Day 1.
+
+❌ **Pas de filtres avancés recherche** : Date range, montant, émetteur (Phase 2).
+
+❌ **Recherche trouve 1 seul fichier** : Top-1 result envoyé (pas multi-download).
+
+---
+
+### Roadmap Phase 2 (Q2 2026)
+
+🔄 **File retrieval direct depuis PC** via Tailscale/rsync (pas d'attente sync)
+
+🔄 **Support archives** : Décompression automatique `.zip` + indexation contenu
+
+🔄 **Filtres recherche avancés** : Date, montant, catégorie, émetteur
+
+🔄 **Multi-file download** : Envoyer plusieurs fichiers d'un coup
+
+🔄 **Preview images** : Thumbnails dans Telegram avant full download
+
+🔄 **OCR preview** : Extrait texte avant classement complet (feedback rapide)
+
+---
+
+### Exemples d'Usage
+
+**Scénario 1 : Facture urgente besoin pour compta**
+
+```
+User: "Envoie-moi la facture URSSAF dernier trimestre"
+
+Friday: 🔍 Recherche : facture URSSAF dernier trimestre...
+
+Friday: 📄 Voici le fichier trouvé
+
+📄 2026-01-15_Facture_URSSAF_Q4.pdf
+Type : facture
+Émetteur : URSSAF
+Montant : 3,450.00 EUR
+
+[PDF envoyé directement]
+```
+
+**Scénario 2 : Photo événement recherche**
+
+```
+User: "Où est la photo de l'équipement labo ?"
+
+Friday: 🔍 Recherche : photo équipement labo...
+
+Friday: 📷 Voici le fichier trouvé
+
+📷 2026-02-10_Equipement_Labo_Microscope.jpg
+Type : photo
+Catégorie : recherche
+
+[Image envoyée directement]
+```
+
+**Scénario 3 : Upload batch documents compta**
+
+```
+User: [Upload 5 fichiers PDF factures]
+
+Friday: ✅ 5 fichiers reçus
+  • facture_1.pdf (1.2 Mo)
+  • facture_2.pdf (0.8 Mo)
+  • facture_3.pdf (2.1 Mo)
+  • facture_4.pdf (1.5 Mo)
+  • facture_5.pdf (0.9 Mo)
+
+⏳ Traitement en cours (OCR + classification)...
+
+[15 secondes plus tard]
+
+✅ 5 documents archivés
+  → finance/selarl : 3 documents
+  → finance/scm : 2 documents
+
+Retrouvez-les via /search
+```
+
+---
+
+### Troubleshooting
+
+**❌ Fichier rejeté "MIME type non autorisé"**
+
+**Cause** : Type fichier dangereux (`.exe`, `.zip`, `.sh`) ou non supporté (`.mp4`, `.rar`).
+
+**Solution** : Vérifier extension fichier. Si légitime mais non supporté → Attendre Phase 2 ou accéder directement sur PC.
+
+**❌ "Limite d'upload atteinte"**
+
+**Cause** : Plus de 20 fichiers envoyés en 1 minute.
+
+**Solution** : Attendre 45-60 secondes avant retry.
+
+**❌ Recherche ne trouve pas fichier récent**
+
+**Cause** : Indexation pgvector en cours (peut prendre quelques minutes après upload).
+
+**Solution** : Attendre 2-3 minutes puis retry recherche.
+
+**❌ Friday dit "Fichier pas sur VPS" mais Syncthing actif**
+
+**Cause** : Sync Syncthing pas encore terminé ou fichier trop récent.
+
+**Solution** : Forcer sync manuel Syncthing ou attendre quelques minutes.
+
+**❌ OCR échoue "Pipeline failed"**
+
+**Cause** : Surya OCR indisponible ou PDF corrompu.
+
+**Solution** : Vérifier logs `docker compose logs archiviste-consumer`. Si Surya down → Restart service.
+
+---
+
+### Métriques & Monitoring
+
+**Logs structurés** (JSON) Topic **📊 Metrics & Logs** :
+
+```
+✅ Fichier uploadé
+Nom : facture.pdf
+Taille : 1.2 Mo
+Type : application/pdf
+Durée : 4.2s
+```
+
+```
+✅ Fichier envoyé
+Nom : facture.pdf
+Similarité : 87%
+Latence : 8.1s
+```
+
+**Alertes Topic System** (si échec) :
+
+```
+❌ Erreur traitement fichier
+Nom : document_corrompu.pdf
+Erreur : OCR pipeline failed after 3 retries
+Action : Vérifier Surya OCR service
+```
+
+**Commande `/stats`** (Story 1.11) inclut métriques fichiers :
+
+```
+📊 Statistiques Friday
+
+Documents archivés : 156
+  → finance : 72
+  → pro : 45
+  → recherche : 23
+  → universite : 16
+
+Fichiers envoyés ce mois : 42
+Latence moyenne recherche : 7.2s
+```
+
+---
+
 ## 📅 Google Calendar Sync (Story 7.2)
 
 ### Qu'est-ce que c'est ?

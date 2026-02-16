@@ -2,15 +2,14 @@
 
 import asyncio
 import json
-import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 import redis.asyncio as aioredis
-
+import structlog
 from agents.src.integrations.google_calendar.sync_manager import GoogleCalendarSync
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 async def send_telegram_alert(message: str, topic: str = "system"):
@@ -24,7 +23,12 @@ async def send_telegram_alert(message: str, topic: str = "system"):
         Cette fonction sera intégrée avec le bot Telegram dans Story 1.9.
         Pour l'instant, elle log simplement le message.
     """
-    logger.error(f"[TELEGRAM ALERT {topic.upper()}] {message}")
+    # M1 fix: use structlog instead of f-string logging
+    logger.error(
+        "Telegram alert stub",
+        topic=topic,
+        message=message,
+    )
     # TODO Story 1.9: Intégrer avec le bot Telegram pour envoyer réellement l'alerte
 
 
@@ -35,7 +39,7 @@ class CalendarSyncWorker:
     - Sync bidirectionnelle toutes les N minutes (configurable)
     - Healthcheck Redis (calendar:last_sync TTL 1h)
     - Compteur échecs avec alerte System après 3 échecs consécutifs
-    - Arrêt gracieux (SIGTERM)
+    - Arrêt gracieux via shutdown_event (SIGTERM)
     """
 
     HEALTHCHECK_KEY = "calendar:last_sync"
@@ -48,6 +52,7 @@ class CalendarSyncWorker:
         sync_manager: GoogleCalendarSync,
         redis_client: aioredis.Redis,
         config: dict,
+        shutdown_event: Optional[asyncio.Event] = None,
     ):
         """Initialise le worker.
 
@@ -55,6 +60,7 @@ class CalendarSyncWorker:
             sync_manager: Instance de GoogleCalendarSync
             redis_client: Client Redis asyncio
             config: Configuration complète (doit contenir google_calendar.sync_interval_minutes)
+            shutdown_event: Event pour arrêt gracieux (M2 fix)
         """
         self.sync_manager = sync_manager
         self.redis = redis_client
@@ -62,6 +68,7 @@ class CalendarSyncWorker:
         self.sync_interval = (
             config["google_calendar"]["sync_interval_minutes"] * 60
         )  # Convert to seconds
+        self.shutdown_event = shutdown_event or asyncio.Event()
 
     async def sync_once(self) -> bool:
         """Exécute une synchronisation unique.
@@ -76,19 +83,18 @@ class CalendarSyncWorker:
             - Envoie alerte Telegram après 3 échecs consécutifs
         """
         try:
-            # Execute bidirectional sync
             result = await self.sync_manager.sync_bidirectional()
 
             if result.errors:
                 logger.warning(
-                    f"Sync completed with errors: {len(result.errors)} errors"
+                    "Sync completed with errors",
+                    error_count=len(result.errors),
+                    errors=result.errors,
                 )
-                for error in result.errors:
-                    logger.error(f"  - {error}")
 
-            # Update healthcheck Redis key
+            # H4 fix: use timezone-aware datetime
             healthcheck_data = {
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "events_created": result.events_created,
                 "events_updated": result.events_updated,
                 "errors_count": len(result.errors),
@@ -100,28 +106,26 @@ class CalendarSyncWorker:
                 ex=self.HEALTHCHECK_TTL,
             )
 
-            # Reset failure counter on success
             await self.redis.delete(self.FAILURE_COUNTER_KEY)
 
             logger.info(
-                f"Sync successful: {result.events_created} created, "
-                f"{result.events_updated} updated"
+                "Sync successful",
+                events_created=result.events_created,
+                events_updated=result.events_updated,
             )
             return True
 
         except Exception as e:
-            logger.error(f"Sync failed: {str(e)}", exc_info=True)
+            logger.error("Sync failed", error=str(e), exc_info=True)
 
-            # Increment failure counter
             failure_count = await self.redis.incr(self.FAILURE_COUNTER_KEY)
 
-            # Send alert after MAX_CONSECUTIVE_FAILURES
             if failure_count >= self.MAX_CONSECUTIVE_FAILURES:
                 await send_telegram_alert(
                     message=(
-                        f"🚨 Google Calendar sync: {failure_count} échecs consécutifs\n"
-                        f"Dernière erreur: {str(e)}\n"
-                        f"Vérifiez les credentials OAuth2 et la config."
+                        "Google Calendar sync: %d echecs consecutifs. "
+                        "Derniere erreur: %s. "
+                        "Verifiez les credentials OAuth2 et la config." % (failure_count, str(e))
                     ),
                     topic="system",
                 )
@@ -132,25 +136,34 @@ class CalendarSyncWorker:
         """Boucle principale du daemon.
 
         Exécute sync_bidirectional() toutes les sync_interval_minutes.
-        Gère gracieusement SIGTERM/CancelledError.
+        M2 fix: vérifie shutdown_event pour arrêt gracieux.
         """
         logger.info(
-            f"Calendar sync worker started (interval: {self.sync_interval}s = "
-            f"{self.sync_interval // 60} min)"
+            "Calendar sync worker started",
+            interval_s=self.sync_interval,
+            interval_min=self.sync_interval // 60,
         )
 
         try:
-            while True:
-                # Execute sync
+            while not self.shutdown_event.is_set():
                 await self.sync_once()
 
-                # Wait for next sync
-                logger.debug(f"Waiting {self.sync_interval}s until next sync...")
-                await asyncio.sleep(self.sync_interval)
+                # M2 fix: use wait with timeout instead of sleep
+                # This allows shutdown_event to interrupt the wait
+                try:
+                    await asyncio.wait_for(
+                        self.shutdown_event.wait(),
+                        timeout=self.sync_interval,
+                    )
+                    # If we get here, shutdown was requested
+                    break
+                except asyncio.TimeoutError:
+                    # Normal: timeout expired, loop continues
+                    pass
 
         except asyncio.CancelledError:
-            logger.info("Calendar sync worker shutting down gracefully...")
-            raise  # Re-raise to allow proper cleanup
+            logger.info("Calendar sync worker shutting down gracefully")
+            raise
 
     async def start(self):
         """Démarre le worker (alias pour run)."""

@@ -15,7 +15,7 @@ class Event(BaseModel):
     name: str
     start_datetime: str  # ISO 8601 format
     end_datetime: str  # ISO 8601 format
-    casquette: Literal["medecin", "enseignant", "chercheur"]
+    casquette: Literal["medecin", "enseignant", "chercheur", "personnel"]
     status: Literal["proposed", "confirmed", "cancelled"] = "confirmed"
     location: str | None = None
     description: str | None = None

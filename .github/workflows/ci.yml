@@ -70,7 +70,7 @@ jobs:
         run: |
           echo "{\"timestamp\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"level\":\"INFO\",\"message\":\"Running flake8 linter\",\"job\":\"lint\"}"
           echo "::notice::Running flake8 linter..."
-          flake8 agents/ services/ bot/ scripts/ --max-line-length=100 --extend-ignore=E203,W503 || {
+          flake8 agents/ services/ bot/ scripts/ || {
             echo "{\"timestamp\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"level\":\"ERROR\",\"message\":\"Flake8 linting failed\",\"job\":\"lint\"}"
             echo "::error::Flake8 linting failed."
             exit 1

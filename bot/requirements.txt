@@ -7,7 +7,7 @@ python-telegram-bot[job-queue]==21.0  # Job queue for scheduled tasks
 # Core
 pydantic==2.6.0  # Data validation
 structlog==24.1.0  # Structured logging
-python-dotenv==1.0.0  # Environment variables
+python-dotenv==1.2.1  # Environment variables
 
 # Database
 asyncpg==0.29.0  # PostgreSQL async driver

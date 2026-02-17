@@ -14,7 +14,7 @@ BEGIN;
 
 -- Table warranties principale
 CREATE TABLE knowledge.warranties (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     item_name VARCHAR(500) NOT NULL,
     item_category VARCHAR(100) NOT NULL,
     vendor VARCHAR(255),
@@ -44,7 +44,7 @@ EXECUTE FUNCTION core.update_updated_at();
 
 -- Table tracking alertes envoyées (éviter spam)
 CREATE TABLE knowledge.warranty_alerts (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     warranty_id UUID NOT NULL REFERENCES knowledge.warranties(id) ON DELETE CASCADE,
     alert_type VARCHAR(50) NOT NULL CHECK (alert_type IN ('60_days', '30_days', '7_days', 'expired')),
     notified_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),

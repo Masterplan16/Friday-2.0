@@ -26,3 +26,5 @@ exclude =
     n8n-workflows
 per-file-ignores =
     __init__.py:F401
+    tests/**/*.py:F401
+    tests/*.py:F401

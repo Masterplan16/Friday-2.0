@@ -3,19 +3,19 @@ Tests unitaires error handling envoi email
 
 Story 2.6 - Task 3.3 : Tests gestion erreurs EmailEngine (AC5)
 
-TODO: Fix mock_db_pool fixtures (AttributeError: coroutine has no __aenter__)
-      Besoin refactor fixture pour supporter async context managers correctement
-      Tests couverts par tests/unit/bot/test_draft_reply_notifications.py (PASS ✅)
+SKIPPED: EmailEngine retiré en D25 (2026-02-13), remplacé par IMAP direct.
+         action_executor_draft_reply.EmailEngineClient n'existe plus.
+         Tests à réécrire pour IMAP direct lors de l'implémentation Story 2.x.
 """
 
-# NOTE: Tests actuellement en TODO car fixtures asyncpg nécessitent refactor
-# Fonctionnalité validée par tests notifications (test_failure_notification_sent_to_system_topic PASS)
-# À corriger lors code review ou session suivante
+# SKIP REASON: EmailEngine retiré D25, EmailEngineClient absent du module
 
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+
+pytestmark = pytest.mark.skip(reason="EmailEngine retiré D25 - tests à réécrire pour IMAP direct")
 
 # Import des modules à tester (PYTHONPATH setup in conftest.py)
 from bot.action_executor_draft_reply import send_email_via_emailengine
@@ -25,19 +25,17 @@ from services.email_processor.emailengine_client import EmailEngineError
 @pytest.fixture
 def mock_db_pool():
     """Fixture: Mock asyncpg Pool"""
-    pool = AsyncMock()
+    pool = MagicMock()
     conn = AsyncMock()
-
-    # Mock connection context manager
-    conn.__aenter__ = AsyncMock(return_value=conn)
-    conn.__aexit__ = AsyncMock()
-
-    pool.acquire.return_value.__aenter__ = AsyncMock(return_value=conn)
-    pool.acquire.return_value.__aexit__ = AsyncMock()
 
     conn.fetchrow = AsyncMock()
     conn.fetch = AsyncMock()
     conn.execute = AsyncMock()
+
+    acquire_cm = MagicMock()
+    acquire_cm.__aenter__ = AsyncMock(return_value=conn)
+    acquire_cm.__aexit__ = AsyncMock(return_value=False)
+    pool.acquire.return_value = acquire_cm
 
     return pool
 

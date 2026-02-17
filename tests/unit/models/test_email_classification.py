@@ -216,7 +216,7 @@ def test_email_classification_to_dict():
 
     assert data["category"] == "pro"
     assert data["confidence"] == 0.92
-    assert data["reasoning"] == "Test reasoning"
+    assert data["reasoning"] == "Email classification test with valid reasoning content"
     assert data["keywords"] == ["test"]
     assert data["suggested_priority"] == "high"
 

@@ -26,6 +26,13 @@ with patch("agents.src.agents.email.vip_detector.friday_action", mock_friday_act
     from bot.handlers.vip_commands import vip_add_command, vip_list_command, vip_remove_command
 
 
+@pytest.fixture(autouse=True)
+def set_owner_user_id():
+    """Patch OWNER_USER_ID module-level pour tous les tests (user.id = 12345)."""
+    with patch("bot.handlers.vip_commands.OWNER_USER_ID", "12345"):
+        yield
+
+
 @pytest.fixture
 def mock_update():
     """Mock Update Telegram."""
@@ -75,7 +82,7 @@ async def test_vip_add_success(mock_update, mock_context, mock_db_pool):
     mock_context.bot_data["db_pool"] = mock_db_pool
 
     # Mock acquisition
-    async def mock_acquire_context():
+    def mock_acquire_context():
         conn = AsyncMock()
         conn.fetchrow = AsyncMock(return_value=None)  # Pas de VIP existant
         conn.execute = AsyncMock()
@@ -127,7 +134,7 @@ async def test_vip_list_empty(mock_update, mock_context, mock_db_pool):
     mock_context.bot_data["db_pool"] = mock_db_pool
 
     # Mock acquire
-    async def mock_acquire_context():
+    def mock_acquire_context():
         conn = AsyncMock()
         conn.fetch = AsyncMock(return_value=[])  # Aucun VIP
 
@@ -156,7 +163,7 @@ async def test_vip_list_with_vips(mock_update, mock_context, mock_db_pool):
     mock_context.bot_data["db_pool"] = mock_db_pool
 
     # Mock acquire avec VIPs
-    async def mock_acquire_context():
+    def mock_acquire_context():
         conn = AsyncMock()
         conn.fetch = AsyncMock(
             return_value=[
@@ -202,7 +209,7 @@ async def test_vip_remove_success(mock_update, mock_context, mock_db_pool):
     mock_context.bot_data["db_pool"] = mock_db_pool
 
     # Mock acquire
-    async def mock_acquire_context():
+    def mock_acquire_context():
         conn = AsyncMock()
         conn.fetchrow = AsyncMock(
             return_value={
@@ -241,7 +248,7 @@ async def test_vip_remove_not_found(mock_update, mock_context, mock_db_pool):
     mock_context.bot_data["db_pool"] = mock_db_pool
 
     # Mock acquire
-    async def mock_acquire_context():
+    def mock_acquire_context():
         conn = AsyncMock()
         conn.fetchrow = AsyncMock(return_value=None)  # VIP pas trouvé
 

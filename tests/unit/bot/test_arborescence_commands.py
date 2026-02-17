@@ -7,6 +7,7 @@ Tests : affichage tree, stats, add, remove, protection finance, owner-only
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from tests.conftest import create_mock_pool_with_conn
 
 
 @pytest.fixture
@@ -48,7 +49,7 @@ async def test_arbo_unauthorized_user(mock_update, mock_context):
 
 @pytest.mark.asyncio
 @patch.dict("os.environ", {"OWNER_USER_ID": "12345"})
-@patch("bot.handlers.arborescence_commands.get_arborescence_config")
+@patch("agents.src.config.arborescence_config.get_arborescence_config")
 async def test_arbo_display_tree(mock_config, mock_update, mock_context):
     """Test /arbo affiche l'arborescence ASCII."""
     from bot.handlers.arborescence_commands import arbo_command
@@ -109,15 +110,13 @@ async def test_arbo_stats_with_data(mock_update, mock_context):
     from bot.handlers.arborescence_commands import arbo_command
 
     # Mock DB pool
-    db_pool = AsyncMock()
     conn = AsyncMock()
-    db_pool.acquire.return_value.__aenter__ = AsyncMock(return_value=conn)
-    db_pool.acquire.return_value.__aexit__ = AsyncMock(return_value=False)
     conn.fetch.return_value = [
         {"category": "pro", "subcategory": "-", "count": 10},
         {"category": "finance", "subcategory": "selarl", "count": 5},
     ]
     conn.fetchval.side_effect = [20, 15]  # total, classified
+    db_pool = create_mock_pool_with_conn(conn)
 
     mock_context.args = ["stats"]
     mock_context.bot_data = {"db_pool": db_pool}
@@ -135,7 +134,7 @@ async def test_arbo_stats_with_data(mock_update, mock_context):
 
 @pytest.mark.asyncio
 @patch.dict("os.environ", {"OWNER_USER_ID": "12345"})
-@patch("bot.handlers.arborescence_commands.get_arborescence_config")
+@patch("agents.src.config.arborescence_config.get_arborescence_config")
 async def test_arbo_add_valid_folder(mock_config, mock_update, mock_context):
     """Test /arbo add avec dossier valide."""
     from bot.handlers.arborescence_commands import arbo_command

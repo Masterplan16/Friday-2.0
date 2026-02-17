@@ -88,7 +88,7 @@ async def scan_dedup_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
     _active_scan = dedup_id
 
     # Send initial message with progress
-    metrics_topic_id = int(os.getenv("TOPIC_METRICS_ID", "0"))
+    metrics_topic_id = int((os.getenv("TOPIC_METRICS_ID", "0") or "0").split("#")[0].strip() or "0")
     msg = await update.message.reply_text(
         "Scan deduplication PC en cours...\n" "Initialisation du scanner...",
         message_thread_id=metrics_topic_id or None,
@@ -246,7 +246,7 @@ async def handle_dedup_report_callback(update: Update, context: ContextTypes.DEF
         await query.edit_message_text("Rapport non trouve.")
         return
 
-    metrics_topic_id = int(os.getenv("TOPIC_METRICS_ID", "0"))
+    metrics_topic_id = int((os.getenv("TOPIC_METRICS_ID", "0") or "0").split("#")[0].strip() or "0")
     with open(report_path, "rb") as report_file:
         await context.bot.send_document(
             chat_id=query.message.chat_id,

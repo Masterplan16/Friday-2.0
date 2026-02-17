@@ -9,7 +9,7 @@ BEGIN;
 
 -- Table vip_senders
 CREATE TABLE IF NOT EXISTS core.vip_senders (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     email_anon TEXT NOT NULL UNIQUE,
     email_hash TEXT NOT NULL UNIQUE,
     label TEXT,

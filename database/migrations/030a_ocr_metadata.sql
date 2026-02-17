@@ -5,7 +5,7 @@ BEGIN;
 
 -- Table metadata documents OCR (Task 5.1)
 CREATE TABLE IF NOT EXISTS ingestion.document_metadata (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     filename TEXT NOT NULL,
     file_path TEXT,
     ocr_text TEXT NOT NULL,  -- Texte OCR anonymisé (AC6)

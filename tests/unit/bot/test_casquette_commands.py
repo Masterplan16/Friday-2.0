@@ -12,6 +12,7 @@ Tests:
 - Unicode emojis rendering
 """
 
+import os
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -24,6 +25,13 @@ from telegram import Chat, InlineKeyboardMarkup, Message, Update, User
 # ============================================================================
 # Fixtures
 # ============================================================================
+
+
+@pytest.fixture(autouse=True)
+def set_owner_user_id():
+    """Set OWNER_USER_ID to match mock user (12345) for all tests."""
+    with patch.dict(os.environ, {"OWNER_USER_ID": "12345"}):
+        yield
 
 
 @pytest.fixture
@@ -138,7 +146,7 @@ async def test_casquette_command_set_medecin(mock_update, mock_context):
     mock_cm.set_context.assert_called_once_with(casquette=Casquette.MEDECIN, source="manual")
 
     mock_update.message.reply_text.assert_called_once()
-    text = mock_update.message.reply_text.call_args[1]["text"]
+    text = mock_update.message.reply_text.call_args[0][0]
     assert "✅" in text
     assert "Médecin" in text
     assert "Contexte changé" in text
@@ -171,7 +179,7 @@ async def test_casquette_command_set_auto(mock_update, mock_context):
     mock_cm.set_context.assert_called_once_with(casquette=None, source="system")
 
     mock_update.message.reply_text.assert_called_once()
-    text = mock_update.message.reply_text.call_args[1]["text"]
+    text = mock_update.message.reply_text.call_args[0][0]
     assert "✅" in text
     assert "Détection automatique réactivée" in text
 
@@ -194,7 +202,7 @@ async def test_casquette_command_invalid_argument(mock_update, mock_context):
 
     # Message erreur
     mock_update.message.reply_text.assert_called_once()
-    text = mock_update.message.reply_text.call_args[1]["text"]
+    text = mock_update.message.reply_text.call_args[0][0]
     assert "❌" in text
     assert "invalide" in text.lower()
     assert "medecin" in text

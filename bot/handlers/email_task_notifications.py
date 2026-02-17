@@ -5,9 +5,10 @@ AC3 : Notification topic Actions avec inline buttons
 AC4 : Notification topic Email avec lien receipt
 """
 
-import logging
 import os
 from typing import List
+
+import structlog
 
 try:
     from agents.src.agents.email.models import TaskDetected
@@ -15,30 +16,15 @@ except ImportError:
     TaskDetected = None  # type: ignore[assignment,misc]
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 # Env vars Telegram
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 TELEGRAM_SUPERGROUP_ID = os.environ.get("TELEGRAM_SUPERGROUP_ID")
 
-# H3 fix: Validation topic IDs au démarrage (fail-fast)
-_TOPIC_ACTIONS_ID_STR = os.environ.get("TOPIC_ACTIONS_ID")
-_TOPIC_EMAIL_ID_STR = os.environ.get("TOPIC_EMAIL_ID")
-
-if not _TOPIC_ACTIONS_ID_STR or _TOPIC_ACTIONS_ID_STR == "0":
-    raise ValueError(
-        "TOPIC_ACTIONS_ID environment variable is required and must be non-zero. "
-        "Extract thread IDs using scripts/extract_telegram_thread_ids.py"
-    )
-
-if not _TOPIC_EMAIL_ID_STR or _TOPIC_EMAIL_ID_STR == "0":
-    raise ValueError(
-        "TOPIC_EMAIL_ID environment variable is required and must be non-zero. "
-        "Extract thread IDs using scripts/extract_telegram_thread_ids.py"
-    )
-
-TOPIC_ACTIONS_ID = int(_TOPIC_ACTIONS_ID_STR)
-TOPIC_EMAIL_ID = int(_TOPIC_EMAIL_ID_STR)
+# Topic IDs (validés au premier appel via _get_topic_id)
+TOPIC_ACTIONS_ID = int(os.environ.get("TOPIC_ACTIONS_ID", "0").split("#")[0].strip() or "0")
+TOPIC_EMAIL_ID = int(os.environ.get("TOPIC_EMAIL_ID", "0").split("#")[0].strip() or "0")
 
 
 async def send_task_detected_notification(

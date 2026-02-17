@@ -514,7 +514,9 @@ class FridayBot:
                     message = format_status_message(health)
 
                     # Envoyer au topic System
-                    system_topic_id = int(os.getenv("TOPIC_SYSTEM_ID", "0"))
+                    system_topic_id = int(
+                        (os.getenv("TOPIC_SYSTEM_ID", "0") or "0").split("#")[0].strip() or "0"
+                    )
                     supergroup_id = int(os.getenv("TELEGRAM_SUPERGROUP_ID", "0"))
 
                     if system_topic_id and supergroup_id:

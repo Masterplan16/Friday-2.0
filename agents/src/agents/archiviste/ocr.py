@@ -19,8 +19,8 @@ from typing import Optional
 from agents.src.agents.archiviste.models import OCRResult
 
 try:
-    from PIL import Image
     import fitz  # PyMuPDF pour PDF
+    from PIL import Image
 except ImportError:
     Image = None  # type: ignore[assignment,misc]
     fitz = None  # type: ignore[assignment]

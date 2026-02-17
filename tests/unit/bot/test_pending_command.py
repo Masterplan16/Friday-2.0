@@ -75,14 +75,16 @@ async def test_pending_command_shows_only_pending_actions(mock_update, mock_cont
         ]
     )
 
-    with patch("bot.handlers.trust_budget_commands._get_pool", return_value=mock_pool):
+    with patch(
+        "bot.handlers.trust_budget_commands._get_pool", new=AsyncMock(return_value=mock_pool)
+    ):
         with patch("bot.handlers.trust_budget_commands._OWNER_USER_ID", 12345):
             with patch("bot.handlers.trust_budget_commands.send_message_with_split") as mock_send:
                 await pending_command(mock_update, mock_context)
 
     # Vérifier que seules les actions pending sont listées
-    mock_send.assert_called_once()
-    text = mock_send.call_args[0][1]
+    mock_update.message.reply_text.assert_called_once()
+    text = mock_update.message.reply_text.call_args[0][0]
     assert "📋 Actions en attente de validation (2)" in text
     assert "⏳" in text
     assert "abc12345" in text
@@ -117,12 +119,14 @@ async def test_pending_command_chronological_desc(mock_update, mock_context, moc
         ]
     )
 
-    with patch("bot.handlers.trust_budget_commands._get_pool", return_value=mock_pool):
+    with patch(
+        "bot.handlers.trust_budget_commands._get_pool", new=AsyncMock(return_value=mock_pool)
+    ):
         with patch("bot.handlers.trust_budget_commands._OWNER_USER_ID", 12345):
             with patch("bot.handlers.trust_budget_commands.send_message_with_split") as mock_send:
                 await pending_command(mock_update, mock_context)
 
-    text = mock_send.call_args[0][1]
+    text = mock_update.message.reply_text.call_args[0][0]
     # La plus récente doit apparaître en premier
     newer_pos = text.find("newer123")
     older_pos = text.find("older123")
@@ -148,22 +152,24 @@ async def test_pending_command_format_output(mock_update, mock_context, mock_poo
         ]
     )
 
-    with patch("bot.handlers.trust_budget_commands._get_pool", return_value=mock_pool):
+    with patch(
+        "bot.handlers.trust_budget_commands._get_pool", new=AsyncMock(return_value=mock_pool)
+    ):
         with patch("bot.handlers.trust_budget_commands._OWNER_USER_ID", 12345):
             with patch("bot.handlers.trust_budget_commands.send_message_with_split") as mock_send:
                 await pending_command(mock_update, mock_context)
 
-    text = mock_send.call_args[0][1]
+    text = mock_update.message.reply_text.call_args[0][0]
     # Vérifier tous les éléments du format
     assert "⏳" in text  # Emoji pending
     assert "abc12345" in text  # ID (8 premiers chars)
     assert "email.classify" in text  # module.action
     assert "Catégorie: pro" in text  # output_summary
     assert "/receipt abc12345" in text  # Lien receipt
-    assert "💡 Utilisez /receipt <id>" in text  # Footer
+    assert "💡 /receipt" in text  # Footer
     # M1 fix: pas de parse_mode Markdown (contenu utilisateur non echappe)
     assert (
-        mock_send.call_args[1].get("parse_mode") is None
+        mock_update.message.reply_text.call_args[1].get("parse_mode") is None
         or "parse_mode" not in mock_send.call_args[1]
     )
 
@@ -194,7 +200,9 @@ async def test_pending_command_filter_by_module(mock_update, mock_context, mock_
         ]
     )
 
-    with patch("bot.handlers.trust_budget_commands._get_pool", return_value=mock_pool):
+    with patch(
+        "bot.handlers.trust_budget_commands._get_pool", new=AsyncMock(return_value=mock_pool)
+    ):
         with patch("bot.handlers.trust_budget_commands._OWNER_USER_ID", 12345):
             with patch("bot.handlers.trust_budget_commands.send_message_with_split") as mock_send:
                 await pending_command(mock_update, mock_context)
@@ -204,7 +212,7 @@ async def test_pending_command_filter_by_module(mock_update, mock_context, mock_
     query = fetch_call[0][0]
     assert "module = $1" in query
 
-    text = mock_send.call_args[0][1]
+    text = mock_update.message.reply_text.call_args[0][0]
     assert "📋 Actions en attente - Module: email (1)" in text
 
 
@@ -234,12 +242,14 @@ async def test_pending_command_verbose_shows_input(mock_update, mock_context, mo
         ]
     )
 
-    with patch("bot.handlers.trust_budget_commands._get_pool", return_value=mock_pool):
+    with patch(
+        "bot.handlers.trust_budget_commands._get_pool", new=AsyncMock(return_value=mock_pool)
+    ):
         with patch("bot.handlers.trust_budget_commands._OWNER_USER_ID", 12345):
             with patch("bot.handlers.trust_budget_commands.send_message_with_split") as mock_send:
                 await pending_command(mock_update, mock_context)
 
-    text = mock_send.call_args[0][1]
+    text = mock_update.message.reply_text.call_args[0][0]
     assert "📥 Input:" in text
     assert "Email complet avec détails" in text
 
@@ -256,7 +266,9 @@ async def test_pending_command_no_pending_actions(mock_update, mock_context, moc
 
     mock_pool.acquire.return_value.__aenter__.return_value.fetch = AsyncMock(return_value=[])
 
-    with patch("bot.handlers.trust_budget_commands._get_pool", return_value=mock_pool):
+    with patch(
+        "bot.handlers.trust_budget_commands._get_pool", new=AsyncMock(return_value=mock_pool)
+    ):
         with patch("bot.handlers.trust_budget_commands._OWNER_USER_ID", 12345):
             await pending_command(mock_update, mock_context)
 
@@ -294,12 +306,14 @@ async def test_pending_command_pagination_limit_20(mock_update, mock_context, mo
     conn_mock.fetch = AsyncMock(return_value=mock_rows)
     conn_mock.fetchval = AsyncMock(return_value=25)  # Total count
 
-    with patch("bot.handlers.trust_budget_commands._get_pool", return_value=mock_pool):
+    with patch(
+        "bot.handlers.trust_budget_commands._get_pool", new=AsyncMock(return_value=mock_pool)
+    ):
         with patch("bot.handlers.trust_budget_commands._OWNER_USER_ID", 12345):
             with patch("bot.handlers.trust_budget_commands.send_message_with_split") as mock_send:
                 await pending_command(mock_update, mock_context)
 
-    text = mock_send.call_args[0][1]
+    text = mock_update.message.reply_text.call_args[0][0]
     assert "⚠️ Affichage limite aux 20 plus recentes (25 total)" in text
 
 
@@ -338,7 +352,9 @@ async def test_pending_command_db_error(mock_update, mock_context, mock_pool):
         side_effect=Exception("DB connection failed")
     )
 
-    with patch("bot.handlers.trust_budget_commands._get_pool", return_value=mock_pool):
+    with patch(
+        "bot.handlers.trust_budget_commands._get_pool", new=AsyncMock(return_value=mock_pool)
+    ):
         with patch("bot.handlers.trust_budget_commands._OWNER_USER_ID", 12345):
             await pending_command(mock_update, mock_context)
 
@@ -369,12 +385,14 @@ async def test_pending_command_combined_module_verbose(mock_update, mock_context
         ]
     )
 
-    with patch("bot.handlers.trust_budget_commands._get_pool", return_value=mock_pool):
+    with patch(
+        "bot.handlers.trust_budget_commands._get_pool", new=AsyncMock(return_value=mock_pool)
+    ):
         with patch("bot.handlers.trust_budget_commands._OWNER_USER_ID", 12345):
             with patch("bot.handlers.trust_budget_commands.send_message_with_split") as mock_send:
                 await pending_command(mock_update, mock_context)
 
-    text = mock_send.call_args[0][1]
+    text = mock_update.message.reply_text.call_args[0][0]
     # Vérifier filtrage module
     assert "Module: email" in text
     # Vérifier mode verbose
@@ -412,7 +430,9 @@ async def test_pending_command_pagination_with_module_filter(mock_update, mock_c
     conn_mock.fetch = AsyncMock(return_value=mock_rows)
     conn_mock.fetchval = AsyncMock(return_value=30)  # 30 email pending (pas total global)
 
-    with patch("bot.handlers.trust_budget_commands._get_pool", return_value=mock_pool):
+    with patch(
+        "bot.handlers.trust_budget_commands._get_pool", new=AsyncMock(return_value=mock_pool)
+    ):
         with patch("bot.handlers.trust_budget_commands._OWNER_USER_ID", 12345):
             with patch("bot.handlers.trust_budget_commands.send_message_with_split") as mock_send:
                 await pending_command(mock_update, mock_context)
@@ -422,7 +442,7 @@ async def test_pending_command_pagination_with_module_filter(mock_update, mock_c
     count_query = fetchval_call[0][0]
     assert "module = $1" in count_query, "Count query doit filtrer par module"
 
-    text = mock_send.call_args[0][1]
+    text = mock_update.message.reply_text.call_args[0][0]
     assert "30 total" in text
     assert "Module: email" in text
 
@@ -455,7 +475,9 @@ async def test_pending_command_long_verbose_flag_not_parsed_as_module(
         ]
     )
 
-    with patch("bot.handlers.trust_budget_commands._get_pool", return_value=mock_pool):
+    with patch(
+        "bot.handlers.trust_budget_commands._get_pool", new=AsyncMock(return_value=mock_pool)
+    ):
         with patch("bot.handlers.trust_budget_commands._OWNER_USER_ID", 12345):
             with patch("bot.handlers.trust_budget_commands.send_message_with_split") as mock_send:
                 await pending_command(mock_update, mock_context)
@@ -465,7 +487,7 @@ async def test_pending_command_long_verbose_flag_not_parsed_as_module(
     query = fetch_call[0][0]
     assert "module = $1" in query, "Doit filtrer par module email"
 
-    text = mock_send.call_args[0][1]
+    text = mock_update.message.reply_text.call_args[0][0]
     assert "Module: email" in text
     # Verbose doit etre actif aussi
     assert "📥 Input:" in text
@@ -495,10 +517,12 @@ async def test_pending_command_confidence_none(mock_update, mock_context, mock_p
         ]
     )
 
-    with patch("bot.handlers.trust_budget_commands._get_pool", return_value=mock_pool):
+    with patch(
+        "bot.handlers.trust_budget_commands._get_pool", new=AsyncMock(return_value=mock_pool)
+    ):
         with patch("bot.handlers.trust_budget_commands._OWNER_USER_ID", 12345):
             with patch("bot.handlers.trust_budget_commands.send_message_with_split") as mock_send:
                 await pending_command(mock_update, mock_context)
 
-    text = mock_send.call_args[0][1]
+    text = mock_update.message.reply_text.call_args[0][0]
     assert "N/A" in text

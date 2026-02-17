@@ -24,7 +24,7 @@ async def test_handle_correct_button_email_shows_category_buttons(mock_anonymize
     mock_pool = AsyncMock()
     mock_conn = AsyncMock()
     mock_conn.fetchrow.return_value = {
-        "id": "receipt-email-123",
+        "id": "00000000-0000-0000-0000-000000000123",
         "module": "email",
         "action_type": "classify",
         "input_summary": "Email from @urssaf.fr",
@@ -40,7 +40,7 @@ async def test_handle_correct_button_email_shows_category_buttons(mock_anonymize
 
     # Mock Telegram Update avec callback_data
     update = MagicMock()
-    update.callback_query.data = "correct_receipt-email-123"
+    update.callback_query.data = "correct_00000000-0000-0000-0000-000000000123"
     update.callback_query.answer = AsyncMock()
     update.callback_query.message.reply_text = AsyncMock()
 
@@ -69,7 +69,7 @@ async def test_handle_correct_button_email_shows_category_buttons(mock_anonymize
     # Vérifier que les callbacks sont corrects
     categories = ["pro", "finance", "universite", "recherche", "perso", "urgent", "spam", "inconnu"]
     for idx, btn in enumerate(buttons_flat):
-        assert btn.callback_data == f"correct_email_cat_{categories[idx]}_receipt-email-123"
+        assert btn.callback_data == f"cc_{categories[idx]}_00000000-0000-0000-0000-000000000123"
 
 
 @pytest.mark.asyncio
@@ -92,7 +92,7 @@ async def test_handle_correct_button_email_not_found(mock_anonymize):
 
     # Mock Telegram Update
     update = MagicMock()
-    update.callback_query.data = "correct_receipt-nonexistent"
+    update.callback_query.data = "correct_99999999-9999-9999-9999-999999999999"
     update.callback_query.answer = AsyncMock()
     update.callback_query.message.reply_text = AsyncMock()
 
@@ -116,7 +116,7 @@ async def test_handle_correct_button_non_email_uses_text_input():
     mock_pool = AsyncMock()
     mock_conn = AsyncMock()
     mock_conn.fetchrow.return_value = {
-        "id": "receipt-archiviste-456",
+        "id": "00000000-0000-0000-0000-000000000456",
         "module": "archiviste",
         "action_type": "classify_doc",
         "input_summary": "Document.pdf",
@@ -132,7 +132,7 @@ async def test_handle_correct_button_non_email_uses_text_input():
 
     # Mock Telegram Update
     update = MagicMock()
-    update.callback_query.data = "correct_receipt-archiviste-456"
+    update.callback_query.data = "correct_00000000-0000-0000-0000-000000000456"
     update.callback_query.answer = AsyncMock()
     update.callback_query.message.reply_text = AsyncMock()
 
@@ -148,7 +148,7 @@ async def test_handle_correct_button_non_email_uses_text_input():
     assert "reply_markup" not in call_args[1] or call_args[1].get("reply_markup") is None
 
     # Vérifier que user_data a été set pour awaiting_correction_for
-    assert context.user_data["awaiting_correction_for"] == "receipt-archiviste-456"
+    assert context.user_data["awaiting_correction_for"] == "00000000-0000-0000-0000-000000000456"
 
 
 # ==========================================
@@ -165,7 +165,7 @@ async def test_handle_category_correction_success():
     mock_pool = AsyncMock()
     mock_conn = AsyncMock()
     mock_conn.fetchrow.return_value = {
-        "id": "receipt-email-789",
+        "id": "00000000-0000-0000-0000-000000000789",
         "module": "email",
         "action_type": "classify",
         "output_summary": "→ pro (0.92)",  # Catégorie originale
@@ -181,7 +181,7 @@ async def test_handle_category_correction_success():
 
     # Mock Telegram Update avec callback de sélection catégorie
     update = MagicMock()
-    update.callback_query.data = "correct_email_cat_finance_receipt-email-789"
+    update.callback_query.data = "cc_finance_00000000-0000-0000-0000-000000000789"
     update.callback_query.answer = AsyncMock()
     update.callback_query.message.edit_text = AsyncMock()
     update.callback_query.from_user.id = 123456
@@ -231,7 +231,7 @@ async def test_handle_category_correction_receipt_not_found():
 
     # Mock Telegram Update
     update = MagicMock()
-    update.callback_query.data = "correct_email_cat_finance_receipt-nonexistent"
+    update.callback_query.data = "cc_finance_99999999-9999-9999-9999-999999999999"
     update.callback_query.answer = AsyncMock()
     update.callback_query.message.edit_text = AsyncMock()
 
@@ -269,7 +269,7 @@ async def test_handle_category_correction_parses_category_from_output():
 
     for output_summary, expected_category in test_cases:
         mock_conn.fetchrow.return_value = {
-            "id": "receipt-test",
+            "id": "00000000-0000-0000-0000-000000000000",
             "module": "email",
             "action_type": "classify",
             "output_summary": output_summary,
@@ -285,7 +285,7 @@ async def test_handle_category_correction_parses_category_from_output():
 
         # Mock Update
         update = MagicMock()
-        update.callback_query.data = f"correct_email_cat_spam_receipt-test"
+        update.callback_query.data = f"cc_spam_00000000-0000-0000-0000-000000000000"
         update.callback_query.answer = AsyncMock()
         update.callback_query.message.edit_text = AsyncMock()
         update.callback_query.from_user.id = 123456

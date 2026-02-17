@@ -73,7 +73,7 @@ class TestRedisACLPermissions:
         return users
 
     def test_redis_acl_has_6_service_users(self, acl_users):
-        """6 users de service + admin + default = 8 total."""
+        """8 users de service + admin + default = 10 total (D25: EmailEngine → friday_email + friday_bot + document_processor)."""
         expected_users = {
             "default",
             "admin",
@@ -82,7 +82,9 @@ class TestRedisACLPermissions:
             "friday_alerting",
             "friday_metrics",
             "friday_n8n",
-            "friday_emailengine",
+            "friday_bot",
+            "friday_email",
+            "document_processor",
         }
         assert (
             set(acl_users.keys()) == expected_users

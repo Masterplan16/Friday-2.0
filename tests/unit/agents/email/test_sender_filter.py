@@ -91,9 +91,9 @@ async def test_check_sender_filter_blacklist():
     # Assertions
     assert result is not None
     assert result["filter_type"] == "blacklist"
-    assert result["category"] == "spam"
+    assert result["category"] == "blacklisted"
     assert result["confidence"] == 1.0
-    assert result["tokens_saved_estimate"] == 0.015  # $0.015 économie
+    assert result["tokens_saved_estimate"] == 0.006  # $0.006 économie
 
 
 @pytest.mark.asyncio
@@ -119,12 +119,8 @@ async def test_check_sender_filter_whitelist():
         db_pool=mock_pool,
     )
 
-    # Assertions
-    assert result is not None
-    assert result["filter_type"] == "whitelist"
-    assert result["category"] == "pro"
-    assert result["confidence"] == 0.95
-    assert result["tokens_saved_estimate"] == 0.015
+    # Assertions - whitelist = proceed to classify normalement (None)
+    assert result is None
 
 
 @pytest.mark.asyncio
@@ -303,7 +299,7 @@ async def test_check_sender_filter_logging_blacklist():
     # Assertions - vérifier résultat contient économie tokens
     assert result is not None
     assert result["filter_type"] == "blacklist"
-    assert result["tokens_saved_estimate"] == 0.015
+    assert result["tokens_saved_estimate"] == 0.006
     # Note: Logging structlog testé via tests E2E
 
 
@@ -402,6 +398,5 @@ async def test_check_sender_filter_only_email():
         db_pool=mock_pool,
     )
 
-    # Assertions
-    assert result is not None
-    assert result["filter_type"] == "whitelist"
+    # Assertions - whitelist = proceed to classify normalement (None)
+    assert result is None

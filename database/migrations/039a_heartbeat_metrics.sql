@@ -11,7 +11,7 @@ BEGIN;
 
 -- 1. Créer table core.heartbeat_metrics
 CREATE TABLE IF NOT EXISTS core.heartbeat_metrics (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
 
     -- Timestamp cycle
     cycle_timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),

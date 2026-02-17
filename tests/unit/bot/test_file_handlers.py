@@ -88,6 +88,13 @@ def reset_rate_limiter():
     file_upload_limiter.call_history.clear()
 
 
+@pytest.fixture(autouse=True)
+def mock_magic_number_validation():
+    """Mock magic number validation (évite lecture fichier sur disque en tests)."""
+    with patch("bot.handlers.file_handlers.validate_magic_number", return_value=True):
+        yield
+
+
 # ============================================================================
 # Test 1: Document PDF valide (AC#1)
 # ============================================================================

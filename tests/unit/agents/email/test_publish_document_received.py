@@ -16,7 +16,7 @@ async def test_publish_success():
     """
     GIVEN un attachment valide et un client Redis mock
     WHEN _publish_document_received() est appelé
-    THEN événement publié dans documents:received avec payload complet
+    THEN événement publié dans document.received avec payload complet
     """
     redis_mock = AsyncMock()
     redis_mock.xadd = AsyncMock(return_value=b"1234567890-0")
@@ -38,7 +38,7 @@ async def test_publish_success():
     redis_mock.xadd.assert_awaited_once()
 
     call_args = redis_mock.xadd.call_args
-    assert call_args[0][0] == "documents:received"
+    assert call_args[0][0] == "document.received"
     assert call_args[1]["maxlen"] == 10000
 
     # Vérifier payload
@@ -227,7 +227,7 @@ async def test_stream_name_documents_received():
     """
     GIVEN publication événement
     WHEN _publish_document_received() est appelé
-    THEN stream name = 'documents:received'
+    THEN stream name = 'document.received'
     """
     redis_mock = AsyncMock()
     redis_mock.xadd = AsyncMock(return_value=b"1234567890-0")
@@ -247,7 +247,7 @@ async def test_stream_name_documents_received():
 
     # Vérifier stream name
     stream_name = redis_mock.xadd.call_args[0][0]
-    assert stream_name == "documents:received"
+    assert stream_name == "document.received"
 
 
 @pytest.mark.asyncio

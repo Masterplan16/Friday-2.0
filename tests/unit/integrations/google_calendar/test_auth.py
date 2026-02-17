@@ -201,12 +201,14 @@ class TestGoogleCalendarAuth:
             "expiry": (datetime.now() + timedelta(hours=1)).isoformat(),
         }
 
-        # Mock SOPS decrypt
-        with patch("subprocess.run") as mock_sops:
-            mock_sops.return_value = Mock(
-                returncode=0, stdout=json.dumps(mock_decrypted_data).encode()
-            )
+        # Mock asyncio.create_subprocess_exec (implémentation utilise async subprocess)
+        mock_process = AsyncMock()
+        mock_process.returncode = 0
+        mock_process.communicate = AsyncMock(
+            return_value=(json.dumps(mock_decrypted_data).encode(), b"")
+        )
 
+        with patch("asyncio.create_subprocess_exec", return_value=mock_process) as mock_sops:
             # Act
             decrypted = await auth_manager._decrypt_credentials_with_sops(str(encrypted_path))
 

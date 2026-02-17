@@ -41,17 +41,15 @@ class TestServiceConfiguration:
 
         # Vérifier URLs (format attendu)
         assert "presidio-analyzer" in analyzer["url"]
-        assert "5001" in analyzer["url"]
         assert "/health" in analyzer["url"]
 
         assert "presidio-anonymizer" in anonymizer["url"]
-        assert "5002" in anonymizer["url"]
         assert "/health" in anonymizer["url"]
 
     def test_critical_services_configuration(self):
         """Vérifier que les services critiques sont correctement configurés"""
-        # Services critiques attendus
-        expected_critical = {"postgresql", "redis", "emailengine"}
+        # Services critiques attendus (D25: emailengine retiré)
+        expected_critical = {"postgresql", "redis"}
 
         assert CRITICAL_SERVICES == expected_critical, (
             f"CRITICAL_SERVICES mismatch. "

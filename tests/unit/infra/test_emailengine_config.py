@@ -1,6 +1,8 @@
 """
 Tests unitaires pour la configuration EmailEngine dans docker-compose.services.yml
 Story 2.1 - Task 1 - EmailEngine setup
+
+OBSOLETE (D25, 2026-02-13): EmailEngine retiré - remplacé par IMAP direct (aioimaplib).
 """
 
 import os
@@ -8,6 +10,8 @@ from pathlib import Path
 
 import pytest
 import yaml
+
+pytestmark = pytest.mark.skip(reason="EmailEngine retiré D25 - service supprimé de docker-compose")
 
 
 @pytest.fixture

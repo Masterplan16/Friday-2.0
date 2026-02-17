@@ -31,9 +31,12 @@ from agents.src.core.models import Casquette, ContextSource, OngoingEvent, UserC
 @pytest.fixture
 def mock_db_pool():
     """Mock asyncpg.Pool."""
-    pool = AsyncMock()
+    pool = MagicMock()
     conn = AsyncMock()
-    pool.acquire.return_value.__aenter__.return_value = conn
+    acquire_cm = MagicMock()
+    acquire_cm.__aenter__ = AsyncMock(return_value=conn)
+    acquire_cm.__aexit__ = AsyncMock(return_value=False)
+    pool.acquire.return_value = acquire_cm
     return pool, conn
 
 
@@ -41,6 +44,8 @@ def mock_db_pool():
 def mock_redis():
     """Mock Redis client."""
     redis_client = AsyncMock()
+    # Simule cache miss par défaut (évite json.loads sur AsyncMock)
+    redis_client.get.return_value = None
     return redis_client
 
 
@@ -300,8 +305,10 @@ async def test_context_set_invalidates_cache(context_manager, mock_db_pool):
 
 
 @pytest.mark.asyncio
-async def test_context_transition_logged(context_manager, mock_db_pool, caplog):
+async def test_context_transition_logged(context_manager, mock_db_pool):
     """Test: Transition contexte logged (structlog)."""
+    import structlog.testing
+
     _, conn = mock_db_pool
 
     # Mock: UPDATE context
@@ -319,11 +326,11 @@ async def test_context_transition_logged(context_manager, mock_db_pool, caplog):
     context_manager.redis_client.get.return_value = None
 
     # Set context
-    with caplog.at_level("INFO"):
+    with structlog.testing.capture_logs() as cap_logs:
         await context_manager.set_context(Casquette.CHERCHEUR, source="manual")
 
     # Vérifier log "context_updated"
-    assert any("context_updated" in record.message for record in caplog.records)
+    assert any(log.get("event") == "context_updated" for log in cap_logs)
 
 
 @pytest.mark.asyncio
@@ -333,6 +340,16 @@ async def test_context_singleton_user_context_update_not_insert(context_manager,
 
     # Mock: UPDATE (pas INSERT)
     conn.execute = AsyncMock()
+    # fetchrow appelé par get_current_context() après set_context()
+    # Retourner un row manuel valide pour éviter d'autres requêtes DB
+    conn.fetchrow = AsyncMock(
+        return_value={
+            "id": 1,
+            "current_casquette": "medecin",
+            "last_updated_at": datetime.now(),
+            "updated_by": "manual",
+        }
+    )
 
     # Set context
     await context_manager.set_context(Casquette.MEDECIN, source="manual")

@@ -141,7 +141,7 @@ BEGIN
         2, -- normal priority
         NOW() + INTERVAL '2 days',
         jsonb_build_object(
-            'email_id', gen_random_uuid()::text,
+            'email_id', uuid_generate_v4()::text,
             'email_subject', 'Test email anonymized',
             'confidence', 0.85,
             'context', 'Test insertion migration 032',

@@ -9,7 +9,7 @@ BEGIN;
 
 -- Table urgency_keywords
 CREATE TABLE IF NOT EXISTS core.urgency_keywords (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     keyword TEXT NOT NULL UNIQUE,
     weight DOUBLE PRECISION NOT NULL DEFAULT 0.3 CHECK (weight >= 0.0 AND weight <= 1.0),
     context_pattern TEXT,

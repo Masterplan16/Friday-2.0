@@ -251,10 +251,10 @@ async def test_update_email_category_success():
     acquire_ctx.__aexit__ = AsyncMock(return_value=None)
     mock_pool.acquire = MagicMock(return_value=acquire_ctx)
 
-    # Test - ne doit pas raise
+    # Test - ne doit pas raise (email_id doit être un UUID valide)
     await _update_email_category(
         db_pool=mock_pool,
-        email_id="test-email-123",
+        email_id="550e8400-e29b-41d4-a716-446655440000",
         category="pro",
         confidence=0.92,
     )
@@ -281,13 +281,12 @@ async def test_update_email_category_not_found():
     acquire_ctx.__aexit__ = AsyncMock(return_value=None)
     mock_pool.acquire = MagicMock(return_value=acquire_ctx)
 
-    # Test - doit raise EmailClassifierError
-    with pytest.raises(EmailClassifierError) as exc_info:
-        await _update_email_category(
-            db_pool=mock_pool,
-            email_id="nonexistent-email",
-            category="pro",
-            confidence=0.92,
-        )
-
-    assert "introuvable" in str(exc_info.value)
+    # Test - email non trouvé → log warning, ne raise PAS (mode dégradé)
+    await _update_email_category(
+        db_pool=mock_pool,
+        email_id="550e8400-e29b-41d4-a716-446655440001",
+        category="pro",
+        confidence=0.92,
+    )
+    # Vérifie que execute a bien été appelé (UPDATE émis même si 0 lignes modifiées)
+    mock_conn.execute.assert_called_once()

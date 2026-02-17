@@ -14,6 +14,7 @@ Tests :
 """
 
 import json
+import os
 from datetime import date, datetime, time
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
@@ -35,12 +36,22 @@ from telegram.ext import ContextTypes
 # ============================================================================
 
 
+@pytest.fixture(autouse=True)
+def set_owner_user_id():
+    """Patch OWNER_USER_ID pour tous les tests (user.id = 123456789)."""
+    with patch.dict(os.environ, {"OWNER_USER_ID": "123456789"}):
+        yield
+
+
 @pytest.fixture
 def mock_db_pool():
     """Mock asyncpg.Pool."""
-    pool = AsyncMock()
+    pool = MagicMock()
     conn = AsyncMock()
-    pool.acquire.return_value.__aenter__.return_value = conn
+    acquire_cm = MagicMock()
+    acquire_cm.__aenter__ = AsyncMock(return_value=conn)
+    acquire_cm.__aexit__ = AsyncMock(return_value=False)
+    pool.acquire.return_value = acquire_cm
     return pool, conn
 
 

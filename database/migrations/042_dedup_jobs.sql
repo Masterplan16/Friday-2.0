@@ -11,7 +11,7 @@ BEGIN;
 -- ============================================================================
 
 CREATE TABLE IF NOT EXISTS core.dedup_jobs (
-    dedup_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    dedup_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     scan_date TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
     -- Scan stats

@@ -62,8 +62,10 @@ BACKOFF_BASE = 1  # 1s, 2s, 4s
 ERRORS_DIR = Path("/var/friday/transit/telegram_uploads/errors")
 
 # Topic Telegram pour notifications (AC#5)
-TOPIC_EMAIL_COMMUNICATIONS = int(os.getenv("TOPIC_EMAIL_ID", "0"))
-TOPIC_SYSTEM_ALERTS = int(os.getenv("TOPIC_SYSTEM_ID", "0"))
+TOPIC_EMAIL_COMMUNICATIONS = int(
+    (os.getenv("TOPIC_EMAIL_ID", "0") or "0").split("#")[0].strip() or "0"
+)
+TOPIC_SYSTEM_ALERTS = int((os.getenv("TOPIC_SYSTEM_ID", "0") or "0").split("#")[0].strip() or "0")
 
 # Magic numbers pour validation fichiers (AC#4)
 MAGIC_NUMBERS = {

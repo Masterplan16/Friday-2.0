@@ -123,7 +123,7 @@ async def detect_vip_sender(
                 confidence=1.0,  # Lookup binaire, pas d'incertitude
                 reasoning=f"Expediteur dans table VIP (source={vip.designation_source}, "
                 f"emails_received={vip.emails_received_count})",
-                payload={"vip": vip.model_dump(), "is_vip": True},
+                payload={"vip": vip.model_dump(mode="json"), "is_vip": True},
             )
         else:
             # Non VIP

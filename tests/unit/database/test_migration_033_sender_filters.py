@@ -92,7 +92,7 @@ class TestMigration033Syntax:
 
         assert "CREATE TRIGGER" in content
         assert "trg_sender_filters_updated_at" in content or "sender_filters_updated_at" in content
-        assert "update_updated_at_column" in content
+        assert "update_updated_at" in content
 
     def test_migration_has_not_null_constraints(self):
         """Migration définit NOT NULL sur colonnes critiques."""

@@ -31,7 +31,8 @@ def _get_topic_chat_proactive_id() -> Optional[str]:
 
 
 def _get_topic_system_id() -> Optional[str]:
-    return os.getenv("TOPIC_SYSTEM_ID")
+    raw = os.getenv("TOPIC_SYSTEM_ID", "")
+    return raw.split("#")[0].strip() or None
 
 
 # ============================================================================

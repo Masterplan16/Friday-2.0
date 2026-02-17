@@ -102,7 +102,7 @@ async def send_event_proposal_notification(
     if supergroup_id is None:
         supergroup_id = int(os.getenv("TELEGRAM_SUPERGROUP_ID", "0"))
     if topic_id is None:
-        topic_id = int(os.getenv("TOPIC_ACTIONS_ID", "0"))
+        topic_id = int((os.getenv("TOPIC_ACTIONS_ID", "0") or "0").split("#")[0].strip() or "0")
 
     if not supergroup_id or not topic_id:
         logger.warning("Telegram supergroup_id or topic_id not configured")

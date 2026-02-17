@@ -86,8 +86,7 @@ class BriefingGenerator:
         grouped_events = self._group_events_by_casquette(events)
 
         # Récupérer conflits du jour (Story 7.3 Task 5)
-        # Note: conflict_detector pas encore implémenté → stub
-        conflicts = []  # await self._get_conflicts_for_day(target_date)
+        conflicts = await self._get_conflicts_for_day(target_date)
 
         # Formater message
         message = format_briefing_message(
@@ -183,6 +182,10 @@ class BriefingGenerator:
             casquette = event["casquette"]
             if casquette in grouped:
                 grouped[casquette].append(event)
+
+        # Tri chronologique dans chaque section (fallback si mock/DB ne trie pas)
+        for casquette in grouped:
+            grouped[casquette].sort(key=lambda e: e["start_datetime"])
 
         # Retirer casquettes vides
         return {k: v for k, v in grouped.items() if v}

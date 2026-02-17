@@ -13,7 +13,7 @@ BEGIN;
 -- Cleanup quotidien: fichiers >24h ET status='archived' supprimés
 
 CREATE TABLE IF NOT EXISTS ingestion.attachments (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     email_id UUID NOT NULL REFERENCES ingestion.emails(id) ON DELETE CASCADE,
     filename TEXT NOT NULL,  -- Nom original (sanitisé)
     filepath TEXT NOT NULL,  -- Chemin complet zone transit

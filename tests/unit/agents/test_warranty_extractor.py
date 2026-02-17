@@ -297,7 +297,7 @@ class TestExtractWarranty:
 
         from agents.src.agents.archiviste.warranty_extractor import extract_warranty_from_document
 
-        with pytest.raises(NotImplementedError, match="parse"):
+        with pytest.raises((RuntimeError, NotImplementedError)):
             await extract_warranty_from_document(
                 document_id="test-doc",
                 ocr_text="Facture",

@@ -63,7 +63,9 @@ class CallbacksHandler:
         self.db_pool = db_pool
         self.action_executor = action_executor
         self._owner_user_id = int(os.getenv("OWNER_USER_ID", "0"))
-        self._metrics_topic_id = int(os.getenv("TOPIC_METRICS_ID", "0"))
+        self._metrics_topic_id = int(
+            (os.getenv("TOPIC_METRICS_ID", "0") or "0").split("#")[0].strip() or "0"
+        )
         self._supergroup_id = int(os.getenv("TELEGRAM_SUPERGROUP_ID", "0"))
 
     def _is_authorized(self, user_id: int) -> bool:

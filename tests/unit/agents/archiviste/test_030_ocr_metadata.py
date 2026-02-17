@@ -38,7 +38,7 @@ def test_migration_has_uuid_primary_key():
     """Verifier que la PK est UUID (standard Friday 2.0)."""
     content = MIGRATION_PATH.read_text()
     assert "UUID PRIMARY KEY" in content
-    assert "gen_random_uuid()" in content
+    assert "uuid_generate_v4()" in content
 
 
 def test_migration_has_required_columns():

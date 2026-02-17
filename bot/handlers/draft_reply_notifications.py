@@ -7,11 +7,10 @@ avec inline buttons pour validation (Approve/Reject/Edit).
 Story: 2.5 Brouillon Réponse Email - Task 5 Subtask 5.1
 """
 
-import logging
-
+import structlog
 from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 async def send_draft_ready_notification(
@@ -191,7 +190,9 @@ async def send_email_confirmation_notification(
 
     # Get env vars
     supergroup_id = int(os.getenv("TELEGRAM_SUPERGROUP_ID", "-1001234567890"))
-    topic_email_id = int(os.getenv("TOPIC_EMAIL_ID", "12346"))
+    topic_email_id = int(
+        (os.getenv("TOPIC_EMAIL_ID", "12346") or "12346").split("#")[0].strip() or "12346"
+    )
 
     # Format timestamp
     timestamp_str = sent_at.strftime("%Y-%m-%d %H:%M:%S")
@@ -258,7 +259,9 @@ async def send_email_failure_notification(
 
     # Get env vars
     supergroup_id = int(os.getenv("TELEGRAM_SUPERGROUP_ID", "-1001234567890"))
-    topic_system_id = int(os.getenv("TOPIC_SYSTEM_ID", "12347"))
+    topic_system_id = int(
+        (os.getenv("TOPIC_SYSTEM_ID", "12347") or "12347").split("#")[0].strip() or "12347"
+    )
 
     # Truncate error message si trop long (max 200 chars)
     error_truncated = error_message[:200] if len(error_message) > 200 else error_message

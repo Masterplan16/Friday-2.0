@@ -264,7 +264,9 @@ async def test_cycle_critical_error_sends_alert(heartbeat_engine, mock_db_pool):
     # Simuler crash complet
     mock_db_pool.acquire.side_effect = Exception("DB connection failed")
 
-    with patch("agents.src.core.heartbeat_engine.send_alert_system") as mock_alert:
+    with patch(
+        "agents.src.core.telegram_helper.send_to_system_alerts", new_callable=AsyncMock
+    ) as mock_alert:
         result = await heartbeat_engine.run_heartbeat_cycle(mode="one-shot")
 
         # Vérifier alerte System envoyée

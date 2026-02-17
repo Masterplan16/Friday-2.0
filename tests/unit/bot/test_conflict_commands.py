@@ -10,8 +10,9 @@ Tests :
 - Agrégation casquettes pair (médecin ⚡ enseignant)
 """
 
+import os
 from datetime import datetime, timedelta
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
@@ -30,12 +31,22 @@ from telegram import Chat, Message, Update, User
 # ============================================================================
 
 
+@pytest.fixture(autouse=True)
+def set_owner_user_id():
+    """Patch OWNER_USER_ID pour tous les tests (user.id = 123456789)."""
+    with patch.dict(os.environ, {"OWNER_USER_ID": "123456789"}):
+        yield
+
+
 @pytest.fixture
 def mock_db_pool():
     """Mock asyncpg.Pool."""
-    pool = AsyncMock()
+    pool = MagicMock()
     conn = AsyncMock()
-    pool.acquire.return_value.__aenter__.return_value = conn
+    acquire_cm = MagicMock()
+    acquire_cm.__aenter__ = AsyncMock(return_value=conn)
+    acquire_cm.__aexit__ = AsyncMock(return_value=False)
+    pool.acquire.return_value = acquire_cm
     return pool, conn
 
 
@@ -122,9 +133,10 @@ async def test_conflits_command_affichage_non_resolus(
 
     # Mock DB responses
     # 1. Conflits non résolus
+    # Ordre réel: fetch=[unresolved, by_casquettes], fetchrow=[resolved_week, month_total]
     conn.fetch = AsyncMock(
         side_effect=[
-            # _get_unresolved_conflicts
+            # _get_unresolved_conflicts (1er conn.fetch)
             [
                 {
                     **conflict,
@@ -133,9 +145,7 @@ async def test_conflits_command_affichage_non_resolus(
                 }
                 for conflict in sample_unresolved_conflicts
             ],
-            # _get_month_stats - total
-            [{"count": 5}],
-            # _get_month_stats - by_casquettes
+            # _get_month_stats - by_casquettes (2ème conn.fetch)
             [
                 {"casquette1": "medecin", "casquette2": "enseignant", "count": 3},
                 {"casquette1": "enseignant", "casquette2": "chercheur", "count": 2},
@@ -143,11 +153,11 @@ async def test_conflits_command_affichage_non_resolus(
         ]
     )
 
-    # 2. Résolus semaine
+    # fetchrow=[resolved_week, month_total]
     conn.fetchrow = AsyncMock(
         side_effect=[
             {"count": 8},  # _get_resolved_week_count
-            {"count": 5},  # _get_month_stats total (duplicate)
+            {"count": 5},  # _get_month_stats total (fetchrow, pas fetch)
         ]
     )
 
@@ -183,17 +193,16 @@ async def test_conflits_command_aucun_conflit(mock_telegram_update, mock_context
 
     db_pool, conn = mock_db_pool
 
-    # Mock DB responses (aucun conflit)
+    # Ordre réel: fetch=[unresolved, by_casquettes], fetchrow=[resolved_week, month_total]
     conn.fetch = AsyncMock(
         side_effect=[
-            [],  # Aucun conflit non résolu
-            [{"count": 0}],  # Stats mois total
-            [],  # Stats by_casquettes
+            [],  # Aucun conflit non résolu (_get_unresolved_conflicts)
+            [],  # Stats by_casquettes (_get_month_stats)
         ]
     )
 
     conn.fetchrow = AsyncMock(
-        side_effect=[{"count": 0}, {"count": 0}]  # Résolus semaine  # Stats total
+        side_effect=[{"count": 0}, {"count": 0}]  # resolved_week, month_total
     )
 
     await handle_conflits_command(update, mock_context)

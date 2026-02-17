@@ -60,7 +60,8 @@ GENERIC_PREFIXES = [
 
 # Duplicate suffix patterns
 DUPLICATE_PATTERNS = re.compile(
-    r"[\s_-]*\(?(\d+)\)?$|[\s_-]*(copy|copie|copier|duplicat|duplicate)[\s_-]*\d*$",
+    r"[\s_-]*\((\d{1,3})\)$|[\s_-]+(\d{1,2})$"
+    r"|[\s_-]*(copy|copie|copier|duplicat|duplicate)[\s_-]*\d*$",
     re.IGNORECASE,
 )
 
@@ -246,14 +247,14 @@ class PriorityEngine:
         """
         name = file_path.stem  # Without extension
 
-        # Duplicate suffix penalty
-        if self._has_duplicate_suffix(name):
-            return -10
-
-        # Generic patterns
+        # Generic patterns take priority (IMG_, DSC_, Screenshot_, etc.)
         name_lower = name.lower()
         if any(name_lower.startswith(prefix) for prefix in GENERIC_PREFIXES):
             return 0
+
+        # Duplicate suffix penalty
+        if self._has_duplicate_suffix(name):
+            return -10
 
         # Length-based score
         if len(name) > 20:

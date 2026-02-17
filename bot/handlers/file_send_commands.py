@@ -43,7 +43,9 @@ PC_ARCHIVES_ROOT = os.getenv("PC_ARCHIVES_ROOT", r"C:\Users\lopez\BeeStation\Fri
 VPS_ARCHIVES_MIRROR = os.getenv("VPS_ARCHIVES_MIRROR", "/var/friday/archives")
 
 # Topics Telegram
-TOPIC_EMAIL_COMMUNICATIONS = int(os.getenv("TOPIC_EMAIL_ID", "0"))
+TOPIC_EMAIL_COMMUNICATIONS = int(
+    (os.getenv("TOPIC_EMAIL_ID", "0") or "0").split("#")[0].strip() or "0"
+)
 
 # Semantic search settings
 SEARCH_TOP_K_DEFAULT = 3  # Top-3 résultats si exact match pas trouvé

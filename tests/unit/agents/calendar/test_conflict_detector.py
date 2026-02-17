@@ -17,7 +17,7 @@ Tests:
 """
 
 from datetime import date, datetime, timedelta
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
@@ -38,9 +38,10 @@ from agents.src.agents.calendar.models import CalendarConflict, CalendarEvent, C
 @pytest.fixture
 def mock_db_pool():
     """Mock asyncpg.Pool."""
-    pool = AsyncMock()
+    pool = MagicMock()
     conn = AsyncMock()
-    pool.acquire.return_value.__aenter__.return_value = conn
+    pool.acquire.return_value.__aenter__ = AsyncMock(return_value=conn)
+    pool.acquire.return_value.__aexit__ = AsyncMock(return_value=None)
     return pool, conn
 
 
@@ -278,34 +279,28 @@ async def test_conflicts_range_7_days(mock_db_pool):
     """Test AC5: Conflits sur 7 jours (Heartbeat check)."""
     pool, conn = mock_db_pool
 
-    # Mock: Retourne événements différents selon date
-    async def mock_fetch_per_date(*args, **kwargs):
-        target_date = args[0]
-        if target_date == date(2026, 2, 17):
-            # Jour 1: Conflit
-            return [
-                {
-                    "id": uuid4(),
-                    "title": "Event 1",
-                    "casquette": "medecin",
-                    "start_datetime": datetime(2026, 2, 17, 14, 0),
-                    "end_datetime": datetime(2026, 2, 17, 15, 0),
-                    "status": "confirmed",
-                },
-                {
-                    "id": uuid4(),
-                    "title": "Event 2",
-                    "casquette": "enseignant",
-                    "start_datetime": datetime(2026, 2, 17, 14, 30),
-                    "end_datetime": datetime(2026, 2, 17, 15, 30),
-                    "status": "confirmed",
-                },
-            ]
-        else:
-            # Autres jours: Pas d'événements
-            return []
-
-    conn.fetch = AsyncMock(side_effect=mock_fetch_per_date)
+    # Mock: Retourne 2 événements qui se chevauchent sur la plage complète
+    # (get_conflicts_range utilise une requête SQL unique pour toute la plage)
+    conn.fetch = AsyncMock(
+        return_value=[
+            {
+                "id": uuid4(),
+                "title": "Event 1",
+                "casquette": "medecin",
+                "start_datetime": datetime(2026, 2, 17, 14, 0),
+                "end_datetime": datetime(2026, 2, 17, 15, 0),
+                "status": "confirmed",
+            },
+            {
+                "id": uuid4(),
+                "title": "Event 2",
+                "casquette": "enseignant",
+                "start_datetime": datetime(2026, 2, 17, 14, 30),
+                "end_datetime": datetime(2026, 2, 17, 15, 30),
+                "status": "confirmed",
+            },
+        ]
+    )
 
     # Récupérer conflits 7 jours
     start_date = date(2026, 2, 17)
@@ -315,7 +310,7 @@ async def test_conflicts_range_7_days(mock_db_pool):
 
     # Assertions: 1 conflit sur 7 jours
     assert len(conflicts) == 1
-    assert conn.fetch.call_count == 7  # 7 appels (1 par jour)
+    assert conn.fetch.call_count == 1  # 1 seul appel SQL (requête range unique)
 
 
 @pytest.mark.asyncio

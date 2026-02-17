@@ -122,7 +122,7 @@ async def test_consumer_detect_urgency_vip_urgent(mock_db_pool):
     vip_status = True
 
     # Mock db_pool.acquire pour keywords
-    async def mock_acquire():
+    def mock_acquire():
         conn = AsyncMock()
         conn.fetch = AsyncMock(
             return_value=[

@@ -180,6 +180,9 @@ async def test_zero_extracted_skips_notification():
             mock_notify.assert_not_called()
 
 
+@pytest.mark.skip(
+    reason="D25: EmailEngineClient supprimé - EmailEngine retiré, remplacé par IMAP direct"
+)
 @pytest.mark.asyncio
 async def test_emailengine_client_wrapper_get_message():
     """

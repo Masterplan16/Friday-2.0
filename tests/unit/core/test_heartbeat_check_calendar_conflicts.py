@@ -63,33 +63,30 @@ def context_quiet_hours():
 
 @pytest.fixture
 def sample_conflicts():
-    """Conflits calendrier test (non résolus)."""
+    """Conflits calendrier test (non résolus) - utilise MagicMock pour attributs Pydantic."""
     base_date = datetime(2026, 2, 18, 14, 30)  # Demain 14h30
 
-    return [
-        {
-            "id": str(uuid4()),
-            "event1_id": str(uuid4()),
-            "event2_id": str(uuid4()),
-            "event1_title": "Consultation Dr Dupont",
-            "event2_title": "Cours L2 Anatomie",
-            "event1_start_datetime": base_date,
-            "event2_start_datetime": base_date.replace(hour=14, minute=0),
-            "overlap_minutes": 30,
-            "resolved": False,
-        },
-        {
-            "id": str(uuid4()),
-            "event1_id": str(uuid4()),
-            "event2_id": str(uuid4()),
-            "event1_title": "Réunion labo",
-            "event2_title": "Séminaire recherche",
-            "event1_start_datetime": base_date.replace(day=19, hour=16, minute=0),
-            "event2_start_datetime": base_date.replace(day=19, hour=15, minute=30),
-            "overlap_minutes": 30,
-            "resolved": False,
-        },
-    ]
+    c1 = MagicMock()
+    c1.event1.id = str(uuid4())
+    c1.event2.id = str(uuid4())
+    c1.event1.title = "Consultation Dr Dupont"
+    c1.event2.title = "Cours L2 Anatomie"
+    c1.event1.start_datetime = base_date
+    c1.event2.start_datetime = base_date.replace(hour=14, minute=0)
+    c1.overlap_minutes = 30
+    c1.resolved = False
+
+    c2 = MagicMock()
+    c2.event1.id = str(uuid4())
+    c2.event2.id = str(uuid4())
+    c2.event1.title = "Réunion labo"
+    c2.event2.title = "Séminaire recherche"
+    c2.event1.start_datetime = base_date.replace(day=19, hour=16, minute=0)
+    c2.event2.start_datetime = base_date.replace(day=19, hour=15, minute=30)
+    c2.overlap_minutes = 30
+    c2.resolved = False
+
+    return [c1, c2]
 
 
 # ============================================================================
@@ -104,19 +101,16 @@ async def test_check_detects_conflicts_7_days(mock_db_pool, context_daytime):
     with patch(
         "agents.src.core.heartbeat_checks.calendar_conflicts.get_conflicts_range"
     ) as mock_get:
-        mock_get.return_value = [
-            {
-                "id": str(uuid4()),
-                "event1_id": str(uuid4()),
-                "event2_id": str(uuid4()),
-                "event1_title": "Consultation",
-                "event2_title": "Cours",
-                "event1_start_datetime": datetime.now() + timedelta(days=2),
-                "event2_start_datetime": datetime.now() + timedelta(days=2),
-                "overlap_minutes": 60,
-                "resolved": False,
-            }
-        ]
+        c = MagicMock()
+        c.event1.id = str(uuid4())
+        c.event2.id = str(uuid4())
+        c.event1.title = "Consultation"
+        c.event2.title = "Cours"
+        c.event1.start_datetime = datetime.now() + timedelta(days=2)
+        c.event2.start_datetime = datetime.now() + timedelta(days=2)
+        c.overlap_minutes = 60
+        c.resolved = False
+        mock_get.return_value = [c]
 
         # Call check
         result = await check_calendar_conflicts(context_daytime, db_pool=mock_db_pool)
@@ -159,34 +153,22 @@ async def test_check_ignores_resolved_conflicts(mock_db_pool, context_daytime):
     with patch(
         "agents.src.core.heartbeat_checks.calendar_conflicts.get_conflicts_range"
     ) as mock_get:
-        mock_get.return_value = [
-            {
-                "id": str(uuid4()),
-                "event1_id": str(uuid4()),
-                "event2_id": str(uuid4()),
-                "event1_title": "Event1",
-                "event2_title": "Event2",
-                "event1_start_datetime": datetime.now() + timedelta(days=1),
-                "event2_start_datetime": datetime.now() + timedelta(days=1),
-                "overlap_minutes": 60,
-                "resolved": True,  # Résolu
-            },
-            {
-                "id": str(uuid4()),
-                "event1_id": str(uuid4()),
-                "event2_id": str(uuid4()),
-                "event1_title": "Event3",
-                "event2_title": "Event4",
-                "event1_start_datetime": datetime.now() + timedelta(days=2),
-                "event2_start_datetime": datetime.now() + timedelta(days=2),
-                "overlap_minutes": 30,
-                "resolved": False,  # Non résolu
-            },
-        ]
+        # get_conflicts_range est censé retourner uniquement les conflits non résolus
+        # La fonction ne filtre pas - elle fait confiance à get_conflicts_range
+        c = MagicMock()
+        c.event1.id = str(uuid4())
+        c.event2.id = str(uuid4())
+        c.event1.title = "Event3"
+        c.event2.title = "Event4"
+        c.event1.start_datetime = datetime.now() + timedelta(days=2)
+        c.event2.start_datetime = datetime.now() + timedelta(days=2)
+        c.overlap_minutes = 30
+        c.resolved = False
+        mock_get.return_value = [c]  # Seulement le conflit non résolu
 
         result = await check_calendar_conflicts(context_daytime, db_pool=mock_db_pool)
 
-        # Assertions: Seulement 1 conflit détecté (non résolu)
+        # Assertions: 1 conflit non résolu détecté
         assert result.notify is True
         assert result.payload["conflict_count"] == 1
         assert "1 conflit calendrier détecté" in result.message
@@ -244,15 +226,12 @@ def test_should_skip_quiet_hours_22h():
 
 def test_format_conflict_notification_single_conflict(context_daytime):
     """Test AC5: Formatage message 1 conflit."""
-    conflicts = [
-        {
-            "id": str(uuid4()),
-            "event1_title": "Consultation Dr Dupont",
-            "event2_title": "Cours L2 Anatomie",
-            "event1_start_datetime": datetime(2026, 2, 18, 14, 30),  # Demain
-            "overlap_minutes": 30,
-        }
-    ]
+    c = MagicMock()
+    c.event1.title = "Consultation Dr Dupont"
+    c.event2.title = "Cours L2 Anatomie"
+    c.event1.start_datetime = datetime(2026, 2, 18, 14, 30)  # Demain
+    c.overlap_minutes = 30
+    conflicts = [c]
 
     message = _format_conflict_notification(conflicts, context_daytime)
 
@@ -278,15 +257,12 @@ def test_format_conflict_notification_multiple_conflicts(context_daytime, sample
 
 def test_format_conflict_notification_today(context_daytime):
     """Test AC5: Label "Aujourd'hui" si conflit aujourd'hui."""
-    conflicts = [
-        {
-            "id": str(uuid4()),
-            "event1_title": "Event1",
-            "event2_title": "Event2",
-            "event1_start_datetime": datetime.now().replace(hour=16, minute=0),  # Aujourd'hui
-            "overlap_minutes": 60,
-        }
-    ]
+    c = MagicMock()
+    c.event1.title = "Event1"
+    c.event2.title = "Event2"
+    c.event1.start_datetime = datetime.now().replace(hour=16, minute=0)  # Aujourd'hui
+    c.overlap_minutes = 60
+    conflicts = [c]
 
     message = _format_conflict_notification(conflicts, context_daytime)
 
@@ -300,15 +276,16 @@ def test_format_conflict_notification_today(context_daytime):
 
 
 @pytest.mark.asyncio
-async def test_check_handles_db_error(context_daytime):
+async def test_check_handles_db_error(mock_db_pool, context_daytime):
     """Test AC5: Check handle erreur DB gracefully."""
     # Mock get_conflicts_range qui raise Exception
+    # On passe mock_db_pool pour éviter le check DATABASE_URL
     with patch(
         "agents.src.core.heartbeat_checks.calendar_conflicts.get_conflicts_range"
     ) as mock_get:
         mock_get.side_effect = Exception("DB connection failed")
 
-        result = await check_calendar_conflicts(context_daytime, db_pool=None)
+        result = await check_calendar_conflicts(context_daytime, db_pool=mock_db_pool)
 
         # Assertions: Erreur catchée, pas de notification
         assert result.notify is False

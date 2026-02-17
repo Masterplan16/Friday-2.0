@@ -18,10 +18,10 @@ BEGIN;
 -- - non liste -> analyser normalement (proceed to classify)
 
 CREATE TABLE IF NOT EXISTS core.sender_filters (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     sender_email TEXT,  -- Email exact (ex: newsletter@example.com). NULL si filtrage par domaine uniquement.
     sender_domain TEXT,  -- Domaine (ex: example.com). NULL si filtrage par email uniquement.
-    filter_type TEXT NOT NULL CHECK (filter_type IN ('vip', 'whitelist', 'blacklist')),
+    filter_type TEXT NOT NULL CHECK (filter_type IN ('vip', 'whitelist', 'blacklist', 'neutral')),
     category TEXT,  -- Categorie pre-assignee (optionnel). Valeurs: pro/finance/universite/recherche/perso/urgent/spam/inconnu
     confidence FLOAT,  -- Confidence score (1.0 blacklist, 0.95 whitelist/vip, NULL si non applicable)
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),

@@ -29,6 +29,22 @@ WEEKDAY_LABELS = {
     6: "Dimanche",
 }
 
+# Labels mois en français (évite dépendance locale système)
+MONTH_LABELS = {
+    1: "janvier",
+    2: "février",
+    3: "mars",
+    4: "avril",
+    5: "mai",
+    6: "juin",
+    7: "juillet",
+    8: "août",
+    9: "septembre",
+    10: "octobre",
+    11: "novembre",
+    12: "décembre",
+}
+
 # Labels période journée par casquette (heuristique)
 CASQUETTE_PERIOD_LABELS = {
     Casquette.MEDECIN: "Matin",
@@ -73,7 +89,8 @@ def format_briefing_message(
 
     # Header
     weekday = WEEKDAY_LABELS[date.weekday()]
-    date_formatted = date.strftime("%d %B %Y")
+    month_fr = MONTH_LABELS[date.month]
+    date_formatted = f"{date.day:02d} {month_fr} {date.year}"
     lines.append(f"📋 **Briefing {weekday} {date_formatted}**")
     lines.append("")
 

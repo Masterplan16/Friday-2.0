@@ -78,23 +78,27 @@ async def test_detect_intent_envoie_moi():
         }
     )
 
-    with patch("bot.handlers.file_send_commands.ClaudeAdapter") as MockClaude:
-        mock_claude = MockClaude.return_value
-        mock_claude.complete_raw = AsyncMock(return_value=mock_llm_response)
+    with patch(
+        "bot.handlers.file_send_commands.anonymize_text",
+        new=AsyncMock(side_effect=lambda text: text),
+    ):
+        with patch("bot.handlers.file_send_commands.ClaudeAdapter") as MockClaude:
+            mock_claude = MockClaude.return_value
+            mock_claude.complete_raw = AsyncMock(return_value=mock_llm_response)
 
-        # Execute
-        result = await detect_file_request_intent("Envoie-moi la facture du plombier")
+            # Execute
+            result = await detect_file_request_intent("Envoie-moi la facture du plombier")
 
-        # Verify
-        assert result is not None
-        assert result.query == "facture plombier"
-        assert result.doc_type == "facture"
-        assert result.confidence == 0.95
-        assert "facture" in result.keywords
-        assert "plombier" in result.keywords
+            # Verify
+            assert result is not None
+            assert result.query == "facture plombier"
+            assert result.doc_type == "facture"
+            assert result.confidence == 0.95
+            assert "facture" in result.keywords
+            assert "plombier" in result.keywords
 
-        # Verify Claude called
-        mock_claude.complete_raw.assert_called_once()
+            # Verify Claude called
+            mock_claude.complete_raw.assert_called_once()
 
 
 # ============================================================================
@@ -120,16 +124,20 @@ async def test_detect_intent_je_veux():
         }
     )
 
-    with patch("bot.handlers.file_send_commands.ClaudeAdapter") as MockClaude:
-        mock_claude = MockClaude.return_value
-        mock_claude.complete_raw = AsyncMock(return_value=mock_llm_response)
+    with patch(
+        "bot.handlers.file_send_commands.anonymize_text",
+        new=AsyncMock(side_effect=lambda text: text),
+    ):
+        with patch("bot.handlers.file_send_commands.ClaudeAdapter") as MockClaude:
+            mock_claude = MockClaude.return_value
+            mock_claude.complete_raw = AsyncMock(return_value=mock_llm_response)
 
-        result = await detect_file_request_intent("Je veux le contrat SELARL")
+            result = await detect_file_request_intent("Je veux le contrat SELARL")
 
-        assert result is not None
-        assert result.query == "contrat SELARL"
-        assert result.doc_type == "contrat"
-        assert result.confidence == 0.92
+            assert result is not None
+            assert result.query == "contrat SELARL"
+            assert result.doc_type == "contrat"
+            assert result.confidence == 0.92
 
 
 # ============================================================================
@@ -179,59 +187,51 @@ async def test_search_file_found_high_similarity():
     """
     from bot.handlers.file_send_commands import DocumentSearchResult, search_documents_semantic
 
-    # Mock DATABASE_URL environment variable
-    with patch("os.getenv") as mock_getenv:
-        mock_getenv.return_value = "postgresql://test:test@localhost:5432/test"
+    # Mock DB pool + connection
+    mock_conn = AsyncMock()
+    mock_conn.fetchrow = AsyncMock(
+        return_value={
+            "id": "doc_123",
+            "filename": "Facture_Plombier_2025.pdf",
+            "file_path": r"C:\Users\lopez\BeeStation\Friday\Archives\finance\Facture_Plombier_2025.pdf",
+            "doc_type": "facture",
+            "emitter": "Plomberie Dupont",
+            "amount": 350.00,
+            "classification_category": "finance",
+            "classification_subcategory": "selarl",
+        }
+    )
+    mock_pool = MagicMock()
+    acquire_cm = MagicMock()
+    acquire_cm.__aenter__ = AsyncMock(return_value=mock_conn)
+    acquire_cm.__aexit__ = AsyncMock(return_value=False)
+    mock_pool.acquire.return_value = acquire_cm
 
-        # Mock Voyage AI embedding (patch dans agents.src.adapters.vectorstore)
-        with patch("agents.src.adapters.vectorstore.VoyageAIAdapter") as MockVoyage:
-            mock_voyage = MockVoyage.return_value
-            mock_voyage.embed_query = AsyncMock(return_value=[0.1] * 1024)  # Mock embedding
+    with patch(
+        "bot.handlers.file_send_commands._get_db_pool",
+        new=AsyncMock(return_value=mock_pool),
+    ):
+        with patch("bot.handlers.file_send_commands.get_vectorstore_adapter") as MockVectorstore:
+            mock_vectorstore = AsyncMock()
+            MockVectorstore.return_value = mock_vectorstore
 
-            # Mock vectorstore search
-            with patch(
-                "bot.handlers.file_send_commands.get_vectorstore_adapter"
-            ) as MockVectorstore:
-                mock_vectorstore = AsyncMock()
-                MockVectorstore.return_value = mock_vectorstore
+            mock_search_result = MagicMock()
+            mock_search_result.node_id = "node_123"
+            mock_search_result.similarity = 0.85
 
-                mock_search_result = MagicMock()
-                mock_search_result.node_id = "node_123"
-                mock_search_result.similarity = 0.85
+            mock_vectorstore.search = AsyncMock(return_value=[mock_search_result])
+            mock_vectorstore.close = AsyncMock()
 
-                mock_vectorstore.search = AsyncMock(return_value=[mock_search_result])
-                mock_vectorstore.close = AsyncMock()
+            # Execute
+            results = await search_documents_semantic(query="facture plombier", top_k=3)
 
-                # Mock PostgreSQL JOIN
-                with patch("bot.handlers.file_send_commands.asyncpg.connect") as MockConnect:
-                    mock_conn = AsyncMock()
-                    MockConnect.return_value = mock_conn
-
-                    mock_conn.fetchrow = AsyncMock(
-                        return_value={
-                            "id": "doc_123",
-                            "filename": "Facture_Plombier_2025.pdf",
-                            "file_path": r"C:\Users\lopez\BeeStation\Friday\Archives\finance\Facture_Plombier_2025.pdf",
-                            "doc_type": "facture",
-                            "emitter": "Plomberie Dupont",
-                            "amount": 350.00,
-                            "classification_category": "finance",
-                            "classification_subcategory": "selarl",
-                        }
-                    )
-
-                    mock_conn.close = AsyncMock()
-
-                    # Execute
-                    results = await search_documents_semantic(query="facture plombier", top_k=3)
-
-                    # Verify
-                    assert len(results) == 1
-                    assert results[0].filename == "Facture_Plombier_2025.pdf"
-                    assert results[0].similarity == 0.85
-                    assert results[0].doc_type == "facture"
-                    assert results[0].emitter == "Plomberie Dupont"
-                    assert results[0].amount == 350.00
+            # Verify
+            assert len(results) == 1
+            assert results[0].filename == "Facture_Plombier_2025.pdf"
+            assert results[0].similarity == 0.85
+            assert results[0].doc_type == "facture"
+            assert results[0].emitter == "Plomberie Dupont"
+            assert results[0].amount == 350.00
 
 
 # ============================================================================
@@ -248,35 +248,29 @@ async def test_search_file_not_found():
     """
     from bot.handlers.file_send_commands import search_documents_semantic
 
-    # Mock DATABASE_URL environment variable
-    with patch("os.getenv") as mock_getenv:
-        mock_getenv.return_value = "postgresql://test:test@localhost:5432/test"
+    mock_pool = MagicMock()
+    acquire_cm = MagicMock()
+    acquire_cm.__aenter__ = AsyncMock(return_value=AsyncMock())
+    acquire_cm.__aexit__ = AsyncMock(return_value=False)
+    mock_pool.acquire.return_value = acquire_cm
 
-        with patch("agents.src.adapters.vectorstore.VoyageAIAdapter") as MockVoyage:
-            mock_voyage = MockVoyage.return_value
-            mock_voyage.embed_query = AsyncMock(return_value=[0.1] * 1024)
+    with patch(
+        "bot.handlers.file_send_commands._get_db_pool",
+        new=AsyncMock(return_value=mock_pool),
+    ):
+        with patch("bot.handlers.file_send_commands.get_vectorstore_adapter") as MockVectorstore:
+            mock_vectorstore = AsyncMock()
+            MockVectorstore.return_value = mock_vectorstore
 
-            with patch(
-                "bot.handlers.file_send_commands.get_vectorstore_adapter"
-            ) as MockVectorstore:
-                mock_vectorstore = AsyncMock()
-                MockVectorstore.return_value = mock_vectorstore
+            # Aucun résultat trouvé
+            mock_vectorstore.search = AsyncMock(return_value=[])
+            mock_vectorstore.close = AsyncMock()
 
-                # Aucun résultat trouvé
-                mock_vectorstore.search = AsyncMock(return_value=[])
-                mock_vectorstore.close = AsyncMock()
+            # Execute
+            results = await search_documents_semantic(query="contrat inexistant")
 
-                # Mock asyncpg.connect (même si pas de résultats, le code peut l'appeler)
-                with patch("bot.handlers.file_send_commands.asyncpg.connect") as MockConnect:
-                    mock_conn = AsyncMock()
-                    MockConnect.return_value = mock_conn
-                    mock_conn.close = AsyncMock()
-
-                    # Execute
-                    results = await search_documents_semantic(query="contrat inexistant")
-
-                    # Verify
-                    assert len(results) == 0
+            # Verify
+            assert len(results) == 0
 
 
 # ============================================================================

@@ -103,7 +103,7 @@ class TestMigration030Syntax:
 
         assert "CREATE TRIGGER" in content
         assert "trg_attachments_updated_at" in content
-        assert "update_updated_at_column" in content
+        assert "update_updated_at" in content
 
     def test_migration_adds_has_attachments_column(self):
         """Migration ajoute colonne has_attachments dans ingestion.emails."""

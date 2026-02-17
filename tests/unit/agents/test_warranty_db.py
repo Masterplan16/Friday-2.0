@@ -74,7 +74,8 @@ class TestInsertWarranty:
         node_id = uuid4()
         doc_node_id = uuid4()
 
-        conn.fetchval = AsyncMock(side_effect=[warranty_id, node_id, doc_node_id])
+        cat_node_id = uuid4()
+        conn.fetchval = AsyncMock(side_effect=[warranty_id, node_id, doc_node_id, cat_node_id])
         conn.execute = AsyncMock()
 
         from agents.src.agents.archiviste.warranty_db import insert_warranty
@@ -88,7 +89,7 @@ class TestInsertWarranty:
         )
 
         assert result == str(warranty_id)
-        assert conn.fetchval.call_count == 3  # warranty + node + doc_node
+        assert conn.fetchval.call_count == 4  # warranty + node + doc_node + category_node
 
     @pytest.mark.asyncio
     async def test_insert_warranty_no_document_node(self):
@@ -97,7 +98,8 @@ class TestInsertWarranty:
         warranty_id = uuid4()
         node_id = uuid4()
 
-        conn.fetchval = AsyncMock(side_effect=[warranty_id, node_id, None])
+        cat_node_id = uuid4()
+        conn.fetchval = AsyncMock(side_effect=[warranty_id, node_id, None, cat_node_id])
         conn.execute = AsyncMock()
 
         from agents.src.agents.archiviste.warranty_db import insert_warranty
@@ -111,8 +113,8 @@ class TestInsertWarranty:
         )
 
         assert result == str(warranty_id)
-        # No edge creation if doc_node_id is None
-        conn.execute.assert_not_called()
+        # Doc edge NOT created (doc_node_id=None), but category belongs_to edge IS created
+        conn.execute.assert_called_once()
 
 
 class TestGetExpiringWarranties:
@@ -216,8 +218,8 @@ class TestDeleteWarranty:
     @pytest.mark.asyncio
     async def test_delete_warranty_success(self):
         """Suppression warranty OK."""
-        pool = AsyncMock()
-        pool.execute = AsyncMock(return_value="DELETE 1")
+        pool, conn = _make_mock_pool()
+        conn.execute = AsyncMock(return_value="DELETE 1")
 
         from agents.src.agents.archiviste.warranty_db import delete_warranty
 
@@ -228,8 +230,8 @@ class TestDeleteWarranty:
     @pytest.mark.asyncio
     async def test_delete_warranty_not_found(self):
         """Warranty non trouvée."""
-        pool = AsyncMock()
-        pool.execute = AsyncMock(return_value="DELETE 0")
+        pool, conn = _make_mock_pool()
+        conn.execute = AsyncMock(return_value="DELETE 0")
 
         from agents.src.agents.archiviste.warranty_db import delete_warranty
 

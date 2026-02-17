@@ -460,7 +460,7 @@ class TestPublishDocumentReceived:
 
         # Vérifier payload
         call_args = mock_redis.xadd.call_args
-        assert call_args[0][0] == "documents:received"  # Stream name
+        assert call_args[0][0] == "document.received"  # Stream name
         payload = call_args[0][1]
         assert payload["attachment_id"] == "abc123"
         assert payload["email_id"] == "xyz789"

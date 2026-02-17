@@ -83,7 +83,9 @@ async def handle_classify_approve(
         )
 
         # Notifier topic Metrics
-        metrics_topic_id = int(os.getenv("TOPIC_METRICS_ID", "0"))
+        metrics_topic_id = int(
+            (os.getenv("TOPIC_METRICS_ID", "0") or "0").split("#")[0].strip() or "0"
+        )
         supergroup_id = int(os.getenv("TELEGRAM_SUPERGROUP_ID", "0"))
         if metrics_topic_id and supergroup_id:
             try:
@@ -208,7 +210,9 @@ async def handle_classify_reject(
         )
 
         # Notifier topic Metrics
-        metrics_topic_id = int(os.getenv("TOPIC_METRICS_ID", "0"))
+        metrics_topic_id = int(
+            (os.getenv("TOPIC_METRICS_ID", "0") or "0").split("#")[0].strip() or "0"
+        )
         supergroup_id = int(os.getenv("TELEGRAM_SUPERGROUP_ID", "0"))
         if metrics_topic_id and supergroup_id:
             try:

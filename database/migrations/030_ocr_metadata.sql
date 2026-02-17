@@ -35,7 +35,7 @@ CREATE INDEX IF NOT EXISTS idx_ocr_metadata_page
 CREATE TRIGGER update_ocr_metadata_updated_at
     BEFORE UPDATE ON ingestion.ocr_metadata
     FOR EACH ROW
-    EXECUTE FUNCTION core.update_updated_at_column();
+    EXECUTE FUNCTION core.update_updated_at();
 
 -- Commentaires documentation
 COMMENT ON TABLE ingestion.ocr_metadata IS 'Métadonnées OCR extraites par Surya (Story 3.1 - Archiviste)';

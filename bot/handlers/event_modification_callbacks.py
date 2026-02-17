@@ -21,7 +21,7 @@ from telegram.ext import ContextTypes
 logger = structlog.get_logger(__name__)
 
 # Config
-TOPIC_ACTIONS_ID = int(os.getenv("TOPIC_ACTIONS_ID", "0"))
+TOPIC_ACTIONS_ID = int((os.getenv("TOPIC_ACTIONS_ID", "0") or "0").split("#")[0].strip() or "0")
 TELEGRAM_SUPERGROUP_ID = int(os.getenv("TELEGRAM_SUPERGROUP_ID", "0"))
 
 # State machine config

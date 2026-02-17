@@ -7,6 +7,12 @@ de style rédactionnel (few-shot learning).
 Story: 2.5 Brouillon Réponse Email
 """
 
+import pytest
+
+pytestmark = pytest.mark.skip(
+    reason="Nécessite une connexion PostgreSQL réelle - test d'intégration"
+)
+
 import asyncio
 from datetime import datetime
 

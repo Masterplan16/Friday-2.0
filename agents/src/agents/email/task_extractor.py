@@ -21,16 +21,22 @@ from anthropic import APIError, AsyncAnthropic, RateLimitError
 
 logger = structlog.get_logger(__name__)
 
-# C3 fix: Validation ANTHROPIC_API_KEY au démarrage (fail-fast)
-_ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY")
-if not _ANTHROPIC_API_KEY:
-    raise ValueError(
-        "ANTHROPIC_API_KEY environment variable is required for task extraction. "
-        "Set it in .env or environment before starting the service."
-    )
+# Client Anthropic - initialisé lazily pour éviter crash à l'import si clé manquante
+_anthropic_client: Optional[AsyncAnthropic] = None
 
-# Client Anthropic global
-anthropic_client = AsyncAnthropic(api_key=_ANTHROPIC_API_KEY)
+
+def _get_anthropic_client() -> AsyncAnthropic:
+    """Retourne le client Anthropic, l'initialise si nécessaire (fail-fast à l'usage)."""
+    global _anthropic_client
+    if _anthropic_client is None:
+        api_key = os.environ.get("ANTHROPIC_API_KEY")
+        if not api_key:
+            raise ValueError(
+                "ANTHROPIC_API_KEY environment variable is required for task extraction. "
+                "Set it in .env or environment before starting the service."
+            )
+        _anthropic_client = AsyncAnthropic(api_key=api_key)
+    return _anthropic_client
 
 
 async def extract_tasks_from_email(
@@ -166,7 +172,7 @@ Retourner JSON structuré avec confidence par tâche.
 
     for attempt in range(1, max_retries + 1):
         try:
-            response = await anthropic_client.messages.create(
+            response = await _get_anthropic_client().messages.create(
                 model="claude-haiku-4-5-20251001",
                 max_tokens=500,  # Tâches courtes attendues
                 temperature=0.1,  # Déterministe

@@ -21,8 +21,12 @@ from agents.src.agents.email.models import TaskDetected, TaskExtractionResult
 @pytest.fixture
 def mock_anthropic_client():
     """Mock du client Anthropic pour éviter appels API réels"""
-    with patch("agents.src.agents.email.task_extractor.anthropic_client") as mock:
-        yield mock
+    mock_client = MagicMock()
+    with patch(
+        "agents.src.agents.email.task_extractor._get_anthropic_client",
+        return_value=mock_client,
+    ):
+        yield mock_client
 
 
 @pytest.fixture
@@ -622,5 +626,6 @@ async def test_presidio_anonymization_called(
         current_date=current_date_str,
     )
 
-    # Assertions
-    mock_presidio.assert_called_once_with(email_text, language="fr")
+    # Assertions: Presidio appelé au moins une fois avec le texte email
+    # (production anonymise aussi sender et subject séparément)
+    mock_presidio.assert_any_call(email_text, language="fr")

@@ -44,8 +44,13 @@ FRENCH_ENTITIES = [
     "PERSON",  # Noms, prénoms (spaCy FR)
     "EMAIL_ADDRESS",  # Emails (built-in Presidio)
     "PHONE_NUMBER",  # Téléphones (built-in Presidio)
-    # Entités FR custom désactivées temporairement (nécessitent recognizers custom):
-    # "IBAN_CODE", "NRP", "LOCATION", "DATE_TIME", "MEDICAL_LICENSE", "FR_NIR", "CREDIT_CARD"
+    "CREDIT_CARD",  # Cartes de crédit (built-in Presidio) — Bug B1 fix
+    "IBAN_CODE",  # IBAN bancaires (built-in Presidio)
+    "NRP",  # Numéro de registre national (built-in Presidio)
+    "LOCATION",  # Lieux (spaCy FR)
+    "DATE_TIME",  # Dates/heures (spaCy FR)
+    "MEDICAL_LICENSE",  # Licences médicales (built-in Presidio)
+    "FR_NIR",  # Numéro INSEE/sécurité sociale (recognizer custom si disponible)
 ]
 
 logger = structlog.get_logger(__name__)

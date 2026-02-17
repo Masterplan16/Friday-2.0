@@ -65,7 +65,7 @@ COMMENT ON FUNCTION core.update_user_context_timestamp() IS 'Met à jour automat
 -- ============================================================================
 
 CREATE TABLE IF NOT EXISTS knowledge.calendar_conflicts (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     event1_id UUID NOT NULL REFERENCES knowledge.entities(id) ON DELETE CASCADE,
     event2_id UUID NOT NULL REFERENCES knowledge.entities(id) ON DELETE CASCADE,
     detected_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),

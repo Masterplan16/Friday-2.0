@@ -8,7 +8,7 @@
 BEGIN;
 
 CREATE TABLE IF NOT EXISTS core.llm_usage (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     provider TEXT NOT NULL,       -- 'anthropic', 'voyage'
     model TEXT NOT NULL,           -- 'claude-sonnet-4-5', 'voyage-2'

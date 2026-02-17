@@ -25,8 +25,8 @@ def migrations_dir() -> Path:
 
 @pytest.fixture
 def migration_files(migrations_dir: Path) -> list[Path]:
-    """Liste triee de tous les fichiers de migration SQL."""
-    return sorted(migrations_dir.glob("*.sql"))
+    """Liste triee de tous les fichiers de migration SQL (hors rollback)."""
+    return sorted(f for f in migrations_dir.glob("*.sql") if "rollback" not in f.name)
 
 
 @pytest.fixture

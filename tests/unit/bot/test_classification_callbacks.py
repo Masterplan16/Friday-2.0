@@ -4,16 +4,24 @@ Tests unitaires callbacks classification documents (Story 3.2 Task 5.6).
 Tests inline buttons : Approve, Correct, Reject, Reclassify, Finance perimeter
 """
 
+import os
 import uuid
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 
+@pytest.fixture(autouse=True)
+def set_owner_user_id():
+    """Patch OWNER_USER_ID pour tous les tests (user.id = 12345)."""
+    with patch.dict(os.environ, {"OWNER_USER_ID": "12345"}):
+        yield
+
+
 @pytest.fixture
 def mock_db_pool():
     """Mock asyncpg pool."""
-    pool = AsyncMock()
+    pool = MagicMock()
     conn = AsyncMock()
     pool.acquire.return_value.__aenter__ = AsyncMock(return_value=conn)
     pool.acquire.return_value.__aexit__ = AsyncMock(return_value=False)

@@ -86,5 +86,5 @@ def test_watchtower_env_vars_actually_set():
     assert os.getenv("TOPIC_SYSTEM_ID"), "TOPIC_SYSTEM_ID must be set"
 
     # Validate format
-    topic_id = os.getenv("TOPIC_SYSTEM_ID")
+    topic_id = os.getenv("TOPIC_SYSTEM_ID", "").split("#")[0].strip()
     assert topic_id.isdigit(), f"TOPIC_SYSTEM_ID must be numeric, got: {topic_id}"

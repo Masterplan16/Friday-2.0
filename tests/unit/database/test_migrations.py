@@ -65,7 +65,7 @@ class TestMigrationFilesExist:
         "005_ingestion_documents",
         "006_ingestion_media",
         "007_knowledge_entities",
-        "007_knowledge_nodes_edges",
+        "007a_knowledge_nodes_edges",
         "008_knowledge_embeddings",
         "009_knowledge_thesis",
         "010_knowledge_finance",
@@ -81,12 +81,36 @@ class TestMigrationFilesExist:
         "020_recovery_events",
         "022_add_purged_at_to_action_receipts",
         "023_add_deleted_at_to_backup_metadata",
+        "024_emailengine_accounts",
+        "025_api_usage_tracking",
+        "026_cold_start_tracking",
+        "027_vip_senders",
+        "028_urgency_keywords",
+        "029_priority_check_constraint",
+        "030_ingestion_attachments",
+        "030_ocr_metadata",
+        "030a_ocr_metadata",
+        "031_rename_sci",
+        "032_add_email_task_type",
+        "032b_writing_examples",
+        "033_sender_filters",
+        "034_llm_usage_tracking",
+        "035_d25_imap_direct",
+        "036_events_support",
+        "037_classification_metadata",
+        "037a_context_conflicts",
+        "038_embeddings_document_fk",
+        "039_batch_jobs",
+        "039a_heartbeat_metrics",
+        "040_knowledge_warranties",
+        "041_warranty_nodes_edges",
+        "042_dedup_jobs",
     ]
 
     def test_migration_files_exist(self, migration_files: list[Path]) -> None:
-        """AC#1: 23 migrations disponibles."""
-        assert len(migration_files) == 23, (
-            f"Expected 23 migration files, found {len(migration_files)}: "
+        """AC#1: 47 migrations disponibles."""
+        assert len(migration_files) == 47, (
+            f"Expected 47 migration files, found {len(migration_files)}: "
             f"{[f.name for f in migration_files]}"
         )
 
@@ -175,8 +199,8 @@ class TestMigrationsTracking:
 
     def test_migrations_would_produce_tracking_records(self, migration_files: list[Path]) -> None:
         """Les 23 fichiers de migration produiraient 23 enregistrements dans schema_migrations."""
-        assert len(migration_files) == 23, (
-            f"Expected 23 migration files to produce 23 tracking records, "
+        assert len(migration_files) == 47, (
+            f"Expected 47 migration files to produce 47 tracking records, "
             f"found {len(migration_files)}"
         )
 
@@ -565,6 +589,12 @@ class TestSQLConsistency:
             for line in lines:
                 # Skip CREATE INDEX lines (column names may contain "timestamp")
                 if re.match(r"CREATE\s+INDEX", line, re.IGNORECASE):
+                    continue
+                # Skip COMMENT ON lines and string literal continuations
+                if re.match(r"COMMENT\s+ON", line, re.IGNORECASE):
+                    continue
+                # Skip string literal lines (multi-line COMMENT ON values)
+                if line.startswith("'") or line.startswith('"'):
                     continue
                 if re.search(r"\bTIMESTAMP\b", line, re.IGNORECASE):
                     # TIMESTAMP WITH TIME ZONE est equivalent a TIMESTAMPTZ

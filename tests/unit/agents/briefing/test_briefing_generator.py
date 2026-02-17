@@ -33,9 +33,13 @@ from agents.src.core.models import Casquette
 @pytest.fixture
 def mock_db_pool():
     """Mock asyncpg.Pool."""
-    pool = AsyncMock()
+    pool = MagicMock()
     conn = AsyncMock()
-    pool.acquire.return_value.__aenter__.return_value = conn
+    # acquire() must return a sync context manager with async __aenter__/__aexit__
+    acquire_cm = MagicMock()
+    acquire_cm.__aenter__ = AsyncMock(return_value=conn)
+    acquire_cm.__aexit__ = AsyncMock(return_value=False)
+    pool.acquire.return_value = acquire_cm
     return pool, conn
 
 
@@ -274,8 +278,10 @@ async def test_briefing_conflicts_section_on_top(briefing_generator, mock_db_poo
         }
     ]
 
-    # Mock _get_conflicts_for_day
-    with patch.object(briefing_generator, "_get_conflicts_for_day", return_value=mock_conflicts):
+    # Mock _get_conflicts_for_day (async method → use AsyncMock)
+    with patch.object(
+        briefing_generator, "_get_conflicts_for_day", new=AsyncMock(return_value=mock_conflicts)
+    ):
         # Générer briefing
         briefing = await briefing_generator.generate_morning_briefing(target_date=base_date.date())
 
@@ -288,8 +294,9 @@ async def test_briefing_conflicts_section_on_top(briefing_generator, mock_db_poo
 
     assert conflict_pos < medecin_pos, "Section conflits pas en haut du briefing"
 
-    # Vérifier ligne conflit
-    assert "médecin ⚡ enseignant" in briefing
+    # Vérifier ligne conflit (format: • 14h30 médecin ⚡ 14h00 enseignant)
+    assert "médecin ⚡" in briefing
+    assert "enseignant" in briefing
 
 
 # ============================================================================
@@ -365,5 +372,5 @@ def test_format_briefing_message_empty_events():
 
     message = format_briefing_message(target_date, grouped_events, conflicts)
 
-    assert "📋 **Briefing Lundi 17 février 2026**" in message
+    assert "📋 **Briefing Mardi 17 février 2026**" in message
     assert "_Aucun événement prévu aujourd'hui_" in message

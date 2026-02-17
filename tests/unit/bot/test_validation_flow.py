@@ -76,7 +76,7 @@ async def test_full_validation_flow_approve(mock_db_pool, mock_context):
     with patch.dict(os.environ, {"OWNER_USER_ID": "12345"}):
         handler = CallbacksHandler(mock_db_pool)
 
-    update = _make_update("approve_test-receipt-001")
+    update = _make_update("approve_00000000-0000-0000-0000-000000000001")
     await handler.handle_approve_callback(update, mock_context)
 
     # Receipt doit etre mis a jour avec validated_by
@@ -99,7 +99,7 @@ async def test_full_validation_flow_reject(mock_db_pool, mock_context):
     with patch.dict(os.environ, {"OWNER_USER_ID": "12345"}):
         handler = CallbacksHandler(mock_db_pool)
 
-    update = _make_update("reject_test-receipt-001")
+    update = _make_update("reject_00000000-0000-0000-0000-000000000001")
     await handler.handle_reject_callback(update, mock_context)
 
     # Receipt doit etre rejete avec validated_by

@@ -7,7 +7,7 @@ BEGIN;
 -- Table: core.api_usage
 -- Suivi granulaire des appels API externes (Voyage AI, Claude, etc.)
 CREATE TABLE IF NOT EXISTS core.api_usage (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
 
     -- Identification
     service VARCHAR(50) NOT NULL,  -- 'voyage-ai', 'anthropic', 'openai', etc.
@@ -42,7 +42,7 @@ CREATE INDEX idx_api_usage_created_at ON core.api_usage(created_at DESC);
 -- Table: core.api_budget_limits
 -- Limites mensuelles par service
 CREATE TABLE IF NOT EXISTS core.api_budget_limits (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
 
     service VARCHAR(50) NOT NULL UNIQUE,  -- 'voyage-ai', 'anthropic', etc.
 

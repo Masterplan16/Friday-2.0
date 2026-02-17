@@ -30,7 +30,7 @@ def mock_db_pool():
     conn.execute = AsyncMock(return_value="UPDATE 1")
     conn.fetchrow = AsyncMock(
         return_value={
-            "id": "abc123-def4-5678-9012-345678901234",
+            "id": "abc12300-def4-5678-9012-345678901234",
             "status": "pending",
             "module": "email",
             "action_type": "classify",
@@ -104,7 +104,7 @@ async def test_approve_callback_updates_status(handler, mock_db_pool, mock_conte
     """
     Test AC2: Approve met a jour status='approved' + validated_by dans core.action_receipts.
     """
-    update = _make_callback_update("approve_abc123-def4-5678-9012-345678901234")
+    update = _make_callback_update("approve_abc12300-def4-5678-9012-345678901234")
 
     await handler.handle_approve_callback(update, mock_context)
 
@@ -113,7 +113,7 @@ async def test_approve_callback_updates_status(handler, mock_db_pool, mock_conte
     select_call = conn.fetchrow.call_args
     assert "SELECT" in select_call[0][0]
     assert "FOR UPDATE" in select_call[0][0]
-    assert select_call[0][1] == "abc123-def4-5678-9012-345678901234"
+    assert str(select_call[0][1]) == "abc12300-def4-5678-9012-345678901234"
 
     # Verifier UPDATE status='approved' + validated_by (H4 fix)
     update_call = conn.execute.call_args
@@ -126,7 +126,7 @@ async def test_approve_callback_edits_message(handler, mock_db_pool, mock_contex
     """
     Test AC5: Approve remplace boutons par confirmation visuelle.
     """
-    update = _make_callback_update("approve_abc123-def4-5678-9012-345678901234")
+    update = _make_callback_update("approve_abc12300-def4-5678-9012-345678901234")
 
     await handler.handle_approve_callback(update, mock_context)
 
@@ -141,7 +141,7 @@ async def test_approve_callback_notifies_metrics(handler, mock_db_pool, mock_con
     """
     Test AC2: Approve envoie notification dans topic Metrics & Logs.
     """
-    update = _make_callback_update("approve_abc123-def4-5678-9012-345678901234")
+    update = _make_callback_update("approve_abc12300-def4-5678-9012-345678901234")
 
     with patch.dict(
         os.environ,
@@ -168,13 +168,13 @@ async def test_approve_callback_executes_action(handler_with_executor, mock_db_p
     """
     Test C1 fix: Approve declenche l'execution via ActionExecutor.
     """
-    update = _make_callback_update("approve_abc123-def4-5678-9012-345678901234")
+    update = _make_callback_update("approve_abc12300-def4-5678-9012-345678901234")
 
     await handler_with_executor.handle_approve_callback(update, mock_context)
 
     # Verifier que ActionExecutor.execute() a ete appele
     handler_with_executor.action_executor.execute.assert_called_once_with(
-        "abc123-def4-5678-9012-345678901234"
+        "abc12300-def4-5678-9012-345678901234"
     )
 
     # Message doit indiquer "execute"
@@ -192,7 +192,7 @@ async def test_reject_callback_updates_status(handler, mock_db_pool, mock_contex
     """
     Test AC3: Reject met a jour status='rejected' + validated_by.
     """
-    update = _make_callback_update("reject_abc123-def4-5678-9012-345678901234")
+    update = _make_callback_update("reject_abc12300-def4-5678-9012-345678901234")
 
     await handler.handle_reject_callback(update, mock_context)
 
@@ -208,7 +208,7 @@ async def test_reject_callback_does_not_execute(handler, mock_db_pool, mock_cont
     """
     Test AC3: Reject N'execute PAS l'action.
     """
-    update = _make_callback_update("reject_abc123-def4-5678-9012-345678901234")
+    update = _make_callback_update("reject_abc12300-def4-5678-9012-345678901234")
     await handler.handle_reject_callback(update, mock_context)
 
     # Pas d'executor appele
@@ -220,7 +220,7 @@ async def test_reject_callback_edits_message(handler, mock_db_pool, mock_context
     """
     Test AC5: Reject remplace boutons par confirmation visuelle.
     """
-    update = _make_callback_update("reject_abc123-def4-5678-9012-345678901234")
+    update = _make_callback_update("reject_abc12300-def4-5678-9012-345678901234")
 
     await handler.handle_reject_callback(update, mock_context)
 
@@ -243,7 +243,7 @@ async def test_double_click_prevention_already_approved(handler, mock_db_pool, m
     # Simuler receipt deja approuve
     conn = mock_db_pool.acquire.return_value.__aenter__.return_value
     conn.fetchrow.return_value = {
-        "id": "abc123-def4-5678-9012-345678901234",
+        "id": "abc12300-def4-5678-9012-345678901234",
         "status": "approved",  # Deja approuve
         "module": "email",
         "action_type": "classify",
@@ -251,7 +251,7 @@ async def test_double_click_prevention_already_approved(handler, mock_db_pool, m
         "output_summary": "test",
     }
 
-    update = _make_callback_update("approve_abc123-def4-5678-9012-345678901234")
+    update = _make_callback_update("approve_abc12300-def4-5678-9012-345678901234")
     await handler.handle_approve_callback(update, mock_context)
 
     # Pas d'UPDATE SQL (receipt deja valide)
@@ -318,7 +318,7 @@ async def test_callback_unauthorized_user_rejected(handler, mock_db_pool, mock_c
     Test BUG-1.10.4: User_id different de owner -> rejete.
     """
     update = _make_callback_update(
-        "approve_abc123-def4-5678-9012-345678901234",
+        "approve_abc12300-def4-5678-9012-345678901234",
         user_id=99999,  # Pas le owner
     )
 
@@ -341,7 +341,7 @@ async def test_callback_authorized_user_accepted(handler, mock_db_pool, mock_con
     Test: User_id = owner -> action acceptee.
     """
     update = _make_callback_update(
-        "approve_abc123-def4-5678-9012-345678901234",
+        "approve_abc12300-def4-5678-9012-345678901234",
         user_id=12345,  # Owner
     )
 
@@ -358,7 +358,7 @@ async def test_reject_unauthorized_user_rejected(handler, mock_db_pool, mock_con
     Test BUG-1.10.4: User_id different de owner pour reject -> rejete.
     """
     update = _make_callback_update(
-        "reject_abc123-def4-5678-9012-345678901234",
+        "reject_abc12300-def4-5678-9012-345678901234",
         user_id=88888,
     )
 

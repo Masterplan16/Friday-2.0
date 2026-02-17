@@ -28,7 +28,7 @@ def mock_update_correct_button():
     update = Mock(spec=Update)
     update.callback_query = Mock(spec=CallbackQuery)
     update.callback_query.answer = AsyncMock()
-    update.callback_query.data = "correct_abc123-def4-5678-9012-345678901234"
+    update.callback_query.data = "correct_abc12345-def4-5678-9012-345678901234"
     update.callback_query.from_user = Mock(spec=User)
     update.callback_query.from_user.id = 12345
     update.callback_query.message = Mock(spec=Message)
@@ -74,7 +74,9 @@ async def test_handle_correct_button_stores_receipt_id(
 
     # Vérifier receipt_id stocké dans user_data
     assert "awaiting_correction_for" in mock_context.user_data
-    assert mock_context.user_data["awaiting_correction_for"] == "abc123-def4-5678-9012-345678901234"
+    assert (
+        mock_context.user_data["awaiting_correction_for"] == "abc12345-def4-5678-9012-345678901234"
+    )
 
     # Vérifier message envoyé à owner
     mock_update_correct_button.callback_query.message.reply_text.assert_called_once()
@@ -98,7 +100,7 @@ async def test_handle_correction_text_updates_receipt(
     handler = CorrectionsHandler(mock_db_pool)
 
     # Simuler correction en attente
-    mock_context.user_data["awaiting_correction_for"] = "abc123-def4-5678-9012-345678901234"
+    mock_context.user_data["awaiting_correction_for"] = "abc12345-def4-5678-9012-345678901234"
 
     await handler.handle_correction_text(mock_update_correction_text, mock_context)
 
@@ -114,7 +116,7 @@ async def test_handle_correction_text_updates_receipt(
     params = conn.execute.call_args[0][1:]
     assert params[0] == "URSSAF → finance"  # correction
     assert "owner" in params[1]  # feedback_comment
-    assert params[2] == "abc123-def4-5678-9012-345678901234"  # receipt_id
+    assert str(params[2]) == "abc12345-def4-5678-9012-345678901234"  # receipt_id (UUID object)
 
     # Vérifier user_data nettoyé
     assert "awaiting_correction_for" not in mock_context.user_data
@@ -197,7 +199,7 @@ async def test_handle_correction_text_db_exception_error(
     conn.execute.side_effect = Exception("Database connection lost")
 
     # Simuler correction en attente
-    mock_context.user_data["awaiting_correction_for"] = "abc123"
+    mock_context.user_data["awaiting_correction_for"] = "abc12345-def4-5678-9012-345678901234"
 
     await handler.handle_correction_text(mock_update_correction_text, mock_context)
 

@@ -890,9 +890,9 @@ class TestJournalEmailStory26:
         """Story 2.6 AC4: /receipt affiche section Email Details pour emails."""
         from bot.handlers.trust_budget_commands import receipt_command
 
-        mock_context.args = ["test-email-receipt"]
+        mock_context.args = ["aabbccdd-eeff-aabb-ccdd-eeffaabbccdd"]
         mock_db_conn.fetchrow.return_value = {
-            "id": "test-email-receipt-uuid-123",
+            "id": "aabbccdd-eeff-aabb-ccdd-eeffaabbccdd",
             "module": "email",
             "action_type": "draft_reply",
             "trust_level": "auto",
@@ -924,8 +924,8 @@ class TestJournalEmailStory26:
                 text = mock_send.call_args[0][1]
 
                 # Vérifier section Email Details
-                assert "**Email Details**" in text
-                assert "Compte IMAP: `account_professional`" in text
+                assert "Email Details" in text
+                assert "Compte IMAP: account_professional" in text
                 assert "Type: professional" in text
                 assert "Message ID:" in text
                 assert "Brouillon (extrait):" in text
@@ -938,9 +938,9 @@ class TestJournalEmailStory26:
         """Story 2.6 AC4: /receipt -v affiche payload JSON complet."""
         from bot.handlers.trust_budget_commands import receipt_command
 
-        mock_context.args = ["test-receipt", "-v"]
+        mock_context.args = ["aabbccdd-eeff-aabb-ccdd-eeffaabbccdd", "-v"]
         mock_db_conn.fetchrow.return_value = {
-            "id": "test-receipt-uuid",
+            "id": "aabbccdd-eeff-aabb-ccdd-eeffaabbccdd",
             "module": "email",
             "action_type": "draft_reply",
             "trust_level": "propose",
@@ -975,13 +975,12 @@ class TestJournalEmailStory26:
                 text = mock_send.call_args[0][1]
 
                 # Vérifier section Details (-v)
-                assert "**Details** (`-v`)" in text
+                assert "Details (-v)" in text
                 assert "Duration: 1250ms" in text
                 assert "Validated by: user 12345" in text
                 assert "Validated at:" in text
                 assert "Executed at:" in text
 
                 # Vérifier payload JSON complet affiché
-                assert "Payload (JSON complet):" in text
-                assert "```json" in text
+                assert "Payload (JSON):" in text
                 assert '"draft_body":' in text or '"account_id":' in text

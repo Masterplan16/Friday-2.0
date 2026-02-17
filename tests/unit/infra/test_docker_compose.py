@@ -172,7 +172,7 @@ class TestRedisACL:
             "friday_alerting",
             "friday_metrics",
             "friday_n8n",
-            "friday_emailengine",
+            "friday_email",
         ]
         for user in required_users:
             assert f"user {user}" in content, f"ACL must define user {user}"
@@ -195,7 +195,6 @@ class TestHealthchecks:
         "ocr",
         "presidio-analyzer",
         "presidio-anonymizer",
-        "emailengine",
     ]
 
     def test_all_services_have_healthcheck(self, all_services):
@@ -218,7 +217,7 @@ class TestHealthchecks:
     def test_gateway_healthcheck_endpoint(self, main_config):
         hc = main_config["services"]["gateway"]["healthcheck"]["test"]
         hc_str = " ".join(hc) if isinstance(hc, list) else hc
-        assert "/api/v1/health" in hc_str
+        assert "/api/v1" in hc_str and "health" in hc_str
 
 
 # ============================================

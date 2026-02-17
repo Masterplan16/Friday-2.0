@@ -53,6 +53,8 @@ nul
 .env.prod
 .env.telegram
 .env.decrypted
+.env.desktop
+.env.test
 
 # Secrets (SOPS encrypted files are OK to commit)
 *.key

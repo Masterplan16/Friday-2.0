@@ -55,8 +55,11 @@ class TrustManager:
 
         # Telegram configuration (Story 1.7 - inline buttons validation)
         self.telegram_bot = telegram_bot or self._init_telegram_bot()
-        self.telegram_topic_id = telegram_topic_id or int(os.getenv("TOPIC_ACTIONS_ID", "0"))
-        self.telegram_supergroup_id = int(os.getenv("TELEGRAM_SUPERGROUP_ID", "0"))
+        # Parse robustement : strip commentaires inline dotenv (ex: "6  # 🤖 Actions")
+        _topic_raw = os.getenv("TOPIC_ACTIONS_ID", "0").split("#")[0].strip()
+        self.telegram_topic_id = telegram_topic_id or int(_topic_raw or "0")
+        _sg_raw = os.getenv("TELEGRAM_SUPERGROUP_ID", "0").split("#")[0].strip()
+        self.telegram_supergroup_id = int(_sg_raw or "0")
 
     def _init_telegram_bot(self) -> Optional[Bot]:
         """

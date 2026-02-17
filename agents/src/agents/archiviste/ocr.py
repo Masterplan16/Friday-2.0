@@ -18,6 +18,13 @@ from typing import Optional
 
 from agents.src.agents.archiviste.models import OCRResult
 
+try:
+    from PIL import Image
+    import fitz  # PyMuPDF pour PDF
+except ImportError:
+    Image = None  # type: ignore[assignment,misc]
+    fitz = None  # type: ignore[assignment]
+
 
 class SuryaOCREngine:
     """
@@ -144,9 +151,7 @@ class SuryaOCREngine:
         await self._load_model_if_needed()
 
         try:
-            # Import dynamique
-            import fitz  # PyMuPDF pour PDF
-            from PIL import Image
+            # Import dynamique Surya (lourd, chargé à la demande)
             from surya.ocr import run_ocr
 
             # Charger document

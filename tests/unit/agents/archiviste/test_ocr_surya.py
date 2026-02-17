@@ -75,7 +75,7 @@ async def test_ocr_document_image_success(
 
     # Mock asyncio.to_thread pour les appels de load_model et run_ocr
     async def mock_thread_exec(func, *args, **kwargs):
-        if func.__name__ == "run_ocr":
+        if getattr(func, "__name__", "") == "run_ocr":
             return [mock_surya_result]
         # Pour load_model/load_processor
         return MagicMock()
@@ -156,7 +156,7 @@ async def test_ocr_document_pdf_multipage(
     page3_result.text_lines = [page3_line]
 
     async def mock_thread_exec(func, *args, **kwargs):
-        if func.__name__ == "run_ocr":
+        if getattr(func, "__name__", "") == "run_ocr":
             return [page1_result, page2_result, page3_result]
         return MagicMock()
 
@@ -197,7 +197,7 @@ async def test_ocr_document_empty_result(mock_path_class, mock_to_thread, mock_i
     empty_result.text_lines = []
 
     async def mock_thread_exec(func, *args, **kwargs):
-        if func.__name__ == "run_ocr":
+        if getattr(func, "__name__", "") == "run_ocr":
             return [empty_result]
         return MagicMock()
 
@@ -311,10 +311,11 @@ async def test_ocr_model_lazy_loading(mock_path_class, mock_to_thread, mock_imag
 
     async def mock_thread_exec(func, *args, **kwargs):
         nonlocal call_count
-        if "load_model" in func.__name__ or "load_processor" in func.__name__:
+        func_name = getattr(func, "__name__", "")
+        if "load_model" in func_name or "load_processor" in func_name:
             call_count += 1
             return MagicMock()
-        if func.__name__ == "run_ocr":
+        if func_name == "run_ocr":
             return [mock_result]
         return MagicMock()
 

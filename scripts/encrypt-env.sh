@@ -18,7 +18,7 @@ ENC_FILE="$PROJECT_ROOT/.env.enc"
 case "${1:-}" in
     --from-vps)
         echo "Recuperation .env depuis VPS..."
-        scp friday-vps:/opt/friday/.env "$ENV_FILE"
+        scp friday-vps:/opt/friday-2.0/.env "$ENV_FILE"
         echo "Recupere: $ENV_FILE"
         ;;
 esac

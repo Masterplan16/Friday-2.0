@@ -113,8 +113,8 @@ if [ ${#failed_services[@]} -eq 0 ]; then
     echo -e "${GREEN}✅ All critical services are healthy${NC}"
 
     # Envoyer notification Telegram succès
-    if command -v /opt/friday/scripts/telegram-notify.sh &> /dev/null; then
-        /opt/friday/scripts/telegram-notify.sh "✅ *Friday Healthcheck PASSED*
+    if command -v /opt/friday-2.0/scripts/telegram-notify.sh &> /dev/null; then
+        /opt/friday-2.0/scripts/telegram-notify.sh "✅ *Friday Healthcheck PASSED*
 
 All critical services are running:
 $(printf '• %s\n' "${CRITICAL_SERVICES[@]}")
@@ -131,8 +131,8 @@ else
     echo "Failed services: ${failed_services[*]}"
 
     # Envoyer notification Telegram échec
-    if command -v /opt/friday/scripts/telegram-notify.sh &> /dev/null; then
-        /opt/friday/scripts/telegram-notify.sh "🚨 *Friday Healthcheck FAILED*
+    if command -v /opt/friday-2.0/scripts/telegram-notify.sh &> /dev/null; then
+        /opt/friday-2.0/scripts/telegram-notify.sh "🚨 *Friday Healthcheck FAILED*
 
 Failed services:
 $(printf '• %s\n' "${failed_services[@]}")

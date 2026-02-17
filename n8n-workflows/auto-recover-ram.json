@@ -22,7 +22,7 @@
     },
     {
       "parameters": {
-        "command": "bash ${FRIDAY_HOME:-/opt/friday}/scripts/monitor-ram.sh --json"
+        "command": "bash ${FRIDAY_HOME:-/opt/friday-2.0}/scripts/monitor-ram.sh --json"
       },
       "name": "Check RAM Usage",
       "type": "n8n-nodes-base.executeCommand",
@@ -46,7 +46,7 @@
     },
     {
       "parameters": {
-        "command": "bash ${FRIDAY_HOME:-/opt/friday}/scripts/auto-recover-ram.sh"
+        "command": "bash ${FRIDAY_HOME:-/opt/friday-2.0}/scripts/auto-recover-ram.sh"
       },
       "name": "Execute Auto-Recovery",
       "type": "n8n-nodes-base.executeCommand",

@@ -104,7 +104,7 @@ Wants=network-online.target
 [Service]
 Type=oneshot
 User=root
-ExecStart=/bin/bash -c '/opt/friday/scripts/telegram-notify.sh "✅ *Friday VPS Rebooted*\n\nOS security updates applied successfully.\nTimestamp: $(date -u +%%Y-%%m-%%dT%%H:%%M:%%SZ)\n\nHealthcheck in progress..." && sleep 30 && /opt/friday/scripts/healthcheck-all.sh'
+ExecStart=/bin/bash -c '/opt/friday-2.0/scripts/telegram-notify.sh "✅ *Friday VPS Rebooted*\n\nOS security updates applied successfully.\nTimestamp: $(date -u +%%Y-%%m-%%dT%%H:%%M:%%SZ)\n\nHealthcheck in progress..." && sleep 30 && /opt/friday-2.0/scripts/healthcheck-all.sh'
 RemainAfterExit=yes
 
 [Install]
@@ -121,7 +121,7 @@ echo ""
 # 5. Créer pre-reboot hook (AC5: Notification avant reboot)
 echo "🔔 Creating pre-reboot hook..."
 
-mkdir -p /opt/friday/scripts
+mkdir -p /opt/friday-2.0/scripts
 
 cat > /etc/apt/apt.conf.d/51friday-telegram-hooks <<'EOF'
 // Friday 2.0 - Telegram notification hooks
@@ -129,7 +129,7 @@ cat > /etc/apt/apt.conf.d/51friday-telegram-hooks <<'EOF'
 
 // Pre-reboot notification
 DPkg::Pre-Invoke {
-    "if [ -f /var/run/reboot-required ]; then /opt/friday/scripts/telegram-notify.sh 'OS reboot imminent (kernel update) - Friday services will restart automatically'; fi";
+    "if [ -f /var/run/reboot-required ]; then /opt/friday-2.0/scripts/telegram-notify.sh 'OS reboot imminent (kernel update) - Friday services will restart automatically'; fi";
 };
 EOF
 

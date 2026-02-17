@@ -22,7 +22,7 @@
     },
     {
       "parameters": {
-        "command": "bash ${FRIDAY_HOME:-/opt/friday}/scripts/detect-crash-loop.sh"
+        "command": "bash ${FRIDAY_HOME:-/opt/friday-2.0}/scripts/detect-crash-loop.sh"
       },
       "name": "Execute Crash Loop Detector",
       "type": "n8n-nodes-base.executeCommand",

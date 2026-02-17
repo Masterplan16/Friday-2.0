@@ -44,13 +44,13 @@ case "${1:-}" in
         echo "Dechiffrement et envoi sur VPS..."
         sops --input-type dotenv --output-type dotenv -d "$ENC_FILE" > "$OUT_FILE"
         echo "Dechiffre: $OUT_FILE"
-        scp "$OUT_FILE" friday-vps:/opt/friday/.env
-        echo "Envoye sur VPS: /opt/friday/.env"
+        scp "$OUT_FILE" friday-vps:/opt/friday-2.0/.env
+        echo "Envoye sur VPS: /opt/friday-2.0/.env"
         rm -f "$OUT_FILE"
         echo "Fichier local .env supprime (securite)"
         echo ""
         echo "IMPORTANT: Redemarrer les services sur VPS:"
-        echo "  ssh friday-vps 'cd /opt/friday && docker compose --project-name friday-20 up -d'"
+        echo "  ssh friday-vps 'cd /opt/friday-2.0 && docker compose --project-name friday-20 up -d'"
         ;;
     *)
         echo "Dechiffrement de .env.enc -> .env"
